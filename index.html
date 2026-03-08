@@ -179,9 +179,33 @@
         if (typeof initShareButton === 'function') {
             initShareButton();
         }
+
+        // Logo 视频防暂停
+const logoVideo = document.getElementById('logoVideo');
+if (logoVideo) {
+    // 监听暂停事件，一旦暂停立即重新播放
+    logoVideo.addEventListener('pause', () => {
+        logoVideo.play().catch(e => console.log('防暂停重播失败', e));
+    });
+
+    // 监听 seeking（跳转）事件，防止用户拖动进度条
+    logoVideo.addEventListener('seeking', () => {
+        // 强制回到当前时间（简单粗暴阻止拖动）
+        logoVideo.currentTime = 0; 
+    });
+
+    // 监听右键菜单，阻止用户保存视频或查看控制
+    logoVideo.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
+    // 页面加载后如果没自动播放，手动触发一次
+    logoVideo.play().catch(e => console.log('自动播放失败，可能需要用户交互'));
+}
     </script>
 </body>
 </html>
+
 
 
 
