@@ -183,28 +183,43 @@
         // Logo 视频防暂停
 const logoVideo = document.getElementById('logoVideo');
 if (logoVideo) {
-    // 监听暂停事件，一旦暂停立即重新播放
-    logoVideo.addEventListener('pause', () => {
-        logoVideo.play().catch(e => console.log('防暂停重播失败', e));
+    // 尝试播放的函数
+    function attemptPlay() {
+        logoVideo.play().catch(e => {
+            console.log('播放失败', e);
+            // 如果是因为省电策略失败，可以稍后由 visibilitychange 处理
+        });
+    }
+
+    // 监听暂停事件，尝试恢复播放
+    logoVideo.addEventListener('pause', attemptPlay);
+
+    // 监听页面可见性变化：当页面重新可见时，如果视频暂停了，就尝试播放
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && logoVideo.paused) {
+            logoVideo.play().catch(e => console.log('可见性变化后播放失败', e));
+        }
     });
 
-    // 监听 seeking（跳转）事件，防止用户拖动进度条
-    logoVideo.addEventListener('seeking', () => {
-        // 强制回到当前时间（简单粗暴阻止拖动）
-        logoVideo.currentTime = 0; 
-    });
-
-    // 监听右键菜单，阻止用户保存视频或查看控制
-    logoVideo.addEventListener('contextmenu', (e) => {
+    // 阻止用户拖动进度条
+    logoVideo.addEventListener('seeking', (e) => {
         e.preventDefault();
+        logoVideo.currentTime = 0; // 强制回到开头
     });
 
+    // 禁用右键菜单
+    logoVideo.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // 页面加载后尝试播放
+    logoVideo.play().catch(e => console.log('初始播放失败', e));
+}
     // 页面加载后如果没自动播放，手动触发一次
     logoVideo.play().catch(e => console.log('自动播放失败，可能需要用户交互'));
 }
     </script>
 </body>
 </html>
+
 
 
 
