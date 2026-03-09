@@ -1,1 +1,1 @@
-# nb-channel
+# NB频道官网
