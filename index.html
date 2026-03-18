@@ -123,8 +123,8 @@
             <video 
             id="logoVideo"
             src="https://videos.tuchuangyun.top/autoupload/f/2ybw2nnc3ldHerixYxPOdCfNcKcqEnRmcljopnyJoMs/20260318/XYwo/LOGO%28%E6%9C%80%E6%9C%80%E7%BB%88%E7%89%88%29.mp4" type="video/mp4" 
-            autoplay  
-            loop 
+            autoplay 
+            muted 
             playsinline
             disablePictureInPicture
             style="width:100%; height:auto; aspect-ratio:16/9; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);"
@@ -202,30 +202,25 @@ if (logoVideo) {
         });
     }
 
-    // 监听暂停事件，尝试恢复播放
-    logoVideo.addEventListener('pause', attemptPlay);
+    // LOGO 视频只播放一次，但防止被浏览器意外暂停
+const logoVideo = document.getElementById('logoVideo');
+if (logoVideo) {
+    // 如果视频被暂停（比如浏览器省电策略），尝试恢复播放一次
+    logoVideo.addEventListener('pause', () => {
+        logoVideo.play().catch(e => console.log('恢复播放失败', e));
+    });
 
-    // 监听页面可见性变化：当页面重新可见时，如果视频暂停了，就尝试播放
+    // 当用户切回页面时，如果视频暂停了，也尝试恢复
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && logoVideo.paused) {
-            logoVideo.play().catch(e => console.log('可见性变化后播放失败', e));
+            logoVideo.play().catch(e => console.log('页面恢复后播放失败', e));
         }
     });
 
-    // 阻止用户拖动进度条
-    logoVideo.addEventListener('seeking', (e) => {
-        e.preventDefault();
-        logoVideo.currentTime = 0; // 强制回到开头
-    });
+    // 不再需要阻止 seeking，也不强制回到开头
 
-    // 禁用右键菜单
-    logoVideo.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    // 页面加载后尝试播放
+    // 初始自动播放（浏览器可能会阻止，但 muted 情况下应该成功）
     logoVideo.play().catch(e => console.log('初始播放失败', e));
-}
-    // 页面加载后如果没自动播放，手动触发一次
-    logoVideo.play().catch(e => console.log('自动播放失败，可能需要用户交互'));
 
     </script>
 </body>
