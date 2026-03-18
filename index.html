@@ -193,36 +193,24 @@
             initShareButton();
         }
 
-        // Logo 视频防暂停
-const logoVideo = document.getElementById('logoVideo');
-if (logoVideo) {
-    function attemptPlay() {
-        logoVideo.play().catch(e => {
-            console.log('播放失败', e);
-        });
-    }
+                // Logo 视频防暂停
+        const logoVideo = document.getElementById('logoVideo');
+        if (logoVideo) {
+            // 如果视频被暂停（比如浏览器省电策略），尝试恢复播放一次
+            logoVideo.addEventListener('pause', () => {
+                logoVideo.play().catch(e => console.log('恢复播放失败', e));
+            });
 
-    // LOGO 视频只播放一次，但防止被浏览器意外暂停
-const logoVideo = document.getElementById('logoVideo');
-if (logoVideo) {
-    // 如果视频被暂停（比如浏览器省电策略），尝试恢复播放一次
-    logoVideo.addEventListener('pause', () => {
-        logoVideo.play().catch(e => console.log('恢复播放失败', e));
-    });
+            // 当用户切回页面时，如果视频暂停了，也尝试恢复
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && logoVideo.paused) {
+                    logoVideo.play().catch(e => console.log('页面恢复后播放失败', e));
+                }
+            });
 
-    // 当用户切回页面时，如果视频暂停了，也尝试恢复
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && logoVideo.paused) {
-            logoVideo.play().catch(e => console.log('页面恢复后播放失败', e));
+            // 初始自动播放（muted 情况下应该成功）
+            logoVideo.play().catch(e => console.log('初始播放失败', e));
         }
-    });
-
-    // 不再需要阻止 seeking，也不强制回到开头
-
-    // 初始自动播放（浏览器可能会阻止，但 muted 情况下应该成功）
-    logoVideo.play().catch(e => console.log('初始播放失败', e));
-    }
-
     </script>
 </body>
 </html>
