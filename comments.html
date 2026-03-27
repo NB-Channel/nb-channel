@@ -21,6 +21,63 @@
             color: var(--text-color);
         }
     </style>
+     /* 导航栏整体容器：上下两行 */
+        .nav-container {
+            margin-bottom: 30px;
+        }
+        /* 第一行：主要页面链接 */
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        /* 第二行：功能按钮 */
+        .nav-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        /* 统一按钮样式（复用你原有的 .nav-btn 样式即可） */
+        .theme-toggle, .share-btn {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            border-radius: 30px;
+            padding: 10px 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            min-width: 90px;
+        }
+        .theme-toggle:hover, .share-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        /* 底部统计容器 */
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        /* 响应式微调 */
+        @media (max-width: 600px) {
+            .nav-links .nav-btn {
+                padding: 8px 16px;
+                font-size: 1rem;
+            }
+            .theme-toggle, .share-btn {
+                padding: 8px 16px;
+                font-size: 1rem;
+                min-width: auto;
+            }
+        }
 </head>
 <body>
     <div class="container">
