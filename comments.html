@@ -20,87 +20,6 @@
             margin-bottom: 20px;
             color: var(--text-color);
         }
-        /* 导航栏整体容器：上下两行 */
-        .nav-container {
-            margin-bottom: 30px;
-        }
-        /* 第一行：主要页面链接 */
-        .nav-links {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        /* 第二行：功能按钮 */
-        .nav-actions {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        /* 统一按钮样式（复用你原有的 .nav-btn 样式即可） */
-        .theme-toggle, .share-btn {
-            background: var(--nav-btn-bg);
-            color: var(--nav-btn-text);
-            border: none;
-            border-radius: 30px;
-            padding: 10px 25px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 500;
-            min-width: 90px;
-        }
-        .theme-toggle:hover, .share-btn:hover {
-            background: var(--nav-btn-hover-bg);
-            color: var(--nav-btn-hover-text);
-        }
-        /* 底部统计容器 */
-        .stats-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-        /* 响应式微调 */
-        @media (max-width: 600px) {
-            .nav-links .nav-btn {
-                padding: 8px 16px;
-                font-size: 1rem;
-            }
-            .theme-toggle, .share-btn {
-                padding: 8px 16px;
-                font-size: 1rem;
-                min-width: auto;
-            }
-             /* 强制父容器为 flex 行排列，左对齐 */
-    .nav-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    justify-content: flex-start !important;  /* 左对齐，分享在左，夜间模式在右自然成立 */
-    align-items: center !important;
-    gap: 15px !important;
-    flex-wrap: wrap !important;
-    margin-top: 20px !important;  /* 调整竖直位置 */
-    }
-        .nav-actions {
-    justify-content: center !important;  /* 强制水平居中 */
-}
-
-/* 清除按钮可能的浮动或定位干扰 */
-.share-btn, .theme-toggle {
-    float: none !important;
-    position: static !important;
-    margin: 0 !important;  /* 如果之前有单独 margin 导致错位，先重置 */
-}
-
-/* 然后单独调整夜间模式按钮水平位置（如果需要微调） */
-.theme-toggle {
-    margin-left: 0;  /* 确保没有额外左外边距 */
-        }
     </style>
      
 </head>
@@ -111,19 +30,22 @@
 
         <!-- 导航栏（你需要复制现有的导航栏结构，并高亮“评论”按钮） -->
         <div class="nav-container">
-            <div class="nav-links">
-                <a href="index.html" class="nav-btn">首页</a>
-                <a href="videos.html" class="nav-btn">视频</a>
-                <a href="about.html" class="nav-btn">关于</a>
-                <a href="changelog.html" class="nav-btn">更新日志</a>
-                <a href="product.html" class="nav-btn">我的产品</a>
-                <a href="APP.html" class="nav-btn">软件/APP下载</a>
-                <a href="comments.html" class="nav-btn active">💬 评论</a>
-            </div>
-            <div class="nav-actions">
-                <button class="share-btn" id="shareButton">📤 分享此频道</button>
-                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 夜间模式</button>
-            </div>
+    <!-- 第一行：主要页面链接 -->
+    <div class="nav-links">
+        <a href="index.html" class="nav-btn">首页</a>
+        <a href="videos.html" class="nav-btn">视频</a>
+        <a href="about.html" class="nav-btn">关于</a>
+        <a href="changelog.html" class="nav-btn">更新日志</a>
+        <a href="product.html" class="nav-btn">我的产品</a>
+        <a href="APP.html" class="nav-btn">软件/APP下载</a>
+        <a href="comments.html" class="nav-btn active">💬 评论</a>
+    </div>
+    <!-- 第二行：功能按钮（必须放在 .nav-actions 中） -->
+    <div class="nav-actions">
+        <button class="share-btn" id="shareButton">📤 分享此频道</button>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 夜间模式</button>
+    </div>
+</div>
         </div>
 
         <!-- 评论区主体 -->
