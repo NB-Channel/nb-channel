@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NB频道 - 评论区</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* 可自定义评论页的额外样式 */
+        .comments-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .comments-container h2 {
+            margin-bottom: 20px;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📺 NB频道官网</h1>
+        <div class="author-info" id="authorInfo">UP主：NB搞事局</div>
+
+        <!-- 导航栏（你需要复制现有的导航栏结构，并高亮“评论”按钮） -->
+        <div class="nav-container">
+            <div class="nav-links">
+                <a href="index.html" class="nav-btn">首页</a>
+                <a href="videos.html" class="nav-btn">视频</a>
+                <a href="about.html" class="nav-btn">关于</a>
+                <a href="changelog.html" class="nav-btn">更新日志</a>
+                <a href="product.html" class="nav-btn">我的产品</a>
+                <a href="APP.html" class="nav-btn">软件/APP下载</a>
+                <a href="comments.html" class="nav-btn active">💬 评论</a>
+            </div>
+            <div class="nav-actions">
+                <button class="share-btn" id="shareButton">📤 分享此频道</button>
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 夜间模式</button>
+            </div>
+        </div>
+
+        <!-- 评论区主体 -->
+        <div class="comments-container">
+            <h2>💬 评论区</h2>
+            <p>欢迎留言讨论，使用 GitHub 账号即可登录评论。</p>
+            <!-- 在这里嵌入 Giscus 代码 -->
+            <script src="https://giscus.app/client.js"
+                <script src="https://giscus.app/client.js"
+             data-repo="123-System/nb-channel-comments"
+             data-repo-id="R_kgDORyavIg"
+             data-category="Announcements"
+             data-category-id="DIC_kwDORyavIs4C5Z0M"
+             data-mapping="pathname"
+             data-strict="0"
+             data-reactions-enabled="1"
+             data-emit-metadata="0"
+             data-input-position="bottom"
+             data-theme="light"
+             data-lang="zh-CN"
+             crossorigin="anonymous"
+        async>
+</script>
+            </script>
+        </div>
+
+        <!-- 底部统计（可保留） -->
+        <div class="stats-container">
+            <span>总访问 <span id="vercount_value_site_pv">Loading</span> 次</span>
+            <span>总访客 <span id="vercount_value_site_uv">Loading</span> 人</span>
+        </div>
+        <p align="center" style="margin-top:15px;"><strong>©2026NB频道</strong></p>
+        <p align="center"><strong>制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank">NB搞事局</a></strong></p>
+        <p align="center"><a href="https://github.com/" target="_blank">Github</a>和<a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank">Cloudflare</a>提供网站托管服务</p>
+    </div>
+
+    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+
+    <script src="data/videos.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        AUTHOR_NAME = 'NB搞事局';
+        document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`;
+        initTheme();
+        updateSiteStats();
+        if (typeof initShareButton === 'function') {
+            initShareButton();
+        }
+    </script>
+</body>
+</html>
