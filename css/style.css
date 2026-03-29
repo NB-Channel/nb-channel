@@ -480,3 +480,45 @@ body.dark-mode .author-info {
     background: var(--nav-btn-hover-bg);
     color: var(--nav-btn-hover-text);
 }
+/* ==================== 固定在右下角的夜间模式按钮 ==================== */
+.theme-toggle-fixed {
+    position: fixed;
+    bottom: 90px;        /* 回到顶部按钮高度约50px，再加40px间距，放在它上面 */
+    right: 30px;
+    background: var(--nav-btn-bg);
+    color: var(--nav-btn-text);
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.theme-toggle-fixed:hover {
+    background: var(--nav-btn-hover-bg);
+    color: var(--nav-btn-hover-text);
+}
+
+/* 小屏幕下适当缩小间距和尺寸 */
+@media (max-width: 600px) {
+    .theme-toggle-fixed {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        bottom: 80px;
+        right: 20px;
+    }
+    .back-to-top {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        bottom: 20px;
+        right: 20px;
+    }
+}
