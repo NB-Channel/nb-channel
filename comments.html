@@ -167,7 +167,8 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_CeYSaPxbHXZNImMts166_w_jNTzuAsO';
         // =====================================================
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // 创建 Supabase 客户端（变量名改为 supabaseClient 避免冲突）
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
         const pagePath = window.location.pathname;
@@ -189,7 +190,7 @@
         }
 
         async function fetchComments() {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('comments')
                 .select(`*, profiles (username)`)
                 .eq('page_path', pagePath)
@@ -216,9 +217,9 @@
         }
 
         async function loadUser() {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
-                const { data: profile } = await supabase
+                const { data: profile } = await supabaseClient
                     .from('profiles')
                     .select('username')
                     .eq('id', session.user.id)
@@ -226,7 +227,7 @@
                 currentUser = { id: session.user.id, username: profile?.username };
                 authStatus.innerHTML = `<div>欢迎，${escapeHtml(currentUser.username)} <button id="logout">退出</button></div>`;
                 document.getElementById('logout').onclick = async () => {
-                    await supabase.auth.signOut();
+                    await supabaseClient.auth.signOut();
                     location.reload();
                 };
                 commentFormArea.style.display = 'block';
@@ -239,7 +240,7 @@
 
         async function register(username, email, password) {
             // 检查用户名是否已存在
-            const { data: existingUser } = await supabase
+            const { data: existingUser } = await supabaseClient
                 .from('profiles')
                 .select('id')
                 .eq('username', username)
@@ -247,7 +248,7 @@
             if (existingUser) throw new Error('用户名已存在');
 
             // 检查邮箱是否已存在（可选）
-            const { data: existingEmail } = await supabase
+            const { data: existingEmail } = await supabaseClient
                 .from('profiles')
                 .select('id')
                 .eq('email', email)
@@ -255,12 +256,12 @@
             if (existingEmail) throw new Error('邮箱已被注册');
 
             // 注册 auth 账户
-            const { data, error } = await supabase.auth.signUp({ email, password });
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
             if (error) throw error;
             const userId = data.user.id;
 
             // 插入 profiles
-            const { error: profileError } = await supabase
+            const { error: profileError } = await supabaseClient
                 .from('profiles')
                 .insert({ id: userId, username, email });
             if (profileError) throw profileError;
@@ -269,7 +270,7 @@
 
         async function login(username, password) {
             // 通过用户名获取邮箱
-            const { data: profile, error: profileError } = await supabase
+            const { data: profile, error: profileError } = await supabaseClient
                 .from('profiles')
                 .select('email')
                 .eq('username', username)
@@ -277,7 +278,7 @@
             if (profileError || !profile) throw new Error('用户名不存在');
             const email = profile.email;
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) throw error;
             return data;
         }
@@ -327,7 +328,7 @@
             }
             const content = commentContent.value.trim();
             if (!content) return;
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('comments')
                 .insert({ page_path: pagePath, user_id: currentUser.id, content });
             if (error) {
