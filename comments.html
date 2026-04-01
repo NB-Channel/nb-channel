@@ -7,6 +7,7 @@
     <title>NB频道 - 评论区</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
+        /* 样式保持不变，省略... */
         .comment-section {
             max-width: 800px;
             margin: 40px auto;
@@ -115,7 +116,6 @@
             </div>
         </div>
 
-        <!-- 评论区 -->
         <div class="comment-section">
             <div id="user-info" style="display: flex; justify-content: space-between; align-items: center;">
                 <div id="auth-status">未登录</div>
@@ -149,7 +149,7 @@
         <div class="modal-content">
             <h3>注册</h3>
             <input type="text" id="reg-username" placeholder="用户名">
-            <input type="email" id="reg-email" placeholder="邮箱（用于找回密码）">
+            <input type="email" id="reg-email" placeholder="邮箱">
             <input type="password" id="reg-password" placeholder="密码">
             <div id="register-error" class="error"></div>
             <button id="do-register">注册</button>
@@ -162,18 +162,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/common.js"></script>
     <script>
-        // ==================== Supabase 配置 ====================
         const SUPABASE_URL = 'https://stgdkwnpxdyhghfgywqj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_CeYSaPxbHXZNImMts166_w_jNTzuAsO';
-        // =====================================================
-
-        // 创建 Supabase 客户端（变量名改为 supabaseClient 避免冲突）
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
         const pagePath = window.location.pathname;
 
-        // DOM 元素
         const authStatus = document.getElementById('auth-status');
         const commentList = document.getElementById('comment-list');
         const commentFormArea = document.getElementById('comment-form-area');
@@ -216,21 +211,69 @@
             `).join('');
         }
 
+        // 登录后检查并创建 profile
+        async function ensureProfile(userId, email) {
+            let { data: profile, error } = await supabaseClient
+                .from('profiles')
+                .select('username')
+                .eq('id', userId)
+                .maybeSingle();
+            if (error && error.code !== 'PGRST116') {
+                console.error('查询profile失败', error);
+                throw new Error('查询用户信息失败');
+            }
+            if (profile) return profile;
+
+            // 没有 profile，需要创建
+            let username = '';
+            while (!username) {
+                username = prompt('请设置您的用户名（用于显示）：', email.split('@')[0]);
+                if (username === null) {
+                    throw new Error('用户取消设置');
+                }
+                username = username.trim();
+                if (username === '') {
+                    alert('用户名不能为空');
+                    continue;
+                }
+                const { data: existing } = await supabaseClient
+                    .from('profiles')
+                    .select('id')
+                    .eq('username', username)
+                    .maybeSingle();
+                if (existing) {
+                    alert('用户名已被占用，请换一个');
+                    username = '';
+                }
+            }
+            const { error: insertError } = await supabaseClient
+                .from('profiles')
+                .insert({ id: userId, username, email });
+            if (insertError) {
+                console.error('插入profile失败', insertError);
+                throw new Error('设置用户名失败，请稍后重试');
+            }
+            return { username };
+        }
+
         async function loadUser() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
-                const { data: profile } = await supabaseClient
-                    .from('profiles')
-                    .select('username')
-                    .eq('id', session.user.id)
-                    .single();
-                currentUser = { id: session.user.id, username: profile?.username };
-                authStatus.innerHTML = `<div>欢迎，${escapeHtml(currentUser.username)} <button id="logout">退出</button></div>`;
-                document.getElementById('logout').onclick = async () => {
+                try {
+                    const profile = await ensureProfile(session.user.id, session.user.email);
+                    currentUser = { id: session.user.id, username: profile.username };
+                    authStatus.innerHTML = `<div>欢迎，${escapeHtml(currentUser.username)} <button id="logout">退出</button></div>`;
+                    document.getElementById('logout').onclick = async () => {
+                        await supabaseClient.auth.signOut();
+                        location.reload();
+                    };
+                    commentFormArea.style.display = 'block';
+                } catch (err) {
+                    console.error(err);
+                    alert(err.message);
                     await supabaseClient.auth.signOut();
                     location.reload();
-                };
-                commentFormArea.style.display = 'block';
+                }
             } else {
                 currentUser = null;
                 authStatus.innerHTML = '未登录';
@@ -247,7 +290,7 @@
                 .maybeSingle();
             if (existingUser) throw new Error('用户名已存在');
 
-            // 检查邮箱是否已存在（可选）
+            // 检查邮箱是否已存在
             const { data: existingEmail } = await supabaseClient
                 .from('profiles')
                 .select('id')
@@ -255,16 +298,9 @@
                 .maybeSingle();
             if (existingEmail) throw new Error('邮箱已被注册');
 
-            // 注册 auth 账户
+            // 注册用户（不插入 profiles）
             const { data, error } = await supabaseClient.auth.signUp({ email, password });
             if (error) throw error;
-            const userId = data.user.id;
-
-            // 插入 profiles
-            const { error: profileError } = await supabaseClient
-                .from('profiles')
-                .insert({ id: userId, username, email });
-            if (profileError) throw profileError;
             return data;
         }
 
