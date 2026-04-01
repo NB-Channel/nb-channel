@@ -7,7 +7,6 @@
     <title>NB频道 - 评论区</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* 样式同上，省略... */
         .comment-section {
             max-width: 800px;
             margin: 40px auto;
@@ -21,7 +20,7 @@
             gap: 10px;
             margin-bottom: 20px;
         }
-        .auth-buttons button, .comment-form button {
+        .auth-buttons button, .comment-form button, .edit-nickname-btn {
             background: var(--nav-btn-bg);
             color: var(--nav-btn-text);
             border: none;
@@ -30,7 +29,7 @@
             cursor: pointer;
             transition: 0.2s;
         }
-        .auth-buttons button:hover, .comment-form button:hover {
+        .auth-buttons button:hover, .comment-form button:hover, .edit-nickname-btn:hover {
             background: var(--nav-btn-hover-bg);
             color: white;
         }
@@ -100,7 +99,6 @@
         <h1>📺 NB频道官网</h1>
         <div class="author-info" id="authorInfo">UP主：NB搞事局</div>
 
-        <!-- 导航栏（请根据你的实际页面修改链接） -->
         <div class="nav-container">
             <div class="nav-links">
                 <a href="index.html" class="nav-btn">首页</a>
@@ -137,7 +135,7 @@
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <h3>登录</h3>
-            <input type="email" id="login-email" placeholder="邮箱">
+            <input type="text" id="login-username" placeholder="用户名">
             <input type="password" id="login-password" placeholder="密码">
             <div id="login-error" class="error"></div>
             <button id="do-login">登录</button>
@@ -154,6 +152,17 @@
             <div id="register-error" class="error"></div>
             <button id="do-register">注册</button>
             <button id="close-register">取消</button>
+        </div>
+    </div>
+
+    <!-- 修改昵称弹窗 -->
+    <div id="rename-modal" class="modal">
+        <div class="modal-content">
+            <h3>修改昵称</h3>
+            <input type="text" id="new-nickname" placeholder="新昵称">
+            <div id="rename-error" class="error"></div>
+            <button id="do-rename">确认修改</button>
+            <button id="close-rename">取消</button>
         </div>
     </div>
 
@@ -211,7 +220,6 @@
             `).join('');
         }
 
-        // 登录后检查并创建 profile
         async function ensureProfile(userId, email) {
             let { data: profile, error } = await supabaseClient
                 .from('profiles')
@@ -262,10 +270,21 @@
                 try {
                     const profile = await ensureProfile(session.user.id, session.user.email);
                     currentUser = { id: session.user.id, username: profile.username };
-                    authStatus.innerHTML = `<div>欢迎，${escapeHtml(currentUser.username)} <button id="logout">退出</button></div>`;
+                    authStatus.innerHTML = `
+                        <div>
+                            欢迎，${escapeHtml(currentUser.username)}
+                            <button class="edit-nickname-btn" id="editNicknameBtn" style="margin-left:10px;">修改昵称</button>
+                            <button id="logout" style="margin-left:10px;">退出</button>
+                        </div>
+                    `;
                     document.getElementById('logout').onclick = async () => {
                         await supabaseClient.auth.signOut();
                         location.reload();
+                    };
+                    document.getElementById('editNicknameBtn').onclick = () => {
+                        document.getElementById('rename-modal').style.display = 'flex';
+                        document.getElementById('new-nickname').value = '';
+                        document.getElementById('rename-error').innerText = '';
                     };
                     commentFormArea.style.display = 'block';
                 } catch (err) {
@@ -281,8 +300,26 @@
             }
         }
 
+        async function updateNickname(newUsername) {
+            // 检查新用户名是否已被其他用户使用
+            const { data: existing, error: checkError } = await supabaseClient
+                .from('profiles')
+                .select('id')
+                .eq('username', newUsername)
+                .neq('id', currentUser.id)
+                .maybeSingle();
+            if (checkError) throw new Error('检查用户名失败');
+            if (existing) throw new Error('用户名已被占用');
+
+            // 更新
+            const { error: updateError } = await supabaseClient
+                .from('profiles')
+                .update({ username: newUsername })
+                .eq('id', currentUser.id);
+            if (updateError) throw updateError;
+        }
+
         async function register(username, email, password) {
-            // 检查用户名是否已存在
             const { data: existingUser } = await supabaseClient
                 .from('profiles')
                 .select('id')
@@ -290,7 +327,6 @@
                 .maybeSingle();
             if (existingUser) throw new Error('用户名已存在');
 
-            // 检查邮箱是否已存在（可选）
             const { data: existingEmail } = await supabaseClient
                 .from('profiles')
                 .select('id')
@@ -298,13 +334,20 @@
                 .maybeSingle();
             if (existingEmail) throw new Error('邮箱已被注册');
 
-            // 注册用户（不插入 profiles）
             const { data, error } = await supabaseClient.auth.signUp({ email, password });
             if (error) throw error;
             return data;
         }
 
-        async function login(email, password) {
+        async function login(username, password) {
+            const { data: profile, error: profileError } = await supabaseClient
+                .from('profiles')
+                .select('email')
+                .eq('username', username)
+                .single();
+            if (profileError || !profile) throw new Error('用户名不存在');
+            const email = profile.email;
+
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) throw error;
             return data;
@@ -315,13 +358,14 @@
         document.getElementById('close-login').onclick = () => document.getElementById('login-modal').style.display = 'none';
         document.getElementById('show-register').onclick = () => document.getElementById('register-modal').style.display = 'flex';
         document.getElementById('close-register').onclick = () => document.getElementById('register-modal').style.display = 'none';
+        document.getElementById('close-rename').onclick = () => document.getElementById('rename-modal').style.display = 'none';
 
         document.getElementById('do-login').onclick = async () => {
-            const email = document.getElementById('login-email').value.trim();
+            const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
             const errorDiv = document.getElementById('login-error');
             try {
-                await login(email, password);
+                await login(username, password);
                 document.getElementById('login-modal').style.display = 'none';
                 location.reload();
             } catch (err) {
@@ -342,6 +386,22 @@
                 await register(username, email, password);
                 document.getElementById('register-modal').style.display = 'none';
                 alert('注册成功！请登录');
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
+        };
+
+        document.getElementById('do-rename').onclick = async () => {
+            const newNickname = document.getElementById('new-nickname').value.trim();
+            const errorDiv = document.getElementById('rename-error');
+            if (!newNickname) {
+                errorDiv.innerText = '昵称不能为空';
+                return;
+            }
+            try {
+                await updateNickname(newNickname);
+                document.getElementById('rename-modal').style.display = 'none';
+                location.reload(); // 刷新页面显示新昵称
             } catch (err) {
                 errorDiv.innerText = err.message;
             }
