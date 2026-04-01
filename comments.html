@@ -7,7 +7,7 @@
     <title>NB频道 - 评论区</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* 样式保持不变，省略... */
+        /* 样式同上，省略... */
         .comment-section {
             max-width: 800px;
             margin: 40px auto;
@@ -137,7 +137,7 @@
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <h3>登录</h3>
-            <input type="text" id="login-username" placeholder="用户名">
+            <input type="email" id="login-email" placeholder="邮箱">
             <input type="password" id="login-password" placeholder="密码">
             <div id="login-error" class="error"></div>
             <button id="do-login">登录</button>
@@ -290,7 +290,7 @@
                 .maybeSingle();
             if (existingUser) throw new Error('用户名已存在');
 
-            // 检查邮箱是否已存在
+            // 检查邮箱是否已存在（可选）
             const { data: existingEmail } = await supabaseClient
                 .from('profiles')
                 .select('id')
@@ -304,16 +304,7 @@
             return data;
         }
 
-        async function login(username, password) {
-            // 通过用户名获取邮箱
-            const { data: profile, error: profileError } = await supabaseClient
-                .from('profiles')
-                .select('email')
-                .eq('username', username)
-                .single();
-            if (profileError || !profile) throw new Error('用户名不存在');
-            const email = profile.email;
-
+        async function login(email, password) {
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) throw error;
             return data;
@@ -326,11 +317,11 @@
         document.getElementById('close-register').onclick = () => document.getElementById('register-modal').style.display = 'none';
 
         document.getElementById('do-login').onclick = async () => {
-            const username = document.getElementById('login-username').value.trim();
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
             const errorDiv = document.getElementById('login-error');
             try {
-                await login(username, password);
+                await login(email, password);
                 document.getElementById('login-modal').style.display = 'none';
                 location.reload();
             } catch (err) {
