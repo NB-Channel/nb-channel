@@ -65,9 +65,12 @@
     <script src="js/common.js"></script>
     <script>
         AUTHOR_NAME = 'NB搞事局'; document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`; initTheme(); updateSiteStats(); if(typeof initShareButton === 'function') initShareButton();
+
+        // 使用 supabaseClient 避免与全局 supabase 冲突
         const SUPABASE_URL = 'https://stgdkwnpxdyhghfgywqj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_CeYSaPxbHXZNImMts166_w_jNTzuAsO';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         let currentUser = null;
         const pagePath = window.location.pathname;
         const userStatusSpan = document.getElementById('user-status');
@@ -75,9 +78,15 @@
         const newCommentArea = document.getElementById('new-comment-area');
         const commentText = document.getElementById('comment-text');
         const submitCommentBtn = document.getElementById('submit-comment');
+
         function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+
         async function fetchComments() {
-            const { data: comments, error } = await supabase.from('comments').select('*, profiles(username)').eq('page_path', pagePath).order('created_at', { ascending: false });
+            const { data: comments, error } = await supabaseClient
+                .from('comments')
+                .select('*, profiles(username)')
+                .eq('page_path', pagePath)
+                .order('created_at', { ascending: false });
             if(error){ console.error(error); return; }
             if(!comments || comments.length===0){ commentListDiv.innerHTML = '<p>暂无评论，快来抢沙发！</p>'; return; }
             let html = '';
@@ -88,15 +97,18 @@
             commentListDiv.innerHTML = html;
             document.querySelectorAll('.delete-btn').forEach(btn => btn.onclick = () => deleteComment(btn.dataset.id));
         }
-        async function deleteComment(commentId){ if(!currentUser) return; if(!confirm('确定删除？')) return; await supabase.from('comments').delete().eq('id', commentId).eq('user_id', currentUser.id); fetchComments(); }
-        async function postComment(){ if(!currentUser){ alert('请先登录'); return; } const content = commentText.value.trim(); if(!content) return; await supabase.from('comments').insert({ content, user_id: currentUser.id, page_path: pagePath }); commentText.value = ''; fetchComments(); }
+
+        async function deleteComment(commentId){ if(!currentUser) return; if(!confirm('确定删除？')) return; await supabaseClient.from('comments').delete().eq('id', commentId).eq('user_id', currentUser.id); fetchComments(); }
+
+        async function postComment(){ if(!currentUser){ alert('请先登录'); return; } const content = commentText.value.trim(); if(!content) return; await supabaseClient.from('comments').insert({ content, user_id: currentUser.id, page_path: pagePath }); commentText.value = ''; fetchComments(); }
+
         async function loadUser(){
-            const { data:{ session } } = await supabase.auth.getSession();
+            const { data:{ session } } = await supabaseClient.auth.getSession();
             if(session){
-                const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+                const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', session.user.id).single();
                 currentUser = { id: session.user.id, username: profile?.username };
                 userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
-                document.getElementById('logout-btn').onclick = async () => { await supabase.auth.signOut(); location.reload(); };
+                document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
                 newCommentArea.style.display = 'block';
             } else {
                 currentUser = null;
@@ -105,29 +117,33 @@
             }
             fetchComments();
         }
+
         async function register(username, password){
-            const { data: existing } = await supabase.from('profiles').select('id').eq('username', username).maybeSingle();
+            const { data: existing } = await supabaseClient.from('profiles').select('id').eq('username', username).maybeSingle();
             if(existing) throw new Error('用户名已存在');
             const fakeEmail = `${username}@nb-channel.local`;
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email: fakeEmail, password });
+            const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email: fakeEmail, password });
             if(signUpError) throw signUpError;
             const userId = signUpData.user.id;
-            const { error: profileError } = await supabase.from('profiles').insert({ id: userId, username, email: fakeEmail });
+            const { error: profileError } = await supabaseClient.from('profiles').insert({ id: userId, username, email: fakeEmail });
             if(profileError) throw profileError;
-            await supabase.auth.signInWithPassword({ email: fakeEmail, password });
+            await supabaseClient.auth.signInWithPassword({ email: fakeEmail, password });
             return signUpData;
         }
+
         async function login(username, password){
-            const { data: profile, error: profileError } = await supabase.from('profiles').select('email').eq('username', username).single();
+            const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('email').eq('username', username).single();
             if(profileError || !profile) throw new Error('用户名不存在');
             const email = profile.email;
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if(error) throw new Error('密码错误');
         }
+
         document.getElementById('show-login').onclick = () => document.getElementById('login-modal').style.display = 'flex';
         document.getElementById('close-login').onclick = () => document.getElementById('login-modal').style.display = 'none';
         document.getElementById('show-register').onclick = () => document.getElementById('register-modal').style.display = 'flex';
         document.getElementById('close-register').onclick = () => document.getElementById('register-modal').style.display = 'none';
+
         document.getElementById('do-login').onclick = async () => {
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
@@ -135,6 +151,7 @@
             try { await login(username, password); document.getElementById('login-modal').style.display = 'none'; location.reload(); }
             catch(err){ errorDiv.innerText = err.message; }
         };
+
         document.getElementById('do-register').onclick = async () => {
             const username = document.getElementById('reg-username').value.trim();
             const password = document.getElementById('reg-password').value;
@@ -143,6 +160,7 @@
             try { await register(username, password); document.getElementById('register-modal').style.display = 'none'; location.reload(); }
             catch(err){ errorDiv.innerText = err.message; }
         };
+
         submitCommentBtn.onclick = postComment;
         loadUser();
     </script>
