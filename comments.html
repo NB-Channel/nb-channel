@@ -5,35 +5,124 @@
     <meta name="referrer" content="no-referrer">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NB频道 - 评论区</title>
-    <!-- 公共样式（与你其他页面保持一致） -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- Tailwind CSS（评论组件依赖） -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React 和 ReactDOM -->
-    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
-    <!-- Babel 用于解析 JSX -->
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-    <!-- Supabase 客户端 -->
+    <!-- 引入 Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- 评论组件库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@envx-agent/supabase-comments-extension@0.1.2/dist/index.umd.js"></script>
-    <!-- 评论组件样式 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@envx-agent/supabase-comments-extension@0.1.2/dist/index.css">
     <style>
-        /* 确保评论组件在暗色模式下也能正常显示（可选） */
-        .comments-container {
+        /* 评论区专用样式 */
+        .comment-section {
             max-width: 800px;
             margin: 40px auto;
             padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-        /* 覆盖 Tailwind 可能带来的冲突，保持与原有网站风格一致 */
-        body {
-            background: var(--bg-color) !important;
+        .auth-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--card-border);
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        .auth-buttons button, .comment-form button, .reply-btn, .like-btn, .delete-btn {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+            margin-left: 8px;
+        }
+        .auth-buttons button:hover, .comment-form button:hover, .reply-btn:hover, .like-btn:hover, .delete-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            color: white;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+        .comment {
+            border-bottom: 1px solid var(--card-border);
+            padding: 15px 0;
+        }
+        .comment-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .comment-author {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .comment-time {
+            font-size: 0.8rem;
+            color: var(--count-text);
+        }
+        .comment-content {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+        .comment-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .replies {
+            margin-left: 40px;
+            margin-top: 15px;
+            border-left: 2px solid var(--card-border);
+            padding-left: 20px;
+        }
+        .reply-form {
+            margin-top: 10px;
+            display: none;
+        }
+        .reply-form textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: inherit;
+        }
+        .error {
+            color: #ff6b6b;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        .like-btn.liked {
+            background: #ff6b6b;
+            color: white;
         }
     </style>
 </head>
@@ -42,7 +131,7 @@
         <h1>📺 NB频道官网</h1>
         <div class="author-info" id="authorInfo">UP主：NB搞事局</div>
 
-        <!-- 导航栏（与你其他页面保持一致，注意高亮“评论”按钮） -->
+        <!-- 导航栏 -->
         <div class="nav-container">
             <div class="nav-links">
                 <a href="index.html" class="nav-btn">首页</a>
@@ -58,73 +147,328 @@
             </div>
         </div>
 
-        <!-- 评论区容器 -->
-        <div id="comments-root" class="comments-container"></div>
-
-        <!-- 底部统计（可选） -->
-        <div class="stats-container">
-            <span>总访问 <span id="vercount_value_site_pv">Loading</span> 次</span>
-            <span>总访客 <span id="vercount_value_site_uv">Loading</span> 人</span>
+        <!-- 评论区 -->
+        <div class="comment-section">
+            <div class="auth-status">
+                <span id="user-info">未登录</span>
+                <div class="auth-buttons">
+                    <button id="show-login">登录</button>
+                    <button id="show-register">注册</button>
+                </div>
+            </div>
+            <div id="comment-list"></div>
+            <div id="new-comment-area" style="display: none;">
+                <form id="comment-form">
+                    <textarea id="comment-content" rows="3" placeholder="写下你的评论..." style="width:100%; margin-bottom:10px;"></textarea>
+                    <button type="submit">发布评论</button>
+                </form>
+            </div>
         </div>
-        <p align="center" style="margin-top:15px;"><strong>©2026NB频道</strong></p>
-        <p align="center"><strong>制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank">NB搞事局</a></strong></p>
-        <p align="center"><a href="https://github.com/" target="_blank">Github</a>和<a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank">Cloudflare</a>提供网站托管服务</p>
+    </div>
+
+    <!-- 登录弹窗 -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h3>登录</h3>
+            <input type="email" id="login-email" placeholder="邮箱">
+            <input type="password" id="login-password" placeholder="密码">
+            <div id="login-error" class="error"></div>
+            <button id="do-login">登录</button>
+            <button id="close-login">取消</button>
+        </div>
+    </div>
+
+    <!-- 注册弹窗 -->
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <h3>注册</h3>
+            <input type="email" id="reg-email" placeholder="邮箱">
+            <input type="password" id="reg-password" placeholder="密码">
+            <div id="register-error" class="error"></div>
+            <button id="do-register">注册</button>
+            <button id="close-register">取消</button>
+        </div>
     </div>
 
     <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
 
-    <!-- 公共脚本（夜间模式、回到顶部、统计等） -->
     <script src="data/videos.js"></script>
     <script src="js/common.js"></script>
     <script>
+        // 初始化公共部分
         AUTHOR_NAME = 'NB搞事局';
         document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`;
         initTheme();
         updateSiteStats();
-        if (typeof initShareButton === 'function') {
-            initShareButton();
-        }
-    </script>
+        if (typeof initShareButton === 'function') initShareButton();
 
-    <!-- 评论组件初始化脚本 -->
-    <script type="text/babel">
-        const { createClient } = supabase;
-        const { CommentsProvider, Comments, AuthModal } = SupabaseCommentsExtension;
-
-        // 你的 Supabase 配置（请勿修改，已填入正确值）
+        // ==================== Supabase 配置 ====================
         const SUPABASE_URL = 'https://stgdkwnpxdyhghfgywqj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_CeYSaPxbHXZNImMts166_w_jNTzuAsO';
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // =====================================================
 
-        function App() {
-            const [modalVisible, setModalVisible] = React.useState(false);
+        let currentUser = null;
+        const pagePath = window.location.pathname;
 
-            return (
-                <CommentsProvider 
-                    supabaseClient={supabaseClient} 
-                    onAuthRequested={() => setModalVisible(true)}
-                >
-                    <AuthModal 
-                        visible={modalVisible} 
-                        onAuthenticate={() => setModalVisible(false)}
-                        onClose={() => setModalVisible(false)} 
-                        providers={['email']}   // 使用邮箱+密码登录/注册，会自动发送验证邮件
-                        redirectTo={window.location.href}
-                    />
-                    <Comments 
-                        topic="nb-channel-comments" 
-                        // 可选：配置评论排序，默认按时间倒序
-                        sortBy="created_at"
-                        // 开启回复功能
-                        enableReplies={true}
-                        // 开启点赞
-                        enableLikes={true}
-                    />
-                </CommentsProvider>
-            );
+        // DOM 元素
+        const commentListDiv = document.getElementById('comment-list');
+        const newCommentArea = document.getElementById('new-comment-area');
+        const userInfoSpan = document.getElementById('user-info');
+        const commentForm = document.getElementById('comment-form');
+        const commentContent = document.getElementById('comment-content');
+
+        // 辅助函数
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
 
-        ReactDOM.render(<App />, document.getElementById('comments-root'));
+        async function fetchComments() {
+            // 获取所有评论（包括回复），按创建时间升序，方便渲染嵌套
+            const { data, error } = await supabase
+                .from('comments')
+                .select('*, user:auth.users!user_id(email)')
+                .eq('page_path', pagePath)
+                .order('created_at', { ascending: true });
+            if (error) {
+                console.error('加载评论失败', error);
+                return;
+            }
+            // 构建树形结构：顶级评论（parent_id 为 null）和回复
+            const commentsMap = new Map();
+            const roots = [];
+            data.forEach(comment => {
+                commentsMap.set(comment.id, { ...comment, replies: [] });
+            });
+            data.forEach(comment => {
+                const node = commentsMap.get(comment.id);
+                if (comment.parent_id && commentsMap.has(comment.parent_id)) {
+                    commentsMap.get(comment.parent_id).replies.push(node);
+                } else {
+                    roots.push(node);
+                }
+            });
+            renderComments(roots);
+        }
+
+        function renderComments(comments, isReply = false) {
+            let html = '';
+            for (const comment of comments) {
+                const userEmail = comment.user?.email || '未知用户';
+                const authorName = userEmail.split('@')[0]; // 取邮箱前缀作为显示名
+                const likeCount = comment.like_count || 0;
+                const likedByCurrent = comment.liked_by_user || false;
+                html += `
+                    <div class="comment" data-id="${comment.id}">
+                        <div class="comment-meta">
+                            <span class="comment-author">${escapeHtml(authorName)}</span>
+                            <span class="comment-time">${new Date(comment.created_at).toLocaleString()}</span>
+                        </div>
+                        <div class="comment-content">${escapeHtml(comment.content)}</div>
+                        <div class="comment-actions">
+                            <button class="reply-btn" data-id="${comment.id}">回复</button>
+                            <button class="like-btn ${likedByCurrent ? 'liked' : ''}" data-id="${comment.id}" data-liked="${likedByCurrent}">👍 ${likeCount}</button>
+                            ${currentUser && currentUser.id === comment.user_id ? `<button class="delete-btn" data-id="${comment.id}">删除</button>` : ''}
+                        </div>
+                        <div class="reply-form" id="reply-form-${comment.id}" style="display:none;">
+                            <textarea rows="2" placeholder="写下你的回复..."></textarea>
+                            <button class="submit-reply" data-id="${comment.id}">提交回复</button>
+                            <button class="cancel-reply" data-id="${comment.id}">取消</button>
+                        </div>
+                        <div class="replies">
+                            ${comment.replies ? renderComments(comment.replies, true) : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            if (isReply) return html;
+            commentListDiv.innerHTML = html || '<p>暂无评论，快来抢沙发！</p>';
+            // 绑定动态按钮事件
+            document.querySelectorAll('.reply-btn').forEach(btn => {
+                btn.onclick = () => toggleReplyForm(btn.dataset.id);
+            });
+            document.querySelectorAll('.submit-reply').forEach(btn => {
+                btn.onclick = () => submitReply(btn.dataset.id);
+            });
+            document.querySelectorAll('.cancel-reply').forEach(btn => {
+                btn.onclick = () => toggleReplyForm(btn.dataset.id, true);
+            });
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.onclick = () => toggleLike(btn.dataset.id, btn.dataset.liked === 'true');
+            });
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.onclick = () => deleteComment(btn.dataset.id);
+            });
+        }
+
+        function toggleReplyForm(commentId, hide = false) {
+            const form = document.getElementById(`reply-form-${commentId}`);
+            if (form) {
+                form.style.display = hide || form.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+
+        async function submitReply(parentId) {
+            if (!currentUser) {
+                alert('请先登录');
+                return;
+            }
+            const form = document.getElementById(`reply-form-${parentId}`);
+            const textarea = form.querySelector('textarea');
+            const content = textarea.value.trim();
+            if (!content) return;
+            const { error } = await supabase
+                .from('comments')
+                .insert({
+                    content: content,
+                    user_id: currentUser.id,
+                    parent_id: parentId,
+                    page_path: pagePath,
+                });
+            if (error) {
+                console.error('回复失败', error);
+                alert('回复失败，请重试');
+            } else {
+                textarea.value = '';
+                toggleReplyForm(parentId, true);
+                fetchComments();
+            }
+        }
+
+        async function toggleLike(commentId, currentlyLiked) {
+            if (!currentUser) {
+                alert('请先登录');
+                return;
+            }
+            if (currentlyLiked) {
+                // 取消点赞：删除 like 记录
+                const { error } = await supabase
+                    .from('comment_likes')
+                    .delete()
+                    .eq('comment_id', commentId)
+                    .eq('user_id', currentUser.id);
+                if (error) console.error('取消点赞失败', error);
+            } else {
+                // 点赞：插入 like 记录
+                const { error } = await supabase
+                    .from('comment_likes')
+                    .insert({ comment_id: commentId, user_id: currentUser.id });
+                if (error) console.error('点赞失败', error);
+            }
+            // 更新评论的 like_count（可以在数据库用触发器自动维护，这里简单重新加载）
+            fetchComments();
+        }
+
+        async function deleteComment(commentId) {
+            if (!currentUser) return;
+            if (!confirm('确定要删除这条评论吗？')) return;
+            const { error } = await supabase
+                .from('comments')
+                .delete()
+                .eq('id', commentId)
+                .eq('user_id', currentUser.id);
+            if (error) {
+                console.error('删除失败', error);
+                alert('删除失败，请重试');
+            } else {
+                fetchComments();
+            }
+        }
+
+        async function loadUser() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = { id: session.user.id, email: session.user.email };
+                userInfoSpan.innerText = `欢迎，${currentUser.email.split('@')[0]} | `;
+                const logoutBtn = document.createElement('button');
+                logoutBtn.innerText = '退出';
+                logoutBtn.onclick = async () => {
+                    await supabase.auth.signOut();
+                    location.reload();
+                };
+                userInfoSpan.appendChild(logoutBtn);
+                newCommentArea.style.display = 'block';
+            } else {
+                currentUser = null;
+                userInfoSpan.innerText = '未登录';
+                newCommentArea.style.display = 'none';
+            }
+            fetchComments();
+        }
+
+        // 发表新评论（顶级）
+        commentForm.onsubmit = async (e) => {
+            e.preventDefault();
+            if (!currentUser) {
+                alert('请先登录');
+                return;
+            }
+            const content = commentContent.value.trim();
+            if (!content) return;
+            const { error } = await supabase
+                .from('comments')
+                .insert({
+                    content: content,
+                    user_id: currentUser.id,
+                    parent_id: null,
+                    page_path: pagePath,
+                });
+            if (error) {
+                console.error('发表评论失败', error);
+                alert('发表失败，请重试');
+            } else {
+                commentContent.value = '';
+                fetchComments();
+            }
+        };
+
+        // 登录/注册弹窗逻辑
+        const loginModal = document.getElementById('login-modal');
+        const registerModal = document.getElementById('register-modal');
+        document.getElementById('show-login').onclick = () => loginModal.style.display = 'flex';
+        document.getElementById('close-login').onclick = () => loginModal.style.display = 'none';
+        document.getElementById('show-register').onclick = () => registerModal.style.display = 'flex';
+        document.getElementById('close-register').onclick = () => registerModal.style.display = 'none';
+
+        document.getElementById('do-login').onclick = async () => {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+            try {
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                loginModal.style.display = 'none';
+                location.reload();
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
+        };
+
+        document.getElementById('do-register').onclick = async () => {
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const errorDiv = document.getElementById('register-error');
+            if (!email || !password) {
+                errorDiv.innerText = '请填写完整信息';
+                return;
+            }
+            try {
+                const { error } = await supabase.auth.signUp({ email, password });
+                if (error) throw error;
+                registerModal.style.display = 'none';
+                alert('注册成功！请查收邮箱验证邮件，验证后即可登录。');
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
+        };
+
+        loadUser();
     </script>
 </body>
 </html>
