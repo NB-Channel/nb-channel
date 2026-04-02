@@ -7,7 +7,6 @@
     <title>NB频道 - 评论区</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* 样式与你原来的完全一致，省略重复内容 */
         .comment-section {
             max-width: 800px;
             margin: 40px auto;
@@ -211,7 +210,6 @@
             `).join('');
         }
 
-        // 登录后检查并创建 profile
         async function ensureProfile(userId, email) {
             let { data: profile, error } = await supabaseClient
                 .from('profiles')
@@ -224,13 +222,10 @@
             }
             if (profile) return profile;
 
-            // 没有 profile，需要创建
             let username = '';
             while (!username) {
                 username = prompt('请设置您的用户名（用于显示）：', email.split('@')[0]);
-                if (username === null) {
-                    throw new Error('用户取消设置');
-                }
+                if (username === null) throw new Error('用户取消设置');
                 username = username.trim();
                 if (username === '') {
                     alert('用户名不能为空');
@@ -249,10 +244,7 @@
             const { error: insertError } = await supabaseClient
                 .from('profiles')
                 .insert({ id: userId, username, email });
-            if (insertError) {
-                console.error('插入profile失败', insertError);
-                throw new Error('设置用户名失败，请稍后重试');
-            }
+            if (insertError) throw new Error('设置用户名失败，请稍后重试');
             return { username };
         }
 
@@ -290,7 +282,7 @@
                 .maybeSingle();
             if (existingUser) throw new Error('用户名已存在');
 
-            // 检查邮箱是否已存在（可选）
+            // 检查邮箱是否已存在
             const { data: existingEmail } = await supabaseClient
                 .from('profiles')
                 .select('id')
@@ -298,7 +290,7 @@
                 .maybeSingle();
             if (existingEmail) throw new Error('邮箱已被注册');
 
-            // 注册用户（不插入 profiles）
+            // 注册用户（此时邮箱验证已关闭，注册后自动激活）
             const { data, error } = await supabaseClient.auth.signUp({ email, password });
             if (error) throw error;
             return data;
@@ -306,13 +298,7 @@
 
         async function login(email, password) {
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                // 特殊处理邮箱未验证错误
-                if (error.message && error.message.includes('Email not confirmed')) {
-                    throw new Error('邮箱尚未验证，请先查收验证邮件并点击链接激活账号');
-                }
-                throw error;
-            }
+            if (error) throw error;
             return data;
         }
 
@@ -346,8 +332,10 @@
             }
             try {
                 await register(username, email, password);
+                // 注册成功后自动登录
+                await login(email, password);
                 document.getElementById('register-modal').style.display = 'none';
-                alert('注册成功！验证邮件已发送至您的邮箱，请点击链接激活账号后再登录。');
+                location.reload();
             } catch (err) {
                 errorDiv.innerText = err.message;
             }
