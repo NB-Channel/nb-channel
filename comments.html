@@ -7,7 +7,7 @@
     <title>NB频道 - 评论区</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* 样式同上，省略... */
+        /* 样式与你原来的完全一致，省略重复内容 */
         .comment-section {
             max-width: 800px;
             margin: 40px auto;
@@ -306,7 +306,13 @@
 
         async function login(email, password) {
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) throw error;
+            if (error) {
+                // 特殊处理邮箱未验证错误
+                if (error.message && error.message.includes('Email not confirmed')) {
+                    throw new Error('邮箱尚未验证，请先查收验证邮件并点击链接激活账号');
+                }
+                throw error;
+            }
             return data;
         }
 
@@ -341,7 +347,7 @@
             try {
                 await register(username, email, password);
                 document.getElementById('register-modal').style.display = 'none';
-                alert('注册成功！请登录');
+                alert('注册成功！验证邮件已发送至您的邮箱，请点击链接激活账号后再登录。');
             } catch (err) {
                 errorDiv.innerText = err.message;
             }
