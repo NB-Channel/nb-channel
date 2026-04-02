@@ -9,7 +9,7 @@
     <!-- 引入 Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 评论区专用样式 */
+        /* 评论区专用样式（与之前相同，省略...） */
         .comment-section {
             max-width: 800px;
             margin: 40px auto;
@@ -205,7 +205,8 @@
         // ==================== Supabase 配置 ====================
         const SUPABASE_URL = 'https://stgdkwnpxdyhghfgywqj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_CeYSaPxbHXZNImMts166_w_jNTzuAsO';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // 注意：这里将变量名改为 supabaseClient 避免与全局 supabase 冲突
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         // =====================================================
 
         let currentUser = null;
@@ -230,8 +231,7 @@
         }
 
         async function fetchComments() {
-            // 获取所有评论（包括回复），按创建时间升序，方便渲染嵌套
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('comments')
                 .select('*, user:auth.users!user_id(email)')
                 .eq('page_path', pagePath)
@@ -240,7 +240,7 @@
                 console.error('加载评论失败', error);
                 return;
             }
-            // 构建树形结构：顶级评论（parent_id 为 null）和回复
+            // 构建树形结构
             const commentsMap = new Map();
             const roots = [];
             data.forEach(comment => {
@@ -261,7 +261,7 @@
             let html = '';
             for (const comment of comments) {
                 const userEmail = comment.user?.email || '未知用户';
-                const authorName = userEmail.split('@')[0]; // 取邮箱前缀作为显示名
+                const authorName = userEmail.split('@')[0];
                 const likeCount = comment.like_count || 0;
                 const likedByCurrent = comment.liked_by_user || false;
                 html += `
@@ -289,7 +289,7 @@
             }
             if (isReply) return html;
             commentListDiv.innerHTML = html || '<p>暂无评论，快来抢沙发！</p>';
-            // 绑定动态按钮事件
+            // 绑定动态按钮
             document.querySelectorAll('.reply-btn').forEach(btn => {
                 btn.onclick = () => toggleReplyForm(btn.dataset.id);
             });
@@ -323,7 +323,7 @@
             const textarea = form.querySelector('textarea');
             const content = textarea.value.trim();
             if (!content) return;
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('comments')
                 .insert({
                     content: content,
@@ -347,28 +347,25 @@
                 return;
             }
             if (currentlyLiked) {
-                // 取消点赞：删除 like 记录
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('comment_likes')
                     .delete()
                     .eq('comment_id', commentId)
                     .eq('user_id', currentUser.id);
                 if (error) console.error('取消点赞失败', error);
             } else {
-                // 点赞：插入 like 记录
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('comment_likes')
                     .insert({ comment_id: commentId, user_id: currentUser.id });
                 if (error) console.error('点赞失败', error);
             }
-            // 更新评论的 like_count（可以在数据库用触发器自动维护，这里简单重新加载）
             fetchComments();
         }
 
         async function deleteComment(commentId) {
             if (!currentUser) return;
             if (!confirm('确定要删除这条评论吗？')) return;
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('comments')
                 .delete()
                 .eq('id', commentId)
@@ -382,14 +379,14 @@
         }
 
         async function loadUser() {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 currentUser = { id: session.user.id, email: session.user.email };
                 userInfoSpan.innerText = `欢迎，${currentUser.email.split('@')[0]} | `;
                 const logoutBtn = document.createElement('button');
                 logoutBtn.innerText = '退出';
                 logoutBtn.onclick = async () => {
-                    await supabase.auth.signOut();
+                    await supabaseClient.auth.signOut();
                     location.reload();
                 };
                 userInfoSpan.appendChild(logoutBtn);
@@ -402,7 +399,6 @@
             fetchComments();
         }
 
-        // 发表新评论（顶级）
         commentForm.onsubmit = async (e) => {
             e.preventDefault();
             if (!currentUser) {
@@ -411,7 +407,7 @@
             }
             const content = commentContent.value.trim();
             if (!content) return;
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('comments')
                 .insert({
                     content: content,
@@ -428,7 +424,7 @@
             }
         };
 
-        // 登录/注册弹窗逻辑
+        // 登录/注册弹窗
         const loginModal = document.getElementById('login-modal');
         const registerModal = document.getElementById('register-modal');
         document.getElementById('show-login').onclick = () => loginModal.style.display = 'flex';
@@ -441,7 +437,7 @@
             const password = document.getElementById('login-password').value;
             const errorDiv = document.getElementById('login-error');
             try {
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
                 if (error) throw error;
                 loginModal.style.display = 'none';
                 location.reload();
@@ -459,7 +455,7 @@
                 return;
             }
             try {
-                const { error } = await supabase.auth.signUp({ email, password });
+                const { error } = await supabaseClient.auth.signUp({ email, password });
                 if (error) throw error;
                 registerModal.style.display = 'none';
                 alert('注册成功！请查收邮箱验证邮件，验证后即可登录。');
