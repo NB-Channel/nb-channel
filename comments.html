@@ -6,28 +6,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NB频道 - 评论区</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .comment-section { max-width:800px; margin:40px auto; padding:20px; background:var(--card-bg); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-        .auth-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--card-border); }
-        button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:6px 12px; border-radius:20px; cursor:pointer; }
-        button:hover { background:var(--nav-btn-hover-bg); color:white; }
-        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000; }
-        .modal-content { background:var(--card-bg); padding:30px; border-radius:12px; max-width:400px; width:90%; }
-        .modal-content input { width:100%; padding:10px; margin:10px 0; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); }
-        .comment { border-bottom:1px solid var(--card-border); padding:15px 0; }
-        .comment-meta { display:flex; align-items:center; gap:15px; margin-bottom:8px; }
-        .comment-author { font-weight:bold; }
-        .comment-time { font-size:0.8rem; color:var(--count-text); }
-        .comment-content { margin:8px 0; }
-        .error { color:#ff6b6b; font-size:0.9rem; margin-top:5px; }
-        textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; }
+        /* 样式同上，省略... */
+        .comment-section {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .auth-buttons button, .comment-form button {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .auth-buttons button:hover, .comment-form button:hover {
+            background: var(--nav-btn-hover-bg);
+            color: white;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+        .comment {
+            border-bottom: 1px solid var(--card-border);
+            padding: 15px 0;
+        }
+        .comment strong {
+            color: var(--text-color);
+        }
+        .comment small {
+            color: var(--count-text);
+            margin-left: 10px;
+        }
+        .comment p {
+            margin-top: 8px;
+        }
+        .comment-form {
+            margin-top: 20px;
+        }
+        .comment-form textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: inherit;
+        }
+        .error {
+            color: #ff6b6b;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📺 NB频道官网</h1>
         <div class="author-info" id="authorInfo">UP主：NB搞事局</div>
+
+        <!-- 导航栏（请根据你的实际页面修改链接） -->
         <div class="nav-container">
             <div class="nav-links">
                 <a href="index.html" class="nav-btn">首页</a>
@@ -42,117 +115,260 @@
                 <button class="share-btn" id="shareButton">📤 分享此频道</button>
             </div>
         </div>
+
         <div class="comment-section">
-            <div class="auth-bar">
-                <span id="user-status">未登录</span>
-                <div>
+            <div id="user-info" style="display: flex; justify-content: space-between; align-items: center;">
+                <div id="auth-status">未登录</div>
+                <div class="auth-buttons">
                     <button id="show-login">登录</button>
                     <button id="show-register">注册</button>
                 </div>
             </div>
             <div id="comment-list"></div>
-            <div id="new-comment-area" style="display: none;">
-                <textarea id="comment-text" rows="3" placeholder="写下你的评论..."></textarea>
-                <button id="submit-comment" style="margin-top:10px;">发布评论</button>
+            <div id="comment-form-area" style="display: none;">
+                <form id="comment-form" class="comment-form">
+                    <textarea id="comment-content" rows="3" placeholder="写下你的评论..."></textarea>
+                    <button type="submit">发布评论</button>
+                </form>
             </div>
         </div>
     </div>
-    <div id="login-modal" class="modal"><div class="modal-content"><h3>登录</h3><input type="text" id="login-username" placeholder="用户名"><input type="password" id="login-password" placeholder="密码"><div id="login-error" class="error"></div><button id="do-login">登录</button><button id="close-login">取消</button></div></div>
-    <div id="register-modal" class="modal"><div class="modal-content"><h3>注册</h3><input type="text" id="reg-username" placeholder="用户名"><input type="password" id="reg-password" placeholder="密码"><div id="register-error" class="error"></div><button id="do-register">注册</button><button id="close-register">取消</button></div></div>
+
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h3>登录</h3>
+            <input type="email" id="login-email" placeholder="邮箱">
+            <input type="password" id="login-password" placeholder="密码">
+            <div id="login-error" class="error"></div>
+            <button id="do-login">登录</button>
+            <button id="close-login">取消</button>
+        </div>
+    </div>
+
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <h3>注册</h3>
+            <input type="text" id="reg-username" placeholder="用户名">
+            <input type="email" id="reg-email" placeholder="邮箱">
+            <input type="password" id="reg-password" placeholder="密码">
+            <div id="register-error" class="error"></div>
+            <button id="do-register">注册</button>
+            <button id="close-register">取消</button>
+        </div>
+    </div>
+
     <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
-    <script src="data/videos.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/common.js"></script>
     <script>
-        AUTHOR_NAME = 'NB搞事局'; document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`; initTheme(); updateSiteStats(); if(typeof initShareButton === 'function') initShareButton();
         const SUPABASE_URL = 'https://stgdkwnpxdyhghfgywqj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_CeYSaPxbHXZNImMts166_w_jNTzuAsO';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         let currentUser = null;
         const pagePath = window.location.pathname;
-        const userStatusSpan = document.getElementById('user-status');
-        const commentListDiv = document.getElementById('comment-list');
-        const newCommentArea = document.getElementById('new-comment-area');
-        const commentText = document.getElementById('comment-text');
-        const submitCommentBtn = document.getElementById('submit-comment');
 
-        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+        const authStatus = document.getElementById('auth-status');
+        const commentList = document.getElementById('comment-list');
+        const commentFormArea = document.getElementById('comment-form-area');
+        const commentContent = document.getElementById('comment-content');
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
 
         async function fetchComments() {
-            const { data, error } = await supabaseClient.from('comments').select('*').eq('page_path', pagePath).order('created_at', { ascending: false });
-            if(error){ console.error(error); return; }
-            if(!data || data.length===0){ commentListDiv.innerHTML = '<p>暂无评论，快来抢沙发！</p>'; return; }
-            let html = '';
-            for(const c of data){
-                html += `<div class="comment"><div class="comment-meta"><span class="comment-author">${escapeHtml(c.author_name)}</span><span class="comment-time">${new Date(c.created_at).toLocaleString()}</span></div><div class="comment-content">${escapeHtml(c.content)}</div></div>`;
+            const { data, error } = await supabaseClient
+                .from('comments')
+                .select(`*, profiles (username)`)
+                .eq('page_path', pagePath)
+                .order('created_at', { ascending: false });
+            if (error) {
+                console.error('加载评论失败', error);
+                return;
             }
-            commentListDiv.innerHTML = html;
+            renderComments(data);
         }
 
-        async function postComment() {
-            if(!currentUser){ alert('请先登录'); return; }
-            const content = commentText.value.trim();
-            if(!content) return;
-            const { error } = await supabaseClient.from('comments').insert({ content, author_name: currentUser.username, page_path: pagePath });
-            if(error){ console.error(error); alert('发表失败'); } else { commentText.value = ''; fetchComments(); }
+        function renderComments(comments) {
+            if (!comments || comments.length === 0) {
+                commentList.innerHTML = '<p>暂无评论，快来抢沙发！</p>';
+                return;
+            }
+            commentList.innerHTML = comments.map(c => `
+                <div class="comment">
+                    <strong>${escapeHtml(c.profiles.username)}</strong>
+                    <small>${new Date(c.created_at).toLocaleString()}</small>
+                    <p>${escapeHtml(c.content)}</p>
+                </div>
+            `).join('');
         }
 
-        // 注册：使用 Supabase Auth 但用户只感知用户名。我们为用户生成一个固定邮箱：username@nbchannel.local
-        async function register(username, password) {
-            const email = `${username}@nbchannel.local`;
-            const { data, error } = await supabaseClient.auth.signUp({ email, password });
-            if(error) throw error;
-            // 同时插入 profiles 表记录用户名（可选，用于登录时映射）
-            await supabaseClient.from('profiles').insert({ id: data.user.id, username });
-            return data;
-        }
+        // 登录后检查并创建 profile
+        async function ensureProfile(userId, email) {
+            let { data: profile, error } = await supabaseClient
+                .from('profiles')
+                .select('username')
+                .eq('id', userId)
+                .maybeSingle();
+            if (error && error.code !== 'PGRST116') {
+                console.error('查询profile失败', error);
+                throw new Error('查询用户信息失败');
+            }
+            if (profile) return profile;
 
-        // 登录：通过用户名查找邮箱，再用邮箱登录
-        async function login(username, password) {
-            const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('id').eq('username', username).single();
-            if(profileError || !profile) throw new Error('用户名不存在');
-            const email = `${username}@nbchannel.local`;
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if(error) throw new Error('密码错误');
+            // 没有 profile，需要创建
+            let username = '';
+            while (!username) {
+                username = prompt('请设置您的用户名（用于显示）：', email.split('@')[0]);
+                if (username === null) {
+                    throw new Error('用户取消设置');
+                }
+                username = username.trim();
+                if (username === '') {
+                    alert('用户名不能为空');
+                    continue;
+                }
+                const { data: existing } = await supabaseClient
+                    .from('profiles')
+                    .select('id')
+                    .eq('username', username)
+                    .maybeSingle();
+                if (existing) {
+                    alert('用户名已被占用，请换一个');
+                    username = '';
+                }
+            }
+            const { error: insertError } = await supabaseClient
+                .from('profiles')
+                .insert({ id: userId, username, email });
+            if (insertError) {
+                console.error('插入profile失败', insertError);
+                throw new Error('设置用户名失败，请稍后重试');
+            }
+            return { username };
         }
 
         async function loadUser() {
             const { data: { session } } = await supabaseClient.auth.getSession();
-            if(session){
-                const { data: profile } = await supabaseClient.from('profiles').select('username').eq('id', session.user.id).single();
-                currentUser = { id: session.user.id, username: profile?.username };
-                userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
-                document.getElementById('logout-btn').onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
-                newCommentArea.style.display = 'block';
+            if (session) {
+                try {
+                    const profile = await ensureProfile(session.user.id, session.user.email);
+                    currentUser = { id: session.user.id, username: profile.username };
+                    authStatus.innerHTML = `<div>欢迎，${escapeHtml(currentUser.username)} <button id="logout">退出</button></div>`;
+                    document.getElementById('logout').onclick = async () => {
+                        await supabaseClient.auth.signOut();
+                        location.reload();
+                    };
+                    commentFormArea.style.display = 'block';
+                } catch (err) {
+                    console.error(err);
+                    alert(err.message);
+                    await supabaseClient.auth.signOut();
+                    location.reload();
+                }
             } else {
                 currentUser = null;
-                userStatusSpan.innerText = '未登录';
-                newCommentArea.style.display = 'none';
+                authStatus.innerHTML = '未登录';
+                commentFormArea.style.display = 'none';
             }
-            fetchComments();
         }
 
+        async function register(username, email, password) {
+            // 检查用户名是否已存在
+            const { data: existingUser } = await supabaseClient
+                .from('profiles')
+                .select('id')
+                .eq('username', username)
+                .maybeSingle();
+            if (existingUser) throw new Error('用户名已存在');
+
+            // 检查邮箱是否已存在（可选）
+            const { data: existingEmail } = await supabaseClient
+                .from('profiles')
+                .select('id')
+                .eq('email', email)
+                .maybeSingle();
+            if (existingEmail) throw new Error('邮箱已被注册');
+
+            // 注册用户（不插入 profiles）
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) throw error;
+            return data;
+        }
+
+        async function login(email, password) {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            return data;
+        }
+
+        // 事件绑定
         document.getElementById('show-login').onclick = () => document.getElementById('login-modal').style.display = 'flex';
         document.getElementById('close-login').onclick = () => document.getElementById('login-modal').style.display = 'none';
         document.getElementById('show-register').onclick = () => document.getElementById('register-modal').style.display = 'flex';
         document.getElementById('close-register').onclick = () => document.getElementById('register-modal').style.display = 'none';
 
         document.getElementById('do-login').onclick = async () => {
-            const username = document.getElementById('login-username').value.trim();
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
             const errorDiv = document.getElementById('login-error');
-            try{ await login(username, password); document.getElementById('login-modal').style.display = 'none'; location.reload(); }
-            catch(err){ errorDiv.innerText = err.message; }
+            try {
+                await login(email, password);
+                document.getElementById('login-modal').style.display = 'none';
+                location.reload();
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
         };
+
         document.getElementById('do-register').onclick = async () => {
             const username = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
             const errorDiv = document.getElementById('register-error');
-            if(!username || !password){ errorDiv.innerText = '请填写完整'; return; }
-            try{ await register(username, password); document.getElementById('register-modal').style.display = 'none'; alert('注册成功！请登录'); }
-            catch(err){ errorDiv.innerText = err.message; }
+            if (!username || !email || !password) {
+                errorDiv.innerText = '请填写完整信息';
+                return;
+            }
+            try {
+                await register(username, email, password);
+                document.getElementById('register-modal').style.display = 'none';
+                alert('注册成功！请登录');
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
         };
-        submitCommentBtn.onclick = postComment;
+
+        document.getElementById('comment-form').onsubmit = async (e) => {
+            e.preventDefault();
+            if (!currentUser) {
+                alert('请先登录');
+                return;
+            }
+            const content = commentContent.value.trim();
+            if (!content) return;
+            const { error } = await supabaseClient
+                .from('comments')
+                .insert({ page_path: pagePath, user_id: currentUser.id, content });
+            if (error) {
+                console.error('发布失败', error);
+                alert('发布失败，请重试');
+            } else {
+                commentContent.value = '';
+                fetchComments();
+            }
+        };
+
         loadUser();
+        fetchComments();
     </script>
 </body>
 </html>
