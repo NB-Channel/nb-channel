@@ -59,7 +59,7 @@
         </div>
         <div class="comment-section">
             <div class="auth-bar">
-                <span id="user-status">您现在未登录，清登录后再发表评论（新用户清先注册）</span>
+                <span id="user-status">您现在未登录，请登录后再发表评论（新用户清先注册）</span>
                 <div>
                     <button id="show-login">登录</button>
                     <button id="show-register">注册</button>
@@ -316,7 +316,7 @@
                 } catch(e) {}
             }
             currentUser = null;
-            userStatusSpan.innerHTML = '您现在未登录，清登录后再发表评论（新用户清先注册）';
+            userStatusSpan.innerHTML = '您现在未登录，请登录后再发表评论（新用户清先注册）';
             newCommentArea.style.display = 'none';
             fetchComments();
         }
