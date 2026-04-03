@@ -13,14 +13,21 @@
         <h1>📺 NB频道官网</h1>
         <div class="author-info" id="authorInfo">UP主：NB搞事局</div>
 
-        <div class="nav-bar">
-            <a href="index.html" class="nav-btn">首页</a>
-            <a href="videos.html" class="nav-btn">视频</a>
-            <a href="about.html" class="nav-btn">关于</a>
-            <a href="changelog.html" class="nav-btn active">更新日志</a>
-            <a href="product.html" class="nav-btn">我的产品</a>
-            <a href="APP.html" class="nav-btn">软件/APP下载</a>
-            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 夜间模式</button>
+        <!-- 导航栏（两行布局） -->
+        <div class="nav-container">
+            <!-- 第一行：主要页面链接 -->
+            <div class="nav-links">
+                <a href="index.html" class="nav-btn">首页</a>
+                <a href="videos.html" class="nav-btn">视频</a>
+                <a href="about.html" class="nav-btn">关于</a>
+                <a href="changelog.html" class="nav-btn active">更新日志</a>
+                <a href="product.html" class="nav-btn">我的产品</a>
+            </div>
+            <!-- 第二行：功能按钮 -->
+            <div class="nav-actions">
+                <a href="APP.html" class="nav-btn">软件/APP下载</a>
+                <a href="comments.html" class="nav-btn">💬 评论</a>
+            </div>
         </div>
 
         <!-- 更新日志内容 -->
@@ -99,13 +106,16 @@
 
         <!-- 建站统计区域 -->
         <div class="site-stats" id="siteStats"></div>
-        <p align="center" style="margin-top:15px;" <strong>© 2026NB频道 nb-channel.top，github.nb-channel.top，cloudflare.nb-channel.top</strong></p>
-        <p align="center" style="margin-top:15px;"<strong>制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a></strong></p>
-        <p align="center" style="margin-top:15px;"><a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a>和<a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a>提供网站托管服务</p></p>
+        <p align="center" style="margin-top:15px;"><strong>© 2026NB频道 nb-channel.top，github.nb-channel.top，cloudflare.nb-channel.top</strong></p>
+        <p align="center" style="margin-top:15px;"><strong>制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a></strong></p>
+        <p align="center" style="margin-top:15px;"><a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a>和<a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a>提供网站托管服务</p>
     </div>
 
-    <!-- 回到顶部按钮 -->
-    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+    <!-- 右下角固定按钮：夜间模式 + 回到顶部 -->
+    <div class="fixed-buttons">
+        <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+        <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+    </div>
 
     <script src="data/videos.js"></script>
     <script src="js/common.js"></script>
@@ -114,16 +124,9 @@
         document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`;
         initTheme();
         updateSiteStats();
+        if (typeof initShareButton === 'function') {
+            initShareButton();
+        }
     </script>
 </body>
-
 </html>
-
-
-
-
-
-
-
-
-
