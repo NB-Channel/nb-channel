@@ -55,13 +55,11 @@
                 <a href="APP.html" class="nav-btn">软件/APP下载</a>
                 <a href="comments.html" class="nav-btn active">💬 评论</a>
             </div>
-            <div class="nav-actions">
-                <button class="share-btn" id="shareButton">📤 分享此频道</button>
-            </div>
+            
         </div>
         <div class="comment-section">
             <div class="auth-bar">
-                <span id="user-status">未登录</span>
+                <span id="user-status">您现在未登录，清登录后再发表评论（新用户清先注册）</span>
                 <div>
                     <button id="show-login">登录</button>
                     <button id="show-register">注册</button>
@@ -69,7 +67,7 @@
             </div>
             <div id="comment-list"></div>
             <div id="new-comment-area" style="display: none;">
-                <textarea id="comment-text" rows="3" placeholder="写下你的评论..."></textarea>
+                <textarea id="comment-text" rows="3" placeholder="写下您对NB频道的建议..."></textarea>
                 <button id="submit-comment" style="margin-top:10px;">发布评论</button>
             </div>
         </div>
@@ -225,7 +223,7 @@
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.onclick = () => {
                     const commentId = btn.dataset.id;
-                    showConfirm('确认删除', '确定要删除这条评论吗？', async () => {
+                    showConfirm('确认删除', '您确定要删除这条评论吗？', async () => {
                         await deleteComment(commentId);
                     });
                 };
