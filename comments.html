@@ -25,12 +25,19 @@
         .error { color:#ff6b6b; font-size:0.9rem; margin-top:5px; }
         textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; }
         /* 通用消息弹窗样式 */
-        .message-modal .modal-content {
+        .message-modal .modal-content, .confirm-modal .modal-content {
             text-align: center;
         }
-        .message-modal button {
+        .message-modal button, .confirm-modal button {
             margin-top: 20px;
             padding: 8px 20px;
+            margin-left: 10px;
+        }
+        .confirm-modal .modal-content {
+            text-align: center;
+        }
+        .confirm-modal button {
+            margin: 20px 10px 0;
         }
     </style>
 </head>
@@ -101,6 +108,16 @@
         </div>
     </div>
 
+    <!-- 确认弹窗（替代 confirm） -->
+    <div id="confirm-modal" class="modal confirm-modal">
+        <div class="modal-content">
+            <h3 id="confirm-title">确认</h3>
+            <p id="confirm-text"></p>
+            <button id="confirm-ok">确定</button>
+            <button id="confirm-cancel">取消</button>
+        </div>
+    </div>
+
     <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
 
     <script src="data/videos.js"></script>
@@ -143,6 +160,33 @@
             messageClose.addEventListener('click', closeHandler);
         }
 
+        // 确认弹窗函数
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmTitle = document.getElementById('confirm-title');
+        const confirmText = document.getElementById('confirm-text');
+        const confirmOk = document.getElementById('confirm-ok');
+        const confirmCancel = document.getElementById('confirm-cancel');
+
+        function showConfirm(title, msg, onConfirm, onCancel) {
+            confirmTitle.innerText = title;
+            confirmText.innerText = msg;
+            confirmModal.style.display = 'flex';
+            const okHandler = () => {
+                confirmModal.style.display = 'none';
+                confirmOk.removeEventListener('click', okHandler);
+                confirmCancel.removeEventListener('click', cancelHandler);
+                if (onConfirm) onConfirm();
+            };
+            const cancelHandler = () => {
+                confirmModal.style.display = 'none';
+                confirmOk.removeEventListener('click', okHandler);
+                confirmCancel.removeEventListener('click', cancelHandler);
+                if (onCancel) onCancel();
+            };
+            confirmOk.addEventListener('click', okHandler);
+            confirmCancel.addEventListener('click', cancelHandler);
+        }
+
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
@@ -179,13 +223,17 @@
             }
             commentListDiv.innerHTML = html;
             document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.onclick = () => deleteComment(btn.dataset.id);
+                btn.onclick = () => {
+                    const commentId = btn.dataset.id;
+                    showConfirm('确认删除', '确定要删除这条评论吗？', async () => {
+                        await deleteComment(commentId);
+                    });
+                };
             });
         }
 
         async function deleteComment(commentId) {
             if (!currentUser) return;
-            if (!confirm('确定删除这条评论吗？')) return;
             const { error } = await supabaseClient
                 .from('comments')
                 .delete()
