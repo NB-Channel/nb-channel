@@ -16,19 +16,19 @@
         .modal-content { background:var(--card-bg); padding:30px; border-radius:12px; max-width:400px; width:90%; }
         .modal-content input { width:100%; padding:10px; margin:10px 0; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); }
         .comment { border-bottom:1px solid var(--card-border); padding:15px 0; }
-        .comment-meta { display:flex; align-items:center; gap:15px; margin-bottom:8px; }
-        .comment-author { font-weight:bold; }
-        .comment-time { font-size:0.8rem; color:var(--count-text); }
-        .comment-content { margin:8px 0; }
-        .comment-actions { display:flex; gap:10px; margin-top:8px; }
+        .comment strong { color:var(--text-color); }
+        .comment small { color:var(--count-text); margin-left:10px; }
+        .comment p { margin-top:8px; }
+        .comment-form { margin-top:20px; }
+        .comment-form textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; }
         .error { color:#ff6b6b; font-size:0.9rem; margin-top:5px; }
-        textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📺 NB频道官网</h1>
         <div class="author-info" id="authorInfo">UP主：NB搞事局</div>
+        <!-- 导航栏省略，请复制你原有的导航栏 -->
         <div class="nav-container">
             <div class="nav-links">
                 <a href="index.html" class="nav-btn">首页</a>
@@ -43,6 +43,7 @@
                 <button class="share-btn" id="shareButton">📤 分享此频道</button>
             </div>
         </div>
+
         <div class="comment-section">
             <div class="auth-bar">
                 <span id="user-status">未登录</span>
@@ -54,15 +55,16 @@
             <div id="comment-list"></div>
             <div id="new-comment-area" style="display: none;">
                 <textarea id="comment-text" rows="3" placeholder="写下你的评论..."></textarea>
-                <button id="submit-comment" style="margin-top:10px;">发布评论</button>
+                <button id="submit-comment">发布评论</button>
             </div>
         </div>
     </div>
 
+    <!-- 登录/注册弹窗（使用邮箱） -->
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <h3>登录</h3>
-            <input type="text" id="login-username" placeholder="用户名">
+            <input type="email" id="login-email" placeholder="邮箱">
             <input type="password" id="login-password" placeholder="密码">
             <div id="login-error" class="error"></div>
             <button id="do-login">登录</button>
@@ -73,7 +75,7 @@
     <div id="register-modal" class="modal">
         <div class="modal-content">
             <h3>注册</h3>
-            <input type="text" id="reg-username" placeholder="用户名">
+            <input type="email" id="reg-email" placeholder="邮箱">
             <input type="password" id="reg-password" placeholder="密码">
             <div id="register-error" class="error"></div>
             <button id="do-register">注册</button>
@@ -86,41 +88,38 @@
     <script src="data/videos.js"></script>
     <script src="js/common.js"></script>
     <script>
-        // 公共初始化
         AUTHOR_NAME = 'NB搞事局';
         document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`;
         initTheme();
         updateSiteStats();
         if (typeof initShareButton === 'function') initShareButton();
 
-        // Supabase 配置
         const SUPABASE_URL = 'https://stgdkwnpxdyhghfgywqj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_CeYSaPxbHXZNImMts166_w_jNTzuAsO';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let currentUser = null;  // { id, username }
+        let currentUser = null;
         const pagePath = window.location.pathname;
 
         const userStatusSpan = document.getElementById('user-status');
         const commentListDiv = document.getElementById('comment-list');
         const newCommentArea = document.getElementById('new-comment-area');
         const commentText = document.getElementById('comment-text');
-        const submitCommentBtn = document.getElementById('submit-comment');
+        const submitBtn = document.getElementById('submit-comment');
 
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
         }
 
-        // 加载评论
         async function fetchComments() {
-            const { data, error } = await supabaseClient
+            const { data, error } = await supabase
                 .from('comments')
                 .select('*, profiles(username)')
                 .eq('page_path', pagePath)
                 .order('created_at', { ascending: false });
             if (error) {
-                console.error('加载评论失败', error);
+                console.error(error);
                 return;
             }
             if (!data || data.length === 0) {
@@ -129,43 +128,39 @@
             }
             let html = '';
             for (const c of data) {
+                const username = c.profiles?.username || c.user_id?.slice(0,8) || '匿名';
                 html += `
-                    <div class="comment" data-id="${c.id}">
-                        <div class="comment-meta">
-                            <span class="comment-author">${escapeHtml(c.profiles.username)}</span>
-                            <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
-                        </div>
-                        <div class="comment-content">${escapeHtml(c.content)}</div>
-                        <div class="comment-actions">
-                            ${currentUser && currentUser.id === c.user_id ? `<button class="delete-btn" data-id="${c.id}">删除</button>` : ''}
-                        </div>
+                    <div class="comment">
+                        <strong>${escapeHtml(username)}</strong>
+                        <small>${new Date(c.created_at).toLocaleString()}</small>
+                        <p>${escapeHtml(c.content)}</p>
                     </div>
                 `;
             }
             commentListDiv.innerHTML = html;
-            // 绑定删除按钮事件
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.onclick = () => deleteComment(btn.dataset.id);
-            });
         }
 
-        // 删除评论
-        async function deleteComment(commentId) {
-            if (!currentUser) return;
-            if (!confirm('确定删除这条评论吗？')) return;
-            const { error } = await supabaseClient
-                .from('comments')
-                .delete()
-                .eq('id', commentId)
-                .eq('user_id', currentUser.id);
-            if (error) {
-                alert('删除失败');
+        async function loadUser() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = { id: session.user.id, email: session.user.email };
+                // 尝试获取用户名（如果 profiles 表有）
+                const { data: profile } = await supabase.from('profiles').select('username').eq('id', currentUser.id).maybeSingle();
+                const displayName = profile?.username || currentUser.email.split('@')[0];
+                userStatusSpan.innerHTML = `欢迎，${escapeHtml(displayName)} <button id="logout">退出</button>`;
+                document.getElementById('logout').onclick = async () => {
+                    await supabase.auth.signOut();
+                    location.reload();
+                };
+                newCommentArea.style.display = 'block';
             } else {
-                fetchComments();
+                currentUser = null;
+                userStatusSpan.innerText = '未登录';
+                newCommentArea.style.display = 'none';
             }
+            fetchComments();
         }
 
-        // 发表评论
         async function postComment() {
             if (!currentUser) {
                 alert('请先登录');
@@ -173,77 +168,34 @@
             }
             const content = commentText.value.trim();
             if (!content) return;
-            const { error } = await supabaseClient
-                .from('comments')
-                .insert({ page_path: pagePath, user_id: currentUser.id, content });
+            const { error } = await supabase.from('comments').insert({
+                content: content,
+                user_id: currentUser.id,
+                page_path: pagePath
+            });
             if (error) {
                 console.error(error);
-                alert('发表失败');
+                alert('发表失败: ' + error.message);
             } else {
                 commentText.value = '';
                 fetchComments();
             }
         }
 
-        // 注册
-        async function register(username, password) {
-            const { data, error } = await supabaseClient.rpc('register_user', {
-                input_username: username,
-                input_password: password
-            });
-            if (error) throw new Error(error.message);
-            return data; // 返回用户UUID
+        // 注册（使用邮箱+密码，关闭邮箱验证后直接登录）
+        async function register(email, password) {
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            if (error) throw error;
+            return data;
         }
 
-        // 登录
-        async function login(username, password) {
-            const { data, error } = await supabaseClient.rpc('login_user', {
-                input_username: username,
-                input_password: password
-            });
-            if (error) throw new Error(error.message);
-            if (!data) throw new Error('用户名或密码错误');
-            // 获取用户完整信息
-            const { data: profile } = await supabaseClient
-                .from('profiles')
-                .select('id, username')
-                .eq('id', data)
-                .single();
-            return profile;
+        async function login(email, password) {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            return data;
         }
 
-        // 加载当前登录用户（使用 localStorage 存储 session）
-        async function loadUser() {
-            const stored = localStorage.getItem('nb_user');
-            if (stored) {
-                try {
-                    const user = JSON.parse(stored);
-                    // 验证用户是否仍存在
-                    const { data } = await supabaseClient
-                        .from('profiles')
-                        .select('id')
-                        .eq('id', user.id)
-                        .single();
-                    if (data) {
-                        currentUser = user;
-                        userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
-                        document.getElementById('logout-btn').onclick = () => {
-                            localStorage.removeItem('nb_user');
-                            location.reload();
-                        };
-                        newCommentArea.style.display = 'block';
-                        fetchComments();
-                        return;
-                    }
-                } catch(e) {}
-            }
-            currentUser = null;
-            userStatusSpan.innerHTML = '未登录';
-            newCommentArea.style.display = 'none';
-            fetchComments();
-        }
-
-        // 弹窗逻辑
+        // 弹窗
         const loginModal = document.getElementById('login-modal');
         const registerModal = document.getElementById('register-modal');
         document.getElementById('show-login').onclick = () => loginModal.style.display = 'flex';
@@ -252,12 +204,11 @@
         document.getElementById('close-register').onclick = () => registerModal.style.display = 'none';
 
         document.getElementById('do-login').onclick = async () => {
-            const username = document.getElementById('login-username').value.trim();
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
             const errorDiv = document.getElementById('login-error');
             try {
-                const user = await login(username, password);
-                localStorage.setItem('nb_user', JSON.stringify({ id: user.id, username: user.username }));
+                await login(email, password);
                 loginModal.style.display = 'none';
                 location.reload();
             } catch (err) {
@@ -266,15 +217,15 @@
         };
 
         document.getElementById('do-register').onclick = async () => {
-            const username = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
             const errorDiv = document.getElementById('register-error');
-            if (!username || !password) {
+            if (!email || !password) {
                 errorDiv.innerText = '请填写完整';
                 return;
             }
             try {
-                await register(username, password);
+                await register(email, password);
                 registerModal.style.display = 'none';
                 alert('注册成功！请登录');
             } catch (err) {
@@ -282,7 +233,7 @@
             }
         };
 
-        submitCommentBtn.onclick = postComment;
+        submitBtn.onclick = postComment;
         loadUser();
     </script>
 </body>
