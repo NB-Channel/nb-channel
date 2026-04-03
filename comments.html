@@ -8,21 +8,21 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 样式略，与之前相同，保持你的原有样式 */
         .comment-section { max-width:800px; margin:40px auto; padding:20px; background:var(--card-bg); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-        .auth-buttons { display:flex; gap:10px; margin-bottom:20px; }
-        .auth-buttons button, .comment-form button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:8px 20px; border-radius:30px; cursor:pointer; transition:0.2s; }
-        .auth-buttons button:hover, .comment-form button:hover { background:var(--nav-btn-hover-bg); color:white; }
+        .auth-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--card-border); }
+        button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:6px 12px; border-radius:20px; cursor:pointer; }
+        button:hover { background:var(--nav-btn-hover-bg); color:white; }
         .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000; }
         .modal-content { background:var(--card-bg); padding:30px; border-radius:12px; max-width:400px; width:90%; }
         .modal-content input { width:100%; padding:10px; margin:10px 0; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); }
         .comment { border-bottom:1px solid var(--card-border); padding:15px 0; }
-        .comment strong { color:var(--text-color); }
-        .comment small { color:var(--count-text); margin-left:10px; }
-        .comment p { margin-top:8px; }
-        .comment-form { margin-top:20px; }
-        .comment-form textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; }
+        .comment-meta { display:flex; align-items:center; gap:15px; margin-bottom:8px; }
+        .comment-author { font-weight:bold; }
+        .comment-time { font-size:0.8rem; color:var(--count-text); }
+        .comment-content { margin:8px 0; }
+        .comment-actions { display:flex; gap:10px; margin-top:8px; }
         .error { color:#ff6b6b; font-size:0.9rem; margin-top:5px; }
+        textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; }
     </style>
 </head>
 <body>
@@ -44,19 +44,17 @@
             </div>
         </div>
         <div class="comment-section">
-            <div id="user-info" style="display: flex; justify-content: space-between; align-items: center;">
-                <div id="auth-status">未登录</div>
-                <div class="auth-buttons">
+            <div class="auth-bar">
+                <span id="user-status">未登录</span>
+                <div>
                     <button id="show-login">登录</button>
                     <button id="show-register">注册</button>
                 </div>
             </div>
             <div id="comment-list"></div>
-            <div id="comment-form-area" style="display: none;">
-                <form id="comment-form" class="comment-form">
-                    <textarea id="comment-content" rows="3" placeholder="写下你的评论..."></textarea>
-                    <button type="submit">发布评论</button>
-                </form>
+            <div id="new-comment-area" style="display: none;">
+                <textarea id="comment-text" rows="3" placeholder="写下你的评论..."></textarea>
+                <button id="submit-comment" style="margin-top:10px;">发布评论</button>
             </div>
         </div>
     </div>
@@ -88,56 +86,92 @@
     <script src="data/videos.js"></script>
     <script src="js/common.js"></script>
     <script>
+        // 公共初始化
         AUTHOR_NAME = 'NB搞事局';
         document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`;
         initTheme();
         updateSiteStats();
         if (typeof initShareButton === 'function') initShareButton();
 
+        // Supabase 配置
         const SUPABASE_URL = 'https://stgdkwnpxdyhghfgywqj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_CeYSaPxbHXZNImMts166_w_jNTzuAsO';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let currentUser = null;
+        let currentUser = null;  // { id, username }
         const pagePath = window.location.pathname;
 
-        const authStatus = document.getElementById('auth-status');
-        const commentList = document.getElementById('comment-list');
-        const commentFormArea = document.getElementById('comment-form-area');
-        const commentContent = document.getElementById('comment-content');
+        const userStatusSpan = document.getElementById('user-status');
+        const commentListDiv = document.getElementById('comment-list');
+        const newCommentArea = document.getElementById('new-comment-area');
+        const commentText = document.getElementById('comment-text');
+        const submitCommentBtn = document.getElementById('submit-comment');
 
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
         }
 
+        // 加载评论
         async function fetchComments() {
             const { data, error } = await supabaseClient
                 .from('comments')
                 .select('*, profiles(username)')
                 .eq('page_path', pagePath)
                 .order('created_at', { ascending: false });
-            if (error) { console.error(error); return; }
+            if (error) {
+                console.error('加载评论失败', error);
+                return;
+            }
             if (!data || data.length === 0) {
-                commentList.innerHTML = '<p>暂无评论，快来抢沙发！</p>';
+                commentListDiv.innerHTML = '<p>暂无评论，快来抢沙发！</p>';
                 return;
             }
             let html = '';
             for (const c of data) {
                 html += `
-                    <div class="comment">
-                        <strong>${escapeHtml(c.profiles.username)}</strong>
-                        <small>${new Date(c.created_at).toLocaleString()}</small>
-                        <p>${escapeHtml(c.content)}</p>
+                    <div class="comment" data-id="${c.id}">
+                        <div class="comment-meta">
+                            <span class="comment-author">${escapeHtml(c.profiles.username)}</span>
+                            <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
+                        </div>
+                        <div class="comment-content">${escapeHtml(c.content)}</div>
+                        <div class="comment-actions">
+                            ${currentUser && currentUser.id === c.user_id ? `<button class="delete-btn" data-id="${c.id}">删除</button>` : ''}
+                        </div>
                     </div>
                 `;
             }
-            commentList.innerHTML = html;
+            commentListDiv.innerHTML = html;
+            // 绑定删除按钮事件
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.onclick = () => deleteComment(btn.dataset.id);
+            });
         }
 
+        // 删除评论
+        async function deleteComment(commentId) {
+            if (!currentUser) return;
+            if (!confirm('确定删除这条评论吗？')) return;
+            const { error } = await supabaseClient
+                .from('comments')
+                .delete()
+                .eq('id', commentId)
+                .eq('user_id', currentUser.id);
+            if (error) {
+                alert('删除失败');
+            } else {
+                fetchComments();
+            }
+        }
+
+        // 发表评论
         async function postComment() {
-            if (!currentUser) { alert('请先登录'); return; }
-            const content = commentContent.value.trim();
+            if (!currentUser) {
+                alert('请先登录');
+                return;
+            }
+            const content = commentText.value.trim();
             if (!content) return;
             const { error } = await supabaseClient
                 .from('comments')
@@ -146,37 +180,45 @@
                 console.error(error);
                 alert('发表失败');
             } else {
-                commentContent.value = '';
+                commentText.value = '';
                 fetchComments();
             }
         }
 
-        // 注册：调用数据库 RPC
+        // 注册
         async function register(username, password) {
             const { data, error } = await supabaseClient.rpc('register_user', {
-                username: username,
-                plain_password: password
+                input_username: username,
+                input_password: password
             });
             if (error) throw new Error(error.message);
-            return data;
+            return data; // 返回用户UUID
         }
 
-        // 登录：调用数据库 RPC
+        // 登录
         async function login(username, password) {
             const { data, error } = await supabaseClient.rpc('login_user', {
-                username: username,
-                plain_password: password
+                input_username: username,
+                input_password: password
             });
             if (error) throw new Error(error.message);
-            if (!data || data.length === 0) throw new Error('用户名或密码错误');
-            return data[0]; // { id, username }
+            if (!data) throw new Error('用户名或密码错误');
+            // 获取用户完整信息
+            const { data: profile } = await supabaseClient
+                .from('profiles')
+                .select('id, username')
+                .eq('id', data)
+                .single();
+            return profile;
         }
 
+        // 加载当前登录用户（使用 localStorage 存储 session）
         async function loadUser() {
             const stored = localStorage.getItem('nb_user');
             if (stored) {
                 try {
                     const user = JSON.parse(stored);
+                    // 验证用户是否仍存在
                     const { data } = await supabaseClient
                         .from('profiles')
                         .select('id')
@@ -184,20 +226,20 @@
                         .single();
                     if (data) {
                         currentUser = user;
-                        authStatus.innerHTML = `<div>欢迎，${escapeHtml(currentUser.username)} <button id="logout">退出</button></div>`;
-                        document.getElementById('logout').onclick = () => {
+                        userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
+                        document.getElementById('logout-btn').onclick = () => {
                             localStorage.removeItem('nb_user');
                             location.reload();
                         };
-                        commentFormArea.style.display = 'block';
+                        newCommentArea.style.display = 'block';
                         fetchComments();
                         return;
                     }
                 } catch(e) {}
             }
             currentUser = null;
-            authStatus.innerHTML = '未登录';
-            commentFormArea.style.display = 'none';
+            userStatusSpan.innerHTML = '未登录';
+            newCommentArea.style.display = 'none';
             fetchComments();
         }
 
@@ -218,7 +260,7 @@
                 localStorage.setItem('nb_user', JSON.stringify({ id: user.id, username: user.username }));
                 loginModal.style.display = 'none';
                 location.reload();
-            } catch(err) {
+            } catch (err) {
                 errorDiv.innerText = err.message;
             }
         };
@@ -235,12 +277,12 @@
                 await register(username, password);
                 registerModal.style.display = 'none';
                 alert('注册成功！请登录');
-            } catch(err) {
+            } catch (err) {
                 errorDiv.innerText = err.message;
             }
         };
 
-        document.getElementById('comment-form').onsubmit = (e) => { e.preventDefault(); postComment(); };
+        submitCommentBtn.onclick = postComment;
         loadUser();
     </script>
 </body>
