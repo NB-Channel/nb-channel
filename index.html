@@ -30,7 +30,7 @@
             flex-wrap: wrap;
         }
         /* 统一按钮样式（复用你原有的 .nav-btn 样式即可） */
-        .theme-toggle, .share-btn {
+        .share-btn {
             background: var(--nav-btn-bg);
             color: var(--nav-btn-text);
             border: none;
@@ -42,7 +42,7 @@
             font-weight: 500;
             min-width: 90px;
         }
-        .theme-toggle:hover, .share-btn:hover {
+        .share-btn:hover {
             background: var(--nav-btn-hover-bg);
             color: var(--nav-btn-hover-text);
         }
@@ -61,14 +61,12 @@
                 padding: 8px 16px;
                 font-size: 1rem;
             }
-            .theme-toggle, .share-btn {
+            .share-btn {
                 padding: 8px 16px;
                 font-size: 1rem;
                 min-width: auto;
             }
         }
-      
-
         /* 新增卡片样式 */
         .home-card {
             background: var(--about-bg);
@@ -85,27 +83,90 @@
             margin-bottom: 0;
         }
         /* 卡片行容器：让卡片1和2并排 */
-.home-row {
-    display: flex;
-    gap: 30px;
-    margin-bottom: 30px;
-}
-
-.home-row .home-card {
-    flex: 1;          /* 两个卡片等宽 */
-    margin-bottom: 0; /* 取消单个卡片的下边距，由行控制 */
-}
-
-/* 移动端适配：窄屏时改为上下排列 */
-@media (max-width: 600px) {
-    .home-row {
-        flex-direction: column;
-        gap: 30px;
-    }
-}
+        .home-row {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .home-row .home-card {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        /* 移动端适配：窄屏时改为上下排列 */
+        @media (max-width: 600px) {
+            .home-row {
+                flex-direction: column;
+                gap: 30px;
+            }
+        }
         .video-container {
-    margin-bottom: 30px;
-}
+            margin-bottom: 30px;
+        }
+        /* 右下角固定按钮容器（夜间模式 + 回到顶部） */
+        .fixed-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+        .theme-toggle-fixed {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .theme-toggle-fixed:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        .back-to-top {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            border: 1px solid var(--card-border);
+            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+        }
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .back-to-top:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        @media (max-width: 600px) {
+            .fixed-buttons {
+                bottom: 20px;
+                right: 20px;
+                gap: 10px;
+            }
+            .theme-toggle-fixed, .back-to-top {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -123,12 +184,10 @@
                 <a href="changelog.html" class="nav-btn">更新日志</a>
                 <a href="product.html" class="nav-btn">我的产品</a>
                 <a href="APP.html" class="nav-btn">软件/APP下载</a>
-                
             </div>
-            <!-- 第二层：功能按钮 -->
+            <!-- 第二层：功能按钮（只保留分享按钮） -->
             <div class="nav-actions">
                 <button class="share-btn" id="shareButton">📤 分享此频道</button>
-                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 夜间模式</button>
             </div>
         </div>
 
@@ -151,50 +210,46 @@
 
         <!-- 首页内容分成三个卡片容器 -->
         <!-- 第一行：卡片1和卡片2并排 -->
-<div class="home-row">
-    <!-- 第一块：频道介绍与UP主动态 -->
-    <div class="home-card">
-        <p>👋 欢迎来到 <strong>NB频道</strong> </p>
-        <p>NB频道，全名NoBook频道，是一个热爱理科（和作死）的畜中生up主建立的虚拟公司</p>
-        <p>这个在NB圈发展的公司，目前还没有上市</p>
-        <p>这个频道汇集了UP主<strong>“NB搞事局”</strong>的所有视频，点击按钮可以查看不同分区内容</p>
-        <p>频道主要分享有趣的化学、物理实验和日常作死小技巧，以后还会有产品问世，欢迎关注！</p>
-        <p style="color:#00a1d6; margin-top:30px;">✨ 注：点击上方“视频”查看UP的全部作品 ✨</p>
-        <p>UP已经开学了，而且将面临地生会考，暂时更不了视频（可能会零星更几条）</p>
-        <p>不过您可以点个关注支持一下吗，（虽然已经10万粉了，但我要冲15万粉，嘿嘿awa）</p>
-        <p>UP放假的时候会去更新的qwq</p>
-        <p>🔗去我的主页关注我 ：<a href="https://space.bilibili.com/3493259582114264?spm_id_from=333.1007.0.0" target="_blank" rel="noopener noreferrer">点击前往</a></p>
-    </div>
+        <div class="home-row">
+            <div class="home-card">
+                <p>👋 欢迎来到 <strong>NB频道</strong> </p>
+                <p>NB频道，全名NoBook频道，是一个热爱理科（和作死）的畜中生up主建立的虚拟公司</p>
+                <p>这个在NB圈发展的公司，目前还没有上市</p>
+                <p>这个频道汇集了UP主<strong>“NB搞事局”</strong>的所有视频，点击按钮可以查看不同分区内容</p>
+                <p>频道主要分享有趣的化学、物理实验和日常作死小技巧，以后还会有产品问世，欢迎关注！</p>
+                <p style="color:#00a1d6; margin-top:30px;">✨ 注：点击上方“视频”查看UP的全部作品 ✨</p>
+                <p>UP已经开学了，而且将面临地生会考，暂时更不了视频（可能会零星更几条）</p>
+                <p>不过您可以点个关注支持一下吗，（虽然已经10万粉了，但我要冲15万粉，嘿嘿awa）</p>
+                <p>UP放假的时候会去更新的qwq</p>
+                <p>🔗去我的主页关注我 ：<a href="https://space.bilibili.com/3493259582114264?spm_id_from=333.1007.0.0" target="_blank" rel="noopener noreferrer">点击前往</a></p>
+            </div>
+            <div class="home-card">
+                <p style="color:#00a1d6; margin-top:30px;">什么？你找不到NB实验室？</p>
+                <p>没关系,我这里有链接↓（网页版）</p>
+                <p>🔗NB实验室（化学） ：<a href="https://hx.nobook.com/console/templates/resource?grade_id=3" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+                <p>🔗NB实验室（物理） ：<a href="https://wl.nobook.com/console/templates/resource?grade_id=3" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+                <p>注：想下载软件安装包的话去上方的“软件/APP下载”里去下载或者看看自己手机的应用商店有没有</p>
+                <p>🔗NB实验室（官网首页） ：<a href="https://www.nobook.com/index.html" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            </div>
+        </div>
 
-    <!-- 第二块：NB实验室链接 -->
-    <div class="home-card">
-        <p style="color:#00a1d6; margin-top:30px;">什么？你找不到NB实验室？</p>
-        <p>没关系,我这里有链接↓（网页版）</p>
-        <p>🔗NB实验室（化学） ：<a href="https://hx.nobook.com/console/templates/resource?grade_id=3" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-        <p>🔗NB实验室（物理） ：<a href="https://wl.nobook.com/console/templates/resource?grade_id=3" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-        <p>注：想下载软件安装包的话去上方的“软件/APP下载”里去下载或者看看自己手机的应用商店有没有</p>
-        <p>🔗NB实验室（官网首页） ：<a href="https://www.nobook.com/index.html" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    </div>
-</div>
-
-<!-- 第二行：卡片3单独 -->
-<div class="home-card">
-    <p style="color:#00a1d6; margin-top:30px;">什么？你想了解其他虚拟公司的网站？</p>
-    <p>没关系,我这里也有链接↓</p>
-    <p style="margin-top:20px;">🔗 友商Vialの官网（网站已停运，且Vial的B站账号已经注销，其域名和子域名也已经停用，此链接将一直保留，默哀）：<a href="https://orgent.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">（不过Fafat有一个Vial网站2.1的存档，在这）：<a href="https://vial.uuk.pp.ua/vial2.1/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 我的の官网（Cloudflare上的）：<a href="https://nb-channel.pages.dev/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商AWMの官网：<a href="https://45d.cn/AWM/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商Fafatの官网：<a href="https://fafat.uuk.pp.ua/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商Lemon（齐喜）の官网：<a href="https://nb-qx.top/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商Utwの官网：<a href="https://nb-utw.pages.dev/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商PTC(GoodPTC)の官网：<a href="https://pipetrainingcamp.github.io/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商UVSの官网：<a href="https://yoyo-user-awa.github.io/UVS/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商UwLSの官网：<a href="https://3f7ceb4e.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商Oganessonの官网：<a href="https://0f13c941.pinit.eth.limo/Oganesson.html" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-    <p style="margin-top:20px;">🔗 友商SOTの官网：<a href="https://78439049.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
-</div>
-        
+        <!-- 第二行：卡片3单独 -->
+        <div class="home-card">
+            <p style="color:#00a1d6; margin-top:30px;">什么？你想了解其他虚拟公司的网站？</p>
+            <p>没关系,我这里也有链接↓</p>
+            <p style="margin-top:20px;">🔗 友商Vialの官网（网站已停运，且Vial的B站账号已经注销，其域名和子域名也已经停用，此链接将一直保留，默哀）：<a href="https://orgent.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">（不过Fafat有一个Vial网站2.1的存档，在这）：<a href="https://vial.uuk.pp.ua/vial2.1/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 我的の官网（Cloudflare上的）：<a href="https://nb-channel.pages.dev/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商AWMの官网：<a href="https://45d.cn/AWM/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商Fafatの官网：<a href="https://fafat.uuk.pp.ua/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商Lemon（齐喜）の官网：<a href="https://nb-qx.top/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商Utwの官网：<a href="https://nb-utw.pages.dev/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商PTC(GoodPTC)の官网：<a href="https://pipetrainingcamp.github.io/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商UVSの官网：<a href="https://yoyo-user-awa.github.io/UVS/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商UwLSの官网：<a href="https://3f7ceb4e.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商Oganessonの官网：<a href="https://0f13c941.pinit.eth.limo/Oganesson.html" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+            <p style="margin-top:20px;">🔗 友商SOTの官网：<a href="https://78439049.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">点击访问</a></p>
+        </div>
 
         <!-- 底部统计 -->
         <div class="stats-container">
@@ -208,8 +263,11 @@
     <p align="center" style="margin-top:15px;"><a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a>和<a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a>提供网站托管服务</p>
     <p align="center" style="margin-top:15px;"><a href="https://imgbed.cn/" target="_blank" rel="noopener noreferrer">图床小镇</a>提供视频托管服务</p>
 
-    <!-- 回到顶部按钮 -->
-    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+    <!-- 右下角固定按钮：夜间模式 + 回到顶部 -->
+    <div class="fixed-buttons">
+        <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+        <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+    </div>
 
     <!-- 脚本 -->
     <script src="data/videos.js"></script>
@@ -226,21 +284,28 @@
         // Logo 视频防暂停
         const logoVideo = document.getElementById('logoVideo');
         if (logoVideo) {
-            // 如果视频被暂停（比如浏览器省电策略），尝试恢复播放一次
             logoVideo.addEventListener('pause', () => {
                 logoVideo.play().catch(e => console.log('恢复播放失败', e));
             });
-
-            // 当用户切回页面时，如果视频暂停了，也尝试恢复
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden && logoVideo.paused) {
                     logoVideo.play().catch(e => console.log('页面恢复后播放失败', e));
                 }
             });
-
-            // 初始自动播放（muted 情况下应该成功）
             logoVideo.play().catch(e => console.log('初始播放失败', e));
         }
+
+        // 回到顶部滚动监听
+        window.addEventListener('scroll', function() {
+            const backBtn = document.getElementById('backToTop');
+            if (backBtn) {
+                if (window.scrollY > 300) {
+                    backBtn.classList.add('show');
+                } else {
+                    backBtn.classList.remove('show');
+                }
+            }
+        });
     </script>
 </body>
 </html>
