@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 基础样式 */
+        /* 基础样式（原样保留） */
         .comment-section { max-width:800px; margin:40px auto; padding:20px; background:var(--card-bg); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
         .auth-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--card-border); }
         button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:6px 12px; border-radius:20px; cursor:pointer; }
@@ -34,9 +34,74 @@
         .new-comment-area { margin-bottom: 30px; }
         .account-btn { background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none; border-radius: 30px; padding: 10px 20px; font-size: 1rem; cursor: pointer; }
         .account-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
-        /* 折叠回复按钮样式 */
         .toggle-replies-btn { background: none; border: none; color: var(--status-border); cursor: pointer; font-size: 0.85rem; margin-top: 8px; padding: 0; }
         .toggle-replies-btn:hover { text-decoration: underline; background: none; color: var(--nav-btn-hover-bg); }
+
+        /* 新增：右下角固定按钮容器 */
+        .fixed-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+        .theme-toggle-fixed {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .theme-toggle-fixed:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        .back-to-top {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            border: 1px solid var(--card-border);
+            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+        }
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .back-to-top:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        @media (max-width: 600px) {
+            .fixed-buttons {
+                bottom: 20px;
+                right: 20px;
+                gap: 10px;
+            }
+            .theme-toggle-fixed, .back-to-top {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -148,7 +213,11 @@
         </div>
     </div>
 
-    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+    <!-- 右下角固定按钮：夜间模式 + 回到顶部 -->
+    <div class="fixed-buttons">
+        <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+        <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+    </div>
 
     <script src="data/videos.js"></script>
     <script src="js/common.js"></script>
@@ -165,7 +234,6 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
-        // 恢复原来的 page_path：基于当前页面路径
         const pagePath = window.location.pathname;
 
         // DOM 元素
