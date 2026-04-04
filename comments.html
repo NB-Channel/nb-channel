@@ -55,8 +55,9 @@
             </div>
             <div class="nav-actions">
                 <a href="comments.html" class="nav-btn active">💬 评论</a>
+                <button class="share-btn" id="shareButton">📤 分享此频道</button>
                 <a href="https://nb-channel.pages.dev/comments.html" class="nav-btn" target="_blank">Cloudflare评论区（内容不同）</a>
-                <a href="https://NB-Channel.github.io/nb-channel/comments.html" class="nav-btn" target="_blank">Github评论区（内容不同）</a>
+                <a href="https://NB-Channel.github.io/nb-channel/comments.html" class="nav-btn" target="_blank">Github评论（内容不同）</a>
                 <button class="account-btn" id="accountBtn">⚙️ 账号设置</button>
             </div>
         </div>
@@ -165,6 +166,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
+        // 恢复原来的 page_path：基于当前页面路径
         const pagePath = window.location.pathname;
 
         // DOM 元素
@@ -255,7 +257,16 @@
             return roots;
         }
 
-        // 渲染单个评论（支持回复折叠）
+        // 计算节点后代总数（不包括自身）
+        function countDescendants(node) {
+            let count = node.replies.length;
+            for (const child of node.replies) {
+                count += countDescendants(child);
+            }
+            return count;
+        }
+
+        // 渲染单个评论（支持回复折叠基于总回复数）
         function renderCommentNode(node) {
             const author = node.profiles?.username || '匿名';
             const fullText = node.content;
@@ -269,27 +280,28 @@
                 displayText = fullText;
             }
 
-            // 处理回复列表的折叠（超过5条时）
-            const replyCount = node.replies.length;
+            const totalReplies = countDescendants(node);
+            const showReplyBtn = node.depth < 2;
+
             let repliesHtml = '';
             let toggleRepliesBtn = '';
-            if (replyCount > 0) {
-                // 默认只显示第一条回复，其余隐藏
-                let visibleReplies = [];
-                let hiddenReplies = [];
-                if (replyCount > 5) {
-                    visibleReplies = node.replies.slice(0, 1);
-                    hiddenReplies = node.replies.slice(1);
-                    const hiddenHtml = hiddenReplies.map(child => renderCommentNode(child)).join('');
-                    repliesHtml = visibleReplies.map(child => renderCommentNode(child)).join('');
-                    repliesHtml += `<div class="hidden-replies" style="display:none;">${hiddenHtml}</div>`;
-                    toggleRepliesBtn = `<button class="toggle-replies-btn" data-id="${node.id}" data-state="collapsed">展开所有回复 (${replyCount-1}条)</button>`;
-                } else {
-                    repliesHtml = node.replies.map(child => renderCommentNode(child)).join('');
-                }
+
+            // 折叠阈值改为 3
+            if (totalReplies > 3 && node.replies.length > 0) {
+                // 只显示第一条回复（按时间正序，即数组第一个）
+                const firstReply = node.replies[0];
+                const restReplies = node.replies.slice(1);
+                // 渲染第一条回复（包含其嵌套）
+                const firstReplyHtml = renderCommentNode(firstReply);
+                // 渲染其余回复及其后代，放入隐藏容器
+                const restHtml = restReplies.map(child => renderCommentNode(child)).join('');
+                repliesHtml = firstReplyHtml;
+                repliesHtml += `<div class="hidden-replies" style="display:none;">${restHtml}</div>`;
+                toggleRepliesBtn = `<button class="toggle-replies-btn" data-id="${node.id}" data-state="collapsed">展开所有回复</button>`;
+            } else if (node.replies.length > 0) {
+                repliesHtml = node.replies.map(child => renderCommentNode(child)).join('');
             }
 
-            const showReplyBtn = node.depth < 2;
             return `
                 <div class="comment" data-id="${node.id}" data-depth="${node.depth}">
                     <div class="comment-meta">
@@ -325,7 +337,7 @@
             const html = tree.map(node => renderCommentNode(node)).join('');
             commentListDiv.innerHTML = html;
 
-            // 绑定折叠/展开按钮
+            // 绑定折叠/展开按钮（正文折叠）
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -344,7 +356,7 @@
                 };
             });
 
-            // 绑定回复折叠/展开按钮
+            // 绑定回复折叠/展开按钮（基于总回复数折叠）
             document.querySelectorAll('.toggle-replies-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -353,14 +365,12 @@
                     const hiddenDiv = repliesDiv.querySelector('.hidden-replies');
                     const isCollapsed = btn.dataset.state === 'collapsed';
                     if (isCollapsed) {
-                        // 展开所有回复
                         if (hiddenDiv) hiddenDiv.style.display = 'block';
-                        btn.innerText = `折叠所有回复`;
+                        btn.innerText = '折叠所有回复';
                         btn.dataset.state = 'expanded';
                     } else {
-                        // 折叠，只保留第一条
                         if (hiddenDiv) hiddenDiv.style.display = 'none';
-                        btn.innerText = `展开所有回复 (${hiddenDiv ? hiddenDiv.querySelectorAll('.comment').length : 0}条)`;
+                        btn.innerText = '展开所有回复';
                         btn.dataset.state = 'collapsed';
                     }
                 };
