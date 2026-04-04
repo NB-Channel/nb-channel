@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 样式与之前相同，无变化 */
+        /* 基础样式 */
         .comment-section { max-width:800px; margin:40px auto; padding:20px; background:var(--card-bg); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
         .auth-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--card-border); }
         button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:6px 12px; border-radius:20px; cursor:pointer; }
@@ -32,6 +32,8 @@
         textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; resize: vertical; }
         .char-counter { text-align: right; font-size: 0.8rem; color: var(--count-text); margin-top: 5px; }
         .new-comment-area { margin-bottom: 30px; }
+        .account-btn { background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none; border-radius: 30px; padding: 6px 12px; cursor: pointer; }
+        .account-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
     </style>
 </head>
 <body>
@@ -50,6 +52,7 @@
             <div class="nav-actions">
                 <a href="APP.html" class="nav-btn">软件/APP下载</a>
                 <a href="comments.html" class="nav-btn active">💬 评论</a>
+                <button class="account-btn" id="accountBtn">⚙️ 账号设置</button>
             </div>
         </div>
 
@@ -62,19 +65,19 @@
                 </div>
             </div>
 
-            <!-- 发表新评论框（顶级） -->
+            <!-- 发表新评论框 -->
             <div id="new-comment-area" class="new-comment-area" style="display: none;">
                 <textarea id="comment-text" rows="3" placeholder="写下你的评论... (最多200字)" maxlength="200"></textarea>
                 <div class="char-counter"><span id="char-count">0</span>/200</div>
                 <button id="submit-comment" style="margin-top:10px;">发布评论</button>
             </div>
 
-            <!-- 评论列表容器 -->
+            <!-- 评论列表 -->
             <div id="comment-list"></div>
         </div>
     </div>
 
-    <!-- 弹窗（登录、注册、消息、确认）-->
+    <!-- 登录弹窗 -->
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <h3>登录</h3>
@@ -86,17 +89,42 @@
         </div>
     </div>
 
+    <!-- 注册弹窗（两次密码） -->
     <div id="register-modal" class="modal">
         <div class="modal-content">
             <h3>注册</h3>
             <input type="text" id="reg-username" placeholder="用户名">
             <input type="password" id="reg-password" placeholder="密码">
+            <input type="password" id="reg-password2" placeholder="确认密码">
             <div id="register-error" class="error"></div>
             <button id="do-register">注册</button>
             <button id="close-register">取消</button>
         </div>
     </div>
 
+    <!-- 账号设置弹窗 -->
+    <div id="account-modal" class="modal">
+        <div class="modal-content">
+            <h3>账号设置</h3>
+            <div id="account-error" class="error"></div>
+            <div style="margin-bottom:20px;">
+                <h4>修改用户名</h4>
+                <input type="text" id="new-username" placeholder="新用户名">
+                <input type="password" id="old-password-for-username" placeholder="当前密码">
+                <button id="do-update-username">修改用户名</button>
+            </div>
+            <div>
+                <h4>修改密码</h4>
+                <input type="password" id="old-password" placeholder="旧密码">
+                <input type="password" id="new-password" placeholder="新密码">
+                <input type="password" id="new-password2" placeholder="确认新密码">
+                <button id="do-update-password">修改密码</button>
+            </div>
+            <button id="close-account" style="margin-top:20px;">关闭</button>
+        </div>
+    </div>
+
+    <!-- 通用消息弹窗 -->
     <div id="message-modal" class="modal message-modal">
         <div class="modal-content">
             <h3 id="message-title">提示</h3>
@@ -105,6 +133,7 @@
         </div>
     </div>
 
+    <!-- 确认弹窗 -->
     <div id="confirm-modal" class="modal confirm-modal">
         <div class="modal-content">
             <h3 id="confirm-title">确认</h3>
@@ -133,6 +162,7 @@
         let currentUser = null;
         const pagePath = window.location.pathname;
 
+        // DOM 元素
         const userStatusSpan = document.getElementById('user-status');
         const commentListDiv = document.getElementById('comment-list');
         const newCommentArea = document.getElementById('new-comment-area');
@@ -147,7 +177,7 @@
             });
         }
 
-        // 弹窗函数
+        // 通用消息弹窗
         const messageModal = document.getElementById('message-modal');
         const messageTitle = document.getElementById('message-title');
         const messageText = document.getElementById('message-text');
@@ -164,6 +194,7 @@
             messageClose.addEventListener('click', closeHandler);
         }
 
+        // 确认弹窗
         const confirmModal = document.getElementById('confirm-modal');
         const confirmTitle = document.getElementById('confirm-title');
         const confirmText = document.getElementById('confirm-text');
@@ -194,7 +225,7 @@
             return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
         }
 
-        // 将扁平评论列表构建为树形结构，并附加深度信息
+        // ---------- 评论树构建与渲染 ----------
         function buildCommentTree(comments) {
             const map = new Map();
             const roots = [];
@@ -209,9 +240,7 @@
                     roots.push(node);
                 }
             });
-            // 按时间倒序排序顶级评论
             roots.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            // 递归为每个节点设置深度，并排序回复（按时间正序）
             const setDepth = (node, depth) => {
                 node.depth = depth;
                 node.replies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -221,7 +250,6 @@
             return roots;
         }
 
-        // 渲染单个评论（递归）
         function renderCommentNode(node) {
             const author = node.profiles?.username || '匿名';
             const fullText = node.content;
@@ -238,7 +266,6 @@
             if (node.replies && node.replies.length > 0) {
                 repliesHtml = `<div class="replies">${node.replies.map(child => renderCommentNode(child)).join('')}</div>`;
             }
-            // 只有深度 < 2 的评论才显示“回复”按钮（即最多嵌套3层：深度0、1、2可回复，深度2的评论不能再被回复）
             const showReplyBtn = node.depth < 2;
             return `
                 <div class="comment" data-id="${node.id}" data-depth="${node.depth}">
@@ -272,7 +299,7 @@
             const html = tree.map(node => renderCommentNode(node)).join('');
             commentListDiv.innerHTML = html;
 
-            // 绑定折叠/展开按钮
+            // 折叠/展开
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -291,7 +318,7 @@
                 };
             });
 
-            // 绑定回复按钮：显示回复表单
+            // 回复按钮
             document.querySelectorAll('.reply-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -299,7 +326,6 @@
                     const replyForm = document.getElementById(`reply-form-${commentId}`);
                     if (replyForm) {
                         replyForm.style.display = replyForm.style.display === 'block' ? 'none' : 'block';
-                        // 清空之前的输入和计数
                         const textarea = replyForm.querySelector('textarea');
                         if (textarea) {
                             textarea.value = '';
@@ -310,7 +336,7 @@
                 };
             });
 
-            // 绑定取消回复按钮
+            // 取消回复
             document.querySelectorAll('.cancel-reply').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -320,18 +346,14 @@
                 };
             });
 
-            // 绑定提交回复按钮（增加深度检查）
+            // 提交回复（含深度检查）
             document.querySelectorAll('.submit-reply').forEach(btn => {
                 btn.onclick = async (e) => {
                     e.stopPropagation();
                     const parentId = btn.dataset.id;
-                    // 获取父评论的深度（从父评论元素的 data-depth 属性获取）
-                    const parentCommentDiv = document.querySelector(`.comment[data-id="${parentId}"]`);
+                    const parentDiv = document.querySelector(`.comment[data-id="${parentId}"]`);
                     let parentDepth = -1;
-                    if (parentCommentDiv) {
-                        parentDepth = parseInt(parentCommentDiv.dataset.depth);
-                    }
-                    // 如果父评论深度 >= 2，则不能再回复
+                    if (parentDiv) parentDepth = parseInt(parentDiv.dataset.depth);
                     if (parentDepth >= 2) {
                         showMessage('提示', '已达到最大回复层数（3层），无法继续回复');
                         return;
@@ -339,32 +361,22 @@
                     const replyForm = document.getElementById(`reply-form-${parentId}`);
                     const textarea = replyForm.querySelector('textarea');
                     let content = textarea.value.trim();
-                    if (!content) {
-                        showMessage('提示', '回复内容不能为空');
-                        return;
-                    }
-                    if (content.length > 200) {
-                        showMessage('提示', '回复内容不能超过200字');
-                        return;
-                    }
-                    if (!currentUser) {
-                        showMessage('提示', '请先登录');
-                        return;
-                    }
+                    if (!content) { showMessage('提示', '回复内容不能为空'); return; }
+                    if (content.length > 200) { showMessage('提示', '回复内容不能超过200字'); return; }
+                    if (!currentUser) { showMessage('提示', '请先登录'); return; }
                     const { error } = await supabaseClient
                         .from('comments')
                         .insert({ page_path: pagePath, user_id: currentUser.id, content, parent_id: parseInt(parentId) });
                     if (error) {
-                        console.error(error);
                         showMessage('错误', '回复失败');
                     } else {
                         replyForm.style.display = 'none';
-                        fetchComments(); // 刷新列表
+                        fetchComments();
                     }
                 };
             });
 
-            // 绑定删除按钮
+            // 删除按钮
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.onclick = () => {
                     const commentId = btn.dataset.id;
@@ -374,7 +386,7 @@
                 };
             });
 
-            // 回复表单内的字数计数
+            // 回复表单字数计数
             document.querySelectorAll('.reply-form textarea').forEach(textarea => {
                 const counterSpan = textarea.closest('.reply-form').querySelector('.char-counter span');
                 textarea.addEventListener('input', () => {
@@ -390,11 +402,8 @@
                 .delete()
                 .eq('id', commentId)
                 .eq('user_id', currentUser.id);
-            if (error) {
-                showMessage('错误', '删除失败');
-            } else {
-                fetchComments();
-            }
+            if (error) showMessage('错误', '删除失败');
+            else fetchComments();
         }
 
         async function fetchComments() {
@@ -403,41 +412,30 @@
                 .select('*, profiles(username)')
                 .eq('page_path', pagePath)
                 .order('created_at', { ascending: true });
-            if (error) {
-                console.error('加载评论失败', error);
-                return;
-            }
+            if (error) { console.error(error); return; }
             renderComments(data);
         }
 
         async function postComment() {
-            if (!currentUser) {
-                showMessage('提示', '请先登录');
-                return;
-            }
+            if (!currentUser) { showMessage('提示', '请先登录'); return; }
             let content = commentText.value.trim();
-            if (!content) {
-                showMessage('提示', '评论内容不能为空');
-                return;
-            }
-            if (content.length > 200) {
-                showMessage('提示', '评论内容不能超过200字');
-                return;
-            }
+            if (!content) { showMessage('提示', '评论内容不能为空'); return; }
+            if (content.length > 200) { showMessage('提示', '评论内容不能超过200字'); return; }
             const { error } = await supabaseClient
                 .from('comments')
                 .insert({ page_path: pagePath, user_id: currentUser.id, content, parent_id: null });
-            if (error) {
-                console.error(error);
-                showMessage('错误', '发表失败');
-            } else {
+            if (error) showMessage('错误', '发表失败');
+            else {
                 commentText.value = '';
                 charCountSpan.innerText = '0';
                 fetchComments();
             }
         }
 
-        async function register(username, password) {
+        // ---------- 用户注册（两次密码验证） ----------
+        async function register(username, password, password2) {
+            if (password !== password2) throw new Error('两次输入的密码不一致');
+            if (password.length < 4) throw new Error('密码长度至少4位');
             const { data, error } = await supabaseClient.rpc('register_user', {
                 input_username: username,
                 input_password: password
@@ -447,6 +445,7 @@
             return data;
         }
 
+        // ---------- 登录 ----------
         async function login(username, password) {
             const { data, error } = await supabaseClient.rpc('login_user', {
                 input_username: username,
@@ -462,6 +461,33 @@
             return profile;
         }
 
+        // ---------- 修改用户名 ----------
+        async function updateUsername(newUsername, oldPassword) {
+            const { data, error } = await supabaseClient.rpc('update_username', {
+                user_id: currentUser.id,
+                new_username: newUsername,
+                old_password: oldPassword
+            });
+            if (error) throw new Error(error.message);
+            if (!data.success) throw new Error(data.message);
+            return data;
+        }
+
+        // ---------- 修改密码 ----------
+        async function updatePassword(oldPassword, newPassword, newPassword2) {
+            if (newPassword !== newPassword2) throw new Error('新密码两次输入不一致');
+            if (newPassword.length < 4) throw new Error('新密码长度至少4位');
+            const { data, error } = await supabaseClient.rpc('update_password', {
+                user_id: currentUser.id,
+                old_password: oldPassword,
+                new_password: newPassword
+            });
+            if (error) throw new Error(error.message);
+            if (!data.success) throw new Error(data.message);
+            return data;
+        }
+
+        // ---------- 加载当前用户 ----------
         async function loadUser() {
             const stored = localStorage.getItem('nb_user');
             if (stored) {
@@ -491,14 +517,23 @@
             fetchComments();
         }
 
-        // 弹窗绑定
+        // ---------- 弹窗绑定 ----------
         const loginModal = document.getElementById('login-modal');
         const registerModal = document.getElementById('register-modal');
+        const accountModal = document.getElementById('account-modal');
+        const closeAccount = document.getElementById('close-account');
+
         document.getElementById('show-login').onclick = () => loginModal.style.display = 'flex';
         document.getElementById('close-login').onclick = () => loginModal.style.display = 'none';
         document.getElementById('show-register').onclick = () => registerModal.style.display = 'flex';
         document.getElementById('close-register').onclick = () => registerModal.style.display = 'none';
+        document.getElementById('accountBtn').onclick = () => {
+            if (!currentUser) { showMessage('提示', '请先登录'); return; }
+            accountModal.style.display = 'flex';
+        };
+        closeAccount.onclick = () => accountModal.style.display = 'none';
 
+        // 登录按钮
         document.getElementById('do-login').onclick = async () => {
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
@@ -513,18 +548,59 @@
             }
         };
 
+        // 注册按钮
         document.getElementById('do-register').onclick = async () => {
             const username = document.getElementById('reg-username').value.trim();
             const password = document.getElementById('reg-password').value;
+            const password2 = document.getElementById('reg-password2').value;
             const errorDiv = document.getElementById('register-error');
             if (!username || !password) {
                 errorDiv.innerText = '请填写完整';
                 return;
             }
             try {
-                await register(username, password);
+                await register(username, password, password2);
                 registerModal.style.display = 'none';
                 showMessage('提示', '注册成功！请登录');
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
+        };
+
+        // 修改用户名
+        document.getElementById('do-update-username').onclick = async () => {
+            const newUsername = document.getElementById('new-username').value.trim();
+            const oldPassword = document.getElementById('old-password-for-username').value;
+            const errorDiv = document.getElementById('account-error');
+            if (!newUsername) {
+                errorDiv.innerText = '请输入新用户名';
+                return;
+            }
+            try {
+                await updateUsername(newUsername, oldPassword);
+                errorDiv.innerText = '';
+                showMessage('成功', '用户名已修改，请重新登录', () => {
+                    localStorage.removeItem('nb_user');
+                    location.reload();
+                });
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
+        };
+
+        // 修改密码
+        document.getElementById('do-update-password').onclick = async () => {
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const newPassword2 = document.getElementById('new-password2').value;
+            const errorDiv = document.getElementById('account-error');
+            try {
+                await updatePassword(oldPassword, newPassword, newPassword2);
+                errorDiv.innerText = '';
+                showMessage('成功', '密码已修改，请重新登录', () => {
+                    localStorage.removeItem('nb_user');
+                    location.reload();
+                });
             } catch (err) {
                 errorDiv.innerText = err.message;
             }
@@ -537,11 +613,8 @@
         window.addEventListener('scroll', function() {
             const backBtn = document.getElementById('backToTop');
             if (backBtn) {
-                if (window.scrollY > 300) {
-                    backBtn.classList.add('show');
-                } else {
-                    backBtn.classList.remove('show');
-                }
+                if (window.scrollY > 300) backBtn.classList.add('show');
+                else backBtn.classList.remove('show');
             }
         });
     </script>
