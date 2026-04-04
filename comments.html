@@ -34,6 +34,9 @@
         .new-comment-area { margin-bottom: 30px; }
         .account-btn { background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none; border-radius: 30px; padding: 10px 20px; font-size: 1rem; cursor: pointer; }
         .account-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
+        /* 折叠回复按钮样式 */
+        .toggle-replies-btn { background: none; border: none; color: var(--status-border); cursor: pointer; font-size: 0.85rem; margin-top: 8px; padding: 0; }
+        .toggle-replies-btn:hover { text-decoration: underline; background: none; color: var(--nav-btn-hover-bg); }
     </style>
 </head>
 <body>
@@ -52,6 +55,7 @@
             <div class="nav-actions">
                 <a href="APP.html" class="nav-btn">软件/APP下载</a>
                 <a href="comments.html" class="nav-btn active">💬 评论</a>
+                <button class="share-btn" id="shareButton">📤 分享此频道</button>
                 <button class="account-btn" id="accountBtn">⚙️ 账号设置</button>
             </div>
         </div>
@@ -250,6 +254,7 @@
             return roots;
         }
 
+        // 渲染单个评论（支持回复折叠）
         function renderCommentNode(node) {
             const author = node.profiles?.username || '匿名';
             const fullText = node.content;
@@ -262,10 +267,27 @@
             } else {
                 displayText = fullText;
             }
+
+            // 处理回复列表的折叠（超过5条时）
+            const replyCount = node.replies.length;
             let repliesHtml = '';
-            if (node.replies && node.replies.length > 0) {
-                repliesHtml = `<div class="replies">${node.replies.map(child => renderCommentNode(child)).join('')}</div>`;
+            let toggleRepliesBtn = '';
+            if (replyCount > 0) {
+                // 默认只显示第一条回复，其余隐藏
+                let visibleReplies = [];
+                let hiddenReplies = [];
+                if (replyCount > 5) {
+                    visibleReplies = node.replies.slice(0, 1);
+                    hiddenReplies = node.replies.slice(1);
+                    const hiddenHtml = hiddenReplies.map(child => renderCommentNode(child)).join('');
+                    repliesHtml = visibleReplies.map(child => renderCommentNode(child)).join('');
+                    repliesHtml += `<div class="hidden-replies" style="display:none;">${hiddenHtml}</div>`;
+                    toggleRepliesBtn = `<button class="toggle-replies-btn" data-id="${node.id}" data-state="collapsed">展开所有回复 (${replyCount-1}条)</button>`;
+                } else {
+                    repliesHtml = node.replies.map(child => renderCommentNode(child)).join('');
+                }
             }
+
             const showReplyBtn = node.depth < 2;
             return `
                 <div class="comment" data-id="${node.id}" data-depth="${node.depth}">
@@ -285,7 +307,10 @@
                         <button class="submit-reply" data-id="${node.id}">提交回复</button>
                         <button class="cancel-reply" data-id="${node.id}">取消</button>
                     </div>
-                    ${repliesHtml}
+                    <div class="replies" id="replies-${node.id}">
+                        ${repliesHtml}
+                        ${toggleRepliesBtn ? `<div class="toggle-replies-btn-container">${toggleRepliesBtn}</div>` : ''}
+                    </div>
                 </div>
             `;
         }
@@ -299,7 +324,7 @@
             const html = tree.map(node => renderCommentNode(node)).join('');
             commentListDiv.innerHTML = html;
 
-            // 折叠/展开
+            // 绑定折叠/展开按钮
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -313,6 +338,28 @@
                     } else {
                         contentDiv.innerText = contentDiv.dataset.short;
                         btn.innerText = '展开';
+                        btn.dataset.state = 'collapsed';
+                    }
+                };
+            });
+
+            // 绑定回复折叠/展开按钮
+            document.querySelectorAll('.toggle-replies-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const commentId = btn.dataset.id;
+                    const repliesDiv = document.getElementById(`replies-${commentId}`);
+                    const hiddenDiv = repliesDiv.querySelector('.hidden-replies');
+                    const isCollapsed = btn.dataset.state === 'collapsed';
+                    if (isCollapsed) {
+                        // 展开所有回复
+                        if (hiddenDiv) hiddenDiv.style.display = 'block';
+                        btn.innerText = `折叠所有回复`;
+                        btn.dataset.state = 'expanded';
+                    } else {
+                        // 折叠，只保留第一条
+                        if (hiddenDiv) hiddenDiv.style.display = 'none';
+                        btn.innerText = `展开所有回复 (${hiddenDiv ? hiddenDiv.querySelectorAll('.comment').length : 0}条)`;
                         btn.dataset.state = 'collapsed';
                     }
                 };
