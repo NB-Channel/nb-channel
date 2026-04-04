@@ -5,26 +5,18 @@ let AUTHOR_NAME = '';
 
 function toggleTheme() {
     const body = document.body;
-    const oldThemeBtn = document.getElementById('themeToggle'); // 旧按钮（可能已删除）
     body.classList.toggle('dark-mode');
     const isDark = body.classList.contains('dark-mode');
-    // 如果旧按钮存在才更新它的文字（避免报错）
-    if (oldThemeBtn) {
-        oldThemeBtn.innerText = isDark ? '☀️ 白天模式' : '🌙 夜间模式';
-    }
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
 }
 
 function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     const body = document.body;
-    const oldThemeBtn = document.getElementById('themeToggle');
     if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
-        if (oldThemeBtn) oldThemeBtn.innerText = '☀️ 白天模式';
     } else {
         body.classList.remove('dark-mode');
-        if (oldThemeBtn) oldThemeBtn.innerText = '🌙 夜间模式';
     }
 }
 
