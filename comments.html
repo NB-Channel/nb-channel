@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* 样式与之前相同，无变化 */
         .comment-section { max-width:800px; margin:40px auto; padding:20px; background:var(--card-bg); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
         .auth-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--card-border); }
         button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:6px 12px; border-radius:20px; cursor:pointer; }
@@ -22,17 +23,21 @@
         .comment-content { margin:8px 0; white-space: pre-wrap; word-break: break-word; }
         .comment-actions { display:flex; gap:10px; margin-top:8px; }
         .toggle-btn { background: none; border: none; color: var(--status-border); cursor: pointer; padding: 0; font-size: 0.85rem; margin-left: 8px; }
-        .toggle-btn:hover { text-decoration: underline; background: none; color: var(--nav-btn-hover-bg); }
+        .toggle-btn:hover, .toggle-btn:focus, .toggle-btn:active { background: none; color: var(--status-border); text-decoration: none; outline: none; }
         .error { color:#ff6b6b; font-size:0.9rem; margin-top:5px; }
         textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; resize: vertical; }
         .char-counter { text-align: right; font-size: 0.8rem; color: var(--count-text); margin-top: 5px; }
+        /* 新增：让发布框与评论列表之间有些间距 */
+        .new-comment-area {
+            margin-bottom: 30px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📺 NB频道官网</h1>
         <div class="author-info" id="authorInfo">UP主：NB搞事局</div>
-        <!-- 导航栏（与之前统一布局） -->
+        <!-- 导航栏（统一布局） -->
         <div class="nav-container">
             <div class="nav-links">
                 <a href="index.html" class="nav-btn">首页</a>
@@ -56,16 +61,20 @@
                     <button id="show-register">注册</button>
                 </div>
             </div>
-            <div id="comment-list"></div>
-            <div id="new-comment-area" style="display: none;">
+
+            <!-- 评论发布框移到这里（登录后才显示） -->
+            <div id="new-comment-area" class="new-comment-area" style="display: none;">
                 <textarea id="comment-text" rows="3" placeholder="写下你的评论... (最多200字)" maxlength="200"></textarea>
                 <div class="char-counter"><span id="char-count">0</span>/200</div>
                 <button id="submit-comment" style="margin-top:10px;">发布评论</button>
             </div>
+
+            <!-- 评论列表 -->
+            <div id="comment-list"></div>
         </div>
     </div>
 
-    <!-- 登录弹窗 -->
+    <!-- 弹窗部分（保持不变） -->
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <h3>登录</h3>
@@ -77,7 +86,6 @@
         </div>
     </div>
 
-    <!-- 注册弹窗 -->
     <div id="register-modal" class="modal">
         <div class="modal-content">
             <h3>注册</h3>
@@ -89,7 +97,6 @@
         </div>
     </div>
 
-    <!-- 通用消息弹窗 -->
     <div id="message-modal" class="modal message-modal">
         <div class="modal-content">
             <h3 id="message-title">提示</h3>
@@ -98,7 +105,6 @@
         </div>
     </div>
 
-    <!-- 确认弹窗 -->
     <div id="confirm-modal" class="modal confirm-modal">
         <div class="modal-content">
             <h3 id="confirm-title">确认</h3>
@@ -113,6 +119,7 @@
     <script src="data/videos.js"></script>
     <script src="js/common.js"></script>
     <script>
+        // 公共初始化
         AUTHOR_NAME = 'NB搞事局';
         document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`;
         initTheme();
@@ -133,19 +140,18 @@
         const submitCommentBtn = document.getElementById('submit-comment');
         const charCountSpan = document.getElementById('char-count');
 
-        // 实时显示字数
+        // 实时字数显示
         if (commentText) {
             commentText.addEventListener('input', () => {
                 charCountSpan.innerText = commentText.value.length;
             });
         }
 
-        // 消息弹窗函数
+        // 消息弹窗
         const messageModal = document.getElementById('message-modal');
         const messageTitle = document.getElementById('message-title');
         const messageText = document.getElementById('message-text');
         const messageClose = document.getElementById('message-close');
-
         function showMessage(title, msg, callback) {
             messageTitle.innerText = title;
             messageText.innerText = msg;
@@ -164,7 +170,6 @@
         const confirmText = document.getElementById('confirm-text');
         const confirmOk = document.getElementById('confirm-ok');
         const confirmCancel = document.getElementById('confirm-cancel');
-
         function showConfirm(title, msg, onConfirm, onCancel) {
             confirmTitle.innerText = title;
             confirmText.innerText = msg;
@@ -190,7 +195,7 @@
             return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
         }
 
-        // 渲染评论（支持长评论折叠）
+        // 渲染评论（支持折叠）
         function renderComments(comments) {
             if (!comments || comments.length === 0) {
                 commentListDiv.innerHTML = '<p>暂无评论，快来抢沙发！</p>';
@@ -225,7 +230,7 @@
             }
             commentListDiv.innerHTML = html;
 
-            // 绑定折叠/展开按钮事件
+            // 折叠/展开按钮
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -233,22 +238,18 @@
                     const contentDiv = commentDiv.querySelector('.comment-content');
                     const isCollapsed = btn.dataset.state === 'collapsed';
                     if (isCollapsed) {
-                        // 展开：显示完整内容
-                        const fullText = contentDiv.dataset.full;
-                        contentDiv.innerText = fullText;
+                        contentDiv.innerText = contentDiv.dataset.full;
                         btn.innerText = '折叠';
                         btn.dataset.state = 'expanded';
                     } else {
-                        // 折叠：显示短内容
-                        const shortText = contentDiv.dataset.short;
-                        contentDiv.innerText = shortText;
+                        contentDiv.innerText = contentDiv.dataset.short;
                         btn.innerText = '展开';
                         btn.dataset.state = 'collapsed';
                     }
                 };
             });
 
-            // 绑定删除按钮事件
+            // 删除按钮
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.onclick = () => {
                     const commentId = btn.dataset.id;
@@ -367,7 +368,7 @@
             fetchComments();
         }
 
-        // 弹窗逻辑
+        // 弹窗绑定
         const loginModal = document.getElementById('login-modal');
         const registerModal = document.getElementById('register-modal');
         document.getElementById('show-login').onclick = () => loginModal.style.display = 'flex';
