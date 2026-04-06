@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>举报管理 - NB频道</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        h1 {
+            margin-top: 0;
+            color: #00a1d6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .comment-content {
+            max-width: 400px;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #00a1d6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 5px;
+        }
+        button.delete {
+            background: #ff6b6b;
+        }
+        button.ban {
+            background: #ff9800;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+        .refresh-btn {
+            background: #28a745;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📋 举报管理后台</h1>
+    <button id="refreshBtn" class="refresh-btn">🔄 刷新列表</button>
+    <div id="reportsContainer">加载中...</div>
+</div>
+
+<script>
+    // ==================== 简单密码验证 ====================
+    const ADMIN_PASSWORD = '125800gxh';  
+    const userPassword = prompt('请输入管理密码：');
+    if (userPassword !== ADMIN_PASSWORD) {
+        document.body.innerHTML = '<div style="text-align:center; margin-top:100px;"><h1>⛔ 访问被拒绝</h1><p>密码错误，无法进入管理后台。</p></div>';
+        throw new Error('密码错误');
+    }
+    // ====================================================
+
+    // Supabase 配置
+    const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 辅助函数
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        return new Date(dateStr).toLocaleString();
+    }
+
+    async function loadReports() {
+        const container = document.getElementById('reportsContainer');
+        container.innerHTML = '<div class="loading">加载中...</div>';
+
+        try {
+            const { data, error } = await supabase
+                .from('reports')
+                .select(`
+                    id,
+                    reason,
+                    created_at,
+                    comment_id,
+                    comments!inner (
+                        id,
+                        content,
+                        user_id,
+                        profiles!inner (username)
+                    ),
+                    reporter_user_id,
+                    reporter:profiles!reports_reporter_user_id_fkey (username)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                container.innerHTML = `<div class="error">加载失败: ${error.message}<br>请检查 reports 表的 RLS 策略。</div>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="loading">暂无举报记录</div>';
+                return;
+            }
+
+            let html = `<table>
+                <thead>
+                    <tr><th>举报时间</th><th>被举报评论</th><th>评论作者</th><th>举报原因</th><th>举报人</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+            `;
+            for (const report of data) {
+                const comment = report.comments;
+                const commentAuthor = comment?.profiles?.username || '匿名用户';
+                const reporterName = report.reporter?.username || '未知';
+                const commentContent = comment?.content || '【评论已删除】';
+                const commentId = comment?.id;
+
+                html += `
+                    <tr data-report-id="${report.id}" data-comment-id="${commentId || ''}" data-user-id="${comment?.user_id || ''}">
+                        <td>${formatDate(report.created_at)}</td>
+                        <td class="comment-content">${escapeHtml(commentContent)}</td>
+                        <td>${escapeHtml(commentAuthor)}</td>
+                        <td>${escapeHtml(report.reason)}</td>
+                        <td>${escapeHtml(reporterName)}</td>
+                        <td>
+                            ${commentId ? `<button class="delete" data-comment-id="${commentId}" data-report-id="${report.id}">🗑️ 删除评论</button>` : '评论已不存在'}
+                            ${comment?.user_id ? `<button class="ban" data-user-id="${comment.user_id}" data-report-id="${report.id}">🚫 封禁用户</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }
+            html += '</tbody></table>';
+            container.innerHTML = html;
+
+            // 删除评论
+            document.querySelectorAll('.delete').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const commentId = btn.dataset.commentId;
+                    const reportId = btn.dataset.reportId;
+                    if (!confirm('确定删除这条评论吗？')) return;
+                    const { error: delError } = await supabase.from('comments').delete().eq('id', commentId);
+                    if (delError) { alert('删除失败: ' + delError.message); return; }
+                    await supabase.from('reports').delete().eq('id', reportId);
+                    alert('删除成功');
+                    loadReports();
+                });
+            });
+
+            // 封禁用户
+            document.querySelectorAll('.ban').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const userId = btn.dataset.userId;
+                    const reportId = btn.dataset.reportId;
+                    if (!userId) return;
+                    if (!confirm('确定封禁该用户吗？')) return;
+                    const { error: banError } = await supabase
+                        .from('profiles')
+                        .update({ is_banned: true, banned_reason: '经举报核实，违规发言' })
+                        .eq('id', userId);
+                    if (banError) { alert('封禁失败: ' + banError.message); return; }
+                    await supabase.from('reports').delete().eq('id', reportId);
+                    alert('用户已封禁');
+                    loadReports();
+                });
+            });
+
+        } catch (err) {
+            container.innerHTML = `<div class="error">发生错误: ${err.message}</div>`;
+        }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadReports);
+    loadReports();
+</script>
+</body>
+</html>
