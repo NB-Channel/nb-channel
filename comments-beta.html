@@ -113,7 +113,6 @@
             margin-left: 4px;
             font-size: 1rem;
         }
-        /* 新增举报按钮样式 */
         .report-btn {
             background: none;
             border: none;
@@ -180,7 +179,7 @@
 <div id="login-modal" class="modal">
     <div class="modal-content">
         <h3>登录</h3>
-        <input type="text" id="login-username" placeholder="用户名">
+        <input type="email" id="login-email" placeholder="邮箱">
         <input type="password" id="login-password" placeholder="密码">
         <div id="login-error" class="error"></div>
         <button id="do-login">登录</button>
@@ -247,11 +246,9 @@
 <script src="data/videos.js"></script>
 <script src="js/common.js"></script>
 <script>
-    // ==================== 新项目配置 ====================
+    // ==================== Supabase 配置 ====================
     const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
-    // =================================================
-
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // 公共初始化
@@ -531,7 +528,6 @@
                 if (content.length > 200) { showMessage('提示', '回复内容不能超过200字'); return; }
                 if (!currentUser) { showMessage('提示', '请先登录'); return; }
 
-                // 违禁词检测
                 const BAD_WORDS = ["操你妈", "傻逼", "垃圾", "废物", "脑残", "智障", "滚", "去死", "sb", "nmsl", "炸服务器", "gay", "Gay", "GAY", "cnm"];
                 let containsBadWord = false;
                 for (const word of BAD_WORDS) {
@@ -576,7 +572,6 @@
                     }
                 }
 
-                // 无违禁词，提交回复
                 const { error } = await supabaseClient
                     .from('comments')
                     .insert({ page_path: pagePath, user_id: currentUser.id, content, parent_id: parseInt(parentId) });
@@ -663,7 +658,6 @@
         if (!content) { showMessage('提示', '评论内容不能为空'); return; }
         if (content.length > 200) { showMessage('提示', '评论内容不能超过200字'); return; }
 
-        // 违禁词检测
         const BAD_WORDS = ["操你妈", "傻逼", "垃圾", "废物", "脑残", "智障", "滚", "去死", "sb", "nmsl", "炸服务器", "gay", "Gay", "GAY", "cnm"];
         let containsBadWord = false;
         for (const word of BAD_WORDS) {
@@ -708,7 +702,6 @@
             }
         }
 
-        // 无违禁词，发表评论
         const { error } = await supabaseClient
             .from('comments')
             .insert({ page_path: pagePath, user_id: currentUser.id, content, parent_id: null });
@@ -721,59 +714,82 @@
         }
     }
 
-    // 注册（带邮箱）
+    // 注册（使用 Supabase Auth）
     async function register(username, email, password, password2) {
         if (password !== password2) throw new Error('两次输入的密码不一致');
         if (password.length < 4) throw new Error('密码长度至少4位');
         if (!email) throw new Error('邮箱不能为空');
-        const { data, error } = await supabaseClient.rpc('register_user', {
-            input_username: username,
-            input_password: password,
-            input_email: email
+        // 检查用户名是否已存在（通过 profiles 表）
+        const { data: existingUser } = await supabaseClient
+            .from('profiles')
+            .select('id')
+            .eq('username', username)
+            .maybeSingle();
+        if (existingUser) throw new Error('用户名已存在');
+        // 注册 auth 用户
+        const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+            email: email,
+            password: password,
         });
-        if (error) throw new Error(error.message);
-        if (!data) throw new Error('用户名或邮箱已存在');
-        return data;
+        if (authError) throw authError;
+        const userId = authData.user.id;
+        // 插入 profiles
+        const { error: profileError } = await supabaseClient
+            .from('profiles')
+            .insert({ id: userId, username: username, email: email });
+        if (profileError) throw profileError;
+        return authData;
     }
 
-    async function login(username, password) {
-        const { data, error } = await supabaseClient.rpc('login_user', {
-            input_username: username,
-            input_password: password
+    // 登录（使用 Supabase Auth）
+    async function login(email, password) {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password,
         });
-        if (error) throw new Error(error.message);
-        if (!data) throw new Error('用户名或密码错误');
-        const { data: profile } = await supabaseClient
+        if (error) throw error;
+        const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
-            .select('id, username, is_banned, banned_reason')
-            .eq('id', data)
-            .maybeSingle();
-        if (!profile) throw new Error('用户资料异常');
-        return profile;
+            .select('username, is_banned, banned_reason')
+            .eq('id', data.user.id)
+            .single();
+        if (profileError) throw new Error('获取用户信息失败');
+        if (profile.is_banned) throw new Error('账号已被封禁，请联系管理员');
+        return { user: data.user, username: profile.username };
     }
 
     async function updateUsername(newUsername, oldPassword) {
-        const { data, error } = await supabaseClient.rpc('update_username', {
-            user_id: currentUser.id,
-            new_username: newUsername,
-            old_password: oldPassword
+        // 验证旧密码
+        const { error: signInError } = await supabaseClient.auth.signInWithPassword({
+            email: currentUser.email,
+            password: oldPassword,
         });
-        if (error) throw new Error(error.message);
-        if (!data.success) throw new Error(data.message);
-        return data;
+        if (signInError) throw new Error('密码错误');
+        // 检查新用户名是否已被占用
+        const { data: existing } = await supabaseClient
+            .from('profiles')
+            .select('id')
+            .eq('username', newUsername)
+            .neq('id', currentUser.id)
+            .maybeSingle();
+        if (existing) throw new Error('用户名已被占用');
+        const { error: updateError } = await supabaseClient
+            .from('profiles')
+            .update({ username: newUsername })
+            .eq('id', currentUser.id);
+        if (updateError) throw updateError;
+        return { success: true };
     }
 
     async function updatePassword(oldPassword, newPassword, newPassword2) {
         if (newPassword !== newPassword2) throw new Error('新密码两次输入不一致');
         if (newPassword.length < 4) throw new Error('新密码长度至少4位');
-        const { data, error } = await supabaseClient.rpc('update_password', {
-            user_id: currentUser.id,
-            old_password: oldPassword,
-            new_password: newPassword
+        // 验证旧密码并更新
+        const { error } = await supabaseClient.auth.updateUser({
+            password: newPassword
         });
-        if (error) throw new Error(error.message);
-        if (!data.success) throw new Error(data.message);
-        return data;
+        if (error) throw error;
+        return { success: true };
     }
 
     async function loadUser() {
@@ -781,38 +797,35 @@
         if (stored) {
             try {
                 const user = JSON.parse(stored);
-                const { data, error } = await supabaseClient
-                    .from('profiles')
-                    .select('id, username, is_banned, banned_reason')
-                    .eq('id', user.id)
-                    .maybeSingle();
-                if (error) throw error;
-                if (!data) {
-                    console.error('未找到用户 profile，可能注册未完成');
-                    showMessage('错误', '账号数据异常，请尝试重新登录或联系管理员');
-                    await supabaseClient.auth.signOut();
-                    localStorage.removeItem('nb_user');
-                    location.reload();
-                    return;
-                }
-                if (data.is_banned) {
-                    userStatusSpan.innerHTML = `您的账号已被封禁，原因：${data.banned_reason || '多次违规'} <button class="apology-btn" id="apologyBtn">找我道歉</button>`;
-                    document.getElementById('apologyBtn').onclick = () => {
-                        window.location.href = 'https://space.bilibili.com/3493259582114264';
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session && session.user.id === user.id) {
+                    const { data: profile, error: profileError } = await supabaseClient
+                        .from('profiles')
+                        .select('username, is_banned, banned_reason')
+                        .eq('id', user.id)
+                        .maybeSingle();
+                    if (profileError) throw profileError;
+                    if (!profile) throw new Error('用户资料缺失');
+                    if (profile.is_banned) {
+                        userStatusSpan.innerHTML = `您的账号已被封禁，原因：${profile.banned_reason || '多次违规'} <button class="apology-btn" id="apologyBtn">找我道歉</button>`;
+                        document.getElementById('apologyBtn').onclick = () => {
+                            window.location.href = 'https://space.bilibili.com/3493259582114264';
+                        };
+                        newCommentArea.style.display = 'none';
+                        fetchComments();
+                        return;
+                    }
+                    currentUser = { id: user.id, username: profile.username, email: session.user.email };
+                    userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
+                    document.getElementById('logout-btn').onclick = () => {
+                        localStorage.removeItem('nb_user');
+                        supabaseClient.auth.signOut();
+                        location.reload();
                     };
-                    newCommentArea.style.display = 'none';
+                    newCommentArea.style.display = 'block';
                     fetchComments();
                     return;
                 }
-                currentUser = { id: data.id, username: data.username };
-                userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
-                document.getElementById('logout-btn').onclick = () => {
-                    localStorage.removeItem('nb_user');
-                    location.reload();
-                };
-                newCommentArea.style.display = 'block';
-                fetchComments();
-                return;
             } catch(e) { console.error(e); }
         }
         currentUser = null;
@@ -838,12 +851,12 @@
     closeAccount.onclick = () => accountModal.style.display = 'none';
 
     document.getElementById('do-login').onclick = async () => {
-        const username = document.getElementById('login-username').value.trim();
+        const email = document.getElementById('login-email').value.trim();
         const password = document.getElementById('login-password').value;
         const errorDiv = document.getElementById('login-error');
         try {
-            const user = await login(username, password);
-            localStorage.setItem('nb_user', JSON.stringify({ id: user.id, username: user.username }));
+            const { user, username } = await login(email, password);
+            localStorage.setItem('nb_user', JSON.stringify({ id: user.id, username: username, email: email }));
             loginModal.style.display = 'none';
             location.reload();
         } catch (err) {
