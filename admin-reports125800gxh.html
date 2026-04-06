@@ -54,19 +54,19 @@
             margin-bottom: 5px;
         }
         button.delete {
-            background: #fd7e14;  /* 橙色 */
+            background: #fd7e14;
         }
         button.delete:hover {
             background: #e67e22;
         }
         button.ban {
-            background: #dc3545;  /* 红色 */
+            background: #dc3545;
         }
         button.ban:hover {
             background: #c82333;
         }
         button.ignore {
-            background: #28a745;  /* 绿色 */
+            background: #28a745;
         }
         button.ignore:hover {
             background: #218838;
@@ -97,12 +97,10 @@
 </div>
 
 <script>
-    // Supabase 配置
     const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 辅助函数
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
@@ -113,7 +111,6 @@
         return new Date(dateStr).toLocaleString();
     }
 
-    // 加载举报列表
     async function loadReports() {
         const container = document.getElementById('reportsContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
@@ -169,10 +166,10 @@
                         <td>${escapeHtml(reporterName)}</td>
                         <td>
                             ${commentId ? `<button class="delete" data-comment-id="${commentId}" data-report-id="${report.id}">🗑️ 删除举报评论</button>` : '评论已不存在'}
-                            ${comment?.user_id ? `<button class="ban" data-user-id="${comment.user_id}" data-report-id="${report.id}">🚫 封禁用户IP</button>` : ''}
-                            <button class="ignore" data-report-id="${report.id}">🙈 忽略举报信息</button>
-                         </td>
-                     </tr>
+                            ${comment?.user_id ? `<button class="ban" data-user-id="${comment.user_id}" data-report-id="${report.id}">🚫 封禁用户</button>` : ''}
+                            <button class="ignore" data-report-id="${report.id}">🙈 忽略举报</button>
+                        </td>
+                    </tr>
                 `;
             }
             html += '</tbody></table>';
@@ -210,10 +207,11 @@
                 });
             });
 
-            // 忽略举报
+            // 忽略举报（直接删除行）
             document.querySelectorAll('.ignore').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const reportId = btn.dataset.reportId;
+                    const row = btn.closest('tr');
                     if (!confirm('确定忽略此举报吗？该举报将被删除，不会对评论和用户做任何操作。')) return;
                     const { error: ignoreError } = await supabaseClient.from('reports').delete().eq('id', reportId);
                     if (ignoreError) {
@@ -221,7 +219,7 @@
                         return;
                     }
                     alert('已忽略该举报');
-                    loadReports();
+                    if (row) row.remove(); // 直接删除行，无需重新加载
                 });
             });
 
