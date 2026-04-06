@@ -512,7 +512,7 @@
             };
         });
 
-        // 提交回复（调用 Edge Function）
+        // 提交回复（前端违禁词检测）
         document.querySelectorAll('.submit-reply').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -530,13 +530,58 @@
                 if (!content) { showMessage('提示', '回复内容不能为空'); return; }
                 if (content.length > 200) { showMessage('提示', '回复内容不能超过200字'); return; }
                 if (!currentUser) { showMessage('提示', '请先登录'); return; }
-                const { data, error } = await supabaseClient.functions.invoke('check-and-post-comment', {
-                    body: { user_id: currentUser.id, content, page_path: pagePath, parent_id: parseInt(parentId) }
-                });
+
+                // 违禁词检测
+                const BAD_WORDS = ["操你妈", "傻逼", "垃圾", "废物", "脑残", "智障", "滚", "去死", "sb", "nmsl", "炸服务器", "gay", "Gay", "GAY", "cnm"];
+                let containsBadWord = false;
+                for (const word of BAD_WORDS) {
+                    if (content.includes(word)) {
+                        containsBadWord = true;
+                        break;
+                    }
+                }
+
+                if (containsBadWord) {
+                    const { data: profile, error: profileError } = await supabaseClient
+                        .from('profiles')
+                        .select('warning_count, is_banned')
+                        .eq('id', currentUser.id)
+                        .maybeSingle();
+                    if (profileError) {
+                        showMessage('错误', '查询用户信息失败');
+                        return;
+                    }
+                    const newWarningCount = (profile?.warning_count || 0) + 1;
+                    let isBanned = false;
+                    let bannedReason = '';
+                    if (newWarningCount >= 3) {
+                        isBanned = true;
+                        bannedReason = '多次发布违禁词，账号已封禁';
+                    }
+                    await supabaseClient
+                        .from('profiles')
+                        .update({
+                            warning_count: newWarningCount,
+                            is_banned: isBanned,
+                            banned_reason: bannedReason || null
+                        })
+                        .eq('id', currentUser.id);
+                    if (isBanned) {
+                        showMessage('警告', '您已连续三次发布违禁词，账号已被封禁');
+                        setTimeout(() => location.reload(), 2000);
+                        return;
+                    } else {
+                        showMessage('警告', `您的回复包含违禁词，已警告 ${newWarningCount} 次，满 3 次将封号`);
+                        return;
+                    }
+                }
+
+                // 无违禁词，提交回复
+                const { error } = await supabaseClient
+                    .from('comments')
+                    .insert({ page_path: pagePath, user_id: currentUser.id, content, parent_id: parseInt(parentId) });
                 if (error) {
-                    showMessage('错误', error.message);
-                } else if (data.error) {
-                    showMessage('警告', data.error);
+                    showMessage('错误', '回复失败');
                 } else {
                     replyForm.style.display = 'none';
                     fetchComments();
@@ -611,19 +656,64 @@
         renderComments(data);
     }
 
-    // 发表评论（调用 Edge Function）
+    // 发表评论（前端违禁词检测）
     async function postComment() {
         if (!currentUser) { showMessage('提示', '请先登录'); return; }
         let content = commentText.value.trim();
         if (!content) { showMessage('提示', '评论内容不能为空'); return; }
         if (content.length > 200) { showMessage('提示', '评论内容不能超过200字'); return; }
-        const { data, error } = await supabaseClient.functions.invoke('check-and-post-comment', {
-            body: { user_id: currentUser.id, content, page_path: pagePath, parent_id: null }
-        });
+
+        // 违禁词检测
+        const BAD_WORDS = ["操你妈", "傻逼", "垃圾", "废物", "脑残", "智障", "滚", "去死", "sb", "nmsl", "炸服务器", "gay", "Gay", "GAY", "cnm"];
+        let containsBadWord = false;
+        for (const word of BAD_WORDS) {
+            if (content.includes(word)) {
+                containsBadWord = true;
+                break;
+            }
+        }
+
+        if (containsBadWord) {
+            const { data: profile, error: profileError } = await supabaseClient
+                .from('profiles')
+                .select('warning_count, is_banned')
+                .eq('id', currentUser.id)
+                .maybeSingle();
+            if (profileError) {
+                showMessage('错误', '查询用户信息失败');
+                return;
+            }
+            const newWarningCount = (profile?.warning_count || 0) + 1;
+            let isBanned = false;
+            let bannedReason = '';
+            if (newWarningCount >= 3) {
+                isBanned = true;
+                bannedReason = '多次发布违禁词，账号已封禁';
+            }
+            await supabaseClient
+                .from('profiles')
+                .update({
+                    warning_count: newWarningCount,
+                    is_banned: isBanned,
+                    banned_reason: bannedReason || null
+                })
+                .eq('id', currentUser.id);
+            if (isBanned) {
+                showMessage('警告', '您已连续三次发布违禁词，账号已被封禁');
+                setTimeout(() => location.reload(), 2000);
+                return;
+            } else {
+                showMessage('警告', `您的评论包含违禁词，已警告 ${newWarningCount} 次，满 3 次将封号`);
+                return;
+            }
+        }
+
+        // 无违禁词，发表评论
+        const { error } = await supabaseClient
+            .from('comments')
+            .insert({ page_path: pagePath, user_id: currentUser.id, content, parent_id: null });
         if (error) {
-            showMessage('错误', error.message);
-        } else if (data.error) {
-            showMessage('警告', data.error);
+            showMessage('错误', '发表失败');
         } else {
             commentText.value = '';
             charCountSpan.innerText = '0';
