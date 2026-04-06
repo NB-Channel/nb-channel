@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 基础样式 */
+        /* 基础样式（与之前相同，此处省略以节省篇幅，实际使用时请保留完整样式） */
         .comment-section { max-width:800px; margin:40px auto; padding:20px; background:var(--card-bg); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
         .auth-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--card-border); }
         button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:6px 12px; border-radius:20px; cursor:pointer; }
@@ -175,7 +175,7 @@
     </div>
 </div>
 
-<!-- 弹窗 -->
+<!-- 弹窗（保持不变） -->
 <div id="login-modal" class="modal">
     <div class="modal-content">
         <h3>登录</h3>
@@ -334,31 +334,7 @@
         return data.map(item => item.username);
     }
 
-    // 评论树构建与渲染
-    function buildCommentTree(comments) {
-        const map = new Map();
-        const roots = [];
-        comments.forEach(c => {
-            map.set(c.id, { ...c, replies: [] });
-        });
-        comments.forEach(c => {
-            const node = map.get(c.id);
-            if (c.parent_id && map.has(c.parent_id)) {
-                map.get(c.parent_id).replies.push(node);
-            } else {
-                roots.push(node);
-            }
-        });
-        roots.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        const setDepth = (node, depth) => {
-            node.depth = depth;
-            node.replies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-            node.replies.forEach(child => setDepth(child, depth + 1));
-        };
-        roots.forEach(node => setDepth(node, 0));
-        return roots;
-    }
-
+    // 计算节点后代总数（不包括自身）
     function countDescendants(node) {
         let count = node.replies.length;
         for (const child of node.replies) {
@@ -367,7 +343,9 @@
         return count;
     }
 
-    function renderCommentNode(node) {
+    // 渲染评论节点（支持完美折叠）
+    // 参数: node, hideReplies (是否隐藏该节点的回复列表，用于折叠时隐藏第一条回复的嵌套)
+    function renderCommentNode(node, hideReplies = false) {
         const author = node.profiles?.username || '匿名';
         const fullText = node.content;
         const isLong = fullText.length > 50;
@@ -380,22 +358,38 @@
             displayText = fullText;
         }
 
-        const totalReplies = countDescendants(node);
         const showReplyBtn = node.depth < 2;
-
         let repliesHtml = '';
         let toggleRepliesBtn = '';
 
-        if (totalReplies > 3 && node.replies.length > 0) {
-            const firstReply = node.replies[0];
-            const restReplies = node.replies.slice(1);
-            const firstReplyHtml = renderCommentNode(firstReply);
-            const restHtml = restReplies.map(child => renderCommentNode(child)).join('');
-            repliesHtml = firstReplyHtml;
-            repliesHtml += `<div class="hidden-replies" style="display:none;">${restHtml}</div>`;
-            toggleRepliesBtn = `<button class="toggle-replies-btn" data-id="${node.id}" data-state="collapsed">展开所有回复</button>`;
-        } else if (node.replies.length > 0) {
-            repliesHtml = node.replies.map(child => renderCommentNode(child)).join('');
+        // 顶级评论折叠逻辑
+        if (node.depth === 0) {
+            const totalDescendants = countDescendants(node);
+            if (totalDescendants > 3 && node.replies.length > 0) {
+                // 第一条直接回复
+                const firstReply = node.replies[0];
+                // 渲染第一条回复，并强制隐藏其嵌套回复
+                const firstReplyHtml = renderCommentNode(firstReply, true);
+                // 其余所有回复（包括第一条回复的嵌套回复）放入隐藏容器
+                const restReplies = node.replies.slice(1);
+                let restHtml = restReplies.map(child => renderCommentNode(child, true)).join('');
+                // 将第一条回复的嵌套回复也加入隐藏容器
+                if (firstReply.replies && firstReply.replies.length > 0) {
+                    const firstReplyNestedHtml = firstReply.replies.map(child => renderCommentNode(child, true)).join('');
+                    restHtml += `<div class="first-reply-nested">${firstReplyNestedHtml}</div>`;
+                }
+                repliesHtml = firstReplyHtml;
+                repliesHtml += `<div class="hidden-replies" style="display:none;">${restHtml}</div>`;
+                toggleRepliesBtn = `<button class="toggle-replies-btn" data-id="${node.id}" data-state="collapsed">展开所有回复 (${totalDescendants}条)</button>`;
+            } else {
+                // 正常显示所有回复（不隐藏嵌套）
+                repliesHtml = node.replies.map(child => renderCommentNode(child, false)).join('');
+            }
+        } else {
+            // 非顶级评论：根据 hideReplies 决定是否显示回复
+            if (!hideReplies && node.replies.length > 0) {
+                repliesHtml = node.replies.map(child => renderCommentNode(child, false)).join('');
+            }
         }
 
         let verifiedBadge = '';
@@ -441,10 +435,10 @@
             return;
         }
         const tree = buildCommentTree(comments);
-        const html = tree.map(node => renderCommentNode(node)).join('');
+        const html = tree.map(node => renderCommentNode(node, false)).join('');
         commentListDiv.innerHTML = html;
 
-        // 折叠/展开按钮事件
+        // 折叠/展开按钮事件（正文折叠）
         document.querySelectorAll('.toggle-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
@@ -463,6 +457,7 @@
             };
         });
 
+        // 回复折叠/展开按钮（针对顶级评论的折叠）
         document.querySelectorAll('.toggle-replies-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
@@ -482,6 +477,7 @@
             };
         });
 
+        // 回复按钮
         document.querySelectorAll('.reply-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
@@ -713,7 +709,7 @@
         }
     }
 
-    // 获取客户端公网 IP（使用 icanhazip.com，备用 api.ipify.org）
+    // 获取客户端公网 IP
     async function getClientIP() {
         const services = [
             'https://icanhazip.com',
@@ -743,17 +739,14 @@
             ip = await getClientIP();
         } catch (err) {
             console.warn('获取IP失败，将跳过IP限制检查', err);
-            // 如果无法获取IP，仍然允许注册（但记录警告），防止正常用户被阻塞
         }
 
         if (ip) {
-            // 检查今日注册次数是否超过限制
             const { data: canReg, error: checkError } = await supabaseClient.rpc('can_register', { ip });
             if (checkError) throw new Error('无法验证注册限制');
             if (!canReg) throw new Error('您的IP今日注册次数已达上限（3次），请明天再试');
         }
 
-        // 调用原有的注册 RPC
         const { data: userId, error: regError } = await supabaseClient.rpc('register_user', {
             input_username: username,
             input_password: password
@@ -762,7 +755,6 @@
         if (!userId) throw new Error('用户名已存在');
 
         if (ip) {
-            // 记录本次注册尝试
             await supabaseClient.rpc('record_registration', { ip });
         }
 
@@ -787,13 +779,11 @@
     }
 
     async function updateUsername(newUsername, oldPassword) {
-        // 验证旧密码
         const { data: userId, error: loginError } = await supabaseClient.rpc('login_user', {
             input_username: currentUser.username,
             input_password: oldPassword
         });
         if (loginError || !userId) throw new Error('密码错误');
-        // 检查新用户名是否已被占用
         const { data: existing } = await supabaseClient
             .from('profiles')
             .select('id')
@@ -812,13 +802,11 @@
     async function updatePassword(oldPassword, newPassword, newPassword2) {
         if (newPassword !== newPassword2) throw new Error('新密码两次输入不一致');
         if (newPassword.length < 4) throw new Error('新密码长度至少4位');
-        // 先验证旧密码
         const { data: userId, error: loginError } = await supabaseClient.rpc('login_user', {
             input_username: currentUser.username,
             input_password: oldPassword
         });
         if (loginError || !userId) throw new Error('旧密码错误');
-        // 更新密码
         const { data, error } = await supabaseClient.rpc('update_password', {
             user_id: currentUser.id,
             old_password: oldPassword,
@@ -829,7 +817,6 @@
         return data;
     }
 
-    // 自动处理失效登录的 loadUser 函数
     async function loadUser() {
         const stored = localStorage.getItem('nb_user');
         if (stored) {
@@ -842,7 +829,6 @@
                     .maybeSingle();
                 if (error) throw error;
                 if (!profile) {
-                    // 用户不存在，清除本地存储
                     localStorage.removeItem('nb_user');
                     showMessage('提示', '登录信息已失效，请重新登录');
                     currentUser = null;
