@@ -86,14 +86,6 @@
 </div>
 
 <script>
-    // ==================== 简单密码验证 ====================
-    const ADMIN_PASSWORD = '125800gxh';  
-    const userPassword = prompt('请输入管理密码：');
-    if (userPassword !== ADMIN_PASSWORD) {
-        document.body.innerHTML = '<div style="text-align:center; margin-top:100px;"><h1>⛔ 访问被拒绝</h1><p>密码错误，无法进入管理后台。</p></div>';
-        throw new Error('密码错误');
-    }
-    // ====================================================
 
     // Supabase 配置
     const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
