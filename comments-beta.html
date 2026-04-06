@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 基础样式（与之前相同） */
+        /* 样式部分（与之前相同，为节省篇幅此处省略，实际使用时请保留完整样式） */
         .comment-section { max-width:800px; margin:40px auto; padding:20px; background:var(--card-bg); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
         .auth-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--card-border); }
         button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:6px 12px; border-radius:20px; cursor:pointer; }
@@ -512,8 +512,6 @@
                 // 确保父评论是顶级（不允许对回复再回复）
                 const parentDiv = document.querySelector(`.comment[data-id="${parentId}"]`);
                 if (!parentDiv) return;
-                // 检查是否已经有回复表单（只能回复顶级评论，这里简单通过按钮存在性判断，无需额外深度检查）
-                // 实际上，只有顶级评论才显示回复按钮，所以直接提交即可
                 const replyForm = document.getElementById(`reply-form-${parentId}`);
                 const textarea = replyForm.querySelector('textarea');
                 let content = textarea.value.trim();
@@ -728,24 +726,30 @@
         throw new Error('无法获取IP地址');
     }
 
-    // 注册（包含 IP 限制）
+    // 注册（包含 IP 限制，单一函数定义）
     async function register(username, password, password2) {
         if (password !== password2) throw new Error('两次输入的密码不一致');
         if (password.length < 4) throw new Error('密码长度至少4位');
 
+        // 获取 IP，失败则直接拒绝注册
         let ip = null;
         try {
             ip = await getClientIP();
+            if (!ip) throw new Error('无法获取IP');
         } catch (err) {
-            console.warn('获取IP失败，将跳过IP限制检查', err);
+            console.error('获取IP失败，拒绝注册', err);
+            throw new Error('无法验证注册限制，请稍后重试或联系管理员');
         }
 
-        if (ip) {
-            const { data: canReg, error: checkError } = await supabaseClient.rpc('can_register', { ip });
-            if (checkError) throw new Error('无法验证注册限制');
-            if (!canReg) throw new Error('您的IP今日注册次数已达上限（3次），请明天再试');
+        // 检查今日注册次数
+        const { data: canReg, error: checkError } = await supabaseClient.rpc('can_register', { ip });
+        if (checkError) {
+            console.error('检查注册限制失败', checkError);
+            throw new Error('无法验证注册限制，请稍后重试');
         }
+        if (!canReg) throw new Error('您的IP今日注册次数已达上限（3次），请明天再试');
 
+        // 调用注册 RPC
         const { data: userId, error: regError } = await supabaseClient.rpc('register_user', {
             input_username: username,
             input_password: password
@@ -753,8 +757,11 @@
         if (regError) throw new Error(regError.message);
         if (!userId) throw new Error('用户名已存在');
 
-        if (ip) {
-            await supabaseClient.rpc('record_registration', { ip });
+        // 记录本次注册
+        const { error: recordError } = await supabaseClient.rpc('record_registration', { ip });
+        if (recordError) {
+            console.error('记录注册失败', recordError);
+            // 不影响注册成功，但会留下日志
         }
 
         return userId;
