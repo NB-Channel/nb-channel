@@ -100,7 +100,7 @@
     // Supabase 配置
     const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // 辅助函数
     function escapeHtml(str) {
@@ -119,7 +119,7 @@
         container.innerHTML = '<div class="loading">加载中...</div>';
 
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('reports')
                 .select(`
                     id,
@@ -147,7 +147,7 @@
                 return;
             }
 
-            let html = `<td>
+            let html = `<table>
                 <thead>
                     <tr><th>举报时间</th><th>被举报评论</th><th>评论作者</th><th>举报原因</th><th>举报人</th><th>操作</th></tr>
                 </thead>
@@ -168,11 +168,11 @@
                         <td>${escapeHtml(report.reason)}</td>
                         <td>${escapeHtml(reporterName)}</td>
                         <td>
-                            ${commentId ? `<button class="delete" data-comment-id="${commentId}" data-report-id="${report.id}">🗑️ 删除评论</button>` : '评论已不存在'}
-                            ${comment?.user_id ? `<button class="ban" data-user-id="${comment.user_id}" data-report-id="${report.id}">🚫 封禁用户</button>` : ''}
-                            <button class="ignore" data-report-id="${report.id}">🙈 忽略</button>
-                        </td>
-                    </tr>
+                            ${commentId ? `<button class="delete" data-comment-id="${commentId}" data-report-id="${report.id}">🗑️ 删除举报评论</button>` : '评论已不存在'}
+                            ${comment?.user_id ? `<button class="ban" data-user-id="${comment.user_id}" data-report-id="${report.id}">🚫 封禁用户IP</button>` : ''}
+                            <button class="ignore" data-report-id="${report.id}">🙈 忽略举报信息</button>
+                         </td>
+                     </tr>
                 `;
             }
             html += '</tbody></table>';
@@ -184,9 +184,9 @@
                     const commentId = btn.dataset.commentId;
                     const reportId = btn.dataset.reportId;
                     if (!confirm('确定删除这条评论吗？删除后不可恢复。')) return;
-                    const { error: delError } = await supabase.from('comments').delete().eq('id', commentId);
+                    const { error: delError } = await supabaseClient.from('comments').delete().eq('id', commentId);
                     if (delError) { alert('删除失败: ' + delError.message); return; }
-                    await supabase.from('reports').delete().eq('id', reportId);
+                    await supabaseClient.from('reports').delete().eq('id', reportId);
                     alert('删除成功');
                     loadReports();
                 });
@@ -199,12 +199,12 @@
                     const reportId = btn.dataset.reportId;
                     if (!userId) return;
                     if (!confirm('确定封禁该用户吗？该用户将无法发表任何评论。')) return;
-                    const { error: banError } = await supabase
+                    const { error: banError } = await supabaseClient
                         .from('profiles')
                         .update({ is_banned: true, banned_reason: '经举报核实，违规发言' })
                         .eq('id', userId);
                     if (banError) { alert('封禁失败: ' + banError.message); return; }
-                    await supabase.from('reports').delete().eq('id', reportId);
+                    await supabaseClient.from('reports').delete().eq('id', reportId);
                     alert('用户已封禁');
                     loadReports();
                 });
@@ -215,7 +215,7 @@
                 btn.addEventListener('click', async (e) => {
                     const reportId = btn.dataset.reportId;
                     if (!confirm('确定忽略此举报吗？该举报将被删除，不会对评论和用户做任何操作。')) return;
-                    const { error: ignoreError } = await supabase.from('reports').delete().eq('id', reportId);
+                    const { error: ignoreError } = await supabaseClient.from('reports').delete().eq('id', reportId);
                     if (ignoreError) {
                         alert('忽略失败: ' + ignoreError.message);
                         return;
