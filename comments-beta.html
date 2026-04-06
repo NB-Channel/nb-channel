@@ -713,21 +713,47 @@
         }
     }
 
+    // 获取客户端公网 IP（使用 icanhazip.com，备用 api.ipify.org）
+    async function getClientIP() {
+        const services = [
+            'https://icanhazip.com',
+            'https://api.ipify.org?format=text'
+        ];
+        for (const url of services) {
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    const ip = await response.text();
+                    return ip.trim();
+                }
+            } catch (e) {
+                console.warn(`IP service ${url} failed:`, e);
+            }
+        }
+        throw new Error('无法获取IP地址');
+    }
+
     // 注册（包含 IP 限制）
     async function register(username, password, password2) {
         if (password !== password2) throw new Error('两次输入的密码不一致');
         if (password.length < 4) throw new Error('密码长度至少4位');
 
-        // 1. 获取用户公网 IP
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const { ip } = await ipRes.json();
+        let ip = null;
+        try {
+            ip = await getClientIP();
+        } catch (err) {
+            console.warn('获取IP失败，将跳过IP限制检查', err);
+            // 如果无法获取IP，仍然允许注册（但记录警告），防止正常用户被阻塞
+        }
 
-        // 2. 检查今日注册次数是否超过限制
-        const { data: canReg, error: checkError } = await supabaseClient.rpc('can_register', { ip });
-        if (checkError) throw new Error('无法验证注册限制');
-        if (!canReg) throw new Error('您的IP今日注册次数已达上限（3次），请明天再试');
+        if (ip) {
+            // 检查今日注册次数是否超过限制
+            const { data: canReg, error: checkError } = await supabaseClient.rpc('can_register', { ip });
+            if (checkError) throw new Error('无法验证注册限制');
+            if (!canReg) throw new Error('您的IP今日注册次数已达上限（3次），请明天再试');
+        }
 
-        // 3. 调用原有的注册 RPC
+        // 调用原有的注册 RPC
         const { data: userId, error: regError } = await supabaseClient.rpc('register_user', {
             input_username: username,
             input_password: password
@@ -735,8 +761,10 @@
         if (regError) throw new Error(regError.message);
         if (!userId) throw new Error('用户名已存在');
 
-        // 4. 记录本次注册尝试
-        await supabaseClient.rpc('record_registration', { ip });
+        if (ip) {
+            // 记录本次注册尝试
+            await supabaseClient.rpc('record_registration', { ip });
+        }
 
         return userId;
     }
