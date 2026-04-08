@@ -609,8 +609,8 @@
             showMessage('提示', '请填写举报原因');
             return;
         }
-        if (reason.length > 200) {
-            showMessage('提示', '举报原因不能超过200字');
+        if (reason.length > 100) {
+            showMessage('提示', '举报原因不能超过100字');
             return;
         }
         if (!currentUser) {
@@ -867,9 +867,9 @@
                     return;
                 }
                 if (profile.is_banned) {
-                    userStatusSpan.innerHTML = `您的账号已被封禁，原因：${profile.banned_reason || '多次违规'} <button class="apology-btn" id="apologyBtn">找我道歉</button>`;
+                    userStatusSpan.innerHTML = `您的账号已被封禁，原因：${profile.banned_reason || '多次违规'} <button class="apology-btn" id="apologyBtn">找我解封</button>`;
                     document.getElementById('apologyBtn').onclick = () => {
-                        window.location.href = 'https://space.bilibili.com/3493259582114264';
+                        window.location.href = 'https://message.bilibili.com/?spm_id_from=333.1387.0.0#/whisper/mid3493259582114264';
                     };
                     newCommentArea.style.display = 'none';
                     fetchComments();
