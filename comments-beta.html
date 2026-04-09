@@ -301,10 +301,29 @@
     const closeReportBtn = document.getElementById('close-report');
 
     if (commentText) {
-        commentText.addEventListener('input', () => {
+    // 字数统计 + 行数超限后备处理（防止粘贴等操作）
+    commentText.addEventListener('input', () => {
+        charCountSpan.innerText = commentText.value.length;
+        const lines = commentText.value.split(/\r\n|\r|\n/).length;
+        if (lines > 10) {
+            const truncated = commentText.value.split(/\r\n|\r|\n/).slice(0, 10).join('\n');
+            commentText.value = truncated;
             charCountSpan.innerText = commentText.value.length;
-        });
-    }
+            showMessage('提示', '评论最多只能有10行');
+        }
+    });
+
+    // 阻止回车键换行（当行数已达10行时）
+    commentText.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const currentLines = commentText.value.split(/\r\n|\r|\n/).length;
+            if (currentLines >= 10) {
+                e.preventDefault();
+                showMessage('提示', '评论最多只能有10行，不能再添加新行');
+            }
+        }
+    });
+}
     if (reportReason) {
         reportReason.addEventListener('input', () => {
             reportCharCountSpan.innerText = reportReason.value.length;
