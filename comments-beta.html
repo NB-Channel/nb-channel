@@ -414,15 +414,17 @@
     function renderCommentNode(node, isReply = false) {
         const author = node.profiles?.username || '匿名';
         const fullText = node.content;
-        const isLong = fullText.length > 50;
-        let displayText, toggleButton = '';
-        if (isLong) {
-            const shortText = fullText.substring(0, 50) + '...';
-            displayText = shortText;
-            toggleButton = `<button class="toggle-btn" data-id="${node.id}" data-state="collapsed">展开</button>`;
-        } else {
-            displayText = fullText;
-        }
+const isLong = fullText.length > 50;
+let displayText, toggleButton = '';
+if (isLong) {
+    const shortText = fullText.substring(0, 50) + '...';
+    displayText = shortText;
+    toggleButton = `<button class="toggle-btn" data-id="${node.id}" data-state="collapsed">展开</button>`;
+} else {
+    displayText = fullText;
+}
+// ...
+html += `<div class="comment-content" data-full="${escapeHtml(fullText)}" data-short="${escapeHtml(displayText)}">${escapeHtml(displayText)}</div>`;
 
         const showReplyBtn = !isReply;
         let repliesHtml = '';
@@ -497,14 +499,14 @@
                 const contentDiv = commentDiv.querySelector('.comment-content');
                 const isCollapsed = btn.dataset.state === 'collapsed';
         if (isCollapsed) {
-               contentDiv.textContent = contentDiv.dataset.full;
-                btn.innerText = '折叠';
-                btn.dataset.state = 'expanded';
-         } else {
-                contentDiv.textContent = contentDiv.dataset.short;
-                btn.innerText = '展开';
-                btn.dataset.state = 'collapsed';
-         }
+    contentDiv.textContent = contentDiv.dataset.full;   // 正确
+    btn.innerText = '折叠';
+    btn.dataset.state = 'expanded';
+} else {
+    contentDiv.textContent = contentDiv.dataset.short;
+    btn.innerText = '展开';
+    btn.dataset.state = 'collapsed';
+}
             };
         });
 
