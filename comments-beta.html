@@ -496,15 +496,15 @@
                 const commentDiv = btn.closest('.comment');
                 const contentDiv = commentDiv.querySelector('.comment-content');
                 const isCollapsed = btn.dataset.state === 'collapsed';
-                if (isCollapsed) {
-                    contentDiv.innerText = contentDiv.dataset.full;
-                    btn.innerText = '折叠';
-                    btn.dataset.state = 'expanded';
-                } else {
-                    contentDiv.innerText = contentDiv.dataset.short;
-                    btn.innerText = '展开';
-                    btn.dataset.state = 'collapsed';
-                }
+        if (isCollapsed) {
+               contentDiv.textContent = contentDiv.dataset.full;
+                btn.innerText = '折叠';
+                btn.dataset.state = 'expanded';
+         } else {
+                contentDiv.textContent = contentDiv.dataset.short;
+                btn.innerText = '展开';
+                btn.dataset.state = 'collapsed';
+         }
             };
         });
 
