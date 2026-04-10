@@ -622,22 +622,21 @@
 
     // 提交举报（模态框确认）
     async function submitReport() {
-        if (!pendingReportCommentId) return;
-        const reason = reportReason.value.trim();
-        if (!reason) {
-            showMessage('提示', '请填写举报原因');
-            return;
-        }
-        if (reason.length > 100) {
-    showMessage('提示', '举报原因不能超过100字');
-    return;
-}
-        }
-        if (!currentUser) {
-            showMessage('提示', '请先登录再举报');
-            reportModal.style.display = 'none';
-            return;
-        }
+    if (!pendingReportCommentId) return;
+    const reason = reportReason.value.trim();
+    if (!reason) {
+        showMessage('提示', '请填写举报原因');
+        return;
+    }
+    if (reason.length > 100) {
+        showMessage('提示', '举报原因不能超过100字');
+        return;
+    }
+    if (!currentUser) {
+        showMessage('提示', '请先登录再举报');
+        reportModal.style.display = 'none';
+        return;
+    }
 
         // 1. 检查是否已举报过该评论
         const { data: existing, error: checkError } = await supabaseClient
