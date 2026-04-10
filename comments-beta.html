@@ -86,7 +86,7 @@
     </div>
 </div>
 
-<!-- 模态框 -->
+<!-- 模态框（与原版一致） -->
 <div id="login-modal" class="modal"><div class="modal-content"><h3>登录</h3><input type="text" id="login-username" placeholder="用户名"><input type="password" id="login-password" placeholder="密码"><div id="login-error" class="error"></div><button id="do-login">登录</button><button id="close-login">取消</button></div></div>
 <div id="register-modal" class="modal"><div class="modal-content"><h3>注册</h3><input type="text" id="reg-username" placeholder="用户名"><input type="password" id="reg-password" placeholder="密码"><input type="password" id="reg-password2" placeholder="确认密码"><div id="register-error" class="error"></div><button id="do-register">注册</button><button id="close-register">取消</button></div></div>
 <div id="account-modal" class="modal"><div class="modal-content"><h3>账号设置</h3><div id="account-error" class="error"></div><div style="margin-bottom:20px;"><h4>修改用户名</h4><input type="text" id="new-username" placeholder="新用户名"><input type="password" id="old-password-for-username" placeholder="当前密码"><button id="do-update-username">修改用户名</button></div><div><h4>修改密码</h4><input type="password" id="old-password" placeholder="旧密码"><input type="password" id="new-password" placeholder="新密码"><input type="password" id="new-password2" placeholder="确认新密码"><button id="do-update-password">修改密码</button></div><button id="close-account" style="margin-top:20px;">关闭</button></div></div>
@@ -212,43 +212,46 @@
         return data.map(item => item.username);
     }
 
-    // 评论树构建
+    // 构建评论树（两层嵌套）
     function buildCommentTree(comments) {
         const map = new Map();
         const roots = [];
         comments.forEach(c => map.set(c.id, { ...c, replies: [] }));
         comments.forEach(c => {
             const node = map.get(c.id);
-            if (c.parent_id && map.has(c.parent_id)) map.get(c.parent_id).replies.push(node);
-            else roots.push(node);
+            if (c.parent_id && map.has(c.parent_id)) {
+                map.get(c.parent_id).replies.push(node);
+            } else {
+                roots.push(node);
+            }
         });
         roots.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-        roots.forEach(node => node.replies.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)));
+        roots.forEach(node => {
+            node.replies.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+        });
         return roots;
     }
 
-    // 修复后的渲染函数（局部变量，data-* 存储原始文本并转义双引号）
+    // 渲染单条评论（递归渲染回复）
     function renderCommentNode(node, isReply = false) {
-        let html = '';  // ✅ 局部变量，避免全局污染
         const author = node.profiles?.username || '匿名';
         const fullText = node.content;
         const isLong = fullText.length > 50;
         const shortText = isLong ? fullText.substring(0, 50) + '...' : fullText;
         const toggleButton = isLong ? `<button class="toggle-btn" data-id="${node.id}" data-state="collapsed">展开</button>` : '';
 
-        // 存储原始文本（转义双引号避免破坏属性，但不转义HTML标签，因为后续用textContent安全）
+        // 安全存储原始文本（转义双引号，但不转义HTML，因为textContent安全）
         const safeFull = fullText.replace(/"/g, '&quot;');
         const safeShort = shortText.replace(/"/g, '&quot;');
-        html += `<div class="comment-content" data-full="${safeFull}" data-short="${safeShort}">${escapeHtml(shortText)}</div>`;
-        if (toggleButton) html += `<div class="toggle-btn-container">${toggleButton}</div>`;
 
-        const showReplyBtn = !isReply;
         let repliesHtml = '';
         let toggleRepliesBtn = '';
 
+        // 处理回复列表（只有主评论才显示“回复”按钮和折叠回复功能）
         if (!isReply && node.replies.length > 0) {
             const directRepliesCount = node.replies.length;
             if (directRepliesCount > 3) {
+                // 只显示第一条回复，其余折叠
                 const firstReply = node.replies[0];
                 const restReplies = node.replies.slice(1);
                 repliesHtml = renderCommentNode(firstReply, true);
@@ -257,21 +260,32 @@
             } else {
                 repliesHtml = node.replies.map(child => renderCommentNode(child, true)).join('');
             }
+        } else if (isReply && node.replies.length > 0) {
+            // 回复下的子回复（二级回复内部）—— 我们只支持两层，所以这里不渲染更深层的回复按钮，但为了完整，可以递归，但根据需求“两层嵌套”，我们只显示到第二层
+            // 实际上，为了符合两层嵌套，子回复不再有回复按钮，但如果有子回复的回复（第三层），我们忽略或降级显示为普通文本
+            // 此处简单处理：如果 isReply 为 true，不再渲染回复按钮，但如果有更深层回复，可以平铺显示，但通常业务上禁止。
+            // 为保险，仍然递归但不显示回复按钮（已在下面通过 showReplyBtn 控制）
+            repliesHtml = node.replies.map(child => renderCommentNode(child, true)).join('');
         }
 
+        const showReplyBtn = !isReply;  // 只有顶级评论和一级回复？根据两层设计：主评论可以回复，回复下面不能再回复。但通常回复按钮只出现在主评论上。
+        // 根据你的原始设计：主评论显示“回复”，回复不显示回复按钮。所以 isReply 为 true 时，不显示回复按钮。
         const verifiedBadge = verifiedUsernames.includes(author) ? '<img src="https://s41.ax1x.com/2026/04/05/peNSL5t.png" style="width:24px;height:24px; margin-left:6px; margin-top:-3px; vertical-align: middle;">' : '';
         const reportButton = currentUser ? `<button class="report-btn" data-id="${node.id}" data-author-id="${node.user_id}">举报</button>` : '';
+        const deleteButton = (currentUser && currentUser.id === node.user_id) ? `<button class="delete-btn" data-id="${node.id}">删除</button>` : '';
 
-        html += `
+        // 构建评论HTML（注意：没有重复插入自身）
+        let html = `
             <div class="comment" data-id="${node.id}">
                 <div class="comment-meta">
                     <span class="comment-author">${escapeHtml(author)}${verifiedBadge}</span>
                     <span class="comment-time">${new Date(node.created_at).toLocaleString()}</span>
                 </div>
-                ${html}
+                <div class="comment-content" data-full="${safeFull}" data-short="${safeShort}">${escapeHtml(shortText)}</div>
+                ${toggleButton ? `<div class="toggle-btn-container">${toggleButton}</div>` : ''}
                 <div class="comment-actions">
                     ${showReplyBtn ? `<button class="reply-btn" data-id="${node.id}">回复</button>` : ''}
-                    ${currentUser && currentUser.id === node.user_id ? `<button class="delete-btn" data-id="${node.id}">删除</button>` : ''}
+                    ${deleteButton}
                     ${reportButton}
                 </div>
                 <div class="reply-form" id="reply-form-${node.id}" style="display:none;">
@@ -306,7 +320,7 @@
                 const contentDiv = commentDiv.querySelector('.comment-content');
                 const isCollapsed = btn.dataset.state === 'collapsed';
                 if (isCollapsed) {
-                    contentDiv.textContent = contentDiv.dataset.full;  // dataset 自动解码 &quot; 为 "
+                    contentDiv.textContent = contentDiv.dataset.full;  // dataset自动解码&quot;
                     btn.innerText = '折叠';
                     btn.dataset.state = 'expanded';
                 } else {
@@ -317,7 +331,7 @@
             };
         });
 
-        // 折叠/展开回复列表
+        // 折叠/展开回复列表（超过3条时）
         document.querySelectorAll('.toggle-replies-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
@@ -337,7 +351,7 @@
             };
         });
 
-        // 回复按钮
+        // 显示回复表单
         document.querySelectorAll('.reply-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
@@ -526,7 +540,6 @@
         fetchComments();
     }
 
-    // 举报提交
     async function submitReport() {
         if (!pendingReportCommentId) return;
         const reason = reportReason.value.trim();
@@ -548,7 +561,7 @@
         pendingReportCommentId = null;
     }
 
-    // 模态框事件绑定
+    // 模态框事件
     closeReportBtn.onclick = () => { reportModal.style.display = 'none'; pendingReportCommentId = null; };
     submitReportBtn.onclick = submitReport;
 
