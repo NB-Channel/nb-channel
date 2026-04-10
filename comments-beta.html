@@ -629,8 +629,9 @@
             return;
         }
         if (reason.length > 100) {
-            showMessage('提示', '举报原因不能超过100字');
-            return;
+    showMessage('提示', '举报原因不能超过100字');
+    return;
+}
         }
         if (!currentUser) {
             showMessage('提示', '请先登录再举报');
