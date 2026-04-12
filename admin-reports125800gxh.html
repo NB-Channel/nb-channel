@@ -205,7 +205,8 @@
 <script>
     const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
-    const supabase = supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ✅ 修复：使用一个唯一变量名，避免与全局冲突
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let isLoggedIn = false;
     let currentPage = 1;
@@ -245,10 +246,10 @@
 
     async function loadDashboard() {
         try {
-            const { count: bannedCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_banned', true);
+            const { count: bannedCount } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('is_banned', true);
             const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-            const { count: todayCount } = await supabase.from('reports').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString());
-            const { count: pendingCount } = await supabase.from('reports').select('*', { count: 'exact', head: true });
+            const { count: todayCount } = await supabaseClient.from('reports').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString());
+            const { count: pendingCount } = await supabaseClient.from('reports').select('*', { count: 'exact', head: true });
             document.getElementById('dashboard').innerHTML = `
                 <div class="card"><h3>被封禁用户数</h3><div class="number">${bannedCount || 0}</div></div>
                 <div class="card"><h3>今日新增举报</h3><div class="number">${todayCount || 0}</div></div>
@@ -261,7 +262,7 @@
         const container = document.getElementById('reportsContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
         try {
-            let query = supabase.from('reports').select(`
+            let query = supabaseClient.from('reports').select(`
                 id, reason, created_at, comment_id,
                 comments!inner ( id, content, user_id, profiles!inner (username) ),
                 reporter_user_id, reporter:profiles!reports_reporter_user_id_fkey (username)
@@ -279,7 +280,7 @@
                 document.getElementById('pagination').innerHTML = '';
                 return;
             }
-            let html = `<table><thead><tr><th style="width:40px"><input type="checkbox" id="selectAll"></th><th>举报时间</th><th>被举报评论</th><th>评论作者</th><th>举报原因</th><th>举报人</th><th>操作</th></tr></thead><tbody>`;
+            let html = `<tr><thead><tr><th style="width:40px"><input type="checkbox" id="selectAll"></th><th>举报时间</th><th>被举报评论</th><th>评论作者</th><th>举报原因</th><th>举报人</th><th>操作</th></tr></thead><tbody>`;
             for (const report of currentReports) {
                 const comment = report.comments;
                 const commentAuthor = comment?.profiles?.username || '匿名用户';
@@ -336,8 +337,8 @@
                 const commentId = btn.dataset.commentId;
                 const reportId = btn.dataset.reportId;
                 if (!confirm('确定删除这条评论吗？')) return;
-                await supabase.from('comments').delete().eq('id', commentId);
-                await supabase.from('reports').delete().eq('id', reportId);
+                await supabaseClient.from('comments').delete().eq('id', commentId);
+                await supabaseClient.from('reports').delete().eq('id', reportId);
                 alert('删除成功');
                 selectedReportIds.delete(parseInt(reportId));
                 loadReports(); loadDashboard(); loadBannedUsers();
@@ -348,8 +349,8 @@
                 const userId = btn.dataset.userId;
                 const reportId = btn.dataset.reportId;
                 if (!confirm('确定封禁该用户吗？')) return;
-                await supabase.from('profiles').update({ is_banned: true, banned_reason: '经举报核实，违规发言' }).eq('id', userId);
-                await supabase.from('reports').delete().eq('id', reportId);
+                await supabaseClient.from('profiles').update({ is_banned: true, banned_reason: '经举报核实，违规发言' }).eq('id', userId);
+                await supabaseClient.from('reports').delete().eq('id', reportId);
                 alert('用户已封禁');
                 selectedReportIds.delete(parseInt(reportId));
                 loadReports(); loadDashboard(); loadBannedUsers();
@@ -359,7 +360,7 @@
             btn.onclick = async () => {
                 const reportId = btn.dataset.reportId;
                 if (!confirm('确定忽略此举报吗？')) return;
-                await supabase.from('reports').delete().eq('id', reportId);
+                await supabaseClient.from('reports').delete().eq('id', reportId);
                 alert('已忽略');
                 selectedReportIds.delete(parseInt(reportId));
                 loadReports(); loadDashboard();
@@ -375,7 +376,7 @@
 
     async function batchIgnore() {
         if (!confirm(`确定忽略 ${selectedReportIds.size} 条举报吗？`)) return;
-        for (let id of selectedReportIds) await supabase.from('reports').delete().eq('id', id);
+        for (let id of selectedReportIds) await supabaseClient.from('reports').delete().eq('id', id);
         alert('批量忽略完成');
         selectedReportIds.clear();
         loadReports(); loadDashboard();
@@ -385,8 +386,8 @@
         for (let report of currentReports) if (selectedReportIds.has(report.id) && report.comments?.id) commentIds.add(report.comments.id);
         if (commentIds.size === 0) { alert('无有效评论'); return; }
         if (!confirm(`确定删除 ${commentIds.size} 条评论吗？`)) return;
-        for (let cid of commentIds) await supabase.from('comments').delete().eq('id', cid);
-        for (let id of selectedReportIds) await supabase.from('reports').delete().eq('id', id);
+        for (let cid of commentIds) await supabaseClient.from('comments').delete().eq('id', cid);
+        for (let id of selectedReportIds) await supabaseClient.from('reports').delete().eq('id', id);
         alert('批量删除完成');
         selectedReportIds.clear();
         loadReports(); loadDashboard(); loadBannedUsers();
@@ -396,8 +397,8 @@
         for (let report of currentReports) if (selectedReportIds.has(report.id) && report.comments?.user_id) userIds.add(report.comments.user_id);
         if (userIds.size === 0) { alert('无有效用户'); return; }
         if (!confirm(`确定封禁 ${userIds.size} 个用户吗？`)) return;
-        for (let uid of userIds) await supabase.from('profiles').update({ is_banned: true, banned_reason: '批量封禁' }).eq('id', uid);
-        for (let id of selectedReportIds) await supabase.from('reports').delete().eq('id', id);
+        for (let uid of userIds) await supabaseClient.from('profiles').update({ is_banned: true, banned_reason: '批量封禁' }).eq('id', uid);
+        for (let id of selectedReportIds) await supabaseClient.from('reports').delete().eq('id', id);
         alert('批量封禁完成');
         selectedReportIds.clear();
         loadReports(); loadDashboard(); loadBannedUsers();
@@ -419,7 +420,7 @@
         const container = document.getElementById('bannedUsersList');
         container.innerHTML = '加载中...';
         try {
-            const { data, error } = await supabase.from('profiles').select('id, username, banned_reason, updated_at').eq('is_banned', true).order('updated_at', { ascending: false });
+            const { data, error } = await supabaseClient.from('profiles').select('id, username, banned_reason, updated_at').eq('is_banned', true).order('updated_at', { ascending: false });
             if (error) throw error;
             if (!data || data.length === 0) { container.innerHTML = '<div>暂无封禁用户</div>'; return; }
             let html = '';
@@ -433,7 +434,7 @@
             document.querySelectorAll('.unban-btn').forEach(btn => {
                 btn.onclick = async () => {
                     if (!confirm('确定解封该用户吗？')) return;
-                    await supabase.from('profiles').update({ is_banned: false, banned_reason: null }).eq('id', btn.dataset.userId);
+                    await supabaseClient.from('profiles').update({ is_banned: false, banned_reason: null }).eq('id', btn.dataset.userId);
                     alert('解封成功');
                     loadDashboard(); loadBannedUsers(); loadReports();
                 };
@@ -443,7 +444,7 @@
 
     // 使用明文密码验证（通过 RPC 函数）
     async function checkPassword(pwd) {
-        const { data, error } = await supabase.rpc('check_admin_password_plain', { input_pwd: pwd });
+        const { data, error } = await supabaseClient.rpc('check_admin_password_plain', { input_pwd: pwd });
         if (error) throw new Error(error.message);
         return data;
     }
