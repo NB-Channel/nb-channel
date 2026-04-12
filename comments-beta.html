@@ -254,7 +254,7 @@
     <div class="modal-content">
         <h3>举报评论</h3>
         <textarea id="report-reason" rows="3" placeholder="请填写举报原因（例如：辱骂、广告、冒充等）" maxlength="200"></textarea>
-        <div class="char-counter"><span id="report-char-count">0</span>/200</div>
+        <div class="char-counter"><span id="report-char-count">0</span>/100</div>
         <button id="submit-report">提交举报</button>
         <button id="close-report">取消</button>
     </div>
@@ -622,22 +622,21 @@
 
     // 提交举报（模态框确认）
     async function submitReport() {
-        if (!pendingReportCommentId) return;
-        const reason = reportReason.value.trim();
-        if (!reason) {
-            showMessage('提示', '请填写举报原因');
-            return;
-        }
-        if (reason.length > 100) {
-    showMessage('提示', '举报原因不能超过100字');
-    return;
-}
-        }
-        if (!currentUser) {
-            showMessage('提示', '请先登录再举报');
-            reportModal.style.display = 'none';
-            return;
-        }
+    if (!pendingReportCommentId) return;
+    const reason = reportReason.value.trim();
+    if (!reason) {
+        showMessage('提示', '请填写举报原因');
+        return;
+    }
+    if (reason.length > 100) {
+        showMessage('提示', '举报原因不能超过100字');
+        return;
+    }
+    if (!currentUser) {
+        showMessage('提示', '请先登录再举报');
+        reportModal.style.display = 'none';
+        return;
+    }
 
         // 1. 检查是否已举报过该评论
         const { data: existing, error: checkError } = await supabaseClient
