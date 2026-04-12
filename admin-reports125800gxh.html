@@ -21,14 +21,62 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             padding: 20px;
         }
-        h1 {
-            margin-top: 0;
-            color: #00a1d6;
+        h1 { margin-top: 0; color: #00a1d6; }
+        .dashboard { display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap; }
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px 20px;
+            flex: 1;
+            min-width: 150px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
         }
+        .card h3 { margin: 0 0 8px 0; font-size: 14px; color: #6c757d; }
+        .card .number { font-size: 28px; font-weight: bold; margin: 0; color: #00a1d6; }
+        .filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .filters select, .filters button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            background: white;
+            cursor: pointer;
+        }
+        .filters button {
+            background: #00a1d6;
+            color: white;
+            border: none;
+        }
+        .filters button:hover { background: #008bb5; }
+        .batch-actions {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .batch-actions button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .batch-actions button.danger { background: #dc3545; }
+        .batch-actions button.warning { background: #fd7e14; }
+        .batch-actions button.success { background: #28a745; }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
         }
         th, td {
             border: 1px solid #ddd;
@@ -36,14 +84,8 @@
             text-align: left;
             vertical-align: top;
         }
-        th {
-            background-color: #f2f2f2;
-        }
-        .comment-content {
-            max-width: 400px;
-            word-break: break-word;
-            white-space: pre-wrap;
-        }
+        th { background-color: #f2f2f2; }
+        .comment-content { max-width: 400px; word-break: break-word; white-space: pre-wrap; }
         button {
             color: white;
             border: none;
@@ -53,53 +95,125 @@
             margin-right: 8px;
             margin-bottom: 5px;
         }
-        button.delete {
-            background: #fd7e14;
+        button.delete { background: #fd7e14; }
+        button.delete:hover { background: #e67e22; }
+        button.ban { background: #dc3545; }
+        button.ban:hover { background: #c82333; }
+        button.ignore { background: #28a745; }
+        button.ignore:hover { background: #218838; }
+        button.refresh-btn { background: #28a745; margin-bottom: 15px; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
         }
-        button.delete:hover {
-            background: #e67e22;
+        .pagination button {
+            background: #6c757d;
+            padding: 5px 12px;
         }
-        button.ban {
-            background: #dc3545;
+        .pagination button.active {
+            background: #00a1d6;
         }
-        button.ban:hover {
-            background: #c82333;
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .error { color: red; margin: 10px 0; }
+        .unban-section {
+            margin-top: 40px;
+            border-top: 2px solid #e9ecef;
+            padding-top: 20px;
         }
-        button.ignore {
-            background: #28a745;
+        .unban-section h2 { font-size: 1.2rem; }
+        .banned-user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
         }
-        button.ignore:hover {
-            background: #218838;
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
-        button.refresh-btn {
-            background: #28a745;
-            margin-bottom: 15px;
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
         }
-        button.refresh-btn:hover {
-            background: #218838;
-        }
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-        .error {
-            color: red;
+        .modal-content input {
+            width: 100%;
+            padding: 8px;
             margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
         }
     </style>
 </head>
 <body>
-<div class="container">
+<div class="container" id="mainContainer">
     <h1>📋 举报管理后台</h1>
-    <button id="refreshBtn" class="refresh-btn">🔄 刷新列表</button>
+    <div id="dashboard" class="dashboard"></div>
+
+    <div class="filters">
+        <label>时间范围：</label>
+        <select id="dateRange">
+            <option value="all">全部</option>
+            <option value="today">今天</option>
+            <option value="week">本周</option>
+            <option value="month">本月</option>
+        </select>
+        <button id="applyFilter">应用筛选</button>
+        <button id="refreshBtn" class="refresh-btn">🔄 刷新</button>
+    </div>
+
+    <div class="batch-actions" id="batchActions" style="display: none;">
+        <span>批量操作已选中 <span id="selectedCount">0</span> 条举报</span>
+        <button id="batchIgnore" class="success">🙈 批量忽略</button>
+        <button id="batchDelete" class="warning">🗑️ 批量删除评论</button>
+        <button id="batchBan" class="danger">🚫 批量封禁用户</button>
+        <button id="clearSelection">清空选择</button>
+    </div>
+
     <div id="reportsContainer">加载中...</div>
+    <div id="pagination" class="pagination"></div>
+
+    <div class="unban-section">
+        <h2>🔓 已封禁用户列表 & 手动解封</h2>
+        <div id="bannedUsersList">加载中...</div>
+    </div>
+</div>
+
+<!-- 登录模态框 -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <h3>管理员登录</h3>
+        <input type="password" id="adminPassword" placeholder="请输入管理密码">
+        <div id="loginError" style="color:red; font-size:0.9rem;"></div>
+        <button id="doLogin">登录</button>
+    </div>
 </div>
 
 <script>
     const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let isLoggedIn = false;
+    let currentPage = 1;
+    const pageSize = 20;
+    let currentDateRange = 'all';
+    let totalReports = 0;
+    let currentReports = [];
+    let selectedReportIds = new Set();
 
     function escapeHtml(str) {
         if (!str) return '';
@@ -111,126 +225,274 @@
         return new Date(dateStr).toLocaleString();
     }
 
+    function getDateRangeFilter(range) {
+        const now = new Date();
+        let startDate;
+        if (range === 'today') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        } else if (range === 'week') {
+            const day = now.getDay();
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - day + (day === 0 ? -6 : 1));
+            startDate.setHours(0,0,0,0);
+        } else if (range === 'month') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        } else {
+            return null;
+        }
+        return startDate.toISOString();
+    }
+
+    async function loadDashboard() {
+        try {
+            const { count: bannedCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_banned', true);
+            const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+            const { count: todayCount } = await supabase.from('reports').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString());
+            const { count: pendingCount } = await supabase.from('reports').select('*', { count: 'exact', head: true });
+            document.getElementById('dashboard').innerHTML = `
+                <div class="card"><h3>被封禁用户数</h3><div class="number">${bannedCount || 0}</div></div>
+                <div class="card"><h3>今日新增举报</h3><div class="number">${todayCount || 0}</div></div>
+                <div class="card"><h3>待处理举报总数</h3><div class="number">${pendingCount || 0}</div></div>
+            `;
+        } catch (err) { console.error(err); }
+    }
+
     async function loadReports() {
         const container = document.getElementById('reportsContainer');
         container.innerHTML = '<div class="loading">加载中...</div>';
-
         try {
-            const { data, error } = await supabaseClient
-                .from('reports')
-                .select(`
-                    id,
-                    reason,
-                    created_at,
-                    comment_id,
-                    comments!inner (
-                        id,
-                        content,
-                        user_id,
-                        profiles!inner (username)
-                    ),
-                    reporter_user_id,
-                    reporter:profiles!reports_reporter_user_id_fkey (username)
-                `)
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                container.innerHTML = `<div class="error">加载失败: ${error.message}<br>请检查 reports 表的 RLS 策略。</div>`;
-                return;
-            }
-
-            if (!data || data.length === 0) {
+            let query = supabase.from('reports').select(`
+                id, reason, created_at, comment_id,
+                comments!inner ( id, content, user_id, profiles!inner (username) ),
+                reporter_user_id, reporter:profiles!reports_reporter_user_id_fkey (username)
+            `, { count: 'exact' });
+            const dateFilter = getDateRangeFilter(currentDateRange);
+            if (dateFilter) query = query.gte('created_at', dateFilter);
+            const from = (currentPage - 1) * pageSize;
+            query = query.range(from, from + pageSize - 1).order('created_at', { ascending: false });
+            const { data, error, count } = await query;
+            if (error) throw error;
+            totalReports = count || 0;
+            currentReports = data || [];
+            if (!currentReports.length) {
                 container.innerHTML = '<div class="loading">暂无举报记录</div>';
+                document.getElementById('pagination').innerHTML = '';
                 return;
             }
-
-            let html = `<table>
-                <thead>
-                    <tr><th>举报时间</th><th>被举报评论</th><th>评论作者</th><th>举报原因</th><th>举报人</th><th>操作</th></tr>
-                </thead>
-                <tbody>
-            `;
-            for (const report of data) {
+            let html = `<table><thead><tr><th style="width:40px"><input type="checkbox" id="selectAll"></th><th>举报时间</th><th>被举报评论</th><th>评论作者</th><th>举报原因</th><th>举报人</th><th>操作</th></tr></thead><tbody>`;
+            for (const report of currentReports) {
                 const comment = report.comments;
                 const commentAuthor = comment?.profiles?.username || '匿名用户';
                 const reporterName = report.reporter?.username || '未知';
                 const commentContent = comment?.content || '【评论已删除】';
                 const commentId = comment?.id;
-
-                html += `
-                    <tr data-report-id="${report.id}" data-comment-id="${commentId || ''}" data-user-id="${comment?.user_id || ''}">
-                        <td>${formatDate(report.created_at)}</td>
-                        <td class="comment-content">${escapeHtml(commentContent)}</td>
-                        <td>${escapeHtml(commentAuthor)}</td>
-                        <td>${escapeHtml(report.reason)}</td>
-                        <td>${escapeHtml(reporterName)}</td>
-                        <td>
-                            ${commentId ? `<button class="delete" data-comment-id="${commentId}" data-report-id="${report.id}">🗑️ 删除举报评论</button>` : '评论已不存在'}
-                            ${comment?.user_id ? `<button class="ban" data-user-id="${comment.user_id}" data-report-id="${report.id}">🚫 封禁用户</button>` : ''}
-                            <button class="ignore" data-report-id="${report.id}">🙈 忽略举报</button>
-                        </td>
-                    </tr>
-                `;
+                const isChecked = selectedReportIds.has(report.id) ? 'checked' : '';
+                html += `<tr data-report-id="${report.id}" data-comment-id="${commentId || ''}" data-user-id="${comment?.user_id || ''}">
+                    <td><input type="checkbox" class="report-checkbox" data-id="${report.id}" ${isChecked}></td>
+                    <td>${formatDate(report.created_at)}</td>
+                    <td class="comment-content">${escapeHtml(commentContent)}</td>
+                    <td>${escapeHtml(commentAuthor)}</td>
+                    <td>${escapeHtml(report.reason)}</td>
+                    <td>${escapeHtml(reporterName)}</td>
+                    <td>
+                        ${commentId ? `<button class="delete" data-comment-id="${commentId}" data-report-id="${report.id}">🗑️ 删除评论</button>` : '评论已删除'}
+                        ${comment?.user_id ? `<button class="ban" data-user-id="${comment.user_id}" data-report-id="${report.id}">🚫 封禁用户</button>` : ''}
+                        <button class="ignore" data-report-id="${report.id}">🙈 忽略举报</button>
+                    </td>
+                </tr>`;
             }
             html += '</tbody></table>';
             container.innerHTML = html;
-
-            // 删除评论
-            document.querySelectorAll('.delete').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const commentId = btn.dataset.commentId;
-                    const reportId = btn.dataset.reportId;
-                    if (!confirm('确定删除这条评论吗？删除后不可恢复。')) return;
-                    const { error: delError } = await supabaseClient.from('comments').delete().eq('id', commentId);
-                    if (delError) { alert('删除失败: ' + delError.message); return; }
-                    await supabaseClient.from('reports').delete().eq('id', reportId);
-                    alert('删除成功');
-                    loadReports();
+            attachRowEvents();
+            document.getElementById('selectAll').addEventListener('change', (e) => {
+                const checkboxes = document.querySelectorAll('.report-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = e.target.checked;
+                    const id = parseInt(cb.dataset.id);
+                    if (e.target.checked) selectedReportIds.add(id);
+                    else selectedReportIds.delete(id);
+                });
+                updateBatchBar();
+            });
+            document.querySelectorAll('.report-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    if (e.target.checked) selectedReportIds.add(id);
+                    else selectedReportIds.delete(id);
+                    updateBatchBar();
                 });
             });
-
-            // 封禁用户
-            document.querySelectorAll('.ban').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const userId = btn.dataset.userId;
-                    const reportId = btn.dataset.reportId;
-                    if (!userId) return;
-                    if (!confirm('确定封禁该用户吗？该用户将无法发表任何评论。')) return;
-                    const { error: banError } = await supabaseClient
-                        .from('profiles')
-                        .update({ is_banned: true, banned_reason: '经举报核实，违规发言' })
-                        .eq('id', userId);
-                    if (banError) { alert('封禁失败: ' + banError.message); return; }
-                    await supabaseClient.from('reports').delete().eq('id', reportId);
-                    alert('用户已封禁');
-                    loadReports();
-                });
-            });
-
-            // 忽略举报（直接删除行）
-            document.querySelectorAll('.ignore').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const reportId = btn.dataset.reportId;
-                    const row = btn.closest('tr');
-                    if (!confirm('确定忽略此举报吗？该举报将被删除，不会对评论和用户做任何操作。')) return;
-                    const { error: ignoreError } = await supabaseClient.from('reports').delete().eq('id', reportId);
-                    if (ignoreError) {
-                        alert('忽略失败: ' + ignoreError.message);
-                        return;
-                    }
-                    alert('已忽略该举报');
-                    if (row) row.remove(); // 直接删除行，无需重新加载
-                });
-            });
-
+            updateBatchBar();
+            renderPagination();
         } catch (err) {
             console.error(err);
-            container.innerHTML = `<div class="error">发生错误: ${err.message}</div>`;
+            container.innerHTML = `<div class="error">加载失败: ${err.message}</div>`;
         }
     }
 
-    document.getElementById('refreshBtn').addEventListener('click', loadReports);
-    loadReports();
+    function attachRowEvents() {
+        document.querySelectorAll('.delete').forEach(btn => {
+            btn.onclick = async () => {
+                const commentId = btn.dataset.commentId;
+                const reportId = btn.dataset.reportId;
+                if (!confirm('确定删除这条评论吗？')) return;
+                await supabase.from('comments').delete().eq('id', commentId);
+                await supabase.from('reports').delete().eq('id', reportId);
+                alert('删除成功');
+                selectedReportIds.delete(parseInt(reportId));
+                loadReports(); loadDashboard(); loadBannedUsers();
+            };
+        });
+        document.querySelectorAll('.ban').forEach(btn => {
+            btn.onclick = async () => {
+                const userId = btn.dataset.userId;
+                const reportId = btn.dataset.reportId;
+                if (!confirm('确定封禁该用户吗？')) return;
+                await supabase.from('profiles').update({ is_banned: true, banned_reason: '经举报核实，违规发言' }).eq('id', userId);
+                await supabase.from('reports').delete().eq('id', reportId);
+                alert('用户已封禁');
+                selectedReportIds.delete(parseInt(reportId));
+                loadReports(); loadDashboard(); loadBannedUsers();
+            };
+        });
+        document.querySelectorAll('.ignore').forEach(btn => {
+            btn.onclick = async () => {
+                const reportId = btn.dataset.reportId;
+                if (!confirm('确定忽略此举报吗？')) return;
+                await supabase.from('reports').delete().eq('id', reportId);
+                alert('已忽略');
+                selectedReportIds.delete(parseInt(reportId));
+                loadReports(); loadDashboard();
+            };
+        });
+    }
+
+    function updateBatchBar() {
+        const count = selectedReportIds.size;
+        document.getElementById('selectedCount').innerText = count;
+        document.getElementById('batchActions').style.display = count > 0 ? 'flex' : 'none';
+    }
+
+    async function batchIgnore() {
+        if (!confirm(`确定忽略 ${selectedReportIds.size} 条举报吗？`)) return;
+        for (let id of selectedReportIds) await supabase.from('reports').delete().eq('id', id);
+        alert('批量忽略完成');
+        selectedReportIds.clear();
+        loadReports(); loadDashboard();
+    }
+    async function batchDeleteComments() {
+        const commentIds = new Set();
+        for (let report of currentReports) if (selectedReportIds.has(report.id) && report.comments?.id) commentIds.add(report.comments.id);
+        if (commentIds.size === 0) { alert('无有效评论'); return; }
+        if (!confirm(`确定删除 ${commentIds.size} 条评论吗？`)) return;
+        for (let cid of commentIds) await supabase.from('comments').delete().eq('id', cid);
+        for (let id of selectedReportIds) await supabase.from('reports').delete().eq('id', id);
+        alert('批量删除完成');
+        selectedReportIds.clear();
+        loadReports(); loadDashboard(); loadBannedUsers();
+    }
+    async function batchBanUsers() {
+        const userIds = new Set();
+        for (let report of currentReports) if (selectedReportIds.has(report.id) && report.comments?.user_id) userIds.add(report.comments.user_id);
+        if (userIds.size === 0) { alert('无有效用户'); return; }
+        if (!confirm(`确定封禁 ${userIds.size} 个用户吗？`)) return;
+        for (let uid of userIds) await supabase.from('profiles').update({ is_banned: true, banned_reason: '批量封禁' }).eq('id', uid);
+        for (let id of selectedReportIds) await supabase.from('reports').delete().eq('id', id);
+        alert('批量封禁完成');
+        selectedReportIds.clear();
+        loadReports(); loadDashboard(); loadBannedUsers();
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(totalReports / pageSize);
+        if (totalPages <= 1) return;
+        let html = '';
+        for (let i = 1; i <= totalPages; i++) html += `<button class="${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+        const paginationDiv = document.getElementById('pagination');
+        paginationDiv.innerHTML = html;
+        paginationDiv.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => { currentPage = parseInt(btn.dataset.page); loadReports(); });
+        });
+    }
+
+    async function loadBannedUsers() {
+        const container = document.getElementById('bannedUsersList');
+        container.innerHTML = '加载中...';
+        try {
+            const { data, error } = await supabase.from('profiles').select('id, username, banned_reason, updated_at').eq('is_banned', true).order('updated_at', { ascending: false });
+            if (error) throw error;
+            if (!data || data.length === 0) { container.innerHTML = '<div>暂无封禁用户</div>'; return; }
+            let html = '';
+            for (const user of data) {
+                html += `<div class="banned-user-item">
+                    <span><strong>${escapeHtml(user.username)}</strong> (ID: ${user.id})<br><small>封禁原因: ${escapeHtml(user.banned_reason || '违规')} | 封禁时间: ${formatDate(user.updated_at)}</small></span>
+                    <button class="unban-btn" data-user-id="${user.id}" style="background:#28a745;">🔓 解封</button>
+                </div>`;
+            }
+            container.innerHTML = html;
+            document.querySelectorAll('.unban-btn').forEach(btn => {
+                btn.onclick = async () => {
+                    if (!confirm('确定解封该用户吗？')) return;
+                    await supabase.from('profiles').update({ is_banned: false, banned_reason: null }).eq('id', btn.dataset.userId);
+                    alert('解封成功');
+                    loadDashboard(); loadBannedUsers(); loadReports();
+                };
+            });
+        } catch (err) { container.innerHTML = '<div>加载封禁用户失败</div>'; }
+    }
+
+    // 使用明文密码验证（通过 RPC 函数）
+    async function checkPassword(pwd) {
+        const { data, error } = await supabase.rpc('check_admin_password_plain', { input_pwd: pwd });
+        if (error) throw new Error(error.message);
+        return data;
+    }
+
+    function showLoginModal() {
+        const modal = document.getElementById('loginModal');
+        modal.style.display = 'flex';
+        document.getElementById('doLogin').onclick = async () => {
+            const pwd = document.getElementById('adminPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            try {
+                const ok = await checkPassword(pwd);
+                if (ok) {
+                    isLoggedIn = true;
+                    sessionStorage.setItem('admin_authenticated', 'true');
+                    modal.style.display = 'none';
+                    initAdminPage();
+                } else {
+                    errorDiv.innerText = '密码错误';
+                }
+            } catch (err) {
+                errorDiv.innerText = '验证失败: ' + err.message;
+            }
+        };
+    }
+
+    async function initAdminPage() {
+        await loadDashboard();
+        await loadReports();
+        await loadBannedUsers();
+        document.getElementById('applyFilter').onclick = () => {
+            currentDateRange = document.getElementById('dateRange').value;
+            currentPage = 1;
+            selectedReportIds.clear();
+            loadReports();
+        };
+        document.getElementById('refreshBtn').onclick = () => { loadReports(); loadDashboard(); loadBannedUsers(); };
+        document.getElementById('batchIgnore').onclick = batchIgnore;
+        document.getElementById('batchDelete').onclick = batchDeleteComments;
+        document.getElementById('batchBan').onclick = batchBanUsers;
+        document.getElementById('clearSelection').onclick = () => { selectedReportIds.clear(); loadReports(); };
+    }
+
+    if (sessionStorage.getItem('admin_authenticated') === 'true') {
+        isLoggedIn = true;
+        initAdminPage();
+    } else {
+        showLoginModal();
+    }
 </script>
 </body>
 </html>
