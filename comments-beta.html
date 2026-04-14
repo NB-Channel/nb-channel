@@ -437,7 +437,7 @@
                 const restHtml = restReplies.map(child => renderCommentNode(child, true)).join('');
                 repliesHtml = firstReplyHtml;
                 repliesHtml += `<div class="hidden-replies" style="display:none;">${restHtml}</div>`;
-                toggleRepliesBtn = `<button class="toggle-replies-btn" data-id="${node.id}" data-state="collapsed">展开所有回复 (${directRepliesCount-1}条)</button>`;
+                toggleRepliesBtn = `<button class="toggle-replies-btn" data-id="${node.id}" data-state="collapsed">展开所有回复</button>`;
             } else {
                 repliesHtml = node.replies.map(child => renderCommentNode(child, true)).join('');
             }
