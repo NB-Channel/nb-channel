@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>虚拟股票行情 - 数据可视化看板</title>
+    <!-- 引入 Chart.js 轻量图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+            font-family: 'Segoe UI', 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            padding: 24px 20px;
+        }
+
+        /* 主卡片容器 */
+        .dashboard {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(2px);
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* 头部区域 */
+        .header {
+            padding: 28px 32px 16px 32px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .header h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1e2b3c, #2c5a6e);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            display: inline-block;
+        }
+
+        .sub {
+            color: #5a6e7c;
+            margin-top: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .update-badge {
+            background: #eef2f6;
+            padding: 6px 14px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #2c5a6e;
+        }
+
+        /* 按钮切换栏 */
+        .toolbar {
+            padding: 20px 32px 12px 32px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            border-bottom: 1px solid #eef2f8;
+            background: #ffffffd9;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            background: #f0f4f9;
+            padding: 6px;
+            border-radius: 60px;
+        }
+
+        .chart-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 24px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            color: #3e5a6b;
+        }
+
+        .chart-btn.active {
+            background: #2c5a6e;
+            color: white;
+            box-shadow: 0 4px 8px rgba(44, 90, 110, 0.2);
+        }
+
+        .chart-btn:not(.active):hover {
+            background: #e0e8f0;
+            color: #1e3b4a;
+        }
+
+        .refresh-btn {
+            background: #2c5a6e;
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: auto;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .refresh-btn:hover {
+            background: #1f4456;
+            transform: scale(0.96);
+        }
+
+        /* 图表包装器 */
+        .chart-wrapper {
+            padding: 20px 32px 32px 32px;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            min-height: 500px;
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 16px 8px 8px 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+        }
+
+        canvas {
+            max-height: 520px;
+            width: 100%;
+        }
+
+        /* 底部信息 / 统计摘要 */
+        .stats {
+            padding: 16px 32px 28px 32px;
+            border-top: 1px solid #eef2f8;
+            background: #fbfdff;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            font-size: 0.85rem;
+            color: #2c5a6e;
+        }
+
+        .stat-card {
+            background: #f5f9fe;
+            border-radius: 28px;
+            padding: 10px 22px;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: #1f4d62;
+            background: white;
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+
+        .error-msg {
+            color: #c7362b;
+            background: #ffeae8;
+            border-radius: 40px;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 680px) {
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .refresh-btn { margin-left: 0; }
+            .chart-wrapper { padding: 16px; }
+            .header h1 { font-size: 1.5rem; }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 0.7rem;
+            color: #6f8e9f;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <h1>📊 NB虚拟股票（股票数据来自Orgent）</h1>
+        <div class="sub">
+            <span>📈 股票/概念指数 动态追踪</span>
+            <span class="update-badge" id="dataTimestamp">⚡ 数据加载中...</span>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="btn-group">
+            <button class="chart-btn active" id="barBtn">📊 柱状图</button>
+            <button class="chart-btn" id="lineBtn">📈 折线图</button>
+        </div>
+        <button class="refresh-btn" id="refreshDataBtn">🔄 刷新</button>
+    </div>
+
+    <div class="chart-wrapper">
+        <div class="canvas-container">
+            <canvas id="stockChart" width="1100" height="500" style="width:100%; height:auto; max-width:100%;"></canvas>
+        </div>
+    </div>
+
+    <div class="stats" id="statsPanel">
+        <!-- 动态数据摘要将显示在这里 -->
+        <div>📡 正在从服务器获取股票估值……</div>
+    </div>
+</div>
+<footer>数据来源：Orgent 行情 API </footer>
+
+<script>
+    // ---------- 全局变量 ----------
+    let currentChart = null;          // Chart.js 实例
+    let currentChartType = 'bar';     // 'bar' 或 'line'
+    let rawData = { names: [], values: [] };   // 存储从 API 获取的原始数据
+    let isLoading = false;
+
+    // API 地址 (你提供的)
+    const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
+
+    // ---------- 辅助函数：格式化大数字 (万/亿简写) ----------
+    function formatValue(num) {
+        if (num === undefined || num === null) return '0';
+        const n = Number(num);
+        if (isNaN(n)) return '0';
+        if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
+        if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+        return n.toLocaleString();
+    }
+
+    // 获取API数据并更新全局 rawData
+    async function fetchStockData() {
+        if (isLoading) return;
+        isLoading = true;
+        const timestampElem = document.getElementById('dataTimestamp');
+        const statsPanel = document.getElementById('statsPanel');
+        try {
+            timestampElem.innerHTML = '⏳ 请求行情中...';
+            const response = await fetch(API_URL, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}: 数据获取失败`);
+            const result = await response.json();
+            // 根据API返回结构: { code, msg, names, values }
+            if (result.code !== 200 || !result.names || !result.values) {
+                throw new Error(result.msg || '数据格式异常');
+            }
+            rawData.names = result.names;
+            rawData.values = result.values.map(v => Number(v));
+            // 更新时间戳与统计
+            const now = new Date();
+            timestampElem.innerHTML = `🕒 最新行情 ${now.toLocaleTimeString()}`;
+            // 刷新统计卡片 (Top3 涨幅/市值最大等)
+            updateStatsPanel();
+            // 重新绘制图表 (保留当前选择的类型)
+            renderChart(currentChartType);
+        } catch (error) {
+            console.error('API 请求失败:', error);
+            timestampElem.innerHTML = '⚠️ 数据加载失败';
+            statsPanel.innerHTML = `<div class="error-msg">❌ 获取虚拟股票失败: ${error.message}<br>请稍后点击刷新重试</div>`;
+            // 清空图表
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    // 更新底部统计卡片: 总市值、最高值、最低值、平均线等
+    function updateStatsPanel() {
+        if (!rawData.values.length || !rawData.names.length) {
+            document.getElementById('statsPanel').innerHTML = '<div>暂无有效行情数据</div>';
+            return;
+        }
+        const values = rawData.values;
+        const names = rawData.names;
+        const total = values.reduce((a,b) => a + b, 0);
+        const maxVal = Math.max(...values);
+        const maxIdx = values.indexOf(maxVal);
+        const maxName = names[maxIdx] || '—';
+        const minVal = Math.min(...values);
+        const minIdx = values.indexOf(minVal);
+        const minName = names[minIdx] || '—';
+        const avgVal = (total / values.length).toFixed(0);
+        // 涨幅计算 （模拟相对第一个元素的变化率，更生动）
+        const firstVal = values[0] || 1;
+        const lastVal = values[values.length-1] || 1;
+        const changePercent = ((lastVal - firstVal) / firstVal * 100).toFixed(2);
+        const changeSymbol = changePercent >= 0 ? '📈 +' : '📉 ';
+        
+        const statsHtml = `
+            <div class="stat-card"><span class="stat-label">🏦 成份股数</span><span class="stat-value">${values.length}</span></div>
+            <div class="stat-card"><span class="stat-label">💰 总值(模拟)</span><span class="stat-value">${formatValue(total)}</span></div>
+            <div class="stat-card"><span class="stat-label">🏆 最高价股</span><span class="stat-value">${escapeHtml(maxName)} : ${formatValue(maxVal)}</span></div>
+            <div class="stat-card"><span class="stat-label">📉 最低价股</span><span class="stat-value">${escapeHtml(minName)} : ${formatValue(minVal)}</span></div>
+            <div class="stat-card"><span class="stat-label">📊 平均估值</span><span class="stat-value">${formatValue(avgVal)}</span></div>
+            <div class="stat-card"><span class="stat-label">🔄 首尾变化</span><span class="stat-value">${changeSymbol}${Math.abs(changePercent)}%</span></div>
+        `;
+        document.getElementById('statsPanel').innerHTML = statsHtml;
+    }
+
+    // 简单的XSS防护
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 核心图表渲染 (柱状图/折线图) —— 采用 Chart.js 动态重建方式
+    function renderChart(type) {
+        if (!rawData.names.length || !rawData.values.length) {
+            console.warn('无数据，无法绘图');
+            return;
+        }
+        // 限制显示数量过多导致界面拥挤: 只取前35个或者展示全部，但柱状图过多会拥挤，这里取前40个（API目前约30个，全量显示即可）
+        const labels = rawData.names.slice();      // 股票名称作为横坐标
+        const dataValues = rawData.values.slice();
+        
+        // 自定义颜色池 (清爽渐变)
+        const barColors = dataValues.map((_, idx) => {
+            const hue = (idx * 25) % 360;
+            return `hsla(${hue}, 65%, 55%, 0.85)`;
+        });
+        const lineBorderColor = '#2c5a6e';
+        
+        // 准备数据集 (通用结构)
+        let dataset = [];
+        if (type === 'bar') {
+            dataset = [{
+                label: '虚拟市值 / 积分',
+                data: dataValues,
+                backgroundColor: barColors,
+                borderColor: 'rgba(44, 90, 110, 0.4)',
+                borderWidth: 1,
+                borderRadius: 6,
+                barPercentage: 0.7,
+                categoryPercentage: 0.85,
+            }];
+        } else {
+            // 折线图
+            dataset = [{
+                label: '虚拟股票价值曲线',
+                data: dataValues,
+                borderColor: lineBorderColor,
+                backgroundColor: 'rgba(44, 90, 110, 0.08)',
+                borderWidth: 3,
+                pointRadius: 3.5,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#2c5a6e',
+                pointBorderColor: '#ffffff',
+                tension: 0.2,
+                fill: true,
+            }];
+        }
+        
+        // 公共配置（适用于 bar/line）
+        const chartConfig = {
+            type: type,
+            data: {
+                labels: labels,
+                datasets: dataset
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.raw;
+                                return `${context.dataset.label}: ${formatValue(val)}`;
+                            }
+                        },
+                        backgroundColor: '#1f3e4c',
+                        titleColor: '#f0f3f7'
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: { font: { size: 12, weight: 'bold' }, color: '#2c5a6e' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#e3e9ef' },
+                        title: { display: true, text: '指数 / 市值 (点)', color: '#5d7f8f' },
+                        ticks: { callback: (val) => formatValue(val) }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 35,
+                            autoSkip: true,
+                            maxTicksLimit: 18,
+                            font: { size: 9 }
+                        },
+                        title: { display: true, text: '股票/项目代码', color: '#5d7f8f' }
+                    }
+                },
+                // 优雅的交互动画
+                transitions: {
+                    active: { animation: { duration: 400 } }
+                }
+            }
+        };
+        
+        // 针对柱状图微调，让数据标签更直观
+        if (type === 'bar') {
+            chartConfig.options.plugins.tooltip.callbacks.label = function(context) {
+                let val = context.raw;
+                return `💰 价值: ${formatValue(val)}`;
+            };
+        } else {
+            chartConfig.options.plugins.tooltip.callbacks.label = function(context) {
+                let val = context.raw;
+                return `📈 趋势值: ${formatValue(val)}`;
+            };
+        }
+        
+        // 销毁旧图表 (必须重建，避免类型切换时Chart内部状态错误)
+        if (currentChart) {
+            currentChart.destroy();
+            currentChart = null;
+        }
+        
+        const canvasElem = document.getElementById('stockChart');
+        const ctx = canvasElem.getContext('2d');
+        currentChart = new Chart(ctx, chartConfig);
+    }
+    
+    // 切换图表类型 (带 active 样式)
+    function setChartType(type) {
+        if (type !== 'bar' && type !== 'line') return;
+        currentChartType = type;
+        // 更新按钮样式
+        const barBtn = document.getElementById('barBtn');
+        const lineBtn = document.getElementById('lineBtn');
+        if (type === 'bar') {
+            barBtn.classList.add('active');
+            lineBtn.classList.remove('active');
+        } else {
+            lineBtn.classList.add('active');
+            barBtn.classList.remove('active');
+        }
+        // 如果有数据则重绘，否则等待数据回来后再绘制
+        if (rawData.values.length > 0) {
+            renderChart(currentChartType);
+        }
+    }
+    
+    // 初始化页面：绑定按钮 + 加载数据
+    async function init() {
+        // 绑定按钮事件
+        document.getElementById('barBtn').addEventListener('click', () => setChartType('bar'));
+        document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
+        document.getElementById('refreshDataBtn').addEventListener('click', async () => {
+            await fetchStockData();
+        });
+        // 首次加载数据
+        await fetchStockData();
+    }
+    
+    // 页面启动
+    init();
+</script>
+</body>
+</html>
