@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>NB虚拟股票行情（数据来自<a href="https://orgent.pythonanywhere.com/stocks/" target="_blank" rel="noopener noreferrer">Orgent虚拟投资</a>）</title>
+    <title>NB虚拟股票行情（数据来自Orgent虚拟投资）</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -169,13 +169,30 @@
             font-size: 0.7rem;
             color: #6f8e9f;
         }
+        .orgent-link {
+    background: #2c5a6e;
+    color: white;
+    padding: 6px 16px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: 0.2s;
+    display: inline-block;
+}
+.orgent-link:hover {
+    background: #1f4456;
+    transform: scale(0.96);
+}
     </style>
 </head>
 <body>
 <div class="dashboard">
-    <div class="header">
-        <h1>📊 NB虚拟股票行情（数据来自Orgent）</h1>
-        <div class="sub">
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+    <h1 style="margin: 0;">📊 NB虚拟股票行情（数据来自Orgent虚拟投资）</h1>
+    <a href="https://orgent.pythonanywhere.com/stocks/" target="_blank" rel="noopener noreferrer" class="orgent-link">🔗 访问 Orgent虚拟投资页面</a>
+    <div class="sub" style="width: 100%;">...</div>
+</div>
             <span>📈 股票/概念指数 动态追踪</span>
             <span class="update-badge" id="dataTimestamp">⚡ 数据加载中...</span>
         </div>
@@ -199,7 +216,7 @@
         <div>📡 正在从服务器获取股票估值……</div>
     </div>
 </div>
-<footer>数据来源：<a href="https://orgent.pythonanywhere.com/stocks/" target="_blank" rel="noopener noreferrer">Orgent</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒</footer>
+<footer>数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" rel="noopener noreferrer">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒</footer>
 
 <script>
     // ==================== 全局变量 ====================
