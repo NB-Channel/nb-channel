@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>NB虚拟股票行情（数据来自Orgent）</title>
+    <title>NB虚拟股票行情（数据来自<a href="https://orgent.pythonanywhere.com/stocks/" target="_blank" rel="noopener noreferrer">Orgent虚拟投资</a>）</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -199,7 +199,7 @@
         <div>📡 正在从服务器获取股票估值……</div>
     </div>
 </div>
-<footer>数据来源：Orgent API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒</footer>
+<footer>数据来源：<a href="https://orgent.pythonanywhere.com/stocks/" target="_blank" rel="noopener noreferrer">Orgent</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒</footer>
 
 <script>
     // ==================== 全局变量 ====================
@@ -391,7 +391,7 @@
                     y: {
                         beginAtZero: true,
                         grid: { color: '#e3e9ef' },
-                        title: { display: true, text: '指数 / 市值 (点)', color: '#5d7f8f' },
+                        title: { display: true, text: '市值 (点)', color: '#5d7f8f' },
                         ticks: { callback: (val) => formatValue(val) }
                     },
                     x: {
