@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>虚拟股票行情 - 数据可视化看板</title>
+    <title>NB虚拟股票行情（数据来自Orgent）</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -174,7 +174,7 @@
 <body>
 <div class="dashboard">
     <div class="header">
-        <h1>📊 NB虚拟证券 · 实时行情看板</h1>
+        <h1>📊 NB虚拟股票行情（数据来自Orgent）</h1>
         <div class="sub">
             <span>📈 股票/概念指数 动态追踪</span>
             <span class="update-badge" id="dataTimestamp">⚡ 数据加载中...</span>
@@ -199,7 +199,7 @@
         <div>📡 正在从服务器获取股票估值……</div>
     </div>
 </div>
-<footer>数据来源：Orgent 行情 API | 使用 Deno Deploy 专属代理，稳定可靠</footer>
+<footer>数据来源：Orgent  API | 通过 Deno Deploy 专属代理确保稳定访问</footer>
 
 <script>
     // ==================== 全局变量 ====================
@@ -208,10 +208,8 @@
     let rawData = { names: [], values: [] };
     let isLoading = false;
 
-    // ==================== 配置区域（请替换为你的代理地址） ====================
-    // 🔧 重要：把下面这行改成你自己的 Deno Deploy 代理地址！
-    const PROXY_URL = 'https://你的项目名.deno.dev/?url=';
-    
+    // ==================== 配置区域（已配置好你的 Deno Deploy 代理） ====================
+    const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
 
     // ==================== 辅助函数 ====================
@@ -385,7 +383,7 @@
                             maxTicksLimit: 18,
                             font: { size: 9 }
                         },
-                        title: { display: true, text: '股票/项目代码', color: '#5d7f8f' }
+                        title: { display: true, text: '股票/项目名称', color: '#5d7f8f' }
                     }
                 },
                 transitions: {
