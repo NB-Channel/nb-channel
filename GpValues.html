@@ -186,7 +186,7 @@
             <button class="chart-btn active" id="barBtn">📊 柱状图</button>
             <button class="chart-btn" id="lineBtn">📈 折线图</button>
         </div>
-        <button class="refresh-btn" id="refreshDataBtn">🔄 刷新行情</button>
+        <button class="refresh-btn" id="refreshDataBtn">🔄 立即刷新</button>
     </div>
 
     <div class="chart-wrapper">
@@ -199,7 +199,7 @@
         <div>📡 正在从服务器获取股票估值……</div>
     </div>
 </div>
-<footer>数据来源：Orgent  API | 通过 Deno Deploy 专属代理确保稳定访问</footer>
+<footer>数据来源：Orgent API | 通过 Deno Deploy 专属代理 | 自动刷新周期：30秒</footer>
 
 <script>
     // ==================== 全局变量 ====================
@@ -207,6 +207,8 @@
     let currentChartType = 'bar';
     let rawData = { names: [], values: [] };
     let isLoading = false;
+    let autoRefreshTimer = null;          // 定时器ID
+    let refreshInterval = 30000;          // 30秒 (可调整)
 
     // ==================== 配置区域（已配置好你的 Deno Deploy 代理） ====================
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
@@ -232,14 +234,34 @@
         });
     }
 
+    // 更新时间戳显示（包含自动刷新状态）
+    function updateTimestamp(status = 'success') {
+        const elem = document.getElementById('dataTimestamp');
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        if (status === 'loading') {
+            elem.innerHTML = `⏳ 刷新中...`;
+        } else if (status === 'error') {
+            elem.innerHTML = `⚠️ 上次更新失败 (${timeStr})`;
+        } else {
+            elem.innerHTML = `🕒 自动刷新: 30秒 | 最新: ${timeStr}`;
+        }
+    }
+
     // ==================== 数据获取 ====================
-    async function fetchStockData() {
+    async function fetchStockData(isAuto = false) {
         if (isLoading) return;
         isLoading = true;
-        const timestampElem = document.getElementById('dataTimestamp');
+        
+        if (!isAuto) {
+            // 手动刷新时，短暂显示“手动刷新中”，但不清除自动刷新定时器
+            updateTimestamp('loading');
+        } else {
+            updateTimestamp('loading');
+        }
+        
         const statsPanel = document.getElementById('statsPanel');
         try {
-            timestampElem.innerHTML = '⏳ 请求行情中...';
             const proxyFullUrl = PROXY_URL + encodeURIComponent(API_URL);
             const response = await fetch(proxyFullUrl);
             
@@ -254,14 +276,13 @@
             rawData.names = result.names;
             rawData.values = result.values.map(v => Number(v));
             
-            const now = new Date();
-            timestampElem.innerHTML = `🕒 最新行情 ${now.toLocaleTimeString()}`;
+            updateTimestamp('success');
             updateStatsPanel();
             renderChart(currentChartType);
         } catch (error) {
             console.error('API 请求失败:', error);
-            timestampElem.innerHTML = '⚠️ 数据加载失败';
-            statsPanel.innerHTML = `<div class="error-msg">❌ 获取失败: ${error.message}<br>请检查网络或代理配置</div>`;
+            updateTimestamp('error');
+            statsPanel.innerHTML = `<div class="error-msg">❌ 获取失败: ${error.message}<br>将自动重试</div>`;
             if (currentChart) {
                 currentChart.destroy();
                 currentChart = null;
@@ -420,11 +441,48 @@
         }
     }
     
+    // ==================== 自动刷新控制 ====================
+    function startAutoRefresh() {
+        if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+        autoRefreshTimer = setInterval(() => {
+            fetchStockData(true);  // 自动刷新
+        }, refreshInterval);
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshTimer) {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = null;
+        }
+    }
+
+    // 页面可见性变化时：如果页面隐藏，停止自动刷新以节省资源；显示时重新启动
+    function handleVisibilityChange() {
+        if (document.hidden) {
+            stopAutoRefresh();
+        } else {
+            startAutoRefresh();
+        }
+    }
+
     // ==================== 初始化 ====================
     document.getElementById('barBtn').addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
-    document.getElementById('refreshDataBtn').addEventListener('click', fetchStockData);
-    fetchStockData();
+    document.getElementById('refreshDataBtn').addEventListener('click', () => fetchStockData(false));
+    
+    // 首次加载数据
+    fetchStockData(false).then(() => {
+        // 数据加载完成后启动自动刷新
+        startAutoRefresh();
+    });
+    
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // 页面关闭前清理定时器（可选，避免后台持续运行）
+    window.addEventListener('beforeunload', () => {
+        stopAutoRefresh();
+    });
 </script>
 </body>
 </html>
