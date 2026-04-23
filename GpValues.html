@@ -4,149 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>NB虚拟股票行情（数据来自Orgent虚拟投资）</title>
+    <!-- 引用全局样式和脚本 -->
+    <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="js/common.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
-            font-family: 'Segoe UI', 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            min-height: 100vh;
-            padding: 24px 20px;
-        }
-        .dashboard {
-            max-width: 1300px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(2px);
-            border-radius: 32px;
-            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-        }
-        .header {
-            padding: 28px 32px 16px 32px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-            background: rgba(255, 255, 255, 0.5);
-        }
-        .header h1 {
-            font-size: 1.9rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #1e2b3c, #2c5a6e);
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
-        }
-        .sub {
-            color: #5a6e7c;
-            margin-top: 8px;
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .update-badge {
-            background: #eef2f6;
-            padding: 6px 14px;
-            border-radius: 60px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: #2c5a6e;
-        }
-        .toolbar {
-            padding: 20px 32px 12px 32px;
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            align-items: center;
-            border-bottom: 1px solid #eef2f8;
-            background: #ffffffd9;
-        }
-        .btn-group {
-            display: flex;
-            gap: 12px;
-            background: #f0f4f9;
-            padding: 6px;
-            border-radius: 60px;
-        }
-        .chart-btn {
-            background: transparent;
-            border: none;
-            padding: 8px 24px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: #3e5a6b;
-        }
-        .chart-btn.active {
-            background: #2c5a6e;
-            color: white;
-            box-shadow: 0 4px 8px rgba(44, 90, 110, 0.2);
-        }
-        .chart-btn:not(.active):hover {
-            background: #e0e8f0;
-            color: #1e3b4a;
-        }
-        .refresh-btn {
-            background: #2c5a6e;
-            border: none;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-left: auto;
-            transition: 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .refresh-btn:hover {
-            background: #1f4456;
-            transform: scale(0.96);
-        }
+        /* 仅保留图表容器和股票页面特有的微调（不覆盖全局样式） */
         .chart-wrapper {
             padding: 20px 32px 32px 32px;
         }
         .canvas-container {
             position: relative;
             width: 100%;
-            min-height: 500px;
-            background: #ffffff;
+            min-height: 550px;
+            background: var(--card-bg);
             border-radius: 24px;
             padding: 16px 8px 8px 8px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+            transition: background 0.3s ease;
         }
         canvas {
-            max-height: 520px;
+            max-height: 550px;
             width: 100%;
         }
         .stats {
-            padding: 16px 32px 28px 32px;
-            border-top: 1px solid #eef2f8;
-            background: #fbfdff;
             display: flex;
             flex-wrap: wrap;
             gap: 24px;
-            font-size: 0.85rem;
-            color: #2c5a6e;
+            margin-top: 20px;
+            padding: 16px 32px 28px 32px;
+            border-top: 1px solid var(--card-border);
+            background: var(--card-bg);
         }
         .stat-card {
-            background: #f5f9fe;
+            background: var(--count-bg);
             border-radius: 28px;
             padding: 10px 22px;
             display: inline-flex;
             align-items: baseline;
             gap: 12px;
             flex-wrap: wrap;
+            font-size: 0.85rem;
         }
         .stat-label {
             font-weight: 600;
-            letter-spacing: 0.5px;
         }
         .stat-value {
             font-weight: 700;
-            color: #1f4d62;
-            background: white;
+            color: var(--status-border);
+            background: var(--card-bg);
             padding: 4px 12px;
             border-radius: 30px;
         }
@@ -157,21 +63,14 @@
             padding: 8px 20px;
             font-size: 0.85rem;
         }
-        @media (max-width: 680px) {
-            .toolbar { flex-direction: column; align-items: stretch; }
-            .refresh-btn { margin-left: 0; }
-            .chart-wrapper { padding: 16px; }
-            .header h1 { font-size: 1.5rem; }
+        body.dark-mode .error-msg {
+            background: #3b1e1a;
+            color: #f87171;
         }
-        footer {
-            text-align: center;
-            margin-top: 16px;
-            font-size: 0.7rem;
-            color: #6f8e9f;
-        }
+        /* 确保按钮样式与全局一致 */
         .orgent-link {
-            background: #2c5a6e;
-            color: white;
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
             padding: 6px 16px;
             border-radius: 30px;
             text-decoration: none;
@@ -181,179 +80,135 @@
             display: inline-block;
         }
         .orgent-link:hover {
-            background: #1f4456;
-            transform: scale(0.96);
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        @media (max-width: 680px) {
+            .chart-wrapper { padding: 16px; }
+            .canvas-container { min-height: 400px; }
+            canvas { max-height: 400px; }
+            .stats { padding: 16px; gap: 16px; }
         }
     </style>
 </head>
 <body>
-    <div class="dashboard">
-    <div class="header">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-        <h1 style="margin: 0;">📊 NB虚拟股票行情（数据来自Orgent虚拟投资）</h1>
-        <a href="https://orgent.pythonanywhere.com/stocks/" target="_blank" rel="noopener noreferrer" class="orgent-link">🔗 访问 Orgent虚拟投资页面</a>
-    </div>
-    <div class="sub">
-        <span>📈 股票/概念指数 动态追踪</span>
-        <span class="update-badge" id="dataTimestamp">⚡ 数据加载中...</span>
-    </div>
-</div>
-
-    <div class="toolbar">
-        <div class="btn-group">
-            <button class="chart-btn active" id="barBtn">📊 柱状图</button>
-            <button class="chart-btn" id="lineBtn">📈 折线图</button>
+<div class="container">
+    <!-- 复用全局导航栏（与评论区一致） -->
+    <h1>📺 NB频道官网</h1>
+    <div class="author-info" id="authorInfo">UP主：NB搞事局</div>
+    <div class="nav-container">
+        <div class="nav-links">
+            <a href="index.html" class="nav-btn">首页</a>
+            <a href="videos.html" class="nav-btn">视频</a>
+            <a href="about.html" class="nav-btn">关于</a>
+            <a href="changelog.html" class="nav-btn">更新日志</a>
+            <a href="product.html" class="nav-btn">我的产品</a>
+            <a href="APP.html" class="nav-btn">软件/APP下载</a>
         </div>
-        <button class="refresh-btn" id="refreshDataBtn">🔄 立即刷新</button>
-    </div>
-
-    <div class="chart-wrapper">
-        <div class="canvas-container">
-            <canvas id="stockChart" width="1100" height="500"></canvas>
+        <div class="nav-actions">
+            <a href="comments-beta.html" class="nav-btn">💬 评论Beta</a>
+            <a href="stock.html" class="nav-btn active">📈 虚拟股票</a>
+            <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">🌙 夜间模式</button>
         </div>
     </div>
 
-    <div class="stats" id="statsPanel">
-        <div>📡 正在从服务器获取股票估值……</div>
+    <!-- 股票看板内容 -->
+    <div class="home-card" style="padding-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
+            <h2 style="margin: 0; color: var(--status-border);">📊 虚拟股票行情（数据来自Orgent虚拟投资）</h2>
+            <a href="https://orgent.pythonanywhere.com/stocks/" target="_blank" rel="noopener noreferrer" class="orgent-link">🔗 访问 Orgent页面</a>
+        </div>
+        <div class="sub" style="color: var(--count-text); margin-bottom: 16px;">
+            <span>📈 股票/概念指数 动态追踪</span>
+            <span class="update-badge" id="dataTimestamp" style="background: var(--count-bg); padding: 4px 12px; border-radius: 60px;">⚡ 数据加载中...</span>
+        </div>
+
+        <div class="toolbar" style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 20px;">
+            <div class="btn-group" style="display: flex; gap: 12px; background: var(--nav-btn-bg); padding: 6px; border-radius: 60px;">
+                <button class="chart-btn active" id="barBtn" style="background: transparent; border: none; padding: 8px 24px; border-radius: 40px; cursor: pointer;">📊 柱状图</button>
+                <button class="chart-btn" id="lineBtn" style="background: transparent; border: none; padding: 8px 24px; border-radius: 40px; cursor: pointer;">📈 折线图</button>
+            </div>
+            <button class="refresh-btn" id="refreshDataBtn" style="background: var(--nav-btn-hover-bg); color: white; border: none; padding: 8px 20px; border-radius: 40px; cursor: pointer;">🔄 立即刷新</button>
+        </div>
+
+        <div class="chart-wrapper">
+            <div class="canvas-container">
+                <canvas id="stockChart" width="1100" height="550"></canvas>
+            </div>
+        </div>
+
+        <div class="stats" id="statsPanel">
+            <div>📡 正在从服务器获取股票估值……</div>
+        </div>
     </div>
 </div>
-<footer>数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" rel="noopener noreferrer">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒</footer>
+
+<!-- 底部 Footer（复用全局） -->
+<div class="site-stats">
+    <div class="stats-container" id="siteStats"></div>
+    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒</p>
+</div>
+
+<!-- 固定按钮（暗色模式和回到顶部复用 common.js 的已有逻辑，但股票页面需要单独监听主题变化重绘图表） -->
+<div class="fixed-buttons">
+    <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+</div>
 
 <script>
-    // ==================== 全局变量 ====================
+    // ==================== 股票页面独立逻辑 ====================
     let currentChart = null;
     let currentChartType = 'bar';
     let rawData = { names: [], values: [] };
     let isLoading = false;
-    let autoRefreshTimer = null;          // 定时器ID
-    let refreshInterval = 10000;          // 10秒 (可调整)
+    let autoRefreshTimer = null;
+    let refreshInterval = 10000; // 10秒
 
-    // ==================== 配置区域（已配置好你的 Deno Deploy 代理） ====================
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
 
-    // ==================== 辅助函数 ====================
     function formatValue(num) {
-    if (num === undefined || num === null) return '0';
-    const n = Number(num);
-    if (isNaN(n)) return '0';
-    return n.toLocaleString();
-}
+        if (num === undefined || num === null) return '0';
+        const n = Number(num);
+        if (isNaN(n)) return '0';
+        return n.toLocaleString();
+    }
 
     function escapeHtml(str) {
         if (!str) return '';
-        return String(str).replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
+        return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
     }
 
-    // 更新时间戳显示（包含自动刷新状态）
     function updateTimestamp(status = 'success') {
         const elem = document.getElementById('dataTimestamp');
         const now = new Date();
         const timeStr = now.toLocaleTimeString();
-        if (status === 'loading') {
-            elem.innerHTML = `⏳ 刷新中...`;
-        } else if (status === 'error') {
-            elem.innerHTML = `⚠️ 上次更新失败 (${timeStr})`;
-        } else {
-            elem.innerHTML = `🕒 自动刷新: 10秒 | 最新: ${timeStr}`;
-        }
+        if (status === 'loading') elem.innerHTML = `⏳ 刷新中...`;
+        else if (status === 'error') elem.innerHTML = `⚠️ 上次更新失败 (${timeStr})`;
+        else elem.innerHTML = `🕒 自动刷新: 10秒 | 最新: ${timeStr}`;
     }
 
-    // ==================== 数据获取 ====================
-    async function fetchStockData(isAuto = false) {
-        if (isLoading) return;
-        isLoading = true;
-        
-        if (!isAuto) {
-            // 手动刷新时，短暂显示“手动刷新中”，但不清除自动刷新定时器
-            updateTimestamp('loading');
-        } else {
-            updateTimestamp('loading');
-        }
-        
-        const statsPanel = document.getElementById('statsPanel');
-        try {
-            const proxyFullUrl = PROXY_URL + encodeURIComponent(API_URL);
-            const response = await fetch(proxyFullUrl);
-            
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            
-            const result = await response.json();
-            
-            if (result.code !== 200 || !result.names || !result.values) {
-                throw new Error(result.msg || '数据格式异常');
-            }
-            
-            rawData.names = result.names;
-            rawData.values = result.values.map(v => Number(v));
-            
-            updateTimestamp('success');
-            updateStatsPanel();
-            renderChart(currentChartType);
-        } catch (error) {
-            console.error('API 请求失败:', error);
-            updateTimestamp('error');
-            statsPanel.innerHTML = `<div class="error-msg">❌ 获取失败: ${error.message}<br>将自动重试</div>`;
-            if (currentChart) {
-                currentChart.destroy();
-                currentChart = null;
-            }
-        } finally {
-            isLoading = false;
-        }
+    // 获取当前主题的图表配色（响应全局 body.dark-mode 类）
+    function getChartColors() {
+        const isDark = document.body.classList.contains('dark-mode');
+        return {
+            gridColor: isDark ? '#3f465f' : '#e3e9ef',
+            titleColor: isDark ? '#9ca3af' : '#5d7f8f',
+            tickColor: isDark ? '#9ca3af' : '#5d7f8f',
+            legendColor: isDark ? '#cbd5e6' : '#2c5a6e',
+            borderColor: isDark ? '#60a5fa' : '#2c5a6e',
+            pointBackground: isDark ? '#60a5fa' : '#2c5a6e',
+            tooltipBg: isDark ? '#1f2937' : '#1f3e4c',
+            tooltipTitle: isDark ? '#f3f4f6' : '#f0f3f7'
+        };
     }
 
-    // ==================== 统计面板 ====================
-    function updateStatsPanel() {
-        if (!rawData.values.length || !rawData.names.length) {
-            document.getElementById('statsPanel').innerHTML = '<div>暂无有效行情数据</div>';
-            return;
-        }
-        const values = rawData.values;
-        const names = rawData.names;
-        const total = values.reduce((a,b) => a + b, 0);
-        const maxVal = Math.max(...values);
-        const maxIdx = values.indexOf(maxVal);
-        const maxName = names[maxIdx] || '—';
-        const minVal = Math.min(...values);
-        const minIdx = values.indexOf(minVal);
-        const minName = names[minIdx] || '—';
-        const avgVal = (total / values.length).toFixed(0);
-        const firstVal = values[0] || 1;
-        const lastVal = values[values.length-1] || 1;
-        const changePercent = ((lastVal - firstVal) / firstVal * 100).toFixed(2);
-        const changeSymbol = changePercent >= 0 ? '📈 +' : '📉 ';
-        
-        const statsHtml = `
-            <div class="stat-card"><span class="stat-label">🏦 成份股数</span><span class="stat-value">${values.length}</span></div>
-            <div class="stat-card"><span class="stat-label">💰 总值(模拟)</span><span class="stat-value">${formatValue(total)}</span></div>
-            <div class="stat-card"><span class="stat-label">🏆 最高价股</span><span class="stat-value">${escapeHtml(maxName)} : ${formatValue(maxVal)}</span></div>
-            <div class="stat-card"><span class="stat-label">📉 最低价股</span><span class="stat-value">${escapeHtml(minName)} : ${formatValue(minVal)}</span></div>
-            <div class="stat-card"><span class="stat-label">📊 平均估值</span><span class="stat-value">${formatValue(avgVal)}</span></div>
-            <div class="stat-card"><span class="stat-label">🔄 首尾变化</span><span class="stat-value">${changeSymbol}${Math.abs(changePercent)}%</span></div>
-        `;
-        document.getElementById('statsPanel').innerHTML = statsHtml;
-    }
-
-    // ==================== 图表渲染 ====================
     function renderChart(type) {
-        if (!rawData.names.length || !rawData.values.length) {
-            console.warn('无数据，无法绘图');
-            return;
-        }
+        if (!rawData.names.length || !rawData.values.length) return;
         const labels = rawData.names.slice();
         const dataValues = rawData.values.slice();
-        
-        const barColors = dataValues.map((_, idx) => {
-            const hue = (idx * 25) % 360;
-            return `hsla(${hue}, 65%, 55%, 0.85)`;
-        });
-        const lineBorderColor = '#2c5a6e';
+        const colors = getChartColors();
+        const barColors = dataValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
         
         let dataset = [];
         if (type === 'bar') {
@@ -371,19 +226,18 @@
             dataset = [{
                 label: '虚拟股票价值曲线',
                 data: dataValues,
-                borderColor: lineBorderColor,
-                backgroundColor: 'rgba(44, 90, 110, 0.08)',
+                borderColor: colors.borderColor,
+                backgroundColor: document.body.classList.contains('dark-mode') ? 'rgba(59,130,246,0.1)' : 'rgba(44, 90, 110, 0.08)',
                 borderWidth: 3,
                 pointRadius: 3.5,
-                pointHoverRadius: 6,
-                pointBackgroundColor: '#2c5a6e',
+                pointBackgroundColor: colors.pointBackground,
                 pointBorderColor: '#ffffff',
                 tension: 0.2,
                 fill: true,
             }];
         }
-        
-        const chartConfig = {
+
+        const config = {
             type: type,
             data: { labels, datasets: dataset },
             options: {
@@ -391,114 +245,134 @@
                 maintainAspectRatio: true,
                 plugins: {
                     tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let val = context.raw;
-                                return `${context.dataset.label}: ${formatValue(val)}`;
-                            }
-                        },
-                        backgroundColor: '#1f3e4c',
-                        titleColor: '#f0f3f7'
+                        callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` },
+                        backgroundColor: colors.tooltipBg,
+                        titleColor: colors.tooltipTitle
                     },
-                    legend: {
-                        position: 'top',
-                        labels: { font: { size: 12, weight: 'bold' }, color: '#2c5a6e' }
-                    }
+                    legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { color: '#e3e9ef' },
-                        title: { display: true, text: '市值 (点)', color: '#5d7f8f' },
-                        ticks: { callback: (val) => formatValue(val) }
+                        grid: { color: colors.gridColor },
+                        title: { display: true, text: '市值 (点)', color: colors.titleColor },
+                        ticks: { color: colors.tickColor, callback: v => formatValue(v) }
                     },
                     x: {
                         ticks: {
+                            color: colors.tickColor,
                             maxRotation: 45,
                             minRotation: 35,
-                            autoSkip: true,
-                            maxTicksLimit: 18,
+                            autoSkip: false,     // 全部显示
                             font: { size: 9 }
                         },
-                        title: { display: true, text: '股票名称', color: '#5d7f8f' }
+                        title: { display: true, text: '股票名称', color: colors.titleColor }
                     }
-                },
-                transitions: {
-                    active: { animation: { duration: 400 } }
                 }
             }
         };
-        
-        if (currentChart) {
-            currentChart.destroy();
-            currentChart = null;
-        }
-        
-        const canvasElem = document.getElementById('stockChart');
-        const ctx = canvasElem.getContext('2d');
-        currentChart = new Chart(ctx, chartConfig);
+        if (currentChart) currentChart.destroy();
+        currentChart = new Chart(document.getElementById('stockChart').getContext('2d'), config);
     }
-    
-    // ==================== 图表类型切换 ====================
-    function setChartType(type) {
-        if (type !== 'bar' && type !== 'line') return;
-        currentChartType = type;
-        const barBtn = document.getElementById('barBtn');
-        const lineBtn = document.getElementById('lineBtn');
-        if (type === 'bar') {
-            barBtn.classList.add('active');
-            lineBtn.classList.remove('active');
-        } else {
-            lineBtn.classList.add('active');
-            barBtn.classList.remove('active');
-        }
-        if (rawData.values.length > 0) {
+
+    async function fetchStockData(isAuto = false) {
+        if (isLoading) return;
+        isLoading = true;
+        updateTimestamp('loading');
+        const statsDiv = document.getElementById('statsPanel');
+        try {
+            const url = PROXY_URL + encodeURIComponent(API_URL);
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
+            rawData.names = json.names;
+            rawData.values = json.values.map(v => Number(v));
+            updateTimestamp('success');
+            updateStatsPanel();
             renderChart(currentChartType);
+        } catch (err) {
+            console.error(err);
+            updateTimestamp('error');
+            statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
+            if (currentChart) { currentChart.destroy(); currentChart = null; }
+        } finally {
+            isLoading = false;
         }
     }
-    
-    // ==================== 自动刷新控制 ====================
+
+    function updateStatsPanel() {
+        if (!rawData.values.length) {
+            document.getElementById('statsPanel').innerHTML = '<div>暂无数据</div>';
+            return;
+        }
+        const vals = rawData.values, names = rawData.names;
+        const total = vals.reduce((a,b)=>a+b,0);
+        const max = Math.max(...vals), maxIdx = vals.indexOf(max);
+        const min = Math.min(...vals), minIdx = vals.indexOf(min);
+        const avg = (total/vals.length).toFixed(0);
+        const first = vals[0], last = vals[vals.length-1];
+        const change = ((last - first)/first*100).toFixed(2);
+        const changeSym = change >= 0 ? '📈 +' : '📉 ';
+        document.getElementById('statsPanel').innerHTML = `
+            <div class="stat-card"><span class="stat-label">🏦 成份股数</span><span class="stat-value">${vals.length}</span></div>
+            <div class="stat-card"><span class="stat-label">💰 总值(模拟)</span><span class="stat-value">${formatValue(total)}</span></div>
+            <div class="stat-card"><span class="stat-label">🏆 最高价股</span><span class="stat-value">${escapeHtml(names[maxIdx])} : ${formatValue(max)}</span></div>
+            <div class="stat-card"><span class="stat-label">📉 最低价股</span><span class="stat-value">${escapeHtml(names[minIdx])} : ${formatValue(min)}</span></div>
+            <div class="stat-card"><span class="stat-label">📊 平均估值</span><span class="stat-value">${formatValue(avg)}</span></div>
+            <div class="stat-card"><span class="stat-label">🔄 首尾变化</span><span class="stat-value">${changeSym}${Math.abs(change)}%</span></div>
+        `;
+    }
+
+    function setChartType(type) {
+        if (!['bar','line'].includes(type)) return;
+        currentChartType = type;
+        document.getElementById('barBtn').classList.toggle('active', type === 'bar');
+        document.getElementById('lineBtn').classList.toggle('active', type === 'line');
+        if (rawData.values.length) renderChart(currentChartType);
+    }
+
+    // 自动刷新控制
     function startAutoRefresh() {
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-        autoRefreshTimer = setInterval(() => {
-            fetchStockData(true);  // 自动刷新
-        }, refreshInterval);
+        autoRefreshTimer = setInterval(() => fetchStockData(true), refreshInterval);
     }
-
     function stopAutoRefresh() {
-        if (autoRefreshTimer) {
-            clearInterval(autoRefreshTimer);
-            autoRefreshTimer = null;
-        }
+        if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
     }
-
-    // 页面可见性变化时：如果页面隐藏，停止自动刷新以节省资源；显示时重新启动
     function handleVisibilityChange() {
-        if (document.hidden) {
-            stopAutoRefresh();
-        } else {
-            startAutoRefresh();
-        }
+        if (document.hidden) stopAutoRefresh();
+        else startAutoRefresh();
     }
 
-    // ==================== 初始化 ====================
+    // 监听全局暗色模式变化（当用户通过导航按钮或固定按钮切换主题时，重新渲染图表）
+    function onThemeChange() {
+        if (rawData.values.length) renderChart(currentChartType);
+    }
+
+    // 钩子：因为 common.js 中的 toggleTheme 会修改 body 类，但页面无法直接感知，我们通过 MutationObserver 监听 body 类变化
+    const observer = new MutationObserver(() => {
+        if (rawData.values.length) renderChart(currentChartType);
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    // 初始化
     document.getElementById('barBtn').addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
     document.getElementById('refreshDataBtn').addEventListener('click', () => fetchStockData(false));
     
-    // 首次加载数据
-    fetchStockData(false).then(() => {
-        // 数据加载完成后启动自动刷新
-        startAutoRefresh();
-    });
-    
-    // 监听页面可见性变化
+    fetchStockData(false).then(() => startAutoRefresh());
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // 页面关闭前清理定时器（可选，避免后台持续运行）
-    window.addEventListener('beforeunload', () => {
-        stopAutoRefresh();
-    });
+    window.addEventListener('beforeunload', stopAutoRefresh);
+
+    // 确保回顶部的 scrollToTop 函数存在（common.js 已经提供）
+    if (typeof window.scrollToTop !== 'function') {
+        window.scrollToTop = function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+    }
+    // 更新网站统计（如果 common.js 提供了 updateSiteStats 则调用）
+    if (typeof updateSiteStats === 'function') updateSiteStats();
 </script>
 </body>
 </html>
