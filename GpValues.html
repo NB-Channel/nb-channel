@@ -216,13 +216,11 @@
 
     // ==================== 辅助函数 ====================
     function formatValue(num) {
-        if (num === undefined || num === null) return '0';
-        const n = Number(num);
-        if (isNaN(n)) return '0';
-        if (n >= 100000000) return (n / 100000000).toFixed(1) + '亿';
-        if (n >= 10000) return (n / 10000).toFixed(1) + '万';
-        return n.toLocaleString();
-    }
+    if (num === undefined || num === null) return '0';
+    const n = Number(num);
+    if (isNaN(n)) return '0';
+    return n.toLocaleString();
+}
 
     function escapeHtml(str) {
         if (!str) return '';
