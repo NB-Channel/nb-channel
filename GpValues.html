@@ -199,7 +199,7 @@
         <div>📡 正在从服务器获取股票估值……</div>
     </div>
 </div>
-<footer>数据来源：Orgent API | 通过 Deno Deploy 专属代理 | 自动刷新周期：30秒</footer>
+<footer>数据来源：Orgent API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒</footer>
 
 <script>
     // ==================== 全局变量 ====================
@@ -208,7 +208,7 @@
     let rawData = { names: [], values: [] };
     let isLoading = false;
     let autoRefreshTimer = null;          // 定时器ID
-    let refreshInterval = 30000;          // 30秒 (可调整)
+    let refreshInterval = 10000;          // 10秒 (可调整)
 
     // ==================== 配置区域（已配置好你的 Deno Deploy 代理） ====================
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
@@ -244,7 +244,7 @@
         } else if (status === 'error') {
             elem.innerHTML = `⚠️ 上次更新失败 (${timeStr})`;
         } else {
-            elem.innerHTML = `🕒 自动刷新: 30秒 | 最新: ${timeStr}`;
+            elem.innerHTML = `🕒 自动刷新: 10秒 | 最新: ${timeStr}`;
         }
     }
 
@@ -342,7 +342,7 @@
         let dataset = [];
         if (type === 'bar') {
             dataset = [{
-                label: '虚拟市值 / 积分',
+                label: '虚拟市值',
                 data: dataValues,
                 backgroundColor: barColors,
                 borderColor: 'rgba(44, 90, 110, 0.4)',
@@ -404,7 +404,7 @@
                             maxTicksLimit: 18,
                             font: { size: 9 }
                         },
-                        title: { display: true, text: '股票/项目名称', color: '#5d7f8f' }
+                        title: { display: true, text: '股票名称', color: '#5d7f8f' }
                     }
                 },
                 transitions: {
