@@ -8,88 +8,143 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
-    <style>
-        /* 仅保留图表容器和股票页面特有的微调（不覆盖全局样式） */
-        .chart-wrapper {
-            padding: 20px 32px 32px 32px;
-        }
-        .canvas-container {
-            position: relative;
-            width: 100%;
-            min-height: 550px;
-            background: var(--card-bg);
-            border-radius: 24px;
-            padding: 16px 8px 8px 8px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
-            transition: background 0.3s ease;
-        }
-        canvas {
-            max-height: 550px;
-            width: 100%;
-        }
-        .stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            margin-top: 20px;
-            padding: 16px 32px 28px 32px;
-            border-top: 1px solid var(--card-border);
-            background: var(--card-bg);
-        }
-        .stat-card {
-            background: var(--count-bg);
-            border-radius: 28px;
-            padding: 10px 22px;
-            display: inline-flex;
-            align-items: baseline;
-            gap: 12px;
-            flex-wrap: wrap;
-            font-size: 0.85rem;
-        }
-        .stat-label {
-            font-weight: 600;
-        }
-        .stat-value {
-            font-weight: 700;
-            color: var(--status-border);
-            background: var(--card-bg);
-            padding: 4px 12px;
-            border-radius: 30px;
-        }
-        .error-msg {
-            color: #c7362b;
-            background: #ffeae8;
-            border-radius: 40px;
-            padding: 8px 20px;
-            font-size: 0.85rem;
-        }
-        body.dark-mode .error-msg {
-            background: #3b1e1a;
-            color: #f87171;
-        }
-        /* 确保按钮样式与全局一致 */
-        .orgent-link {
-            background: var(--nav-btn-bg);
-            color: var(--nav-btn-text);
-            padding: 6px 16px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: 0.2s;
-            display: inline-block;
-        }
-        .orgent-link:hover {
-            background: var(--nav-btn-hover-bg);
-            color: var(--nav-btn-hover-text);
-        }
-        @media (max-width: 680px) {
-            .chart-wrapper { padding: 16px; }
-            .canvas-container { min-height: 400px; }
-            canvas { max-height: 400px; }
-            .stats { padding: 16px; gap: 16px; }
-        }
-    </style>
+   <style>
+    /* 图表容器特有的微调（不改变按钮形状） */
+    .chart-wrapper {
+        padding: 20px 32px 32px 32px;
+    }
+    .canvas-container {
+        position: relative;
+        width: 100%;
+        min-height: 550px;
+        background: var(--card-bg);
+        border-radius: 24px;
+        padding: 16px 8px 8px 8px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+        transition: background 0.3s ease;
+    }
+    canvas {
+        max-height: 550px;
+        width: 100%;
+    }
+    .stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        margin-top: 20px;
+        padding: 16px 32px 28px 32px;
+        border-top: 1px solid var(--card-border);
+        background: var(--card-bg);
+    }
+    .stat-card {
+        background: var(--count-bg);
+        border-radius: 28px;
+        padding: 10px 22px;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+    }
+    .stat-label {
+        font-weight: 600;
+    }
+    .stat-value {
+        font-weight: 700;
+        color: var(--status-border);
+        background: var(--card-bg);
+        padding: 4px 12px;
+        border-radius: 30px;
+    }
+    .error-msg {
+        color: #c7362b;
+        background: #ffeae8;
+        border-radius: 40px;
+        padding: 8px 20px;
+        font-size: 0.85rem;
+    }
+    body.dark-mode .error-msg {
+        background: #3b1e1a;
+        color: #f87171;
+    }
+    /* Orgent 链接按钮样式（复用导航按钮风格，不改形状） */
+    .orgent-link {
+        background: var(--nav-btn-bg);
+        color: var(--nav-btn-text);
+        padding: 6px 16px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: 0.2s;
+        display: inline-block;
+    }
+    .orgent-link:hover {
+        background: var(--nav-btn-hover-bg);
+        color: var(--nav-btn-hover-text);
+    }
+    /* 柱状图 / 折线图 切换按钮 —— 仅修改颜色，完全保留原有形状、内边距、圆角、过渡 */
+    .toolbar {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .btn-group {
+        display: flex;
+        gap: 12px;
+        background: var(--nav-btn-bg);
+        padding: 6px;
+        border-radius: 60px;
+    }
+    .chart-btn {
+        background: transparent;
+        border: none;
+        padding: 8px 24px;
+        border-radius: 40px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+        font-weight: 600;
+        /* 只改颜色 */
+        color: var(--nav-btn-text);
+    }
+    /* 激活状态 —— 自定义为品牌蓝 */
+    .chart-btn.active {
+        background: #00a1d6;        /* 品牌蓝色，可换成你喜欢的色值 */
+        color: white;
+        box-shadow: 0 4px 8px rgba(0, 161, 214, 0.3);
+    }
+    /* 悬停效果（非激活状态） */
+    .chart-btn:hover:not(.active) {
+        background: rgba(0, 161, 214, 0.1);
+        color: var(--nav-btn-hover-text);
+    }
+    /* 刷新按钮 */
+    .refresh-btn {
+        background: var(--nav-btn-hover-bg);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 40px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .refresh-btn:hover {
+        filter: brightness(0.9);
+        transform: scale(0.96);
+    }
+    /* 响应式调整（仅缩小内边距，不改按钮形状） */
+    @media (max-width: 680px) {
+        .chart-wrapper { padding: 16px; }
+        .canvas-container { min-height: 400px; }
+        canvas { max-height: 400px; }
+        .stats { padding: 16px; gap: 16px; }
+        .btn-group { gap: 8px; }
+        .chart-btn { padding: 6px 16px; font-size: 0.8rem; }
+    }
+</style>
 </head>
 <body>
 <div class="container">
