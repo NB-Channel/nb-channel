@@ -8,325 +8,443 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
     <style>
-       /* 图表容器及特有样式 */
-.chart-wrapper {
-    padding: 20px 32px 32px 32px;
-}
-.canvas-container {
-    position: relative;
-    width: 100%;
-    min-height: 550px;
-    background: var(--card-bg);
-    border-radius: 24px;
-    padding: 16px 8px 8px 8px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
-    transition: background 0.3s ease;
-}
-canvas {
-    max-height: 550px;
-    width: 100%;
-}
+        /* ==================== 基础变量（亮色模式默认） ==================== */
+        :root {
+            --bg-color: #f6f7f9;
+            --text-color: #18191c;
+            --card-bg: #fff;
+            --card-border: #e5e9ef;
+            --status-bg: #ecf9ff;
+            --status-text: #025;
+            --status-border: #00a1d6;
+            --nav-btn-bg: #e0e0e0;
+            --nav-btn-text: #333;
+            --nav-btn-hover-bg: #00a1d6;
+            --nav-btn-hover-text: white;
+            --count-bg: #e8f4fd;
+            --count-text: #666;
+            --count-border: #00a1d6;
+        }
 
-/* 统计卡片区域 */
-.stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    margin-top: 20px;
-    padding: 16px 32px 28px 32px;
-    border-top: 1px solid var(--card-border);
-    background: var(--card-bg);
-}
-.stat-card {
-    background: var(--count-bg);
-    border-radius: 28px;
-    padding: 10px 22px;
-    display: inline-flex;
-    align-items: baseline;
-    gap: 12px;
-    flex-wrap: wrap;
-    font-size: 0.85rem;
-}
-.stat-label {
-    font-weight: 600;
-}
-.stat-value {
-    font-weight: 700;
-    color: var(--status-border);
-    background: var(--card-bg);
-    padding: 4px 12px;
-    border-radius: 30px;
-}
-.error-msg {
-    color: #c7362b;
-    background: #ffeae8;
-    border-radius: 40px;
-    padding: 8px 20px;
-    font-size: 0.85rem;
-}
-body.dark-mode .error-msg {
-    background: #3b1e1a;
-    color: #f87171;
-}
+        /* ==================== 暗色模式变量 ==================== */
+        body.dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --card-bg: #2d2d2d;
+            --card-border: #444;
+            --status-bg: #1e2a3a;
+            --status-text: #a0d0ff;
+            --status-border: #4a9eff;
+            --nav-btn-bg: #3a3a3a;
+            --nav-btn-text: #ccc;
+            --nav-btn-hover-bg: #4a9eff;
+            --nav-btn-hover-text: #fff;
+            --count-bg: #2a3a4a;
+            --count-text: #b0d0ff;
+            --count-border: #4a9eff;
+        }
 
-/* Orgent 链接按钮 */
-.orgent-link {
-    background: var(--nav-btn-bg);
-    color: var(--nav-btn-text);
-    padding: 6px 16px;
-    border-radius: 30px;
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: 0.2s;
-    display: inline-block;
-}
-.orgent-link:hover {
-    background: var(--nav-btn-hover-bg);
-    color: var(--nav-btn-hover-text);
-}
+        /* ==================== 通用重置 ==================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-/* 工具栏和图表按钮 */
-.toolbar {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-bottom: 20px;
-}
-.btn-group {
-    display: flex;
-    gap: 12px;
-    background: var(--nav-btn-bg);
-    padding: 6px;
-    border-radius: 60px;
-}
-.chart-btn {
-    background: transparent;
-    border: none;
-    padding: 8px 24px;
-    border-radius: 40px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--nav-btn-text);
-}
-.chart-btn.active {
-    background: #00a1d6;
-    color: white;
-    box-shadow: 0 4px 8px rgba(0, 161, 214, 0.3);
-}
-.chart-btn:hover:not(.active) {
-    background: rgba(0, 161, 214, 0.1);
-    color: var(--nav-btn-hover-text);
-}
-.refresh-btn, .pause-btn {
-    background: var(--nav-btn-hover-bg);
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 40px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-.refresh-btn:hover, .pause-btn:hover {
-    filter: brightness(0.9);
-    transform: scale(0.96);
-}
-.pause-btn {
-    background: #6c757d;
-}
+        body {
+            background: var(--bg-color);
+            font-family: 'Segoe UI', 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            padding: 24px 20px;
+            color: var(--text-color);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
 
-/* 表格样式 */
-.data-table-wrapper {
-    margin-top: 20px;
-    padding: 0 32px 20px 32px;
-    background: var(--card-bg);
-}
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-.data-table th,
-.data-table td {
-    padding: 12px 16px;
-    text-align: left;
-    border-bottom: 1px solid var(--card-border);
-}
-.data-table th {
-    background: var(--count-bg);
-    font-weight: 600;
-    color: var(--text-color);
-}
-.data-table tr:hover {
-    background: rgba(0, 161, 214, 0.05);
-}
-.data-table td:first-child,
-.data-table th:first-child {
-    font-weight: 500;
-}
-.data-table td:last-child,
-.data-table th:last-child {
-    text-align: right;
-    font-family: monospace;
-    font-weight: 600;
-}
-body.dark-mode .data-table tr:hover {
-    background: rgba(96, 165, 250, 0.1);
-}
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
 
-/* 表格展开/收起按钮 */
-.toggle-table-btn {
-    display: block;
-    margin: 12px auto 0 auto;
-    background: var(--nav-btn-bg);
-    color: var(--nav-btn-text);
-    border: none;
-    padding: 6px 20px;
-    border-radius: 30px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: 0.2s;
-    width: fit-content;
-}
-.toggle-table-btn:hover {
-    background: var(--nav-btn-hover-bg);
-    color: white;
-}
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 2rem;
+            color: #00a1d6;
+        }
 
-/* 倒计时徽章 */
-.countdown-badge {
-    background: var(--count-bg);
-    padding: 4px 12px;
-    border-radius: 60px;
-    font-size: 0.75rem;
-    margin-left: 8px;
-}
+        .author-info {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            font-weight: 500;
+        }
+        body.dark-mode .author-info {
+            color: #fff;
+        }
 
-/* 滑动条区域（水平滑块） */
-.slider-container {
-    margin: 0 32px 20px 32px;
-    background: var(--card-bg);
-    padding: 12px 16px;
-    border-radius: 40px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
-    border: 1px solid var(--card-border);
-}
-.slider-label {
-    font-size: 0.85rem;
-    color: var(--text-color);
-    background: var(--count-bg);
-    padding: 4px 12px;
-    border-radius: 30px;
-}
-input[type="range"] {
-    flex: 1;
-    min-width: 150px;
-    height: 6px;
-    -webkit-appearance: none;
-    background: var(--card-border);
-    border-radius: 3px;
-    outline: none;
-}
-input[type="range"]:focus {
-    outline: none;
-}
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--status-border);
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-}
-.range-value {
-    font-size: 0.8rem;
-    background: var(--count-bg);
-    padding: 4px 12px;
-    border-radius: 30px;
-    font-family: monospace;
-}
-.reset-btn {
-    background: var(--nav-btn-bg);
-    color: var(--nav-btn-text);
-    border: none;
-    padding: 6px 16px;
-    border-radius: 30px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: 0.2s;
-}
-.reset-btn:hover {
-    background: var(--nav-btn-hover-bg);
-    color: white;
-}
+        .nav-container {
+            margin-bottom: 30px;
+        }
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .nav-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .nav-btn {
+            padding: 10px 25px;
+            font-size: 1.1rem;
+            border: none;
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        .nav-btn.active {
+            box-shadow: 0 4px 10px rgba(0,161,214,0.3);
+        }
 
-/* 手机小屏幕适配 */
-@media (max-width: 680px) {
-    .data-table-wrapper {
-        padding: 0 16px 16px 16px;
-        overflow-x: auto;
-    }
-    .data-table {
-        min-width: 300px;
-        font-size: 0.8rem;
-    }
-    .data-table th,
-    .data-table td {
-        padding: 8px 12px;
-    }
-    .chart-wrapper {
-        padding: 16px;
-    }
-    .canvas-container {
-        min-height: 400px;
-    }
-    canvas {
-        max-height: 400px;
-    }
-    .stats {
-        padding: 16px;
-        gap: 16px;
-    }
-    .btn-group {
-        gap: 8px;
-    }
-    .chart-btn {
-        padding: 6px 16px;
-        font-size: 0.8rem;
-    }
-    .toggle-table-btn,
-    .refresh-btn,
-    .pause-btn {
-        padding: 4px 16px;
-        font-size: 0.75rem;
-    }
-    .slider-container {
-        margin: 0 16px 16px 16px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    .slider-label,
-    .range-value,
-    .reset-btn {
-        font-size: 0.7rem;
-    }
-    .reset-btn {
-        padding: 4px 12px;
-    }
-}
+        .home-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+
+        .chart-wrapper {
+            padding: 20px 0 32px 0;
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            min-height: 550px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 16px 8px 8px 8px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            transition: background 0.3s ease;
+        }
+        canvas {
+            max-height: 550px;
+            width: 100%;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-top: 20px;
+            padding: 16px 0 0 0;
+            border-top: 1px solid var(--card-border);
+        }
+        .stat-card {
+            background: var(--count-bg);
+            border-radius: 28px;
+            padding: 10px 22px;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+        }
+        .stat-label {
+            font-weight: 600;
+        }
+        .stat-value {
+            font-weight: 700;
+            color: var(--status-border);
+            background: var(--card-bg);
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+
+        .error-msg {
+            color: #c7362b;
+            background: #ffeae8;
+            border-radius: 40px;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+        }
+        body.dark-mode .error-msg {
+            background: #3b1e1a;
+            color: #f87171;
+        }
+
+        .orgent-link {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            padding: 6px 16px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: 0.2s;
+            display: inline-block;
+        }
+        .orgent-link:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            background: var(--nav-btn-bg);
+            padding: 6px;
+            border-radius: 60px;
+        }
+        .chart-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--nav-btn-text);
+        }
+        .chart-btn.active {
+            background: #00a1d6;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0,161,214,0.3);
+        }
+        .chart-btn:hover:not(.active) {
+            background: rgba(0,161,214,0.1);
+            color: var(--nav-btn-hover-text);
+        }
+        .refresh-btn, .pause-btn {
+            background: var(--nav-btn-hover-bg);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .refresh-btn:hover, .pause-btn:hover {
+            filter: brightness(0.9);
+            transform: scale(0.96);
+        }
+        .pause-btn {
+            background: #6c757d;
+        }
+
+        .data-table-wrapper {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .data-table th,
+        .data-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .data-table th {
+            background: var(--count-bg);
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        .data-table tr:hover {
+            background: rgba(0,161,214,0.05);
+        }
+        body.dark-mode .data-table tr:hover {
+            background: rgba(96,165,250,0.1);
+        }
+        .data-table td:first-child,
+        .data-table th:first-child {
+            font-weight: 500;
+        }
+        .data-table td:last-child,
+        .data-table th:last-child {
+            text-align: right;
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        .toggle-table-btn {
+            display: block;
+            margin: 12px auto 0 auto;
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            padding: 6px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.2s;
+            width: fit-content;
+        }
+        .toggle-table-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            color: white;
+        }
+
+        .countdown-badge {
+            background: var(--count-bg);
+            padding: 4px 12px;
+            border-radius: 60px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+
+        .slider-container {
+            margin: 0 0 20px 0;
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid var(--card-border);
+        }
+        .slider-label {
+            font-size: 0.85rem;
+            color: var(--text-color);
+            background: var(--count-bg);
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+        input[type="range"] {
+            flex: 1;
+            min-width: 150px;
+            height: 6px;
+            -webkit-appearance: none;
+            background: var(--card-border);
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]:focus {
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--status-border);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .range-value {
+            font-size: 0.8rem;
+            background: var(--count-bg);
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-family: monospace;
+        }
+        .reset-btn {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            padding: 6px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+        .reset-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            color: white;
+        }
+
+        .site-stats {
+            margin-top: 20px;
+            padding: 16px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--count-text);
+        }
+
+        .fixed-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+        .theme-toggle-fixed, .back-to-top {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .theme-toggle-fixed:hover, .back-to-top:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        .back-to-top {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        @media (max-width: 680px) {
+            body { padding: 16px; }
+            .home-card { padding: 16px; }
+            .canvas-container { min-height: 400px; }
+            canvas { max-height: 400px; }
+            .chart-btn { padding: 6px 16px; font-size: 0.8rem; }
+            .refresh-btn, .pause-btn, .toggle-table-btn { padding: 4px 16px; font-size: 0.75rem; }
+            .slider-container { flex-wrap: wrap; justify-content: center; }
+            .slider-label, .range-value, .reset-btn { font-size: 0.7rem; }
+            .reset-btn { padding: 4px 12px; }
+            .data-table th, .data-table td { padding: 8px 12px; }
+            .stats { gap: 12px; }
+            .stat-card { padding: 6px 16px; }
+            .fixed-buttons { bottom: 20px; right: 20px; }
+            .theme-toggle-fixed, .back-to-top { width: 40px; height: 40px; font-size: 20px; }
+        }
     </style>
 </head>
 <body>
@@ -348,7 +466,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
         </div>
     </div>
 
-    <div class="home-card" style="padding-bottom: 20px;">
+    <div class="home-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
             <h2 style="margin: 0; color: var(--status-border);">📊 虚拟股票行情（数据来自Orgent API）</h2>
             <a href="https://orgent.pythonanywhere.com/stocks/" target="_blank" rel="noopener noreferrer" class="orgent-link">🔗 访问 Orgent虚拟投资页面</a>
@@ -375,8 +493,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
             </div>
         </div>
 
-        <!-- 滑动条区域 + 股票全貌按钮 -->
-        <div class="slider-container" id="rangeSliderContainer" style="display: none;">
+        <!-- 滑动条区域（用于控制显示窗口） -->
+        <div class="slider-container" id="rangeSliderContainer">
             <span class="slider-label">📌 滑动查看股票</span>
             <input type="range" id="xAxisSlider" min="0" max="0" value="0" step="1">
             <span class="range-value" id="sliderRangeText">显示 1-0 / 0</span>
@@ -384,7 +502,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
         </div>
 
         <div class="data-table-wrapper">
-            <table class="data-table" id="stockDataTable">
+            <table class="data-table">
                 <thead><tr><th>股票名称</th><th>市值</th></tr></thead>
                 <tbody id="tableBody"><tr><td colspan="2">加载中...</td></tr></tbody>
             </table>
@@ -399,7 +517,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 <div class="site-stats">
     <div class="stats-container" id="siteStats"></div>
-    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒<br>💡 提示：点击“股票全貌”可一次性显示所有股票（分页失效），再点击“恢复分页”可重新启用滑动条。</p>
+    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒<br>💡 提示：拖动滑动条可平滑切换股票显示范围，点击“股票全貌”显示全部数据。</p>
 </div>
 
 <div class="fixed-buttons">
@@ -410,22 +528,22 @@ input[type="range"]::-webkit-slider-thumb:hover {
 <script>
     // ==================== 全局变量 ====================
     let currentChart = null;
-    let currentChartType = 'bar';
+    let currentChartType = 'bar';     // 'bar', 'line', 'pie'
     let rawData = { names: [], values: [] };
     let sortedCombined = [];
     let isLoading = false;
     let autoRefreshTimer = null;
-    let refreshInterval = 10000;
+    let refreshInterval = 10000;       // 10秒
     let fullTableVisible = false;
     let autoRefreshEnabled = true;
     let countdownInterval = null;
     let secondsLeft = 10;
 
-    // 分页相关变量
-    let windowSize = 15;                // 每页显示数量
+    // 滑动显示相关
+    let windowSize = 15;               // 每页显示的股票数量
     let currentStartIndex = 0;
     let totalStocks = 0;
-    let isFullViewMode = false;         // 是否全貌模式（显示所有股票）
+    let isFullViewMode = false;        // 全貌模式（显示所有股票）
 
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
@@ -479,77 +597,64 @@ input[type="range"]::-webkit-slider-thumb:hover {
         updateCountdownDisplay();
     }
 
-    // 获取当前图表应显示的数据（根据全貌模式/分页模式）
-    function getDisplayData() {
-        if (isFullViewMode) {
+    // 获取当前窗口内的数据切片（用于图表和滑动条显示）
+    function getWindowData() {
+        if (isFullViewMode || currentChartType === 'pie') {
             return { names: rawData.names.slice(), values: rawData.values.slice() };
-        } else {
-            const start = currentStartIndex;
-            const end = Math.min(start + windowSize, totalStocks);
-            return {
-                names: rawData.names.slice(start, end),
-                values: rawData.values.slice(start, end)
-            };
         }
+        const start = currentStartIndex;
+        const end = Math.min(start + windowSize, totalStocks);
+        return {
+            names: rawData.names.slice(start, end),
+            values: rawData.values.slice(start, end)
+        };
     }
 
-    // 更新滑动条UI（仅在分页模式下有效）
+    // 更新滑动条UI（数字、按钮文字）
     function updateSliderUI() {
         const sliderContainer = document.getElementById('rangeSliderContainer');
         const slider = document.getElementById('xAxisSlider');
         if (!sliderContainer || !slider) return;
+
         if (isFullViewMode || currentChartType === 'pie') {
             sliderContainer.style.display = 'none';
             return;
         }
-        if (totalStocks <= windowSize) {
-            sliderContainer.style.display = 'none';
-            return;
-        }
         sliderContainer.style.display = 'flex';
-        const maxStart = totalStocks - windowSize;
+        const maxStart = Math.max(0, totalStocks - windowSize);
         slider.max = maxStart;
         if (currentStartIndex > maxStart) currentStartIndex = maxStart;
         slider.value = currentStartIndex;
         const start = currentStartIndex + 1;
         const end = Math.min(currentStartIndex + windowSize, totalStocks);
         document.getElementById('sliderRangeText').innerText = `显示 ${start} - ${end} / ${totalStocks}`;
-        // 根据全貌模式更新按钮文字
         const fullViewBtn = document.getElementById('fullViewBtn');
         if (fullViewBtn) {
-            if (isFullViewMode) fullViewBtn.innerHTML = '📄 恢复分页';
-            else fullViewBtn.innerHTML = '🏠 股票全貌';
+            fullViewBtn.innerHTML = isFullViewMode ? '📄 恢复分页' : '🏠 股票全貌';
         }
     }
 
-    // 切换全貌模式
-    function toggleFullView() {
-        isFullViewMode = !isFullViewMode;
-        if (!isFullViewMode) {
-            // 恢复分页模式，确保起始索引有效
-            if (currentStartIndex > totalStocks - windowSize) currentStartIndex = Math.max(0, totalStocks - windowSize);
+    // 更新图表（只更新数据集，不重建图表实例）
+    function updateChartData() {
+        if (!currentChart) return;
+        const windowData = getWindowData();
+        if (!windowData.names.length) return;
+        currentChart.data.labels = windowData.names;
+        currentChart.data.datasets[0].data = windowData.values;
+        // 对于柱状图和饼图，需要同时更新背景色
+        if (currentChartType === 'bar' || currentChartType === 'pie') {
+            const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+            currentChart.data.datasets[0].backgroundColor = barColors;
         }
-        updateSliderUI();
-        renderChart(currentChartType);
+        currentChart.update();
     }
 
-    // 滑动条事件
-    function onSliderChange() {
-        if (isFullViewMode) return;
-        const slider = document.getElementById('xAxisSlider');
-        if (slider) {
-            currentStartIndex = parseInt(slider.value);
-            updateSliderUI();
-            renderChart(currentChartType);
-        }
-    }
-
-    // ==================== 图表渲染 ====================
-    function renderChart(type) {
-        const displayData = getDisplayData();
-        if (!displayData.names.length) return;
-        const labels = displayData.names;
-        const dataValues = displayData.values;
+    // 初始化或重建图表（仅在首次加载、切换图表类型、或数据完全刷新时调用）
+    function buildChart(type) {
+        if (!rawData.names.length) return;
+        const windowData = getWindowData();
+        const labels = windowData.names;
+        const dataValues = windowData.values;
         const colors = getChartColors();
         const barColors = dataValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
 
@@ -560,14 +665,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
                 data: { labels, datasets: [{ label: '虚拟市值', data: dataValues, backgroundColor: barColors, borderColor: 'rgba(44,90,110,0.4)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.85 }] },
                 options: {
                     responsive: true, maintainAspectRatio: true,
-                    plugins: {
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle },
-                        legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值 (点)', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } },
-                        x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } }
-                    }
+                    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } } },
+                    scales: { y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值 (点)', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } }, x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } } }
                 }
             };
         } else if (type === 'line') {
@@ -576,18 +675,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
                 data: { labels, datasets: [{ label: '虚拟股票价值曲线', data: dataValues, borderColor: colors.borderColor, backgroundColor: document.body.classList.contains('dark-mode') ? 'rgba(59,130,246,0.1)' : 'rgba(44,90,110,0.08)', borderWidth: 3, pointRadius: 3.5, pointBackgroundColor: colors.pointBackground, pointBorderColor: '#ffffff', tension: 0.2, fill: true }] },
                 options: {
                     responsive: true, maintainAspectRatio: true,
-                    plugins: {
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle },
-                        legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } },
-                        x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } }
-                    }
+                    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } } },
+                    scales: { y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } }, x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } } }
                 }
             };
         } else if (type === 'pie') {
-            // 饼图始终显示全部数据，且隐藏滑动条
+            // 饼图模式下，滑动条隐藏，显示全部数据
             const fullLabels = rawData.names;
             const fullValues = rawData.values;
             const fullColors = fullValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
@@ -597,10 +690,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
                 data: { labels: fullLabels, datasets: [{ data: fullValues, backgroundColor: fullColors, borderColor: colors.borderColor, borderWidth: 1 }] },
                 options: {
                     responsive: true, maintainAspectRatio: true,
-                    plugins: {
-                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / fullValues.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle },
-                        legend: { position: isMobile ? 'bottom' : 'right', labels: { font: { size: isMobile ? 9 : 11 }, color: colors.legendColor, boxWidth: 10 } }
-                    }
+                    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / fullValues.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: isMobile ? 'bottom' : 'right', labels: { font: { size: isMobile ? 9 : 11 }, color: colors.legendColor, boxWidth: 10 } } }
                 }
             };
         }
@@ -608,11 +698,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
             if (currentChart) currentChart.destroy();
             currentChart = new Chart(document.getElementById('stockChart').getContext('2d'), chartConfig);
         }
-        // 更新滑动条UI（饼图模式会自动隐藏）
-        updateSliderUI();
+        updateSliderUI();  // 根据新模式更新滑动条显示
     }
 
-    function getChartColors() { /* 同之前 */ 
+    function getChartColors() {
         const isDark = document.body.classList.contains('dark-mode');
         return {
             gridColor: isDark ? '#3f465f' : '#e3e9ef',
@@ -626,7 +715,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
         };
     }
 
-    // ==================== 表格与数据更新 ====================
+    // ==================== 表格与统计 ====================
     function updateDataTable() {
         const tbody = document.getElementById('tableBody');
         if (!sortedCombined.length) { tbody.innerHTML = '<tr><td colspan="2">暂无数据</td></tr>'; return; }
@@ -638,8 +727,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
         tbody.innerHTML = html;
         const toggleBtn = document.getElementById('toggleTableBtn');
         if (toggleBtn) {
-            if (fullTableVisible) toggleBtn.innerHTML = '📋 收起 (显示前5条)';
-            else toggleBtn.innerHTML = `📋 展开全部 (共${sortedCombined.length}条)`;
+            toggleBtn.innerHTML = fullTableVisible ? '📋 收起 (显示前5条)' : `📋 展开全部 (共${sortedCombined.length}条)`;
         }
     }
 
@@ -665,6 +753,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
         `;
     }
 
+    // ==================== 数据获取 ====================
     async function fetchStockData(isAuto = false) {
         if (isLoading) return;
         isLoading = true;
@@ -679,17 +768,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
             rawData.names = json.names;
             rawData.values = json.values.map(v => Number(v));
             totalStocks = rawData.names.length;
+            // 更新排序数据（表格用）
             const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
             combined.sort((a, b) => b.value - a.value);
             sortedCombined = combined;
             updateTimestamp('success');
             updateStatsPanel();
             updateDataTable();
-            // 重置分页和全貌模式状态
-            currentStartIndex = 0;
+            // 重置滑动显示状态（非全貌模式，起始索引为0）
             isFullViewMode = false;
+            currentStartIndex = 0;
             updateSliderUI();
-            renderChart(currentChartType);
+            // 重建图表（因为数据全新，必须重建）
+            buildChart(currentChartType);
             resetCountdown();
         } catch (err) {
             console.error(err);
@@ -701,7 +792,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
         }
     }
 
-    // 图表类型切换（不重新绘制表格）
+    // ==================== 图表类型切换 ====================
     function setChartType(type) {
         if (!['bar','line','pie'].includes(type)) return;
         currentChartType = type;
@@ -709,11 +800,62 @@ input[type="range"]::-webkit-slider-thumb:hover {
         document.getElementById('lineBtn').classList.toggle('active', type === 'line');
         document.getElementById('pieBtn').classList.toggle('active', type === 'pie');
         if (rawData.values.length) {
-            renderChart(currentChartType);
+            isFullViewMode = false;       // 切换图表类型时退出全貌模式
+            currentStartIndex = 0;
+            updateSliderUI();
+            buildChart(currentChartType);
         }
     }
 
-    // 自动刷新控制
+    // ==================== 滑动条控制 ====================
+    function onSliderChange() {
+        if (isFullViewMode || currentChartType === 'pie') return;
+        const slider = document.getElementById('xAxisSlider');
+        if (slider) {
+            currentStartIndex = parseInt(slider.value);
+            updateSliderUI();            // 更新文字显示
+            if (currentChart) {
+                // 仅更新图表数据，不重建实例
+                const windowData = getWindowData();
+                if (windowData.names.length) {
+                    currentChart.data.labels = windowData.names;
+                    currentChart.data.datasets[0].data = windowData.values;
+                    if (currentChartType === 'bar' || currentChartType === 'pie') {
+                        const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+                        currentChart.data.datasets[0].backgroundColor = barColors;
+                    }
+                    currentChart.update();
+                }
+            }
+        }
+    }
+
+    // 切换全貌模式（显示全部股票 / 恢复分页）
+    function toggleFullView() {
+        if (currentChartType === 'pie') return;  // 饼图已经全貌，无需切换
+        isFullViewMode = !isFullViewMode;
+        if (!isFullViewMode) {
+            // 恢复分页模式，确保起始索引有效
+            if (currentStartIndex > totalStocks - windowSize && totalStocks > windowSize)
+                currentStartIndex = totalStocks - windowSize;
+            if (currentStartIndex < 0) currentStartIndex = 0;
+        }
+        updateSliderUI();
+        if (currentChart) {
+            const windowData = getWindowData();
+            if (windowData.names.length) {
+                currentChart.data.labels = windowData.names;
+                currentChart.data.datasets[0].data = windowData.values;
+                if (currentChartType === 'bar' || currentChartType === 'pie') {
+                    const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+                    currentChart.data.datasets[0].backgroundColor = barColors;
+                }
+                currentChart.update();
+            }
+        }
+    }
+
+    // ==================== 自动刷新控制 ====================
     function startAutoRefresh() {
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
         if (!autoRefreshEnabled) return;
@@ -744,7 +886,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
         else if (autoRefreshEnabled) startAutoRefresh();
     }
 
-    // 初始化事件监听
+    // 监听暗色模式变化
+    const observer = new MutationObserver(() => {
+        if (rawData.values.length) buildChart(currentChartType);
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    // ==================== 初始化 ====================
     document.getElementById('barBtn').addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
     document.getElementById('pieBtn').addEventListener('click', () => setChartType('pie'));
@@ -756,13 +904,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
     const fullViewBtn = document.getElementById('fullViewBtn');
     if (fullViewBtn) fullViewBtn.addEventListener('click', toggleFullView);
 
-    // 监听暗色模式变化
-    const observer = new MutationObserver(() => {
-        if (rawData.values.length) renderChart(currentChartType);
-    });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-
-    // 启动
     windowSize = 15;
     fetchStockData(false).then(() => {
         startAutoRefresh();
