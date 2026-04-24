@@ -402,7 +402,7 @@
                         legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } }
                     },
                     scales: {
-                        y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值 (点)', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } },
+                        y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值 ', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } },
                         x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } }
                     }
                 }
@@ -524,8 +524,8 @@
         const change = ((last - first)/first*100).toFixed(2);
         const changeSym = change >= 0 ? '📈 +' : '📉 ';
         document.getElementById('statsPanel').innerHTML = `
-            <div class="stat-card"><span class="stat-label">🏦 成份股数</span><span class="stat-value">${vals.length}</span></div>
-            <div class="stat-card"><span class="stat-label">💰 总值(模拟)</span><span class="stat-value">${formatValue(total)}</span></div>
+            <div class="stat-card"><span class="stat-label">🏦 虚拟股票数</span><span class="stat-value">${vals.length}</span></div>
+            <div class="stat-card"><span class="stat-label">💰 总值</span><span class="stat-value">${formatValue(total)}</span></div>
             <div class="stat-card"><span class="stat-label">🏆 最高价股</span><span class="stat-value">${escapeHtml(names[maxIdx])} : ${formatValue(max)}</span></div>
             <div class="stat-card"><span class="stat-label">📉 最低价股</span><span class="stat-value">${escapeHtml(names[minIdx])} : ${formatValue(min)}</span></div>
             <div class="stat-card"><span class="stat-label">📊 平均估值</span><span class="stat-value">${formatValue(avg)}</span></div>
