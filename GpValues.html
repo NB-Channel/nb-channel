@@ -81,7 +81,7 @@
             background: var(--nav-btn-hover-bg);
             color: var(--nav-btn-hover-text);
         }
-        /* 图表切换按钮样式（只改颜色，保留形状） */
+        /* 图表切换按钮样式 */
         .toolbar {
             display: flex;
             gap: 16px;
@@ -129,7 +129,7 @@
             filter: brightness(0.9);
             transform: scale(0.96);
         }
-        /* ========== 新增表格样式 ========== */
+        /* 表格样式 */
         .data-table-wrapper {
             margin-top: 20px;
             padding: 0 32px 20px 32px;
@@ -167,11 +167,28 @@
             font-family: monospace;
             font-weight: 600;
         }
-        /* 暗色模式表格行悬停 */
         body.dark-mode .data-table tr:hover {
             background: rgba(96, 165, 250, 0.1);
         }
-        /* 手机小屏幕适配：表格横向滚动 */
+        /* 展开/收起按钮 */
+        .toggle-table-btn {
+            display: block;
+            margin: 12px auto 0 auto;
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            padding: 6px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.2s;
+            width: fit-content;
+        }
+        .toggle-table-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            color: white;
+        }
+        /* 手机小屏幕适配 */
         @media (max-width: 680px) {
             .data-table-wrapper {
                 padding: 0 16px 16px 16px;
@@ -185,15 +202,13 @@
             .data-table td {
                 padding: 8px 12px;
             }
-        }
-        /* 原有移动端样式补充 */
-        @media (max-width: 680px) {
             .chart-wrapper { padding: 16px; }
             .canvas-container { min-height: 400px; }
             canvas { max-height: 400px; }
             .stats { padding: 16px; gap: 16px; }
             .btn-group { gap: 8px; }
             .chart-btn { padding: 6px 16px; font-size: 0.8rem; }
+            .toggle-table-btn { padding: 4px 16px; font-size: 0.75rem; }
         }
     </style>
 </head>
@@ -241,16 +256,17 @@
             </div>
         </div>
 
-        <!-- 新增表格区域 -->
+        <!-- 表格区域 -->
         <div class="data-table-wrapper">
             <table class="data-table" id="stockDataTable">
                 <thead>
-                    <tr><th>股票名称</th><th>市值（点）</th></tr>
+                    <tr><th>股票名称</th><th>市值</th></tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr><td colspan="2">加载中...</td></tr>
                 </tbody>
             </table>
+            <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
         </div>
 
         <div class="stats" id="statsPanel">
@@ -277,6 +293,8 @@
     let isLoading = false;
     let autoRefreshTimer = null;
     let refreshInterval = 10000; // 10秒
+    let fullTableVisible = false;  // 表格是否展开（显示全部）
+    let sortedCombined = [];       // 存储排序后的完整数据 {name, value}[]
 
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
@@ -391,7 +409,6 @@
             };
         }
         else if (type === 'pie') {
-            // 手机小屏幕时图例放在底部
             const isMobile = window.innerWidth <= 680;
             chartConfig = {
                 type: 'pie',
@@ -421,25 +438,43 @@
         }
     }
 
-    // ========== 新增表格渲染函数 ==========
+    // 更新表格显示（根据 fullTableVisible 状态显示前5条或全部）
     function updateDataTable() {
         const tbody = document.getElementById('tableBody');
-        if (!rawData.names.length) {
+        if (!sortedCombined.length) {
             tbody.innerHTML = '<tr><td colspan="2">暂无数据</td></tr>';
             return;
         }
-        // 合并数据并按市值降序排序
-        const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
-        combined.sort((a, b) => b.value - a.value);
-        
+        let displayData;
+        if (fullTableVisible) {
+            displayData = sortedCombined;
+        } else {
+            displayData = sortedCombined.slice(0, 5);
+        }
         let html = '';
-        for (const item of combined) {
+        for (const item of displayData) {
             html += `<tr>
                         <td>${escapeHtml(item.name)}</td>
                         <td>${formatValue(item.value)}</td>
                      </tr>`;
         }
         tbody.innerHTML = html;
+        // 更新按钮文字
+        const toggleBtn = document.getElementById('toggleTableBtn');
+        if (toggleBtn) {
+            if (fullTableVisible) {
+                toggleBtn.innerHTML = '📋 收起 (显示前5条)';
+            } else {
+                const total = sortedCombined.length;
+                toggleBtn.innerHTML = `📋 展开全部 (共${total}条)`;
+            }
+        }
+    }
+
+    // 切换表格展开/收起
+    function toggleTable() {
+        fullTableVisible = !fullTableVisible;
+        updateDataTable();
     }
 
     async function fetchStockData(isAuto = false) {
@@ -455,9 +490,15 @@
             if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
             rawData.names = json.names;
             rawData.values = json.values.map(v => Number(v));
+            
+            // 更新排序后的数据
+            const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
+            combined.sort((a, b) => b.value - a.value);
+            sortedCombined = combined;
+            
             updateTimestamp('success');
             updateStatsPanel();
-            updateDataTable();       // 同步刷新表格
+            updateDataTable();      // 根据当前展开状态刷新表格
             renderChart(currentChartType);
         } catch (err) {
             console.error(err);
@@ -514,7 +555,7 @@
         else startAutoRefresh();
     }
 
-    // 监听全局暗色模式变化（通过 MutationObserver 监听 body 类变化）
+    // 监听全局暗色模式变化
     const observer = new MutationObserver(() => {
         if (rawData.values.length) renderChart(currentChartType);
     });
@@ -525,12 +566,13 @@
     document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
     document.getElementById('pieBtn').addEventListener('click', () => setChartType('pie'));
     document.getElementById('refreshDataBtn').addEventListener('click', () => fetchStockData(false));
+    const toggleBtn = document.getElementById('toggleTableBtn');
+    if (toggleBtn) toggleBtn.addEventListener('click', toggleTable);
     
     fetchStockData(false).then(() => startAutoRefresh());
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', stopAutoRefresh);
 
-    // 确保全局函数存在
     if (typeof window.scrollToTop !== 'function') {
         window.scrollToTop = function() { window.scrollTo({ top: 0, behavior: 'smooth' }); };
     }
