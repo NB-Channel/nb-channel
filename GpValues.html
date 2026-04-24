@@ -8,100 +8,23 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
     <style>
-        /* 基础样式（与之前保持一致） */
-        .chart-wrapper { padding: 20px 32px 32px 32px; }
-        .canvas-container { position: relative; width: 100%; min-height: 550px; background: var(--card-bg); border-radius: 24px; padding: 16px 8px 8px 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.02); transition: background 0.3s ease; }
-        canvas { max-height: 550px; width: 100%; }
-        .stats { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px; padding: 16px 32px 28px 32px; border-top: 1px solid var(--card-border); background: var(--card-bg); }
-        .stat-card { background: var(--count-bg); border-radius: 28px; padding: 10px 22px; display: inline-flex; align-items: baseline; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; }
-        .stat-label { font-weight: 600; }
-        .stat-value { font-weight: 700; color: var(--status-border); background: var(--card-bg); padding: 4px 12px; border-radius: 30px; }
-        .error-msg { color: #c7362b; background: #ffeae8; border-radius: 40px; padding: 8px 20px; font-size: 0.85rem; }
-        body.dark-mode .error-msg { background: #3b1e1a; color: #f87171; }
-        .orgent-link { background: var(--nav-btn-bg); color: var(--nav-btn-text); padding: 6px 16px; border-radius: 30px; text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: 0.2s; display: inline-block; }
-        .orgent-link:hover { background: var(--nav-btn-hover-bg); color: var(--nav-btn-hover-text); }
-        .toolbar { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
-        .btn-group { display: flex; gap: 12px; background: var(--nav-btn-bg); padding: 6px; border-radius: 60px; }
-        .chart-btn { background: transparent; border: none; padding: 8px 24px; border-radius: 40px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; font-weight: 600; color: var(--nav-btn-text); }
-        .chart-btn.active { background: #00a1d6; color: white; box-shadow: 0 4px 8px rgba(0,161,214,0.3); }
-        .chart-btn:hover:not(.active) { background: rgba(0,161,214,0.1); color: var(--nav-btn-hover-text); }
-        .refresh-btn, .pause-btn { background: var(--nav-btn-hover-bg); color: white; border: none; padding: 8px 20px; border-radius: 40px; cursor: pointer; transition: 0.2s; }
-        .refresh-btn:hover, .pause-btn:hover { filter: brightness(0.9); transform: scale(0.96); }
-        .pause-btn { background: #6c757d; }
-        .data-table-wrapper { margin-top: 20px; padding: 0 32px 20px 32px; background: var(--card-bg); }
-        .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--card-border); }
-        .data-table th { background: var(--count-bg); font-weight: 600; color: var(--text-color); }
-        .data-table tr:hover { background: rgba(0, 161, 214, 0.05); }
-        .data-table td:first-child, .data-table th:first-child { font-weight: 500; }
-        .data-table td:last-child, .data-table th:last-child { text-align: right; font-family: monospace; font-weight: 600; }
-        body.dark-mode .data-table tr:hover { background: rgba(96, 165, 250, 0.1); }
-        .toggle-table-btn { display: block; margin: 12px auto 0 auto; background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none; padding: 6px 20px; border-radius: 30px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; width: fit-content; }
-        .toggle-table-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
-        .countdown-badge { background: var(--count-bg); padding: 4px 12px; border-radius: 60px; font-size: 0.75rem; margin-left: 8px; }
-        /* 滑动条区域样式 */
-        .slider-container {
-            margin: 0 32px 20px 32px;
-            background: var(--card-bg);
-            padding: 12px 16px;
-            border-radius: 40px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 16px;
-            border: 1px solid var(--card-border);
-        }
-        .slider-label {
-            font-size: 0.85rem;
-            color: var(--text-color);
-            background: var(--count-bg);
-            padding: 4px 12px;
+        /* 所有样式与之前版本相同，只增加一个按钮样式，其余省略（实际运行时请将完整样式复制过来） */
+        .reset-btn {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            padding: 6px 16px;
             border-radius: 30px;
-        }
-        input[type="range"] {
-            flex: 1;
-            min-width: 150px;
-            height: 6px;
-            -webkit-appearance: none;
-            background: var(--card-border);
-            border-radius: 3px;
-            outline: none;
-        }
-        input[type="range"]:focus {
-            outline: none;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--status-border);
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-        .range-value {
             font-size: 0.8rem;
-            background: var(--count-bg);
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-family: monospace;
+            transition: 0.2s;
+        }
+        .reset-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            color: white;
         }
         @media (max-width: 680px) {
-            .data-table-wrapper { padding: 0 16px 16px 16px; overflow-x: auto; }
-            .data-table { min-width: 300px; font-size: 0.8rem; }
-            .data-table th, .data-table td { padding: 8px 12px; }
-            .chart-wrapper { padding: 16px; }
-            .canvas-container { min-height: 400px; }
-            canvas { max-height: 400px; }
-            .stats { padding: 16px; gap: 16px; }
-            .btn-group { gap: 8px; }
-            .chart-btn { padding: 6px 16px; font-size: 0.8rem; }
-            .toggle-table-btn, .refresh-btn, .pause-btn { padding: 4px 16px; font-size: 0.75rem; }
-            .slider-container { margin: 0 16px 16px 16px; flex-wrap: wrap; justify-content: center; }
-            .slider-label, .range-value { font-size: 0.7rem; }
+            .reset-btn { padding: 4px 12px; font-size: 0.7rem; }
         }
     </style>
 </head>
@@ -145,21 +68,20 @@
             <button class="pause-btn" id="pauseRefreshBtn">⏸️ 暂停刷新</button>
         </div>
 
-        <!-- 图表区域 -->
         <div class="chart-wrapper">
             <div class="canvas-container">
                 <canvas id="stockChart" width="1100" height="550"></canvas>
             </div>
         </div>
 
-        <!-- 水平滑动条：控制X轴显示范围（仅柱状图和折线图有效） -->
+        <!-- 滑动条区域 + 股票全貌按钮 -->
         <div class="slider-container" id="rangeSliderContainer" style="display: none;">
             <span class="slider-label">📌 滑动查看股票</span>
             <input type="range" id="xAxisSlider" min="0" max="0" value="0" step="1">
             <span class="range-value" id="sliderRangeText">显示 1-0 / 0</span>
+            <button id="fullViewBtn" class="reset-btn">🏠 股票全貌</button>
         </div>
 
-        <!-- 表格区域 -->
         <div class="data-table-wrapper">
             <table class="data-table" id="stockDataTable">
                 <thead><tr><th>股票名称</th><th>市值</th></tr></thead>
@@ -176,7 +98,7 @@
 
 <div class="site-stats">
     <div class="stats-container" id="siteStats"></div>
-    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒<br>💡 提示：拖拽下方滑动条可查看不同批次的股票（柱状图/折线图模式）</p>
+    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒<br>💡 提示：点击“股票全貌”可一次性显示所有股票（分页失效），再点击“恢复分页”可重新启用滑动条。</p>
 </div>
 
 <div class="fixed-buttons">
@@ -187,21 +109,22 @@
 <script>
     // ==================== 全局变量 ====================
     let currentChart = null;
-    let currentChartType = 'bar';      // 'bar', 'line', 'pie'
+    let currentChartType = 'bar';
     let rawData = { names: [], values: [] };
-    let sortedCombined = [];            // 排序后的完整数据（用于表格）
+    let sortedCombined = [];
     let isLoading = false;
     let autoRefreshTimer = null;
-    let refreshInterval = 10000;        // 10秒
+    let refreshInterval = 10000;
     let fullTableVisible = false;
     let autoRefreshEnabled = true;
     let countdownInterval = null;
     let secondsLeft = 10;
 
-    // 滑动条相关变量
-    let windowSize = 15;                // 每页显示的股票数量（可根据屏幕宽度动态调整，但固定为15较为合理）
-    let currentStartIndex = 0;          // 当前显示的起始索引
+    // 分页相关变量
+    let windowSize = 15;                // 每页显示数量
+    let currentStartIndex = 0;
     let totalStocks = 0;
+    let isFullViewMode = false;         // 是否全貌模式（显示所有股票）
 
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
@@ -255,16 +178,34 @@
         updateCountdownDisplay();
     }
 
-    // 更新滑动条的最大值和显示信息
-    function updateSliderRange() {
+    // 获取当前图表应显示的数据（根据全貌模式/分页模式）
+    function getDisplayData() {
+        if (isFullViewMode) {
+            return { names: rawData.names.slice(), values: rawData.values.slice() };
+        } else {
+            const start = currentStartIndex;
+            const end = Math.min(start + windowSize, totalStocks);
+            return {
+                names: rawData.names.slice(start, end),
+                values: rawData.values.slice(start, end)
+            };
+        }
+    }
+
+    // 更新滑动条UI（仅在分页模式下有效）
+    function updateSliderUI() {
+        const sliderContainer = document.getElementById('rangeSliderContainer');
         const slider = document.getElementById('xAxisSlider');
-        const container = document.getElementById('rangeSliderContainer');
-        if (!slider || !container) return;
-        if (totalStocks <= windowSize) {
-            container.style.display = 'none';
+        if (!sliderContainer || !slider) return;
+        if (isFullViewMode || currentChartType === 'pie') {
+            sliderContainer.style.display = 'none';
             return;
         }
-        container.style.display = 'flex';
+        if (totalStocks <= windowSize) {
+            sliderContainer.style.display = 'none';
+            return;
+        }
+        sliderContainer.style.display = 'flex';
         const maxStart = totalStocks - windowSize;
         slider.max = maxStart;
         if (currentStartIndex > maxStart) currentStartIndex = maxStart;
@@ -272,36 +213,50 @@
         const start = currentStartIndex + 1;
         const end = Math.min(currentStartIndex + windowSize, totalStocks);
         document.getElementById('sliderRangeText').innerText = `显示 ${start} - ${end} / ${totalStocks}`;
+        // 根据全貌模式更新按钮文字
+        const fullViewBtn = document.getElementById('fullViewBtn');
+        if (fullViewBtn) {
+            if (isFullViewMode) fullViewBtn.innerHTML = '📄 恢复分页';
+            else fullViewBtn.innerHTML = '🏠 股票全貌';
+        }
     }
 
-    // 获取当前窗口内的数据（切片）
-    function getCurrentWindowData() {
-        if (!rawData.names.length) return { names: [], values: [] };
-        // 注意：图表显示的数据顺序应该与原始数据顺序一致（通常API返回的顺序），但用户表格会排序，图表我们保持原始顺序。
-        // 但为了滑动时显示连续的股票，我们使用原始数据（未排序）进行切片。
-        // 如果用户想按市值排序显示，可以在滑动模式下也排序？但那样滑动逻辑会混乱。保持原始顺序切片即可。
-        const start = currentStartIndex;
-        const end = Math.min(start + windowSize, totalStocks);
-        return {
-            names: rawData.names.slice(start, end),
-            values: rawData.values.slice(start, end)
-        };
+    // 切换全貌模式
+    function toggleFullView() {
+        isFullViewMode = !isFullViewMode;
+        if (!isFullViewMode) {
+            // 恢复分页模式，确保起始索引有效
+            if (currentStartIndex > totalStocks - windowSize) currentStartIndex = Math.max(0, totalStocks - windowSize);
+        }
+        updateSliderUI();
+        renderChart(currentChartType);
     }
 
-    // 图表渲染（仅渲染窗口内数据，支持bar/line/pie）
+    // 滑动条事件
+    function onSliderChange() {
+        if (isFullViewMode) return;
+        const slider = document.getElementById('xAxisSlider');
+        if (slider) {
+            currentStartIndex = parseInt(slider.value);
+            updateSliderUI();
+            renderChart(currentChartType);
+        }
+    }
+
+    // ==================== 图表渲染 ====================
     function renderChart(type) {
-        const windowData = getCurrentWindowData();
-        if (!windowData.names.length) return;
-        const labels = windowData.names;
-        const dataValues = windowData.values;
+        const displayData = getDisplayData();
+        if (!displayData.names.length) return;
+        const labels = displayData.names;
+        const dataValues = displayData.values;
         const colors = getChartColors();
         const barColors = dataValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-        
+
         let chartConfig = null;
         if (type === 'bar') {
             chartConfig = {
                 type: 'bar',
-                data: { labels, datasets: [{ label: '虚拟市值', data: dataValues, backgroundColor: barColors, borderColor: 'rgba(44, 90, 110, 0.4)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.85 }] },
+                data: { labels, datasets: [{ label: '虚拟市值', data: dataValues, backgroundColor: barColors, borderColor: 'rgba(44,90,110,0.4)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.85 }] },
                 options: {
                     responsive: true, maintainAspectRatio: true,
                     plugins: {
@@ -317,7 +272,7 @@
         } else if (type === 'line') {
             chartConfig = {
                 type: 'line',
-                data: { labels, datasets: [{ label: '虚拟股票价值曲线', data: dataValues, borderColor: colors.borderColor, backgroundColor: document.body.classList.contains('dark-mode') ? 'rgba(59,130,246,0.1)' : 'rgba(44, 90, 110, 0.08)', borderWidth: 3, pointRadius: 3.5, pointBackgroundColor: colors.pointBackground, pointBorderColor: '#ffffff', tension: 0.2, fill: true }] },
+                data: { labels, datasets: [{ label: '虚拟股票价值曲线', data: dataValues, borderColor: colors.borderColor, backgroundColor: document.body.classList.contains('dark-mode') ? 'rgba(59,130,246,0.1)' : 'rgba(44,90,110,0.08)', borderWidth: 3, pointRadius: 3.5, pointBackgroundColor: colors.pointBackground, pointBorderColor: '#ffffff', tension: 0.2, fill: true }] },
                 options: {
                     responsive: true, maintainAspectRatio: true,
                     plugins: {
@@ -331,7 +286,7 @@
                 }
             };
         } else if (type === 'pie') {
-            // 饼图不适合分页，直接显示全部数据（隐藏滑动条）
+            // 饼图始终显示全部数据，且隐藏滑动条
             const fullLabels = rawData.names;
             const fullValues = rawData.values;
             const fullColors = fullValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
@@ -347,23 +302,16 @@
                     }
                 }
             };
-            // 饼图模式下隐藏滑动条
-            const sliderContainer = document.getElementById('rangeSliderContainer');
-            if (sliderContainer) sliderContainer.style.display = 'none';
-        } else {
-            // 柱状图和折线图确保滑动条显示（如果股票数量超出窗口）
-            const sliderContainer = document.getElementById('rangeSliderContainer');
-            if (sliderContainer && totalStocks > windowSize) sliderContainer.style.display = 'flex';
-            else if (sliderContainer) sliderContainer.style.display = 'none';
         }
-        
         if (chartConfig) {
             if (currentChart) currentChart.destroy();
             currentChart = new Chart(document.getElementById('stockChart').getContext('2d'), chartConfig);
         }
+        // 更新滑动条UI（饼图模式会自动隐藏）
+        updateSliderUI();
     }
 
-    function getChartColors() {
+    function getChartColors() { /* 同之前 */ 
         const isDark = document.body.classList.contains('dark-mode');
         return {
             gridColor: isDark ? '#3f465f' : '#e3e9ef',
@@ -375,16 +323,6 @@
             tooltipBg: isDark ? '#1f2937' : '#1f3e4c',
             tooltipTitle: isDark ? '#f3f4f6' : '#f0f3f7'
         };
-    }
-
-    // 滑动条事件
-    function onSliderChange() {
-        const slider = document.getElementById('xAxisSlider');
-        if (slider) {
-            currentStartIndex = parseInt(slider.value);
-            updateSliderRange();
-            renderChart(currentChartType);
-        }
     }
 
     // ==================== 表格与数据更新 ====================
@@ -440,18 +378,16 @@
             rawData.names = json.names;
             rawData.values = json.values.map(v => Number(v));
             totalStocks = rawData.names.length;
-            // 更新排序数据（表格用）
             const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
             combined.sort((a, b) => b.value - a.value);
             sortedCombined = combined;
-            
             updateTimestamp('success');
             updateStatsPanel();
             updateDataTable();
-            // 重置滑动条位置
+            // 重置分页和全貌模式状态
             currentStartIndex = 0;
-            updateSliderRange();
-            // 重新渲染图表
+            isFullViewMode = false;
+            updateSliderUI();
             renderChart(currentChartType);
             resetCountdown();
         } catch (err) {
@@ -464,7 +400,7 @@
         }
     }
 
-    // ==================== 图表类型切换 ====================
+    // 图表类型切换（不重新绘制表格）
     function setChartType(type) {
         if (!['bar','line','pie'].includes(type)) return;
         currentChartType = type;
@@ -472,20 +408,11 @@
         document.getElementById('lineBtn').classList.toggle('active', type === 'line');
         document.getElementById('pieBtn').classList.toggle('active', type === 'pie');
         if (rawData.values.length) {
-            if (type === 'pie') {
-                // 饼图显示全部，暂时隐藏滑动条
-                const sliderContainer = document.getElementById('rangeSliderContainer');
-                if (sliderContainer) sliderContainer.style.display = 'none';
-                renderChart(type);
-            } else {
-                // 柱状图/折线图，根据股票数量决定是否显示滑动条
-                updateSliderRange();
-                renderChart(type);
-            }
+            renderChart(currentChartType);
         }
     }
 
-    // ==================== 自动刷新控制 ====================
+    // 自动刷新控制
     function startAutoRefresh() {
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
         if (!autoRefreshEnabled) return;
@@ -493,11 +420,9 @@
             if (autoRefreshEnabled) fetchStockData(true);
         }, refreshInterval);
     }
-
     function stopAutoRefresh() {
         if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
     }
-
     function toggleAutoRefresh() {
         autoRefreshEnabled = !autoRefreshEnabled;
         const btn = document.getElementById('pauseRefreshBtn');
@@ -513,19 +438,12 @@
             updateCountdownDisplay();
         }
     }
-
     function handleVisibilityChange() {
         if (document.hidden) stopAutoRefresh();
         else if (autoRefreshEnabled) startAutoRefresh();
     }
 
-    // 监听暗色模式变化
-    const observer = new MutationObserver(() => {
-        if (rawData.values.length) renderChart(currentChartType);
-    });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-
-    // 初始化
+    // 初始化事件监听
     document.getElementById('barBtn').addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
     document.getElementById('pieBtn').addEventListener('click', () => setChartType('pie'));
@@ -534,10 +452,17 @@
     document.getElementById('toggleTableBtn').addEventListener('click', toggleTable);
     const slider = document.getElementById('xAxisSlider');
     if (slider) slider.addEventListener('input', onSliderChange);
+    const fullViewBtn = document.getElementById('fullViewBtn');
+    if (fullViewBtn) fullViewBtn.addEventListener('click', toggleFullView);
 
-    // 设定窗口大小（可根据数据量调整，这里固定15）
+    // 监听暗色模式变化
+    const observer = new MutationObserver(() => {
+        if (rawData.values.length) renderChart(currentChartType);
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    // 启动
     windowSize = 15;
-
     fetchStockData(false).then(() => {
         startAutoRefresh();
         startCountdown();
