@@ -8,24 +8,325 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
     <style>
-        /* 所有样式与之前版本相同，只增加一个按钮样式，其余省略（实际运行时请将完整样式复制过来） */
-        .reset-btn {
-            background: var(--nav-btn-bg);
-            color: var(--nav-btn-text);
-            border: none;
-            padding: 6px 16px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: 0.2s;
-        }
-        .reset-btn:hover {
-            background: var(--nav-btn-hover-bg);
-            color: white;
-        }
-        @media (max-width: 680px) {
-            .reset-btn { padding: 4px 12px; font-size: 0.7rem; }
-        }
+       /* 图表容器及特有样式 */
+.chart-wrapper {
+    padding: 20px 32px 32px 32px;
+}
+.canvas-container {
+    position: relative;
+    width: 100%;
+    min-height: 550px;
+    background: var(--card-bg);
+    border-radius: 24px;
+    padding: 16px 8px 8px 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+    transition: background 0.3s ease;
+}
+canvas {
+    max-height: 550px;
+    width: 100%;
+}
+
+/* 统计卡片区域 */
+.stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-top: 20px;
+    padding: 16px 32px 28px 32px;
+    border-top: 1px solid var(--card-border);
+    background: var(--card-bg);
+}
+.stat-card {
+    background: var(--count-bg);
+    border-radius: 28px;
+    padding: 10px 22px;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+}
+.stat-label {
+    font-weight: 600;
+}
+.stat-value {
+    font-weight: 700;
+    color: var(--status-border);
+    background: var(--card-bg);
+    padding: 4px 12px;
+    border-radius: 30px;
+}
+.error-msg {
+    color: #c7362b;
+    background: #ffeae8;
+    border-radius: 40px;
+    padding: 8px 20px;
+    font-size: 0.85rem;
+}
+body.dark-mode .error-msg {
+    background: #3b1e1a;
+    color: #f87171;
+}
+
+/* Orgent 链接按钮 */
+.orgent-link {
+    background: var(--nav-btn-bg);
+    color: var(--nav-btn-text);
+    padding: 6px 16px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: 0.2s;
+    display: inline-block;
+}
+.orgent-link:hover {
+    background: var(--nav-btn-hover-bg);
+    color: var(--nav-btn-hover-text);
+}
+
+/* 工具栏和图表按钮 */
+.toolbar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.btn-group {
+    display: flex;
+    gap: 12px;
+    background: var(--nav-btn-bg);
+    padding: 6px;
+    border-radius: 60px;
+}
+.chart-btn {
+    background: transparent;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--nav-btn-text);
+}
+.chart-btn.active {
+    background: #00a1d6;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 161, 214, 0.3);
+}
+.chart-btn:hover:not(.active) {
+    background: rgba(0, 161, 214, 0.1);
+    color: var(--nav-btn-hover-text);
+}
+.refresh-btn, .pause-btn {
+    background: var(--nav-btn-hover-bg);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.refresh-btn:hover, .pause-btn:hover {
+    filter: brightness(0.9);
+    transform: scale(0.96);
+}
+.pause-btn {
+    background: #6c757d;
+}
+
+/* 表格样式 */
+.data-table-wrapper {
+    margin-top: 20px;
+    padding: 0 32px 20px 32px;
+    background: var(--card-bg);
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.data-table th,
+.data-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--card-border);
+}
+.data-table th {
+    background: var(--count-bg);
+    font-weight: 600;
+    color: var(--text-color);
+}
+.data-table tr:hover {
+    background: rgba(0, 161, 214, 0.05);
+}
+.data-table td:first-child,
+.data-table th:first-child {
+    font-weight: 500;
+}
+.data-table td:last-child,
+.data-table th:last-child {
+    text-align: right;
+    font-family: monospace;
+    font-weight: 600;
+}
+body.dark-mode .data-table tr:hover {
+    background: rgba(96, 165, 250, 0.1);
+}
+
+/* 表格展开/收起按钮 */
+.toggle-table-btn {
+    display: block;
+    margin: 12px auto 0 auto;
+    background: var(--nav-btn-bg);
+    color: var(--nav-btn-text);
+    border: none;
+    padding: 6px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: 0.2s;
+    width: fit-content;
+}
+.toggle-table-btn:hover {
+    background: var(--nav-btn-hover-bg);
+    color: white;
+}
+
+/* 倒计时徽章 */
+.countdown-badge {
+    background: var(--count-bg);
+    padding: 4px 12px;
+    border-radius: 60px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+}
+
+/* 滑动条区域（水平滑块） */
+.slider-container {
+    margin: 0 32px 20px 32px;
+    background: var(--card-bg);
+    padding: 12px 16px;
+    border-radius: 40px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--card-border);
+}
+.slider-label {
+    font-size: 0.85rem;
+    color: var(--text-color);
+    background: var(--count-bg);
+    padding: 4px 12px;
+    border-radius: 30px;
+}
+input[type="range"] {
+    flex: 1;
+    min-width: 150px;
+    height: 6px;
+    -webkit-appearance: none;
+    background: var(--card-border);
+    border-radius: 3px;
+    outline: none;
+}
+input[type="range"]:focus {
+    outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--status-border);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+.range-value {
+    font-size: 0.8rem;
+    background: var(--count-bg);
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-family: monospace;
+}
+.reset-btn {
+    background: var(--nav-btn-bg);
+    color: var(--nav-btn-text);
+    border: none;
+    padding: 6px 16px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: 0.2s;
+}
+.reset-btn:hover {
+    background: var(--nav-btn-hover-bg);
+    color: white;
+}
+
+/* 手机小屏幕适配 */
+@media (max-width: 680px) {
+    .data-table-wrapper {
+        padding: 0 16px 16px 16px;
+        overflow-x: auto;
+    }
+    .data-table {
+        min-width: 300px;
+        font-size: 0.8rem;
+    }
+    .data-table th,
+    .data-table td {
+        padding: 8px 12px;
+    }
+    .chart-wrapper {
+        padding: 16px;
+    }
+    .canvas-container {
+        min-height: 400px;
+    }
+    canvas {
+        max-height: 400px;
+    }
+    .stats {
+        padding: 16px;
+        gap: 16px;
+    }
+    .btn-group {
+        gap: 8px;
+    }
+    .chart-btn {
+        padding: 6px 16px;
+        font-size: 0.8rem;
+    }
+    .toggle-table-btn,
+    .refresh-btn,
+    .pause-btn {
+        padding: 4px 16px;
+        font-size: 0.75rem;
+    }
+    .slider-container {
+        margin: 0 16px 16px 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .slider-label,
+    .range-value,
+    .reset-btn {
+        font-size: 0.7rem;
+    }
+    .reset-btn {
+        padding: 4px 12px;
+    }
+}
     </style>
 </head>
 <body>
