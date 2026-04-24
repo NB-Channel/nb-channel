@@ -6,11 +6,9 @@
     <title>NB虚拟股票行情（数据来自Orgent API）</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- 图表缩放插件 -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="js/common.js"></script>
     <style>
-        /* 你的原有样式（与之前完全相同，此处保留关键部分，实际运行时请粘贴完整样式） */
+        /* 基础样式（与之前保持一致） */
         .chart-wrapper { padding: 20px 32px 32px 32px; }
         .canvas-container { position: relative; width: 100%; min-height: 550px; background: var(--card-bg); border-radius: 24px; padding: 16px 8px 8px 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.02); transition: background 0.3s ease; }
         canvas { max-height: 550px; width: 100%; }
@@ -41,6 +39,56 @@
         .toggle-table-btn { display: block; margin: 12px auto 0 auto; background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none; padding: 6px 20px; border-radius: 30px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; width: fit-content; }
         .toggle-table-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
         .countdown-badge { background: var(--count-bg); padding: 4px 12px; border-radius: 60px; font-size: 0.75rem; margin-left: 8px; }
+        /* 滑动条区域样式 */
+        .slider-container {
+            margin: 0 32px 20px 32px;
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid var(--card-border);
+        }
+        .slider-label {
+            font-size: 0.85rem;
+            color: var(--text-color);
+            background: var(--count-bg);
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+        input[type="range"] {
+            flex: 1;
+            min-width: 150px;
+            height: 6px;
+            -webkit-appearance: none;
+            background: var(--card-border);
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]:focus {
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--status-border);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        .range-value {
+            font-size: 0.8rem;
+            background: var(--count-bg);
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-family: monospace;
+        }
         @media (max-width: 680px) {
             .data-table-wrapper { padding: 0 16px 16px 16px; overflow-x: auto; }
             .data-table { min-width: 300px; font-size: 0.8rem; }
@@ -52,6 +100,8 @@
             .btn-group { gap: 8px; }
             .chart-btn { padding: 6px 16px; font-size: 0.8rem; }
             .toggle-table-btn, .refresh-btn, .pause-btn { padding: 4px 16px; font-size: 0.75rem; }
+            .slider-container { margin: 0 16px 16px 16px; flex-wrap: wrap; justify-content: center; }
+            .slider-label, .range-value { font-size: 0.7rem; }
         }
     </style>
 </head>
@@ -95,21 +145,25 @@
             <button class="pause-btn" id="pauseRefreshBtn">⏸️ 暂停刷新</button>
         </div>
 
+        <!-- 图表区域 -->
         <div class="chart-wrapper">
             <div class="canvas-container">
                 <canvas id="stockChart" width="1100" height="550"></canvas>
             </div>
         </div>
 
+        <!-- 水平滑动条：控制X轴显示范围（仅柱状图和折线图有效） -->
+        <div class="slider-container" id="rangeSliderContainer" style="display: none;">
+            <span class="slider-label">📌 滑动查看股票</span>
+            <input type="range" id="xAxisSlider" min="0" max="0" value="0" step="1">
+            <span class="range-value" id="sliderRangeText">显示 1-0 / 0</span>
+        </div>
+
         <!-- 表格区域 -->
         <div class="data-table-wrapper">
             <table class="data-table" id="stockDataTable">
-                <thead>
-                    <tr><th>股票名称</th><th>市值</th></tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr><td colspan="2">加载中...</td></tr>
-                </tbody>
+                <thead><tr><th>股票名称</th><th>市值</th></tr></thead>
+                <tbody id="tableBody"><tr><td colspan="2">加载中...</td></tr></tbody>
             </table>
             <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
         </div>
@@ -122,7 +176,7 @@
 
 <div class="site-stats">
     <div class="stats-container" id="siteStats"></div>
-    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒<br>💡 提示：按住 Ctrl 键并滚动鼠标滚轮可缩放图表，拖拽查看细节。</p>
+    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒<br>💡 提示：拖拽下方滑动条可查看不同批次的股票（柱状图/折线图模式）</p>
 </div>
 
 <div class="fixed-buttons">
@@ -133,16 +187,21 @@
 <script>
     // ==================== 全局变量 ====================
     let currentChart = null;
-    let currentChartType = 'bar';
+    let currentChartType = 'bar';      // 'bar', 'line', 'pie'
     let rawData = { names: [], values: [] };
+    let sortedCombined = [];            // 排序后的完整数据（用于表格）
     let isLoading = false;
     let autoRefreshTimer = null;
-    let refreshInterval = 10000; // 10秒
+    let refreshInterval = 10000;        // 10秒
     let fullTableVisible = false;
-    let sortedCombined = [];
-    let autoRefreshEnabled = true;   // 自动刷新开关
-    let countdownInterval = null;    // 倒计时定时器
-    let secondsLeft = 10;            // 剩余秒数
+    let autoRefreshEnabled = true;
+    let countdownInterval = null;
+    let secondsLeft = 10;
+
+    // 滑动条相关变量
+    let windowSize = 15;                // 每页显示的股票数量（可根据屏幕宽度动态调整，但固定为15较为合理）
+    let currentStartIndex = 0;          // 当前显示的起始索引
+    let totalStocks = 0;
 
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
@@ -169,7 +228,6 @@
         else elem.innerHTML = `🕒 自动刷新: ${refreshInterval/1000}秒 | 最新: ${timeStr}`;
     }
 
-    // 更新倒计时显示
     function updateCountdownDisplay() {
         const badge = document.getElementById('countdownBadge');
         if (!badge) return;
@@ -180,30 +238,131 @@
         badge.innerHTML = `🕒 下次刷新: ${secondsLeft}秒`;
     }
 
-    // 倒计时循环（每秒更新）
     function startCountdown() {
         if (countdownInterval) clearInterval(countdownInterval);
         countdownInterval = setInterval(() => {
             if (autoRefreshEnabled && !isLoading && secondsLeft > 0) {
                 secondsLeft--;
                 updateCountdownDisplay();
-                if (secondsLeft === 0) {
-                    // 倒计时结束，执行刷新（由定时器自动触发，但为避免重复，不直接调用fetch，等待setInterval触发）
-                    // 注意：实际刷新由 autoRefreshTimer 负责，倒计时仅负责显示。
-                }
             } else if (!autoRefreshEnabled) {
                 updateCountdownDisplay();
             }
         }, 1000);
     }
 
-    // 重置倒计时（刷新成功后调用）
     function resetCountdown() {
         secondsLeft = refreshInterval / 1000;
         updateCountdownDisplay();
     }
 
-    // ==================== 图表相关 ====================
+    // 更新滑动条的最大值和显示信息
+    function updateSliderRange() {
+        const slider = document.getElementById('xAxisSlider');
+        const container = document.getElementById('rangeSliderContainer');
+        if (!slider || !container) return;
+        if (totalStocks <= windowSize) {
+            container.style.display = 'none';
+            return;
+        }
+        container.style.display = 'flex';
+        const maxStart = totalStocks - windowSize;
+        slider.max = maxStart;
+        if (currentStartIndex > maxStart) currentStartIndex = maxStart;
+        slider.value = currentStartIndex;
+        const start = currentStartIndex + 1;
+        const end = Math.min(currentStartIndex + windowSize, totalStocks);
+        document.getElementById('sliderRangeText').innerText = `显示 ${start} - ${end} / ${totalStocks}`;
+    }
+
+    // 获取当前窗口内的数据（切片）
+    function getCurrentWindowData() {
+        if (!rawData.names.length) return { names: [], values: [] };
+        // 注意：图表显示的数据顺序应该与原始数据顺序一致（通常API返回的顺序），但用户表格会排序，图表我们保持原始顺序。
+        // 但为了滑动时显示连续的股票，我们使用原始数据（未排序）进行切片。
+        // 如果用户想按市值排序显示，可以在滑动模式下也排序？但那样滑动逻辑会混乱。保持原始顺序切片即可。
+        const start = currentStartIndex;
+        const end = Math.min(start + windowSize, totalStocks);
+        return {
+            names: rawData.names.slice(start, end),
+            values: rawData.values.slice(start, end)
+        };
+    }
+
+    // 图表渲染（仅渲染窗口内数据，支持bar/line/pie）
+    function renderChart(type) {
+        const windowData = getCurrentWindowData();
+        if (!windowData.names.length) return;
+        const labels = windowData.names;
+        const dataValues = windowData.values;
+        const colors = getChartColors();
+        const barColors = dataValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+        
+        let chartConfig = null;
+        if (type === 'bar') {
+            chartConfig = {
+                type: 'bar',
+                data: { labels, datasets: [{ label: '虚拟市值', data: dataValues, backgroundColor: barColors, borderColor: 'rgba(44, 90, 110, 0.4)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.85 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: true,
+                    plugins: {
+                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle },
+                        legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值 (点)', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } },
+                        x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } }
+                    }
+                }
+            };
+        } else if (type === 'line') {
+            chartConfig = {
+                type: 'line',
+                data: { labels, datasets: [{ label: '虚拟股票价值曲线', data: dataValues, borderColor: colors.borderColor, backgroundColor: document.body.classList.contains('dark-mode') ? 'rgba(59,130,246,0.1)' : 'rgba(44, 90, 110, 0.08)', borderWidth: 3, pointRadius: 3.5, pointBackgroundColor: colors.pointBackground, pointBorderColor: '#ffffff', tension: 0.2, fill: true }] },
+                options: {
+                    responsive: true, maintainAspectRatio: true,
+                    plugins: {
+                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle },
+                        legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } },
+                        x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } }
+                    }
+                }
+            };
+        } else if (type === 'pie') {
+            // 饼图不适合分页，直接显示全部数据（隐藏滑动条）
+            const fullLabels = rawData.names;
+            const fullValues = rawData.values;
+            const fullColors = fullValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+            const isMobile = window.innerWidth <= 680;
+            chartConfig = {
+                type: 'pie',
+                data: { labels: fullLabels, datasets: [{ data: fullValues, backgroundColor: fullColors, borderColor: colors.borderColor, borderWidth: 1 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: true,
+                    plugins: {
+                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / fullValues.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle },
+                        legend: { position: isMobile ? 'bottom' : 'right', labels: { font: { size: isMobile ? 9 : 11 }, color: colors.legendColor, boxWidth: 10 } }
+                    }
+                }
+            };
+            // 饼图模式下隐藏滑动条
+            const sliderContainer = document.getElementById('rangeSliderContainer');
+            if (sliderContainer) sliderContainer.style.display = 'none';
+        } else {
+            // 柱状图和折线图确保滑动条显示（如果股票数量超出窗口）
+            const sliderContainer = document.getElementById('rangeSliderContainer');
+            if (sliderContainer && totalStocks > windowSize) sliderContainer.style.display = 'flex';
+            else if (sliderContainer) sliderContainer.style.display = 'none';
+        }
+        
+        if (chartConfig) {
+            if (currentChart) currentChart.destroy();
+            currentChart = new Chart(document.getElementById('stockChart').getContext('2d'), chartConfig);
+        }
+    }
+
     function getChartColors() {
         const isDark = document.body.classList.contains('dark-mode');
         return {
@@ -218,71 +377,13 @@
         };
     }
 
-    // 增量更新（仅更新数据，不重建）
-    function updateChartData(newNames, newValues) {
-        if (!currentChart) return false;
-        const oldLabels = currentChart.data.labels;
-        let labelsChanged = (oldLabels.length !== newNames.length);
-        if (!labelsChanged) {
-            for (let i = 0; i < oldLabels.length; i++) {
-                if (oldLabels[i] !== newNames[i]) {
-                    labelsChanged = true;
-                    break;
-                }
-            }
-        }
-        if (labelsChanged) return false;
-        currentChart.data.datasets[0].data = newValues;
-        if (currentChartType === 'bar' || currentChartType === 'pie') {
-            const barColors = newValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-            currentChart.data.datasets[0].backgroundColor = barColors;
-        }
-        currentChart.update();
-        return true;
-    }
-
-    function renderChart(type) {
-        if (!rawData.names.length || !rawData.values.length) return;
-        const labels = rawData.names.slice();
-        const dataValues = rawData.values.slice();
-        const colors = getChartColors();
-        const barColors = dataValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-        
-        let chartConfig = null;
-        if (type === 'bar') {
-            chartConfig = {
-                type: 'bar',
-                data: { labels, datasets: [{ label: '虚拟市值', data: dataValues, backgroundColor: barColors, borderColor: 'rgba(44, 90, 110, 0.4)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.85 }] },
-                options: {
-                    responsive: true, maintainAspectRatio: true,
-                    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } }, zoom: { pan: { enabled: true, mode: 'xy' }, zoom: { wheel: { enabled: true, modifierKey: 'ctrl' }, mode: 'xy' } } },
-                    scales: { y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值 (点)', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } }, x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } } }
-                }
-            };
-        } else if (type === 'line') {
-            chartConfig = {
-                type: 'line',
-                data: { labels, datasets: [{ label: '虚拟股票价值曲线', data: dataValues, borderColor: colors.borderColor, backgroundColor: document.body.classList.contains('dark-mode') ? 'rgba(59,130,246,0.1)' : 'rgba(44, 90, 110, 0.08)', borderWidth: 3, pointRadius: 3.5, pointBackgroundColor: colors.pointBackground, pointBorderColor: '#ffffff', tension: 0.2, fill: true }] },
-                options: {
-                    responsive: true, maintainAspectRatio: true,
-                    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } }, zoom: { pan: { enabled: true, mode: 'xy' }, zoom: { wheel: { enabled: true, modifierKey: 'ctrl' }, mode: 'xy' } } },
-                    scales: { y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '市值', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } }, x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '股票名称', color: colors.titleColor } } }
-                }
-            };
-        } else if (type === 'pie') {
-            const isMobile = window.innerWidth <= 680;
-            chartConfig = {
-                type: 'pie',
-                data: { labels, datasets: [{ data: dataValues, backgroundColor: barColors, borderColor: colors.borderColor, borderWidth: 1 }] },
-                options: {
-                    responsive: true, maintainAspectRatio: true,
-                    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / dataValues.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: isMobile ? 'bottom' : 'right', labels: { font: { size: isMobile ? 9 : 11 }, color: colors.legendColor, boxWidth: 10 } }, zoom: { pan: { enabled: false }, zoom: { wheel: { enabled: false } } } }
-                }
-            };
-        }
-        if (chartConfig) {
-            if (currentChart) currentChart.destroy();
-            currentChart = new Chart(document.getElementById('stockChart').getContext('2d'), chartConfig);
+    // 滑动条事件
+    function onSliderChange() {
+        const slider = document.getElementById('xAxisSlider');
+        if (slider) {
+            currentStartIndex = parseInt(slider.value);
+            updateSliderRange();
+            renderChart(currentChartType);
         }
     }
 
@@ -336,23 +437,23 @@
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
-            const newNames = json.names;
-            const newValues = json.values.map(v => Number(v));
-            rawData.names = newNames;
-            rawData.values = newValues;
-            const combined = newNames.map((name, idx) => ({ name, value: newValues[idx] }));
+            rawData.names = json.names;
+            rawData.values = json.values.map(v => Number(v));
+            totalStocks = rawData.names.length;
+            // 更新排序数据（表格用）
+            const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
             combined.sort((a, b) => b.value - a.value);
             sortedCombined = combined;
+            
             updateTimestamp('success');
             updateStatsPanel();
             updateDataTable();
-            if (currentChart && currentChartType === currentChartType) {
-                const updated = updateChartData(newNames, newValues);
-                if (!updated) renderChart(currentChartType);
-            } else {
-                renderChart(currentChartType);
-            }
-            resetCountdown();  // 刷新成功重置倒计时
+            // 重置滑动条位置
+            currentStartIndex = 0;
+            updateSliderRange();
+            // 重新渲染图表
+            renderChart(currentChartType);
+            resetCountdown();
         } catch (err) {
             console.error(err);
             updateTimestamp('error');
@@ -360,6 +461,27 @@
             if (currentChart) { currentChart.destroy(); currentChart = null; }
         } finally {
             isLoading = false;
+        }
+    }
+
+    // ==================== 图表类型切换 ====================
+    function setChartType(type) {
+        if (!['bar','line','pie'].includes(type)) return;
+        currentChartType = type;
+        document.getElementById('barBtn').classList.toggle('active', type === 'bar');
+        document.getElementById('lineBtn').classList.toggle('active', type === 'line');
+        document.getElementById('pieBtn').classList.toggle('active', type === 'pie');
+        if (rawData.values.length) {
+            if (type === 'pie') {
+                // 饼图显示全部，暂时隐藏滑动条
+                const sliderContainer = document.getElementById('rangeSliderContainer');
+                if (sliderContainer) sliderContainer.style.display = 'none';
+                renderChart(type);
+            } else {
+                // 柱状图/折线图，根据股票数量决定是否显示滑动条
+                updateSliderRange();
+                renderChart(type);
+            }
         }
     }
 
@@ -397,29 +519,25 @@
         else if (autoRefreshEnabled) startAutoRefresh();
     }
 
+    // 监听暗色模式变化
+    const observer = new MutationObserver(() => {
+        if (rawData.values.length) renderChart(currentChartType);
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
     // 初始化
     document.getElementById('barBtn').addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
     document.getElementById('pieBtn').addEventListener('click', () => setChartType('pie'));
     document.getElementById('refreshDataBtn').addEventListener('click', () => fetchStockData(false));
     document.getElementById('pauseRefreshBtn').addEventListener('click', toggleAutoRefresh);
-    const toggleBtn = document.getElementById('toggleTableBtn');
-    if (toggleBtn) toggleBtn.addEventListener('click', toggleTable);
+    document.getElementById('toggleTableBtn').addEventListener('click', toggleTable);
+    const slider = document.getElementById('xAxisSlider');
+    if (slider) slider.addEventListener('input', onSliderChange);
 
-    const setChartType = (type) => {
-        if (!['bar','line','pie'].includes(type)) return;
-        currentChartType = type;
-        document.getElementById('barBtn').classList.toggle('active', type === 'bar');
-        document.getElementById('lineBtn').classList.toggle('active', type === 'line');
-        document.getElementById('pieBtn').classList.toggle('active', type === 'pie');
-        if (rawData.values.length) renderChart(currentChartType);
-    };
+    // 设定窗口大小（可根据数据量调整，这里固定15）
+    windowSize = 15;
 
-    // 监听暗色模式变化
-    const observer = new MutationObserver(() => { if (rawData.values.length) renderChart(currentChartType); });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-
-    // 启动
     fetchStockData(false).then(() => {
         startAutoRefresh();
         startCountdown();
