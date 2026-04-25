@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>NB虚拟股票行情（数据来自Orgent API）</title>
-    <!-- 依赖全局样式 -->
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
@@ -45,9 +44,7 @@
             flex-wrap: wrap;
             font-size: 0.85rem;
         }
-        .stat-label {
-            font-weight: 600;
-        }
+        .stat-label { font-weight: 600; }
         .stat-value {
             font-weight: 700;
             color: var(--status-border);
@@ -115,7 +112,7 @@
             background: rgba(0,161,214,0.1);
             color: var(--nav-btn-hover-text);
         }
-        .refresh-btn, .pause-btn {
+        .refresh-btn, .pause-btn, .interval-btn {
             background: var(--nav-btn-hover-bg);
             color: white;
             border: none;
@@ -124,16 +121,31 @@
             cursor: pointer;
             transition: 0.2s;
         }
-        .refresh-btn:hover, .pause-btn:hover {
+        .refresh-btn:hover, .pause-btn:hover, .interval-btn:hover {
             filter: brightness(0.9);
             transform: scale(0.96);
         }
-        .pause-btn {
-            background: #6c757d;
-        }
+        .pause-btn { background: #6c757d; }
+        .interval-btn { background: #17a2b8; }
+        
+        /* 表格 + 搜索框 */
         .data-table-wrapper {
             margin-top: 20px;
             overflow-x: auto;
+        }
+        .search-box {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .search-box input {
+            padding: 6px 12px;
+            border-radius: 30px;
+            border: 1px solid var(--card-border);
+            background: var(--card-bg);
+            color: var(--text-color);
+            width: 200px;
+            font-size: 0.85rem;
         }
         .data-table {
             width: 100%;
@@ -143,8 +155,7 @@
             overflow: hidden;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        .data-table th,
-        .data-table td {
+        .data-table th, .data-table td {
             padding: 12px 16px;
             text-align: left;
             border-bottom: 1px solid var(--card-border);
@@ -154,18 +165,10 @@
             font-weight: 600;
             color: var(--text-color);
         }
-        .data-table tr:hover {
-            background: rgba(0,161,214,0.05);
-        }
-        body.dark-mode .data-table tr:hover {
-            background: rgba(96,165,250,0.1);
-        }
-        .data-table td:first-child,
-        .data-table th:first-child {
-            font-weight: 500;
-        }
-        .data-table td:last-child,
-        .data-table th:last-child {
+        .data-table tr:hover { background: rgba(0,161,214,0.05); }
+        body.dark-mode .data-table tr:hover { background: rgba(96,165,250,0.1); }
+        .data-table td:first-child, .data-table th:first-child { font-weight: 500; }
+        .data-table td:last-child, .data-table th:last-child {
             text-align: right;
             font-family: monospace;
             font-weight: 600;
@@ -194,6 +197,7 @@
             font-size: 0.75rem;
             margin-left: 8px;
         }
+        /* 滑动条 */
         .slider-container {
             margin: 0 0 20px 0;
             background: var(--card-bg);
@@ -213,81 +217,57 @@
             border-radius: 30px;
         }
         input[type="range"] {
-            flex: 1;
-            min-width: 150px;
-            height: 6px;
-            -webkit-appearance: none;
-            background: var(--card-border);
-            border-radius: 3px;
-            outline: none;
-        }
-        input[type="range"]:focus {
-            outline: none;
+            flex: 1; min-width: 150px; height: 6px; -webkit-appearance: none;
+            background: var(--card-border); border-radius: 3px; outline: none;
         }
         input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--status-border);
-            cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+            background: var(--status-border); cursor: pointer;
         }
         .range-value {
-            font-size: 0.8rem;
-            background: var(--count-bg);
-            padding: 4px 12px;
-            border-radius: 30px;
+            font-size: 0.8rem; background: var(--count-bg); padding: 4px 12px; border-radius: 30px;
             font-family: monospace;
         }
         .reset-btn {
-            background: var(--nav-btn-bg);
-            color: var(--nav-btn-text);
-            border: none;
-            padding: 6px 16px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 0.8rem;
+            background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none;
+            padding: 6px 16px; border-radius: 30px; cursor: pointer; font-size: 0.8rem;
             transition: 0.2s;
         }
-        .reset-btn:hover {
-            background: var(--nav-btn-hover-bg);
-            color: white;
+        .reset-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
+        
+        /* 迷你环图容器 */
+        .mini-pie-container {
+            margin-top: 20px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 12px 16px;
+            border: 1px solid var(--card-border);
         }
+        .mini-pie-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--status-border);
+        }
+        .mini-canvas {
+            max-height: 200px;
+            width: 100%;
+        }
+        
         @media (max-width: 680px) {
-            .canvas-container {
-                min-height: 400px;
+            .canvas-container { min-height: 400px; }
+            canvas { max-height: 400px; }
+            .chart-btn { padding: 6px 16px; font-size: 0.8rem; }
+            .refresh-btn, .pause-btn, .interval-btn, .toggle-table-btn {
+                padding: 4px 16px; font-size: 0.75rem;
             }
-            canvas {
-                max-height: 400px;
-            }
-            .chart-btn {
-                padding: 6px 16px;
-                font-size: 0.8rem;
-            }
-            .refresh-btn, .pause-btn, .toggle-table-btn {
-                padding: 4px 16px;
-                font-size: 0.75rem;
-            }
-            .slider-container {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            .slider-label, .range-value, .reset-btn {
-                font-size: 0.7rem;
-            }
-            .reset-btn {
-                padding: 4px 12px;
-            }
-            .data-table th, .data-table td {
-                padding: 8px 12px;
-            }
-            .stats {
-                gap: 12px;
-            }
-            .stat-card {
-                padding: 6px 16px;
-            }
+            .slider-container { flex-wrap: wrap; justify-content: center; }
+            .slider-label, .range-value, .reset-btn { font-size: 0.7rem; }
+            .reset-btn { padding: 4px 12px; }
+            .data-table th, .data-table td { padding: 8px 12px; }
+            .stats { gap: 12px; }
+            .stat-card { padding: 6px 16px; }
+            .search-box input { width: 100%; }
         }
     </style>
 </head>
@@ -329,8 +309,15 @@
             </div>
             <button class="refresh-btn" id="refreshDataBtn">🔄 立即刷新</button>
             <button class="pause-btn" id="pauseRefreshBtn">⏸️ 暂停刷新</button>
+            <select id="intervalSelect" class="interval-btn" style="background: #17a2b8; padding: 6px 12px;">
+                <option value="5">5秒</option>
+                <option value="10" selected>10秒</option>
+                <option value="30">30秒</option>
+                <option value="60">60秒</option>
+            </select>
         </div>
 
+        <!-- 主图表区域 -->
         <div class="chart-wrapper">
             <div class="canvas-container">
                 <canvas id="stockChart" width="1100" height="550"></canvas>
@@ -339,13 +326,23 @@
 
         <!-- 滑动条区域 -->
         <div class="slider-container" id="rangeSliderContainer">
-            <span class="slider-label">📌 滑动查看部分股票</span>
+            <span class="slider-label">📌 滑动查看股票</span>
             <input type="range" id="xAxisSlider" min="0" max="0" value="0" step="1">
             <span class="range-value" id="sliderRangeText">显示 1-0 / 0</span>
             <button id="fullViewBtn" class="reset-btn">🏠 股票全貌</button>
         </div>
 
+        <!-- 迷你环图：市值占比 Top5 -->
+        <div class="mini-pie-container">
+            <div class="mini-pie-title">🥧 市值占比 Top5</div>
+            <canvas id="miniPieChart" width="400" height="200" class="mini-canvas"></canvas>
+        </div>
+
+        <!-- 表格 + 搜索框 -->
         <div class="data-table-wrapper">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 搜索股票名称" autocomplete="off">
+            </div>
             <table class="data-table">
                 <thead><tr><th>股票名称</th><th>市值</th></tr></thead>
                 <tbody id="tableBody"><tr><td colspan="2">加载中...</td></tr></tbody>
@@ -361,7 +358,7 @@
 
 <div class="site-stats">
     <div class="stats-container" id="siteStats"></div>
-    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期：10秒</p>
+    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期可调<br>💡 提示：拖动滑动条平滑切换股票范围，点击“股票全貌”显示全部数据。</p>
 </div>
 
 <div class="fixed-buttons">
@@ -370,14 +367,15 @@
 </div>
 
 <script>
-    // -------------------- 股票页面核心逻辑 --------------------
+    // -------------------- 全局变量 --------------------
     let currentChart = null;
+    let miniPieChart = null;          // 迷你饼图实例
     let currentChartType = 'bar';
     let rawData = { names: [], values: [] };
-    let sortedCombined = [];
+    let sortedCombined = [];           // 排序后完整数据（表格用）
     let isLoading = false;
     let autoRefreshTimer = null;
-    let refreshInterval = 10000;
+    let refreshInterval = 10000;       // 默认10秒
     let fullTableVisible = false;
     let autoRefreshEnabled = true;
     let countdownInterval = null;
@@ -388,9 +386,13 @@
     let totalStocks = 0;
     let isFullViewMode = false;
 
+    // 表格搜索关键词
+    let searchKeyword = '';
+
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
 
+    // -------------------- 辅助函数 --------------------
     function formatValue(num) {
         if (num === undefined || num === null) return '0';
         const n = Number(num);
@@ -439,6 +441,7 @@
         updateCountdownDisplay();
     }
 
+    // 获取当前窗口数据（主图表）
     function getWindowData() {
         if (isFullViewMode || currentChartType === 'pie') {
             return { names: rawData.names.slice(), values: rawData.values.slice() };
@@ -451,44 +454,40 @@
         };
     }
 
+    // 更新滑动条UI
     function updateSliderUI() {
-    const sliderContainer = document.getElementById('rangeSliderContainer');
-    const slider = document.getElementById('xAxisSlider');
-    const rangeSpan = document.getElementById('sliderRangeText');
-    const fullViewBtn = document.getElementById('fullViewBtn');
-    if (!sliderContainer || !slider || !rangeSpan || !fullViewBtn) return;
-
-    // 饼图模式下完全隐藏整个区域
-    if (currentChartType === 'pie') {
-        sliderContainer.style.display = 'none';
-        return;
+        const sliderContainer = document.getElementById('rangeSliderContainer');
+        const slider = document.getElementById('xAxisSlider');
+        const rangeSpan = document.getElementById('sliderRangeText');
+        const fullViewBtn = document.getElementById('fullViewBtn');
+        if (!sliderContainer || !slider || !rangeSpan || !fullViewBtn) return;
+        if (currentChartType === 'pie') {
+            sliderContainer.style.display = 'none';
+            return;
+        }
+        sliderContainer.style.display = 'flex';
+        if (isFullViewMode) {
+            slider.style.display = 'none';
+            rangeSpan.style.display = 'none';
+            fullViewBtn.innerHTML = '🔙 返回分页模式';
+            fullViewBtn.style.margin = '0 auto';
+        } else {
+            slider.style.display = 'block';
+            rangeSpan.style.display = 'inline-block';
+            const maxStart = Math.max(0, totalStocks - windowSize);
+            slider.max = maxStart;
+            if (currentStartIndex > maxStart) currentStartIndex = maxStart;
+            slider.value = currentStartIndex;
+            const start = currentStartIndex + 1;
+            const end = Math.min(currentStartIndex + windowSize, totalStocks);
+            rangeSpan.innerText = `显示 ${start} - ${end} / ${totalStocks}`;
+            fullViewBtn.innerHTML = '🏠 股票全貌';
+            fullViewBtn.style.margin = '';
+        }
     }
 
-    sliderContainer.style.display = 'flex';
-    
-    if (isFullViewMode) {
-        // 全貌模式：隐藏滑块和文本，仅显示“返回分页”按钮
-        slider.style.display = 'none';
-        rangeSpan.style.display = 'none';
-        fullViewBtn.innerHTML = '🔙 返回分页';
-        fullViewBtn.style.margin = '0 auto';
-    } else {
-        // 分页模式：显示滑块和文本，按钮显示“股票全貌”
-        slider.style.display = 'block';
-        rangeSpan.style.display = 'inline-block';
-        const maxStart = Math.max(0, totalStocks - windowSize);
-        slider.max = maxStart;
-        if (currentStartIndex > maxStart) currentStartIndex = maxStart;
-        slider.value = currentStartIndex;
-        const start = currentStartIndex + 1;
-        const end = Math.min(currentStartIndex + windowSize, totalStocks);
-        rangeSpan.innerText = `显示 ${start} - ${end} / ${totalStocks}`;
-        fullViewBtn.innerHTML = '🏠 股票全貌';
-        fullViewBtn.style.margin = '';
-    }
-}
-
-    function updateChartData() {
+    // 平滑更新主图表数据（不重建）
+    function updateMainChartData() {
         if (!currentChart) return;
         const windowData = getWindowData();
         if (!windowData.names.length) return;
@@ -498,23 +497,10 @@
             const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
             currentChart.data.datasets[0].backgroundColor = barColors;
         }
-        currentChart.update();
+        currentChart.update({ duration: 300 });  // 平滑动画
     }
 
-    function getChartColors() {
-        const isDark = document.body.classList.contains('dark-mode');
-        return {
-            gridColor: isDark ? '#3f465f' : '#e3e9ef',
-            titleColor: isDark ? '#9ca3af' : '#5d7f8f',
-            tickColor: isDark ? '#9ca3af' : '#5d7f8f',
-            legendColor: isDark ? '#cbd5e6' : '#2c5a6e',
-            borderColor: isDark ? '#60a5fa' : '#2c5a6e',
-            pointBackground: isDark ? '#60a5fa' : '#2c5a6e',
-            tooltipBg: isDark ? '#1f2937' : '#1f3e4c',
-            tooltipTitle: isDark ? '#f3f4f6' : '#f0f3f7'
-        };
-    }
-
+    // 构建主图表（首次或类型/名称变化时）
     function buildChart(type) {
         if (!rawData.names.length) return;
         const windowData = getWindowData();
@@ -564,17 +550,65 @@
         updateSliderUI();
     }
 
+    function getChartColors() {
+        const isDark = document.body.classList.contains('dark-mode');
+        return {
+            gridColor: isDark ? '#3f465f' : '#e3e9ef',
+            titleColor: isDark ? '#9ca3af' : '#5d7f8f',
+            tickColor: isDark ? '#9ca3af' : '#5d7f8f',
+            legendColor: isDark ? '#cbd5e6' : '#2c5a6e',
+            borderColor: isDark ? '#60a5fa' : '#2c5a6e',
+            pointBackground: isDark ? '#60a5fa' : '#2c5a6e',
+            tooltipBg: isDark ? '#1f2937' : '#1f3e4c',
+            tooltipTitle: isDark ? '#f3f4f6' : '#f0f3f7'
+        };
+    }
+
+    // ---------- 迷你环图（Top5 市值占比） ----------
+    function updateMiniPieChart() {
+        if (!rawData.values.length) return;
+        const combined = rawData.names.map((n, i) => ({ name: n, value: rawData.values[i] }));
+        combined.sort((a, b) => b.value - a.value);
+        const top5 = combined.slice(0, 5);
+        const otherValue = combined.slice(5).reduce((sum, item) => sum + item.value, 0);
+        let labels = top5.map(item => item.name);
+        let data = top5.map(item => item.value);
+        if (otherValue > 0) {
+            labels.push('其他');
+            data.push(otherValue);
+        }
+        const colors = data.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+        const ctx = document.getElementById('miniPieChart').getContext('2d');
+        if (miniPieChart) miniPieChart.destroy();
+        miniPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1 }] },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                plugins: { legend: { position: 'right', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } } }
+            }
+        });
+    }
+
+    // ---------- 表格（带搜索过滤） ----------
     function updateDataTable() {
         const tbody = document.getElementById('tableBody');
         if (!sortedCombined.length) { tbody.innerHTML = '<tr><td colspan="2">暂无数据</td></tr>'; return; }
-        let displayData = fullTableVisible ? sortedCombined : sortedCombined.slice(0, 5);
+        let filtered = sortedCombined;
+        if (searchKeyword.trim() !== '') {
+            const kw = searchKeyword.trim().toLowerCase();
+            filtered = sortedCombined.filter(item => item.name.toLowerCase().includes(kw));
+        }
+        let displayData = fullTableVisible ? filtered : filtered.slice(0, 5);
         let html = '';
         for (const item of displayData) {
             html += `<tr><td>${escapeHtml(item.name)}</td><td>${formatValue(item.value)}</td></tr>`;
         }
         tbody.innerHTML = html;
         const toggleBtn = document.getElementById('toggleTableBtn');
-        if (toggleBtn) toggleBtn.innerHTML = fullTableVisible ? '📋 收起 (显示前5条)' : `📋 展开全部 (共${sortedCombined.length}条)`;
+        if (toggleBtn) {
+            toggleBtn.innerHTML = fullTableVisible ? '📋 收起 (显示前5条)' : `📋 展开全部 (共${filtered.length}条)`;
+        }
     }
 
     function toggleTable() { fullTableVisible = !fullTableVisible; updateDataTable(); }
@@ -599,81 +633,69 @@
         `;
     }
 
+    // ---------- 数据获取（优化：名称不变时仅增量更新） ----------
     async function fetchStockData(isAuto = false) {
-    if (isLoading) return;
-    isLoading = true;
-    updateTimestamp('loading');
-    const statsDiv = document.getElementById('statsPanel');
-    try {
-        const url = PROXY_URL + encodeURIComponent(API_URL);
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
+        if (isLoading) return;
+        isLoading = true;
+        updateTimestamp('loading');
+        const statsDiv = document.getElementById('statsPanel');
+        try {
+            const url = PROXY_URL + encodeURIComponent(API_URL);
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
 
-        const newNames = json.names;
-        const newValues = json.values.map(v => Number(v));
+            const newNames = json.names;
+            const newValues = json.values.map(v => Number(v));
+            let namesChanged = false;
+            if (rawData.names.length !== newNames.length) namesChanged = true;
+            else for (let i = 0; i < rawData.names.length; i++) if (rawData.names[i] !== newNames[i]) { namesChanged = true; break; }
 
-        // 检查名称列表是否发生变化
-        let namesChanged = false;
-        if (rawData.names.length !== newNames.length) {
-            namesChanged = true;
-        } else {
-            for (let i = 0; i < rawData.names.length; i++) {
-                if (rawData.names[i] !== newNames[i]) {
-                    namesChanged = true;
-                    break;
+            rawData.names = newNames;
+            rawData.values = newValues;
+            totalStocks = rawData.names.length;
+
+            const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
+            combined.sort((a, b) => b.value - a.value);
+            sortedCombined = combined;
+
+            updateTimestamp('success');
+            updateStatsPanel();
+            updateDataTable();
+            updateMiniPieChart();   // 更新迷你环图
+
+            if (namesChanged) {
+                isFullViewMode = false;
+                currentStartIndex = 0;
+                updateSliderUI();
+                buildChart(currentChartType);
+            } else {
+                // 仅更新现有图表数据
+                if (currentChart) {
+                    const windowData = getWindowData();
+                    currentChart.data.labels = windowData.names;
+                    currentChart.data.datasets[0].data = windowData.values;
+                    if (currentChartType === 'bar' || currentChartType === 'pie') {
+                        const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+                        currentChart.data.datasets[0].backgroundColor = barColors;
+                    }
+                    currentChart.update({ duration: 300 });
                 }
+                updateSliderUI();
             }
+            resetCountdown();
+        } catch (err) {
+            console.error(err);
+            updateTimestamp('error');
+            statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
+            if (currentChart) { currentChart.destroy(); currentChart = null; }
+        } finally {
+            isLoading = false;
         }
-
-        // 更新原始数据
-        rawData.names = newNames;
-        rawData.values = newValues;
-        totalStocks = rawData.names.length;
-
-        // 更新排序后的数据（用于表格）
-        const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
-        combined.sort((a, b) => b.value - a.value);
-        sortedCombined = combined;
-
-        updateTimestamp('success');
-        updateStatsPanel();
-        updateDataTable();
-
-        if (namesChanged) {
-            // 名称变化：重置分页/全貌状态，重建图表
-            isFullViewMode = false;
-            currentStartIndex = 0;
-            updateSliderUI();
-            buildChart(currentChartType);
-        } else {
-            // 名称未变：仅更新现有图表的数据（增量更新）
-            if (currentChart) {
-                const windowData = getWindowData(); // 获取当前窗口数据
-                currentChart.data.labels = windowData.names;
-                currentChart.data.datasets[0].data = windowData.values;
-                if (currentChartType === 'bar' || currentChartType === 'pie') {
-                    const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-                    currentChart.data.datasets[0].backgroundColor = barColors;
-                }
-                currentChart.update();
-            }
-            // 更新滑动条范围（防止总数量变化但名称没变？实际上总数量相同但名称相同则不用更新；若数量不同会导致名称变化，已进入上分支）
-            updateSliderUI();
-        }
-
-        resetCountdown();
-    } catch (err) {
-        console.error(err);
-        updateTimestamp('error');
-        statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
-        if (currentChart) { currentChart.destroy(); currentChart = null; }
-    } finally {
-        isLoading = false;
     }
-}
 
+    // ---------- 图表类型切换 ----------
     function setChartType(type) {
         if (!['bar','line','pie'].includes(type)) return;
         currentChartType = type;
@@ -688,6 +710,7 @@
         }
     }
 
+    // ---------- 滑动条控制 ----------
     function onSliderChange() {
         if (isFullViewMode || currentChartType === 'pie') return;
         const slider = document.getElementById('xAxisSlider');
@@ -696,15 +719,13 @@
             updateSliderUI();
             if (currentChart) {
                 const windowData = getWindowData();
-                if (windowData.names.length) {
-                    currentChart.data.labels = windowData.names;
-                    currentChart.data.datasets[0].data = windowData.values;
-                    if (currentChartType === 'bar' || currentChartType === 'pie') {
-                        const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-                        currentChart.data.datasets[0].backgroundColor = barColors;
-                    }
-                    currentChart.update();
+                currentChart.data.labels = windowData.names;
+                currentChart.data.datasets[0].data = windowData.values;
+                if (currentChartType === 'bar' || currentChartType === 'pie') {
+                    const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+                    currentChart.data.datasets[0].backgroundColor = barColors;
                 }
+                currentChart.update({ duration: 300 });
             }
         }
     }
@@ -724,10 +745,11 @@
                 const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
                 currentChart.data.datasets[0].backgroundColor = barColors;
             }
-            currentChart.update();
+            currentChart.update({ duration: 300 });
         }
     }
 
+    // ---------- 自动刷新控制 + 自定义间隔 ----------
     function startAutoRefresh() {
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
         if (!autoRefreshEnabled) return;
@@ -749,19 +771,47 @@
             updateCountdownDisplay();
         }
     }
+    function changeRefreshInterval() {
+        const select = document.getElementById('intervalSelect');
+        const newSeconds = parseInt(select.value);
+        refreshInterval = newSeconds * 1000;
+        if (autoRefreshEnabled) {
+            startAutoRefresh();   // 重启定时器
+            resetCountdown();
+        }
+        updateTimestamp('success');
+    }
+
     function handleVisibilityChange() {
         if (document.hidden) stopAutoRefresh();
         else if (autoRefreshEnabled) startAutoRefresh();
     }
 
-    const observer = new MutationObserver(() => { if (rawData.values.length) buildChart(currentChartType); });
+    // ---------- 监听暗色模式 ----------
+    const observer = new MutationObserver(() => {
+        if (rawData.values.length) {
+            buildChart(currentChartType);
+            updateMiniPieChart();
+        }
+    });
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
+    // ---------- 搜索绑定 ----------
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchKeyword = e.target.value;
+            updateDataTable();
+        });
+    }
+
+    // ---------- 初始化事件 ----------
     document.getElementById('barBtn').addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
     document.getElementById('pieBtn').addEventListener('click', () => setChartType('pie'));
     document.getElementById('refreshDataBtn').addEventListener('click', () => fetchStockData(false));
     document.getElementById('pauseRefreshBtn').addEventListener('click', toggleAutoRefresh);
+    document.getElementById('intervalSelect').addEventListener('change', changeRefreshInterval);
     document.getElementById('toggleTableBtn').addEventListener('click', toggleTable);
     const sliderElem = document.getElementById('xAxisSlider');
     if (sliderElem) sliderElem.addEventListener('input', onSliderChange);
@@ -769,7 +819,10 @@
     if (fullViewBtnElem) fullViewBtnElem.addEventListener('click', toggleFullView);
 
     windowSize = 15;
-    fetchStockData(false).then(() => { startAutoRefresh(); startCountdown(); });
+    fetchStockData(false).then(() => {
+        startAutoRefresh();
+        startCountdown();
+    });
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', () => { stopAutoRefresh(); if (countdownInterval) clearInterval(countdownInterval); });
     if (typeof window.scrollToTop !== 'function') window.scrollToTop = function() { window.scrollTo({ top: 0, behavior: 'smooth' }); };
