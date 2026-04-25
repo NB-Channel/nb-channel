@@ -565,30 +565,46 @@
     }
 
     // ---------- 迷你环图（Top5 市值占比） ----------
-    function updateMiniPieChart() {
-        if (!rawData.values.length) return;
-        const combined = rawData.names.map((n, i) => ({ name: n, value: rawData.values[i] }));
-        combined.sort((a, b) => b.value - a.value);
-        const top5 = combined.slice(0, 5);
-        const otherValue = combined.slice(5).reduce((sum, item) => sum + item.value, 0);
-        let labels = top5.map(item => item.name);
-        let data = top5.map(item => item.value);
-        if (otherValue > 0) {
-            labels.push('其他');
-            data.push(otherValue);
-        }
-        const colors = data.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-        const ctx = document.getElementById('miniPieChart').getContext('2d');
-        if (miniPieChart) miniPieChart.destroy();
+   let miniPieChart = null;  // 确保全局有该变量（原有代码已定义，无需重复）
+
+function updateMiniPieChart() {
+    if (!rawData.values.length) return;
+    
+    // 计算 Top5 + 其他
+    const combined = rawData.names.map((n, i) => ({ name: n, value: rawData.values[i] }));
+    combined.sort((a, b) => b.value - a.value);
+    const top5 = combined.slice(0, 5);
+    const otherValue = combined.slice(5).reduce((sum, item) => sum + item.value, 0);
+    let labels = top5.map(item => item.name);
+    let data = top5.map(item => item.value);
+    if (otherValue > 0) {
+        labels.push('其他');
+        data.push(otherValue);
+    }
+    const colors = data.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+    const ctx = document.getElementById('miniPieChart').getContext('2d');
+    
+    if (miniPieChart) {
+        // 增量更新：修改现有图表的数据，不重建实例
+        miniPieChart.data.labels = labels;
+        miniPieChart.data.datasets[0].data = data;
+        miniPieChart.data.datasets[0].backgroundColor = colors;
+        miniPieChart.update({ duration: 300 });
+    } else {
+        // 首次创建
         miniPieChart = new Chart(ctx, {
             type: 'pie',
             data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1 }] },
             options: {
                 responsive: true, maintainAspectRatio: true,
-                plugins: { legend: { position: 'right', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } } }
+                plugins: {
+                    legend: { position: 'right', labels: { font: { size: 10 } } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } }
+                }
             }
         });
     }
+}
 
     // ---------- 表格（带搜索过滤） ----------
     function updateDataTable() {
