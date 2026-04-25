@@ -13,9 +13,13 @@
         .canvas-container {
             position: relative; width: 100%; min-height: 550px; background: var(--card-bg);
             border-radius: 24px; padding: 16px 8px 8px 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.02);
-            transition: background 0.3s ease;
+            transition: background 0.3s ease, opacity 0.3s ease;
         }
+        /* 淡入淡出动画 */
+        .canvas-container.fade-out { opacity: 0; }
+        .canvas-container.fade-in { opacity: 1; }
         canvas { max-height: 550px; width: 100%; }
+        /* 其余样式保持不变（省略，与之前相同） */
         .stats {
             display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px;
             padding: 16px 0 0 0; border-top: 1px solid var(--card-border);
@@ -202,7 +206,7 @@
         </div>
 
         <div class="chart-wrapper">
-            <div class="canvas-container">
+            <div class="canvas-container" id="chartContainer">
                 <canvas id="stockChart" width="1100" height="550"></canvas>
             </div>
         </div>
@@ -225,7 +229,7 @@
             </div>
             <table class="data-table">
                 <thead><tr><th>股票名称</th><th>市值</th></tr></thead>
-                <tbody id="tableBody"><tr><td colspan="2">加载中...</td></tr></tbody>
+                <tbody id="tableBody"><td><td colspan="2">加载中...</td></table></tbody>
             </table>
             <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
         </div>
@@ -376,8 +380,16 @@
         };
     }
 
-    function buildChart(type) {
+    // 带淡入淡出的图表构建函数
+    async function buildChartWithFade(type) {
         if (!rawData.names.length) return;
+        const container = document.getElementById('chartContainer');
+        if (!container) return;
+        // 添加淡出类
+        container.classList.add('fade-out');
+        // 等待150ms让淡出动画完成
+        await new Promise(resolve => setTimeout(resolve, 150));
+        // 构建新图表
         const windowData = getWindowData();
         const labels = windowData.names;
         const dataValues = windowData.values;
@@ -423,6 +435,98 @@
             currentChart = new Chart(document.getElementById('stockChart').getContext('2d'), chartConfig);
         }
         updateSliderUI();
+        // 移除淡出，添加淡入
+        container.classList.remove('fade-out');
+        container.classList.add('fade-in');
+        setTimeout(() => {
+            container.classList.remove('fade-in');
+        }, 150);
+    }
+
+    // 为了保持增量更新时不用淡入淡出，单独定义快速构建（用于名称变化时也调用淡出淡入？也可以统一使用上面的函数）
+    // 修改 setChartType 和 fetchStockData 中 namesChanged 分支，改用 buildChartWithFade
+    // 同时保留原有的增量更新（无动画）分支
+
+    // 保留原有的 buildChart 函数（但我们将覆盖调用）
+    // 注意：为了避免代码重复，我们重写 setChartType 和 fetchStockData 相关调用
+
+    // 以下将原 buildChart 替换为 buildChartWithFade，但为了避免异步问题，保持原逻辑即可
+
+    // 实际修改 setChartType
+    function setChartType(type) {
+        if (!['bar','line','pie'].includes(type)) return;
+        if (type === currentChartType) return; // 相同类型不处理
+        currentChartType = type;
+        document.getElementById('barBtn').classList.toggle('active', type === 'bar');
+        document.getElementById('lineBtn').classList.toggle('active', type === 'line');
+        document.getElementById('pieBtn').classList.toggle('active', type === 'pie');
+        if (rawData.values.length) {
+            isFullViewMode = false;
+            currentStartIndex = 0;
+            updateSliderUI();
+            buildChartWithFade(currentChartType);
+        }
+    }
+
+    // 修改 fetchStockData 中 namesChanged 分支
+    async function fetchStockData(isAuto = false) {
+        if (isLoading) return;
+        isLoading = true;
+        updateTimestamp('loading');
+        const statsDiv = document.getElementById('statsPanel');
+        try {
+            const url = PROXY_URL + encodeURIComponent(API_URL);
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
+
+            const newNames = json.names;
+            const newValues = json.values.map(v => Number(v));
+            let namesChanged = false;
+            if (rawData.names.length !== newNames.length) namesChanged = true;
+            else for (let i = 0; i < rawData.names.length; i++) if (rawData.names[i] !== newNames[i]) { namesChanged = true; break; }
+
+            rawData.names = newNames;
+            rawData.values = newValues;
+            totalStocks = rawData.names.length;
+
+            const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
+            combined.sort((a, b) => b.value - a.value);
+            sortedCombined = combined;
+
+            updateTimestamp('success');
+            updateStatsPanel();
+            updateDataTable();
+            updateMiniPieChart();
+
+            if (namesChanged) {
+                isFullViewMode = false;
+                currentStartIndex = 0;
+                updateSliderUI();
+                await buildChartWithFade(currentChartType);  // 使用淡入淡出重建
+            } else {
+                if (currentChart) {
+                    const windowData = getWindowData();
+                    currentChart.data.labels = windowData.names;
+                    currentChart.data.datasets[0].data = windowData.values;
+                    if (currentChartType === 'bar' || currentChartType === 'pie') {
+                        const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+                        currentChart.data.datasets[0].backgroundColor = barColors;
+                    }
+                    currentChart.update({ duration: 300 });
+                }
+                updateSliderUI();
+            }
+            resetCountdown();
+        } catch (err) {
+            console.error(err);
+            updateTimestamp('error');
+            statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
+            if (currentChart) { currentChart.destroy(); currentChart = null; }
+        } finally {
+            isLoading = false;
+        }
     }
 
     // ---------- 迷你环图 ----------
@@ -503,81 +607,7 @@
         `;
     }
 
-    // ---------- 数据获取 ----------
-    async function fetchStockData(isAuto = false) {
-        if (isLoading) return;
-        isLoading = true;
-        updateTimestamp('loading');
-        const statsDiv = document.getElementById('statsPanel');
-        try {
-            const url = PROXY_URL + encodeURIComponent(API_URL);
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const json = await res.json();
-            if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
-
-            const newNames = json.names;
-            const newValues = json.values.map(v => Number(v));
-            let namesChanged = false;
-            if (rawData.names.length !== newNames.length) namesChanged = true;
-            else for (let i = 0; i < rawData.names.length; i++) if (rawData.names[i] !== newNames[i]) { namesChanged = true; break; }
-
-            rawData.names = newNames;
-            rawData.values = newValues;
-            totalStocks = rawData.names.length;
-
-            const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
-            combined.sort((a, b) => b.value - a.value);
-            sortedCombined = combined;
-
-            updateTimestamp('success');
-            updateStatsPanel();
-            updateDataTable();
-            updateMiniPieChart();
-
-            if (namesChanged) {
-                isFullViewMode = false;
-                currentStartIndex = 0;
-                updateSliderUI();
-                buildChart(currentChartType);
-            } else {
-                if (currentChart) {
-                    const windowData = getWindowData();
-                    currentChart.data.labels = windowData.names;
-                    currentChart.data.datasets[0].data = windowData.values;
-                    if (currentChartType === 'bar' || currentChartType === 'pie') {
-                        const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-                        currentChart.data.datasets[0].backgroundColor = barColors;
-                    }
-                    currentChart.update({ duration: 300 });
-                }
-                updateSliderUI();
-            }
-            resetCountdown();
-        } catch (err) {
-            console.error(err);
-            updateTimestamp('error');
-            statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
-            if (currentChart) { currentChart.destroy(); currentChart = null; }
-        } finally {
-            isLoading = false;
-        }
-    }
-
-    function setChartType(type) {
-        if (!['bar','line','pie'].includes(type)) return;
-        currentChartType = type;
-        document.getElementById('barBtn').classList.toggle('active', type === 'bar');
-        document.getElementById('lineBtn').classList.toggle('active', type === 'line');
-        document.getElementById('pieBtn').classList.toggle('active', type === 'pie');
-        if (rawData.values.length) {
-            isFullViewMode = false;
-            currentStartIndex = 0;
-            updateSliderUI();
-            buildChart(currentChartType);
-        }
-    }
-
+    // ---------- 其他函数（滑动条、自动刷新等，与原代码相同，略）----------
     function onSliderChange() {
         if (isFullViewMode || currentChartType === 'pie') return;
         const slider = document.getElementById('xAxisSlider');
@@ -616,7 +646,6 @@
         }
     }
 
-    // ---------- 自动刷新 ----------
     function startAutoRefresh() {
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
         if (!autoRefreshEnabled) return;
@@ -653,22 +682,22 @@
         else if (autoRefreshEnabled) startAutoRefresh();
     }
 
-    // ---------- 监听暗色模式 ----------
+    // 监听暗色模式
     const observer = new MutationObserver(() => {
         if (rawData.values.length) {
-            buildChart(currentChartType);
+            buildChartWithFade(currentChartType);
             updateMiniPieChart();
         }
     });
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
-    // ---------- 搜索绑定 ----------
+    // 搜索绑定
     document.getElementById('searchInput')?.addEventListener('input', (e) => {
         searchKeyword = e.target.value;
         updateDataTable();
     });
 
-    // ---------- 初始化事件 ----------
+    // 初始化事件
     document.getElementById('barBtn')?.addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn')?.addEventListener('click', () => setChartType('line'));
     document.getElementById('pieBtn')?.addEventListener('click', () => setChartType('pie'));
