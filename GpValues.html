@@ -690,6 +690,7 @@
         if (countdownInterval) clearInterval(countdownInterval);
     });
     if (typeof window.scrollToTop !== 'function') window.scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof VIDEOS === 'undefined') window.VIDEOS = [];
     if (typeof updateSiteStats === 'function') updateSiteStats();
 </script>
 </body>
