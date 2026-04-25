@@ -600,39 +600,79 @@
     }
 
     async function fetchStockData(isAuto = false) {
-        if (isLoading) return;
-        isLoading = true;
-        updateTimestamp('loading');
-        const statsDiv = document.getElementById('statsPanel');
-        try {
-            const url = PROXY_URL + encodeURIComponent(API_URL);
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const json = await res.json();
-            if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
-            rawData.names = json.names;
-            rawData.values = json.values.map(v => Number(v));
-            totalStocks = rawData.names.length;
-            const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
-            combined.sort((a, b) => b.value - a.value);
-            sortedCombined = combined;
-            updateTimestamp('success');
-            updateStatsPanel();
-            updateDataTable();
+    if (isLoading) return;
+    isLoading = true;
+    updateTimestamp('loading');
+    const statsDiv = document.getElementById('statsPanel');
+    try {
+        const url = PROXY_URL + encodeURIComponent(API_URL);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
+
+        const newNames = json.names;
+        const newValues = json.values.map(v => Number(v));
+
+        // 检查名称列表是否发生变化
+        let namesChanged = false;
+        if (rawData.names.length !== newNames.length) {
+            namesChanged = true;
+        } else {
+            for (let i = 0; i < rawData.names.length; i++) {
+                if (rawData.names[i] !== newNames[i]) {
+                    namesChanged = true;
+                    break;
+                }
+            }
+        }
+
+        // 更新原始数据
+        rawData.names = newNames;
+        rawData.values = newValues;
+        totalStocks = rawData.names.length;
+
+        // 更新排序后的数据（用于表格）
+        const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
+        combined.sort((a, b) => b.value - a.value);
+        sortedCombined = combined;
+
+        updateTimestamp('success');
+        updateStatsPanel();
+        updateDataTable();
+
+        if (namesChanged) {
+            // 名称变化：重置分页/全貌状态，重建图表
             isFullViewMode = false;
             currentStartIndex = 0;
             updateSliderUI();
             buildChart(currentChartType);
-            resetCountdown();
-        } catch (err) {
-            console.error(err);
-            updateTimestamp('error');
-            statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
-            if (currentChart) { currentChart.destroy(); currentChart = null; }
-        } finally {
-            isLoading = false;
+        } else {
+            // 名称未变：仅更新现有图表的数据（增量更新）
+            if (currentChart) {
+                const windowData = getWindowData(); // 获取当前窗口数据
+                currentChart.data.labels = windowData.names;
+                currentChart.data.datasets[0].data = windowData.values;
+                if (currentChartType === 'bar' || currentChartType === 'pie') {
+                    const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+                    currentChart.data.datasets[0].backgroundColor = barColors;
+                }
+                currentChart.update();
+            }
+            // 更新滑动条范围（防止总数量变化但名称没变？实际上总数量相同但名称相同则不用更新；若数量不同会导致名称变化，已进入上分支）
+            updateSliderUI();
         }
+
+        resetCountdown();
+    } catch (err) {
+        console.error(err);
+        updateTimestamp('error');
+        statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
+        if (currentChart) { currentChart.destroy(); currentChart = null; }
+    } finally {
+        isLoading = false;
     }
+}
 
     function setChartType(type) {
         if (!['bar','line','pie'].includes(type)) return;
