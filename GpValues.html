@@ -5,16 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>NB虚拟股票行情（数据来自Orgent API）</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- 确保 Supabase 和 Chart.js 库加载顺序 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
     <style>
-        /* ========== 仅股票页面特有样式 ========== */
+        /* ========== 股票页面特有样式（不重复全局定义） ========== */
         .chart-wrapper { padding: 20px 0 32px 0; }
         .canvas-container {
             position: relative; width: 100%; min-height: 550px; background: var(--card-bg);
             border-radius: 24px; padding: 16px 8px 8px 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.02);
-            transition: background 0.3s ease;
+            transition: background 0.3s ease, opacity 0.3s ease;
         }
+        .canvas-container.fade-out { opacity: 0; }
+        .canvas-container.fade-in { opacity: 1; }
         .history-chart-container {
             margin-top: 20px;
             background: var(--card-bg);
@@ -91,12 +95,8 @@
             animation: spin 0.8s linear infinite;
             visibility: hidden;
         }
-        .refresh-btn.loading .spinner {
-            visibility: visible;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        .refresh-btn.loading .spinner { visibility: visible; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .pause-btn, .interval-btn {
             background: var(--nav-btn-hover-bg); color: white; border: none;
             padding: 8px 20px; border-radius: 40px; cursor: pointer; transition: 0.2s;
@@ -302,13 +302,22 @@
 </div>
 
 <script>
+    // 检查 Supabase 是否加载
+    if (typeof supabase === 'undefined' && typeof window.supabase !== 'undefined') {
+        var supabase = window.supabase;
+    }
+    if (typeof supabase === 'undefined') {
+        document.body.innerHTML = '<div style="color:red; padding:20px; text-align:center;">❌ 无法加载 Supabase 客户端，请检查网络后刷新页面。<br>如果问题持续，请确保 CDN 可访问。</div>';
+        throw new Error('Supabase not loaded');
+    }
+    
     // -------------------- 全局变量 --------------------
     let currentChart = null;
     let miniPieChart = null;
-    let historyChart = null;           // 历史走势图实例
+    let historyChart = null;
     let currentChartType = 'bar';
     let rawData = { names: [], values: [] };
-    let sortedCombined = [];           // 排序后完整数据（表格用）
+    let sortedCombined = [];
     let isLoading = false;
     let autoRefreshTimer = null;
     let refreshInterval = 10000;
@@ -323,8 +332,7 @@
     let isFullViewMode = false;
     let searchKeyword = '';
 
-    // 存储上一次的数据（用于计算涨跌）
-    let previousSnapshot = null;   // { names: [], values: [], total }
+    let previousSnapshot = null;   // 存储上一次数据用于涨跌对比
 
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
@@ -345,7 +353,6 @@
         return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
     }
 
-    // 获取涨跌符号和颜色
     function getChangeHtml(currentVal, previousVal) {
         if (previousVal === undefined || previousVal === null) return '<span class="change-icon">—</span>';
         const diff = currentVal - previousVal;
@@ -368,10 +375,7 @@
     function updateCountdownDisplay() {
         const badge = document.getElementById('countdownBadge');
         if (!badge) return;
-        if (!autoRefreshEnabled) {
-            badge.innerHTML = '⏸️ 已暂停';
-            return;
-        }
+        if (!autoRefreshEnabled) { badge.innerHTML = '⏸️ 已暂停'; return; }
         badge.innerHTML = `🕒 下次刷新: ${secondsLeft}秒`;
     }
 
@@ -381,9 +385,7 @@
             if (autoRefreshEnabled && !isLoading && secondsLeft > 0) {
                 secondsLeft--;
                 updateCountdownDisplay();
-            } else if (!autoRefreshEnabled) {
-                updateCountdownDisplay();
-            }
+            } else if (!autoRefreshEnabled) updateCountdownDisplay();
         }, 1000);
     }
 
@@ -398,10 +400,7 @@
         }
         const start = currentStartIndex;
         const end = Math.min(start + windowSize, totalStocks);
-        return {
-            names: rawData.names.slice(start, end),
-            values: rawData.values.slice(start, end)
-        };
+        return { names: rawData.names.slice(start, end), values: rawData.values.slice(start, end) };
     }
 
     function updateSliderUI() {
@@ -449,7 +448,6 @@
         };
     }
 
-    // 淡入淡出构建主图表
     async function buildChartWithFade(type) {
         if (!rawData.names.length) return;
         const container = document.getElementById('chartContainer');
@@ -506,7 +504,6 @@
         setTimeout(() => container.classList.remove('fade-in'), 150);
     }
 
-    // 绘制历史总市值趋势图
     async function loadHistoryAndDraw() {
         const { data, error } = await supabaseClient
             .from('stock_history')
@@ -523,56 +520,29 @@
         if (historyChart) historyChart.destroy();
         historyChart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '总市值 (模拟)',
-                    data: values,
-                    borderColor: '#00a1d6',
-                    backgroundColor: 'rgba(0,161,214,0.1)',
-                    fill: true,
-                    tension: 0.2,
-                    pointRadius: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` } } }
-            }
+            data: { labels, datasets: [{ label: '总市值 (模拟)', data: values, borderColor: '#00a1d6', backgroundColor: 'rgba(0,161,214,0.1)', fill: true, tension: 0.2, pointRadius: 2 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` } } } }
         });
     }
 
-    // 保存当前数据到数据库并计算涨跌
     async function saveToDatabase(totalValue) {
-        // 1. 获取上一次的快照
+        // 获取上一次快照
         const { data: lastData } = await supabaseClient
             .from('stock_latest')
             .select('snapshot_data, total_value')
             .order('created_at', { ascending: false })
             .limit(1);
         if (lastData && lastData.length > 0) {
-            const lastSnapshot = lastData[0].snapshot_data;
-            previousSnapshot = {
-                names: lastSnapshot.names,
-                values: lastSnapshot.values,
-                total: lastData[0].total_value
-            };
-        } else {
-            previousSnapshot = null;
-        }
-        // 2. 插入本次快照
-        await supabaseClient.from('stock_latest').insert({
-            total_value: totalValue,
-            snapshot_data: { names: rawData.names, values: rawData.values }
-        });
-        // 3. 插入历史趋势
+            const last = lastData[0];
+            previousSnapshot = { names: last.snapshot_data.names, values: last.snapshot_data.values, total: last.total_value };
+        } else { previousSnapshot = null; }
+        // 插入本次快照
+        await supabaseClient.from('stock_latest').insert({ total_value: totalValue, snapshot_data: { names: rawData.names, values: rawData.values } });
+        // 插入历史趋势
         await supabaseClient.from('stock_history').insert({ total_value: totalValue });
-        // 4. 刷新历史图表
         await loadHistoryAndDraw();
     }
 
-    // ---------- 迷你环图 ----------
     function updateMiniPieChart() {
         if (!rawData.values.length) return;
         const combined = rawData.names.map((n, i) => ({ name: n, value: rawData.values[i] }));
@@ -581,10 +551,7 @@
         const otherValue = combined.slice(5).reduce((sum, item) => sum + item.value, 0);
         let labels = top5.map(item => item.name);
         let data = top5.map(item => item.value);
-        if (otherValue > 0) {
-            labels.push('其他');
-            data.push(otherValue);
-        }
+        if (otherValue > 0) { labels.push('其他'); data.push(otherValue); }
         const colors = data.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
         const ctx = document.getElementById('miniPieChart').getContext('2d');
         if (miniPieChart) {
@@ -596,18 +563,11 @@
             miniPieChart = new Chart(ctx, {
                 type: 'pie',
                 data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1 }] },
-                options: {
-                    responsive: true, maintainAspectRatio: true,
-                    plugins: {
-                        legend: { position: 'right', labels: { font: { size: 10 } } },
-                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'right', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } } } }
             });
         }
     }
 
-    // 表格（带涨跌）
     function updateDataTable() {
         const tbody = document.getElementById('tableBody');
         if (!sortedCombined.length) { tbody.innerHTML = '<tr><td colspan="3">暂无数据</td></tr>'; return; }
@@ -625,17 +585,11 @@
                 if (idx !== -1) prevVal = previousSnapshot.values[idx];
             }
             const changeHtml = getChangeHtml(item.value, prevVal);
-            html += `<tr>
-                <td>${escapeHtml(item.name)}</td>
-                <td>${formatValue(item.value)}</td>
-                <td>${changeHtml}</td>
-            </tr>`;
+            html += `<tr><td>${escapeHtml(item.name)}</td><td>${formatValue(item.value)}</td><td>${changeHtml}</td></tr>`;
         }
         tbody.innerHTML = html;
         const toggleBtn = document.getElementById('toggleTableBtn');
-        if (toggleBtn) {
-            toggleBtn.innerHTML = fullTableVisible ? '📋 收起 (显示前5条)' : `📋 展开全部 (共${filtered.length}条)`;
-        }
+        if (toggleBtn) toggleBtn.innerHTML = fullTableVisible ? '📋 收起 (显示前5条)' : `📋 展开全部 (共${filtered.length}条)`;
     }
 
     function toggleTable() { fullTableVisible = !fullTableVisible; updateDataTable(); }
@@ -667,11 +621,9 @@
         `;
     }
 
-    // 数据获取核心（集成数据库存储）
     async function fetchStockData(isAuto = false) {
         if (isLoading) return;
         isLoading = true;
-        // 显示loading动画（刷新按钮）
         const refreshBtn = document.getElementById('refreshDataBtn');
         if (refreshBtn) refreshBtn.classList.add('loading');
         updateTimestamp('loading');
@@ -690,20 +642,14 @@
             if (rawData.names.length !== newNames.length) namesChanged = true;
             else for (let i = 0; i < rawData.names.length; i++) if (rawData.names[i] !== newNames[i]) { namesChanged = true; break; }
 
-            // 更新 rawData
             rawData.names = newNames;
             rawData.values = newValues;
             totalStocks = rawData.names.length;
-
-            // 排序数据（表格用）
             const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
             combined.sort((a, b) => b.value - a.value);
             sortedCombined = combined;
 
-            // 存储到数据库（获取涨跌基准，并插入历史）
             await saveToDatabase(newTotal);
-
-            // 更新界面
             updateTimestamp('success');
             updateStatsPanel(newTotal);
             updateDataTable();
@@ -739,10 +685,8 @@
         }
     }
 
-    // 图表类型切换
     function setChartType(type) {
-        if (!['bar','line','pie'].includes(type)) return;
-        if (type === currentChartType) return;
+        if (!['bar','line','pie'].includes(type) || type === currentChartType) return;
         currentChartType = type;
         document.getElementById('barBtn').classList.toggle('active', type === 'bar');
         document.getElementById('lineBtn').classList.toggle('active', type === 'line');
@@ -826,19 +770,16 @@
         else if (autoRefreshEnabled) startAutoRefresh();
     }
 
-    // 监听暗色模式
     const observer = new MutationObserver(() => {
         if (rawData.values.length) buildChartWithFade(currentChartType);
     });
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
-    // 搜索绑定
     document.getElementById('searchInput')?.addEventListener('input', (e) => {
         searchKeyword = e.target.value;
         updateDataTable();
     });
 
-    // 初始化事件
     document.getElementById('barBtn')?.addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn')?.addEventListener('click', () => setChartType('line'));
     document.getElementById('pieBtn')?.addEventListener('click', () => setChartType('pie'));
