@@ -9,212 +9,104 @@
     <script src="js/common.js"></script>
     <style>
         /* ========== 仅股票页面特有样式（不重复全局定义） ========== */
-        .chart-wrapper {
-            padding: 20px 0 32px 0;
-        }
+        .chart-wrapper { padding: 20px 0 32px 0; }
         .canvas-container {
-            position: relative;
-            width: 100%;
-            min-height: 550px;
-            background: var(--card-bg);
-            border-radius: 24px;
-            padding: 16px 8px 8px 8px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            position: relative; width: 100%; min-height: 550px; background: var(--card-bg);
+            border-radius: 24px; padding: 16px 8px 8px 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.02);
             transition: background 0.3s ease;
         }
-        canvas {
-            max-height: 550px;
-            width: 100%;
-        }
+        canvas { max-height: 550px; width: 100%; }
         .stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            margin-top: 20px;
-            padding: 16px 0 0 0;
-            border-top: 1px solid var(--card-border);
+            display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px;
+            padding: 16px 0 0 0; border-top: 1px solid var(--card-border);
         }
         .stat-card {
-            background: var(--count-bg);
-            border-radius: 28px;
-            padding: 10px 22px;
-            display: inline-flex;
-            align-items: baseline;
-            gap: 12px;
-            flex-wrap: wrap;
-            font-size: 0.85rem;
+            background: var(--count-bg); border-radius: 28px; padding: 10px 22px;
+            display: inline-flex; align-items: baseline; gap: 12px; flex-wrap: wrap; font-size: 0.85rem;
         }
         .stat-label { font-weight: 600; }
         .stat-value {
-            font-weight: 700;
-            color: var(--status-border);
-            background: var(--card-bg);
-            padding: 4px 12px;
-            border-radius: 30px;
+            font-weight: 700; color: var(--status-border); background: var(--card-bg);
+            padding: 4px 12px; border-radius: 30px;
         }
         .error-msg {
-            color: #c7362b;
-            background: #ffeae8;
-            border-radius: 40px;
-            padding: 8px 20px;
-            font-size: 0.85rem;
+            color: #c7362b; background: #ffeae8; border-radius: 40px;
+            padding: 8px 20px; font-size: 0.85rem;
         }
-        body.dark-mode .error-msg {
-            background: #3b1e1a;
-            color: #f87171;
-        }
+        body.dark-mode .error-msg { background: #3b1e1a; color: #f87171; }
         .orgent-link {
-            background: var(--nav-btn-bg);
-            color: var(--nav-btn-text);
-            padding: 6px 16px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: 0.2s;
-            display: inline-block;
+            background: var(--nav-btn-bg); color: var(--nav-btn-text); padding: 6px 16px;
+            border-radius: 30px; text-decoration: none; font-size: 0.85rem; font-weight: 500;
+            transition: 0.2s; display: inline-block;
         }
-        .orgent-link:hover {
-            background: var(--nav-btn-hover-bg);
-            color: var(--nav-btn-hover-text);
-        }
+        .orgent-link:hover { background: var(--nav-btn-hover-bg); color: var(--nav-btn-hover-text); }
         .toolbar {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 20px;
+            display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 20px;
         }
         .btn-group {
-            display: flex;
-            gap: 12px;
-            background: var(--nav-btn-bg);
-            padding: 6px;
-            border-radius: 60px;
+            display: flex; gap: 12px; background: var(--nav-btn-bg); padding: 6px; border-radius: 60px;
         }
         .chart-btn {
-            background: transparent;
-            border: none;
-            padding: 8px 24px;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-            font-weight: 600;
+            background: transparent; border: none; padding: 8px 24px; border-radius: 40px;
+            cursor: pointer; transition: all 0.2s; font-size: 0.9rem; font-weight: 600;
             color: var(--nav-btn-text);
         }
         .chart-btn.active {
-            background: #00a1d6;
-            color: white;
-            box-shadow: 0 4px 8px rgba(0,161,214,0.3);
+            background: #00a1d6; color: white; box-shadow: 0 4px 8px rgba(0,161,214,0.3);
         }
         .chart-btn:hover:not(.active) {
-            background: rgba(0,161,214,0.1);
-            color: var(--nav-btn-hover-text);
+            background: rgba(0,161,214,0.1); color: var(--nav-btn-hover-text);
         }
         .refresh-btn, .pause-btn, .interval-btn {
-            background: var(--nav-btn-hover-bg);
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: 0.2s;
+            background: var(--nav-btn-hover-bg); color: white; border: none;
+            padding: 8px 20px; border-radius: 40px; cursor: pointer; transition: 0.2s;
         }
         .refresh-btn:hover, .pause-btn:hover, .interval-btn:hover {
-            filter: brightness(0.9);
-            transform: scale(0.96);
+            filter: brightness(0.9); transform: scale(0.96);
         }
         .pause-btn { background: #6c757d; }
         .interval-btn { background: #17a2b8; }
         
         /* 表格 + 搜索框 */
-        .data-table-wrapper {
-            margin-top: 20px;
-            overflow-x: auto;
-        }
-        .search-box {
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: flex-end;
-        }
+        .data-table-wrapper { margin-top: 20px; overflow-x: auto; }
+        .search-box { margin-bottom: 12px; display: flex; justify-content: flex-end; }
         .search-box input {
-            padding: 6px 12px;
-            border-radius: 30px;
-            border: 1px solid var(--card-border);
-            background: var(--card-bg);
-            color: var(--text-color);
-            width: 200px;
-            font-size: 0.85rem;
+            padding: 6px 12px; border-radius: 30px; border: 1px solid var(--card-border);
+            background: var(--card-bg); color: var(--text-color); width: 200px; font-size: 0.85rem;
         }
         .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 16px;
+            overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         .data-table th, .data-table td {
-            padding: 12px 16px;
-            text-align: left;
-            border-bottom: 1px solid var(--card-border);
+            padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--card-border);
         }
-        .data-table th {
-            background: var(--count-bg);
-            font-weight: 600;
-            color: var(--text-color);
-        }
+        .data-table th { background: var(--count-bg); font-weight: 600; color: var(--text-color); }
         .data-table tr:hover { background: rgba(0,161,214,0.05); }
         body.dark-mode .data-table tr:hover { background: rgba(96,165,250,0.1); }
         .data-table td:first-child, .data-table th:first-child { font-weight: 500; }
         .data-table td:last-child, .data-table th:last-child {
-            text-align: right;
-            font-family: monospace;
-            font-weight: 600;
+            text-align: right; font-family: monospace; font-weight: 600;
         }
         .toggle-table-btn {
-            display: block;
-            margin: 12px auto 0 auto;
-            background: var(--nav-btn-bg);
-            color: var(--nav-btn-text);
-            border: none;
-            padding: 6px 20px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: 0.2s;
-            width: fit-content;
+            display: block; margin: 12px auto 0 auto; background: var(--nav-btn-bg);
+            color: var(--nav-btn-text); border: none; padding: 6px 20px; border-radius: 30px;
+            cursor: pointer; font-size: 0.85rem; transition: 0.2s; width: fit-content;
         }
-        .toggle-table-btn:hover {
-            background: var(--nav-btn-hover-bg);
-            color: white;
-        }
+        .toggle-table-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
         .countdown-badge {
-            background: var(--count-bg);
-            padding: 4px 12px;
-            border-radius: 60px;
-            font-size: 0.75rem;
-            margin-left: 8px;
+            background: var(--count-bg); padding: 4px 12px; border-radius: 60px;
+            font-size: 0.75rem; margin-left: 8px;
         }
         /* 滑动条 */
         .slider-container {
-            margin: 0 0 20px 0;
-            background: var(--card-bg);
-            padding: 12px 16px;
-            border-radius: 40px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 16px;
-            border: 1px solid var(--card-border);
+            margin: 0 0 20px 0; background: var(--card-bg); padding: 12px 16px;
+            border-radius: 40px; display: flex; flex-wrap: wrap; align-items: center;
+            gap: 16px; border: 1px solid var(--card-border);
         }
         .slider-label {
-            font-size: 0.85rem;
-            color: var(--text-color);
-            background: var(--count-bg);
-            padding: 4px 12px;
-            border-radius: 30px;
+            font-size: 0.85rem; color: var(--text-color); background: var(--count-bg);
+            padding: 4px 12px; border-radius: 30px;
         }
         input[type="range"] {
             flex: 1; min-width: 150px; height: 6px; -webkit-appearance: none;
@@ -225,8 +117,8 @@
             background: var(--status-border); cursor: pointer;
         }
         .range-value {
-            font-size: 0.8rem; background: var(--count-bg); padding: 4px 12px; border-radius: 30px;
-            font-family: monospace;
+            font-size: 0.8rem; background: var(--count-bg); padding: 4px 12px;
+            border-radius: 30px; font-family: monospace;
         }
         .reset-btn {
             background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none;
@@ -237,22 +129,14 @@
         
         /* 迷你环图容器 */
         .mini-pie-container {
-            margin-top: 20px;
-            background: var(--card-bg);
-            border-radius: 24px;
-            padding: 12px 16px;
-            border: 1px solid var(--card-border);
+            margin-top: 20px; background: var(--card-bg); border-radius: 24px;
+            padding: 12px 16px; border: 1px solid var(--card-border);
         }
         .mini-pie-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 10px;
+            font-size: 0.9rem; font-weight: 600; margin-bottom: 10px;
             color: var(--status-border);
         }
-        .mini-canvas {
-            max-height: 200px;
-            width: 100%;
-        }
+        .mini-canvas { max-height: 200px; width: 100%; }
         
         @media (max-width: 680px) {
             .canvas-container { min-height: 400px; }
@@ -317,14 +201,12 @@
             </select>
         </div>
 
-        <!-- 主图表区域 -->
         <div class="chart-wrapper">
             <div class="canvas-container">
                 <canvas id="stockChart" width="1100" height="550"></canvas>
             </div>
         </div>
 
-        <!-- 滑动条区域 -->
         <div class="slider-container" id="rangeSliderContainer">
             <span class="slider-label">📌 滑动查看股票</span>
             <input type="range" id="xAxisSlider" min="0" max="0" value="0" step="1">
@@ -332,13 +214,11 @@
             <button id="fullViewBtn" class="reset-btn">🏠 股票全貌</button>
         </div>
 
-        <!-- 迷你环图：市值占比 Top5 -->
         <div class="mini-pie-container">
             <div class="mini-pie-title">🥧 市值占比 Top5</div>
             <canvas id="miniPieChart" width="400" height="200" class="mini-canvas"></canvas>
         </div>
 
-        <!-- 表格 + 搜索框 -->
         <div class="data-table-wrapper">
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="🔍 搜索股票名称" autocomplete="off">
@@ -369,13 +249,13 @@
 <script>
     // -------------------- 全局变量 --------------------
     let currentChart = null;
-    let miniPieChart = null;          // 迷你饼图实例
+    let miniPieChart = null;
     let currentChartType = 'bar';
     let rawData = { names: [], values: [] };
-    let sortedCombined = [];           // 排序后完整数据（表格用）
+    let sortedCombined = [];
     let isLoading = false;
     let autoRefreshTimer = null;
-    let refreshInterval = 10000;       // 默认10秒
+    let refreshInterval = 10000;
     let fullTableVisible = false;
     let autoRefreshEnabled = true;
     let countdownInterval = null;
@@ -385,8 +265,6 @@
     let currentStartIndex = 0;
     let totalStocks = 0;
     let isFullViewMode = false;
-
-    // 表格搜索关键词
     let searchKeyword = '';
 
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
@@ -441,7 +319,6 @@
         updateCountdownDisplay();
     }
 
-    // 获取当前窗口数据（主图表）
     function getWindowData() {
         if (isFullViewMode || currentChartType === 'pie') {
             return { names: rawData.names.slice(), values: rawData.values.slice() };
@@ -454,7 +331,6 @@
         };
     }
 
-    // 更新滑动条UI
     function updateSliderUI() {
         const sliderContainer = document.getElementById('rangeSliderContainer');
         const slider = document.getElementById('xAxisSlider');
@@ -486,21 +362,20 @@
         }
     }
 
-    // 平滑更新主图表数据（不重建）
-    function updateMainChartData() {
-        if (!currentChart) return;
-        const windowData = getWindowData();
-        if (!windowData.names.length) return;
-        currentChart.data.labels = windowData.names;
-        currentChart.data.datasets[0].data = windowData.values;
-        if (currentChartType === 'bar' || currentChartType === 'pie') {
-            const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-            currentChart.data.datasets[0].backgroundColor = barColors;
-        }
-        currentChart.update({ duration: 300 });  // 平滑动画
+    function getChartColors() {
+        const isDark = document.body.classList.contains('dark-mode');
+        return {
+            gridColor: isDark ? '#3f465f' : '#e3e9ef',
+            titleColor: isDark ? '#9ca3af' : '#5d7f8f',
+            tickColor: isDark ? '#9ca3af' : '#5d7f8f',
+            legendColor: isDark ? '#cbd5e6' : '#2c5a6e',
+            borderColor: isDark ? '#60a5fa' : '#2c5a6e',
+            pointBackground: isDark ? '#60a5fa' : '#2c5a6e',
+            tooltipBg: isDark ? '#1f2937' : '#1f3e4c',
+            tooltipTitle: isDark ? '#f3f4f6' : '#f0f3f7'
+        };
     }
 
-    // 构建主图表（首次或类型/名称变化时）
     function buildChart(type) {
         if (!rawData.names.length) return;
         const windowData = getWindowData();
@@ -550,61 +425,42 @@
         updateSliderUI();
     }
 
-    function getChartColors() {
-        const isDark = document.body.classList.contains('dark-mode');
-        return {
-            gridColor: isDark ? '#3f465f' : '#e3e9ef',
-            titleColor: isDark ? '#9ca3af' : '#5d7f8f',
-            tickColor: isDark ? '#9ca3af' : '#5d7f8f',
-            legendColor: isDark ? '#cbd5e6' : '#2c5a6e',
-            borderColor: isDark ? '#60a5fa' : '#2c5a6e',
-            pointBackground: isDark ? '#60a5fa' : '#2c5a6e',
-            tooltipBg: isDark ? '#1f2937' : '#1f3e4c',
-            tooltipTitle: isDark ? '#f3f4f6' : '#f0f3f7'
-        };
-    }
-
-    // ---------- 迷你环图（Top5 市值占比） ----------
-function updateMiniPieChart() {
-    if (!rawData.values.length) return;
-    
-    // 计算 Top5 + 其他
-    const combined = rawData.names.map((n, i) => ({ name: n, value: rawData.values[i] }));
-    combined.sort((a, b) => b.value - a.value);
-    const top5 = combined.slice(0, 5);
-    const otherValue = combined.slice(5).reduce((sum, item) => sum + item.value, 0);
-    let labels = top5.map(item => item.name);
-    let data = top5.map(item => item.value);
-    if (otherValue > 0) {
-        labels.push('其他');
-        data.push(otherValue);
-    }
-    const colors = data.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-    const ctx = document.getElementById('miniPieChart').getContext('2d');
-    
-    if (miniPieChart) {
-        // 增量更新：修改现有图表的数据，不重建实例
-        miniPieChart.data.labels = labels;
-        miniPieChart.data.datasets[0].data = data;
-        miniPieChart.data.datasets[0].backgroundColor = colors;
-        miniPieChart.update({ duration: 300 });
-    } else {
-        // 首次创建
-        miniPieChart = new Chart(ctx, {
-            type: 'pie',
-            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1 }] },
-            options: {
-                responsive: true, maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'right', labels: { font: { size: 10 } } },
-                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } }
+    // ---------- 迷你环图 ----------
+    function updateMiniPieChart() {
+        if (!rawData.values.length) return;
+        const combined = rawData.names.map((n, i) => ({ name: n, value: rawData.values[i] }));
+        combined.sort((a, b) => b.value - a.value);
+        const top5 = combined.slice(0, 5);
+        const otherValue = combined.slice(5).reduce((sum, item) => sum + item.value, 0);
+        let labels = top5.map(item => item.name);
+        let data = top5.map(item => item.value);
+        if (otherValue > 0) {
+            labels.push('其他');
+            data.push(otherValue);
+        }
+        const colors = data.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+        const ctx = document.getElementById('miniPieChart').getContext('2d');
+        if (miniPieChart) {
+            miniPieChart.data.labels = labels;
+            miniPieChart.data.datasets[0].data = data;
+            miniPieChart.data.datasets[0].backgroundColor = colors;
+            miniPieChart.update({ duration: 300 });
+        } else {
+            miniPieChart = new Chart(ctx, {
+                type: 'pie',
+                data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 10 } } },
+                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } }
+                    }
                 }
-            }
-        });
+            });
+        }
     }
-}
 
-    // ---------- 表格（带搜索过滤） ----------
+    // ---------- 表格 ----------
     function updateDataTable() {
         const tbody = document.getElementById('tableBody');
         if (!sortedCombined.length) { tbody.innerHTML = '<tr><td colspan="2">暂无数据</td></tr>'; return; }
@@ -647,7 +503,7 @@ function updateMiniPieChart() {
         `;
     }
 
-    // ---------- 数据获取（优化：名称不变时仅增量更新） ----------
+    // ---------- 数据获取 ----------
     async function fetchStockData(isAuto = false) {
         if (isLoading) return;
         isLoading = true;
@@ -677,7 +533,7 @@ function updateMiniPieChart() {
             updateTimestamp('success');
             updateStatsPanel();
             updateDataTable();
-            updateMiniPieChart();   // 更新迷你环图
+            updateMiniPieChart();
 
             if (namesChanged) {
                 isFullViewMode = false;
@@ -685,7 +541,6 @@ function updateMiniPieChart() {
                 updateSliderUI();
                 buildChart(currentChartType);
             } else {
-                // 仅更新现有图表数据
                 if (currentChart) {
                     const windowData = getWindowData();
                     currentChart.data.labels = windowData.names;
@@ -709,7 +564,6 @@ function updateMiniPieChart() {
         }
     }
 
-    // ---------- 图表类型切换 ----------
     function setChartType(type) {
         if (!['bar','line','pie'].includes(type)) return;
         currentChartType = type;
@@ -724,7 +578,6 @@ function updateMiniPieChart() {
         }
     }
 
-    // ---------- 滑动条控制 ----------
     function onSliderChange() {
         if (isFullViewMode || currentChartType === 'pie') return;
         const slider = document.getElementById('xAxisSlider');
@@ -763,7 +616,7 @@ function updateMiniPieChart() {
         }
     }
 
-    // ---------- 自动刷新控制 + 自定义间隔 ----------
+    // ---------- 自动刷新 ----------
     function startAutoRefresh() {
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
         if (!autoRefreshEnabled) return;
@@ -790,12 +643,11 @@ function updateMiniPieChart() {
         const newSeconds = parseInt(select.value);
         refreshInterval = newSeconds * 1000;
         if (autoRefreshEnabled) {
-            startAutoRefresh();   // 重启定时器
+            startAutoRefresh();
             resetCountdown();
         }
         updateTimestamp('success');
     }
-
     function handleVisibilityChange() {
         if (document.hidden) stopAutoRefresh();
         else if (autoRefreshEnabled) startAutoRefresh();
@@ -811,26 +663,21 @@ function updateMiniPieChart() {
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
     // ---------- 搜索绑定 ----------
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            searchKeyword = e.target.value;
-            updateDataTable();
-        });
-    }
+    document.getElementById('searchInput')?.addEventListener('input', (e) => {
+        searchKeyword = e.target.value;
+        updateDataTable();
+    });
 
     // ---------- 初始化事件 ----------
-    document.getElementById('barBtn').addEventListener('click', () => setChartType('bar'));
-    document.getElementById('lineBtn').addEventListener('click', () => setChartType('line'));
-    document.getElementById('pieBtn').addEventListener('click', () => setChartType('pie'));
-    document.getElementById('refreshDataBtn').addEventListener('click', () => fetchStockData(false));
-    document.getElementById('pauseRefreshBtn').addEventListener('click', toggleAutoRefresh);
-    document.getElementById('intervalSelect').addEventListener('change', changeRefreshInterval);
-    document.getElementById('toggleTableBtn').addEventListener('click', toggleTable);
-    const sliderElem = document.getElementById('xAxisSlider');
-    if (sliderElem) sliderElem.addEventListener('input', onSliderChange);
-    const fullViewBtnElem = document.getElementById('fullViewBtn');
-    if (fullViewBtnElem) fullViewBtnElem.addEventListener('click', toggleFullView);
+    document.getElementById('barBtn')?.addEventListener('click', () => setChartType('bar'));
+    document.getElementById('lineBtn')?.addEventListener('click', () => setChartType('line'));
+    document.getElementById('pieBtn')?.addEventListener('click', () => setChartType('pie'));
+    document.getElementById('refreshDataBtn')?.addEventListener('click', () => fetchStockData(false));
+    document.getElementById('pauseRefreshBtn')?.addEventListener('click', toggleAutoRefresh);
+    document.getElementById('intervalSelect')?.addEventListener('change', changeRefreshInterval);
+    document.getElementById('toggleTableBtn')?.addEventListener('click', toggleTable);
+    document.getElementById('xAxisSlider')?.addEventListener('input', onSliderChange);
+    document.getElementById('fullViewBtn')?.addEventListener('click', toggleFullView);
 
     windowSize = 15;
     fetchStockData(false).then(() => {
@@ -838,8 +685,11 @@ function updateMiniPieChart() {
         startCountdown();
     });
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', () => { stopAutoRefresh(); if (countdownInterval) clearInterval(countdownInterval); });
-    if (typeof window.scrollToTop !== 'function') window.scrollToTop = function() { window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    window.addEventListener('beforeunload', () => {
+        stopAutoRefresh();
+        if (countdownInterval) clearInterval(countdownInterval);
+    });
+    if (typeof window.scrollToTop !== 'function') window.scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof updateSiteStats === 'function') updateSiteStats();
 </script>
 </body>
