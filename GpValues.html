@@ -452,24 +452,41 @@
     }
 
     function updateSliderUI() {
-        const sliderContainer = document.getElementById('rangeSliderContainer');
-        const slider = document.getElementById('xAxisSlider');
-        if (!sliderContainer || !slider) return;
-        if (isFullViewMode || currentChartType === 'pie') {
-            sliderContainer.style.display = 'none';
-            return;
-        }
-        sliderContainer.style.display = 'flex';
+    const sliderContainer = document.getElementById('rangeSliderContainer');
+    const slider = document.getElementById('xAxisSlider');
+    const rangeSpan = document.getElementById('sliderRangeText');
+    const fullViewBtn = document.getElementById('fullViewBtn');
+    if (!sliderContainer || !slider || !rangeSpan || !fullViewBtn) return;
+
+    // 饼图模式下完全隐藏整个区域
+    if (currentChartType === 'pie') {
+        sliderContainer.style.display = 'none';
+        return;
+    }
+
+    sliderContainer.style.display = 'flex';
+    
+    if (isFullViewMode) {
+        // 全貌模式：隐藏滑块和文本，仅显示“返回分页”按钮
+        slider.style.display = 'none';
+        rangeSpan.style.display = 'none';
+        fullViewBtn.innerHTML = '🔙 返回分页';
+        fullViewBtn.style.margin = '0 auto';
+    } else {
+        // 分页模式：显示滑块和文本，按钮显示“股票全貌”
+        slider.style.display = 'block';
+        rangeSpan.style.display = 'inline-block';
         const maxStart = Math.max(0, totalStocks - windowSize);
         slider.max = maxStart;
         if (currentStartIndex > maxStart) currentStartIndex = maxStart;
         slider.value = currentStartIndex;
         const start = currentStartIndex + 1;
         const end = Math.min(currentStartIndex + windowSize, totalStocks);
-        document.getElementById('sliderRangeText').innerText = `显示 ${start} - ${end} / ${totalStocks}`;
-        const fullViewBtn = document.getElementById('fullViewBtn');
-        if (fullViewBtn) fullViewBtn.innerHTML = isFullViewMode ? '📄 恢复分页' : '🏠 股票全貌';
+        rangeSpan.innerText = `显示 ${start} - ${end} / ${totalStocks}`;
+        fullViewBtn.innerHTML = '🏠 股票全貌';
+        fullViewBtn.style.margin = '';
     }
+}
 
     function updateChartData() {
         if (!currentChart) return;
