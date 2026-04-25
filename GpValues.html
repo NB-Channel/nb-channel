@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
     <style>
-        /* ========== 股票页面特有样式 ========== */
+        /* ========== 样式与之前基本一致，新增全屏和筛选按钮样式 ========== */
         .chart-wrapper { padding: 20px 0 32px 0; }
         .canvas-container {
             position: relative; width: 100%; min-height: 550px; background: var(--card-bg);
@@ -66,6 +66,7 @@
             color: white;
         }
         canvas { max-height: 550px; width: 100%; }
+        /* 其余样式与之前完全一致，省略不重复 */
         .stats {
             display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px;
             padding: 16px 0 0 0; border-top: 1px solid var(--card-border);
@@ -199,17 +200,29 @@
         }
         .mini-canvas { max-height: 200px; width: 100%; }
         
-        /* 全屏模式 */
+        /* 全屏模式下的样式调整 */
         .history-chart-container:-webkit-full-screen {
-            width: 100%; height: 100%; display: flex; flex-direction: column;
-            justify-content: center; background: var(--card-bg);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--card-bg);
         }
-        .history-chart-container:-webkit-full-screen canvas { max-height: calc(100% - 60px); }
+        .history-chart-container:-webkit-full-screen canvas {
+            max-height: calc(100% - 60px);
+        }
         .history-chart-container:fullscreen {
-            width: 100%; height: 100%; display: flex; flex-direction: column;
-            justify-content: center; background: var(--card-bg);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--card-bg);
         }
-        .history-chart-container:fullscreen canvas { max-height: calc(100% - 60px); }
+        .history-chart-container:fullscreen canvas {
+            max-height: calc(100% - 60px);
+        }
         
         @media (max-width: 680px) {
             .canvas-container { min-height: 400px; }
@@ -292,7 +305,7 @@
             <button id="fullViewBtn" class="reset-btn">🏠 股票全貌</button>
         </div>
 
-        <!-- 个股历史走势图 -->
+        <!-- 个股历史走势图（全部股票，带筛选和放大） -->
         <div class="history-chart-container" id="stockHistoryContainer">
             <div class="history-title">
                 <span>📈 个股历史市值走势</span>
@@ -382,9 +395,8 @@
     let searchKeyword = '';
     let previousSnapshot = null;
     let fullHistoryData = [];
-    let allStockNames = [];
-    let currentTopN = 'all';
-    let lastFilteredStockNames = [];   // 用于判断个股列表是否变化
+    let allStockNames = [];        // 存储所有股票名称（固定）
+    let currentTopN = 'all';       // 当前选择的topN
 
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
@@ -520,12 +532,14 @@
         setTimeout(() => container.classList.remove('fade-in'), 150);
     }
 
+    // 历史数据存储
     async function saveFullSnapshot(totalValue) {
         const snapshotData = { names: rawData.names, values: rawData.values };
         await supabaseClient.from('stock_history_full').insert({ recorded_at: new Date(), total_value: totalValue, snapshot: snapshotData });
         await supabaseClient.from('stock_history').insert({ total_value: totalValue });
     }
 
+    // 加载历史数据，并更新图表
     async function loadFullHistory() {
         const { data, error } = await supabaseClient
             .from('stock_history_full')
@@ -538,14 +552,17 @@
             snapshot: row.snapshot,
             total: row.total_value
         }));
+
+        // 首次加载时，确定所有股票名称（固定）
         if (allStockNames.length === 0 && fullHistoryData.length > 0) {
             const latest = fullHistoryData[fullHistoryData.length-1];
             allStockNames = [...latest.snapshot.names];
         }
-        updateStockHistoryChart();
-        updateTotalHistoryChart();
+        updateStockHistoryChart();   // 更新个股图
+        updateTotalHistoryChart();   // 更新总市值图
     }
 
+    // 根据当前topN筛选股票列表（按最新市值排序）
     function getFilteredStockNames() {
         if (!fullHistoryData.length) return [];
         const latest = fullHistoryData[fullHistoryData.length-1].snapshot;
@@ -556,87 +573,56 @@
         return stocks.slice(0, limit).map(s => s.name);
     }
 
+    // 更新个股历史图（根据当前topN设置）
     function updateStockHistoryChart() {
         if (!fullHistoryData.length || allStockNames.length === 0) return;
         const filteredNames = getFilteredStockNames();
         if (filteredNames.length === 0) return;
         
         const labels = fullHistoryData.map(r => r.time.toLocaleTimeString());
-        const ctx = document.getElementById('stockHistoryChart').getContext('2d');
-        
-        // 检查列表是否变化（顺序和内容）
-        let listChanged = (filteredNames.length !== lastFilteredStockNames.length);
-        if (!listChanged) {
-            for (let i = 0; i < filteredNames.length; i++) {
-                if (filteredNames[i] !== lastFilteredStockNames[i]) {
-                    listChanged = true;
-                    break;
-                }
-            }
-        }
-        
+        const datasets = [];
         const colorPalette = [
             '#f44336','#4caf50','#2196f3','#ff9800','#9c27b0','#00bcd4',
             '#e91e63','#3f51b5','#009688','#ffc107','#795548','#607d8b'
         ];
-        
-        if (stockHistoryChart && !listChanged) {
-            // 列表未变：只更新每个 dataset 的数据点
-            for (let i = 0; i < filteredNames.length; i++) {
-                const stockName = filteredNames[i];
-                const dataPoints = [];
-                for (const record of fullHistoryData) {
-                    const idx = record.snapshot.names.indexOf(stockName);
-                    dataPoints.push(idx !== -1 ? record.snapshot.values[idx] : null);
-                }
-                if (stockHistoryChart.data.datasets[i]) {
-                    stockHistoryChart.data.datasets[i].data = dataPoints;
-                }
+        for (let i=0; i<filteredNames.length; i++) {
+            const stockName = filteredNames[i];
+            const dataPoints = [];
+            for (const record of fullHistoryData) {
+                const idx = record.snapshot.names.indexOf(stockName);
+                dataPoints.push(idx !== -1 ? record.snapshot.values[idx] : null);
             }
+            datasets.push({
+                label: stockName,
+                data: dataPoints,
+                borderColor: colorPalette[i % colorPalette.length],
+                backgroundColor: 'transparent',
+                tension: 0.2,
+                fill: false,
+                pointRadius: 1.5,
+                borderWidth: 1.5
+            });
+        }
+        const ctx = document.getElementById('stockHistoryChart').getContext('2d');
+        if (stockHistoryChart) {
             stockHistoryChart.data.labels = labels;
+            stockHistoryChart.data.datasets = datasets;
             stockHistoryChart.update();
         } else {
-            // 列表变化（切换TopN或首次加载）：重新生成 datasets
-            const datasets = [];
-            for (let i=0; i<filteredNames.length; i++) {
-                const stockName = filteredNames[i];
-                const dataPoints = [];
-                for (const record of fullHistoryData) {
-                    const idx = record.snapshot.names.indexOf(stockName);
-                    dataPoints.push(idx !== -1 ? record.snapshot.values[idx] : null);
+            stockHistoryChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` } },
+                        legend: { position: 'top', labels: { font: { size: 10 } } }
+                    },
+                    scales: { y: { beginAtZero: true, ticks: { callback: v => formatValue(v) } } }
                 }
-                datasets.push({
-                    label: stockName,
-                    data: dataPoints,
-                    borderColor: colorPalette[i % colorPalette.length],
-                    backgroundColor: 'transparent',
-                    tension: 0.2,
-                    fill: false,
-                    pointRadius: 1.5,
-                    borderWidth: 1.5
-                });
-            }
-            if (stockHistoryChart) {
-                stockHistoryChart.data.labels = labels;
-                stockHistoryChart.data.datasets = datasets;
-                stockHistoryChart.update();
-            } else {
-                stockHistoryChart = new Chart(ctx, {
-                    type: 'line',
-                    data: { labels, datasets },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` } },
-                            legend: { position: 'top', labels: { font: { size: 10 } } }
-                        },
-                        scales: { y: { beginAtZero: true, ticks: { callback: v => formatValue(v) } } }
-                    }
-                });
-            }
+            });
         }
-        lastFilteredStockNames = [...filteredNames];
     }
 
     function updateTotalHistoryChart() {
@@ -657,16 +643,19 @@
         }
     }
 
+    // 全屏功能
     function toggleFullscreen(element) {
         if (!element) return;
         if (!document.fullscreenElement) {
-            element.requestFullscreen().catch(err => console.error(err));
+            element.requestFullscreen().catch(err => {
+                console.error(`全屏失败: ${err.message}`);
+            });
         } else {
             document.exitFullscreen();
         }
     }
 
-    // 迷你饼图、表格等函数与原一致（略写，已包含）
+    // 以下其他界面更新函数不变
     function updateMiniPieChart() {
         if (!rawData.values.length) return;
         const combined = rawData.names.map((n, i) => ({ name: n, value: rawData.values[i] }));
@@ -690,7 +679,7 @@
 
     function updateDataTable() {
         const tbody = document.getElementById('tableBody');
-        if (!sortedCombined.length) { tbody.innerHTML = '<tr><td colspan="3">暂无数据</td>'; return; }
+        if (!sortedCombined.length) { tbody.innerHTML = '<tr><td colspan="3">暂无数据</td></tr>'; return; }
         let filtered = sortedCombined;
         if (searchKeyword.trim() !== '') {
             const kw = searchKeyword.trim().toLowerCase();
@@ -711,6 +700,7 @@
         const toggleBtn = document.getElementById('toggleTableBtn');
         if (toggleBtn) toggleBtn.innerHTML = fullTableVisible ? '📋 收起 (显示前5条)' : `📋 展开全部 (共${filtered.length}条)`;
     }
+
     function toggleTable() { fullTableVisible = !fullTableVisible; updateDataTable(); }
 
     function updateStatsPanel(total) {
@@ -764,25 +754,30 @@
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
+
             const newNames = json.names;
             const newValues = json.values.map(v => Number(v));
             const newTotal = newValues.reduce((a,b)=>a+b,0);
             let namesChanged = false;
             if (rawData.names.length !== newNames.length) namesChanged = true;
             else for (let i = 0; i < rawData.names.length; i++) if (rawData.names[i] !== newNames[i]) { namesChanged = true; break; }
+            
             rawData.names = newNames;
             rawData.values = newValues;
             totalStocks = rawData.names.length;
             const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
             combined.sort((a, b) => b.value - a.value);
             sortedCombined = combined;
+            
             await saveFullSnapshot(newTotal);
-            await loadFullHistory();
-            await loadPreviousSnapshot();
+            await loadFullHistory();      // 内部会更新个股和总市值图（根据当前topN自动刷新）
+            await loadPreviousSnapshot(); // 获取上次快照
+            
             updateTimestamp('success');
             updateStatsPanel(newTotal);
             updateDataTable();
             updateMiniPieChart();
+            
             if (namesChanged) {
                 isFullViewMode = false;
                 currentStartIndex = 0;
@@ -907,13 +902,17 @@
         searchKeyword = e.target.value;
         updateDataTable();
     });
+
+    // topN 筛选变化事件
     const topNSelect = document.getElementById('topNSelect');
     if (topNSelect) {
         topNSelect.addEventListener('change', (e) => {
             currentTopN = e.target.value;
-            updateStockHistoryChart();  // 列表变化，重建 datasets
+            updateStockHistoryChart();   // 重新生成个股图
         });
     }
+
+    // 放大按钮事件
     const zoomBtn = document.getElementById('zoomStockHistoryBtn');
     if (zoomBtn) {
         zoomBtn.addEventListener('click', () => {
