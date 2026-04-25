@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
     <style>
-        /* ========== 样式完全复用之前，无改动 ========== */
+        /* ========== 样式与之前基本一致，新增全屏和筛选按钮样式 ========== */
         .chart-wrapper { padding: 20px 0 32px 0; }
         .canvas-container {
             position: relative; width: 100%; min-height: 550px; background: var(--card-bg);
@@ -24,6 +24,7 @@
             border-radius: 24px;
             padding: 12px 16px;
             border: 1px solid var(--card-border);
+            position: relative;
         }
         .history-title {
             font-size: 0.9rem;
@@ -36,7 +37,36 @@
             flex-wrap: wrap;
             gap: 8px;
         }
+        .chart-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .topn-select {
+            background: var(--count-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            color: var(--text-color);
+        }
+        .zoom-btn {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            border-radius: 30px;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+        .zoom-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            color: white;
+        }
         canvas { max-height: 550px; width: 100%; }
+        /* 其余样式与之前完全一致，省略不重复 */
         .stats {
             display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px;
             padding: 16px 0 0 0; border-top: 1px solid var(--card-border);
@@ -169,6 +199,31 @@
             color: var(--status-border);
         }
         .mini-canvas { max-height: 200px; width: 100%; }
+        
+        /* 全屏模式下的样式调整 */
+        .history-chart-container:-webkit-full-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--card-bg);
+        }
+        .history-chart-container:-webkit-full-screen canvas {
+            max-height: calc(100% - 60px);
+        }
+        .history-chart-container:fullscreen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--card-bg);
+        }
+        .history-chart-container:fullscreen canvas {
+            max-height: calc(100% - 60px);
+        }
+        
         @media (max-width: 680px) {
             .canvas-container { min-height: 400px; }
             canvas { max-height: 400px; }
@@ -183,6 +238,7 @@
             .stats { gap: 12px; }
             .stat-card { padding: 6px 16px; }
             .search-box input { width: 100%; }
+            .chart-controls { width: 100%; justify-content: space-between; }
         }
     </style>
 </head>
@@ -249,10 +305,19 @@
             <button id="fullViewBtn" class="reset-btn">🏠 股票全貌</button>
         </div>
 
-        <!-- 个股历史走势图（全部股票） -->
-        <div class="history-chart-container">
+        <!-- 个股历史走势图（全部股票，带筛选和放大） -->
+        <div class="history-chart-container" id="stockHistoryContainer">
             <div class="history-title">
-                <span>📈 所有股票历史市值走势</span>
+                <span>📈 个股历史市值走势</span>
+                <div class="chart-controls">
+                    <select id="topNSelect" class="topn-select">
+                        <option value="5">Top5</option>
+                        <option value="10">Top10</option>
+                        <option value="15">Top15</option>
+                        <option value="all" selected>全部</option>
+                    </select>
+                    <button id="zoomStockHistoryBtn" class="zoom-btn">🔍 放大</button>
+                </div>
             </div>
             <canvas id="stockHistoryChart" width="1100" height="280"></canvas>
         </div>
@@ -276,7 +341,7 @@
             </div>
             <table class="data-table">
                 <thead><tr><th>股票名称</th><th>市值</th><th>涨跌</th></thead>
-                <tbody id="tableBody"><tr><td colspan="3">加载中...</td></table></tbody>
+                <tbody id="tableBody"><tr><td colspan="3">加载中...</td></tr></tbody>
             </table>
             <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
         </div>
@@ -298,7 +363,6 @@
 </div>
 
 <script>
-    // Supabase客户端检测
     if (typeof supabase === 'undefined' && typeof window.supabase !== 'undefined') { var supabase = window.supabase; }
     if (typeof supabase === 'undefined') {
         document.body.innerHTML = '<div style="color:red; padding:20px; text-align:center;">❌ 无法加载 Supabase 客户端，请检查网络后刷新页面。</div>';
@@ -331,7 +395,8 @@
     let searchKeyword = '';
     let previousSnapshot = null;
     let fullHistoryData = [];
-    let allStockNames = [];        // 存储所有股票名称（固定，避免图表重建）
+    let allStockNames = [];        // 存储所有股票名称（固定）
+    let currentTopN = 'all';       // 当前选择的topN
 
     const PROXY_URL = 'https://tidy-goose-75.nb-channel.deno.net/?url=';
     const API_URL = 'https://orgent.pythonanywhere.com/api/GpValues';
@@ -474,7 +539,7 @@
         await supabaseClient.from('stock_history').insert({ total_value: totalValue });
     }
 
-    // 加载历史数据，并更新图表（个股图：展示全部股票）
+    // 加载历史数据，并更新图表
     async function loadFullHistory() {
         const { data, error } = await supabaseClient
             .from('stock_history_full')
@@ -497,17 +562,31 @@
         updateTotalHistoryChart();   // 更新总市值图
     }
 
-    // 更新个股历史图（全部股票，不重建图表实例）
+    // 根据当前topN筛选股票列表（按最新市值排序）
+    function getFilteredStockNames() {
+        if (!fullHistoryData.length) return [];
+        const latest = fullHistoryData[fullHistoryData.length-1].snapshot;
+        const stocks = latest.names.map((name, idx) => ({ name, value: latest.values[idx] }));
+        stocks.sort((a,b) => b.value - a.value);
+        if (currentTopN === 'all') return stocks.map(s => s.name);
+        const limit = parseInt(currentTopN, 10);
+        return stocks.slice(0, limit).map(s => s.name);
+    }
+
+    // 更新个股历史图（根据当前topN设置）
     function updateStockHistoryChart() {
         if (!fullHistoryData.length || allStockNames.length === 0) return;
+        const filteredNames = getFilteredStockNames();
+        if (filteredNames.length === 0) return;
+        
         const labels = fullHistoryData.map(r => r.time.toLocaleTimeString());
         const datasets = [];
         const colorPalette = [
             '#f44336','#4caf50','#2196f3','#ff9800','#9c27b0','#00bcd4',
             '#e91e63','#3f51b5','#009688','#ffc107','#795548','#607d8b'
         ];
-        for (let i=0; i<allStockNames.length; i++) {
-            const stockName = allStockNames[i];
+        for (let i=0; i<filteredNames.length; i++) {
+            const stockName = filteredNames[i];
             const dataPoints = [];
             for (const record of fullHistoryData) {
                 const idx = record.snapshot.names.indexOf(stockName);
@@ -526,7 +605,6 @@
         }
         const ctx = document.getElementById('stockHistoryChart').getContext('2d');
         if (stockHistoryChart) {
-            // 增量更新：只改变 labels 和 datasets
             stockHistoryChart.data.labels = labels;
             stockHistoryChart.data.datasets = datasets;
             stockHistoryChart.update();
@@ -565,7 +643,19 @@
         }
     }
 
-    // ---------- 其他界面更新（迷你饼图、表格、统计） ----------
+    // 全屏功能
+    function toggleFullscreen(element) {
+        if (!element) return;
+        if (!document.fullscreenElement) {
+            element.requestFullscreen().catch(err => {
+                console.error(`全屏失败: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    // 以下其他界面更新函数不变
     function updateMiniPieChart() {
         if (!rawData.values.length) return;
         const combined = rawData.names.map((n, i) => ({ name: n, value: rawData.values[i] }));
@@ -651,7 +741,6 @@
         } else { previousSnapshot = null; }
     }
 
-    // 核心数据获取
     async function fetchStockData(isAuto = false) {
         if (isLoading) return;
         isLoading = true;
@@ -681,7 +770,7 @@
             sortedCombined = combined;
             
             await saveFullSnapshot(newTotal);
-            await loadFullHistory();      // 内部会更新个股和总市值图（不重建）
+            await loadFullHistory();      // 内部会更新个股和总市值图（根据当前topN自动刷新）
             await loadPreviousSnapshot(); // 获取上次快照
             
             updateTimestamp('success');
@@ -719,7 +808,6 @@
         }
     }
 
-    // 图表类型切换
     function setChartType(type) {
         if (!['bar','line','pie'].includes(type) || type === currentChartType) return;
         currentChartType = type;
@@ -814,6 +902,24 @@
         searchKeyword = e.target.value;
         updateDataTable();
     });
+
+    // topN 筛选变化事件
+    const topNSelect = document.getElementById('topNSelect');
+    if (topNSelect) {
+        topNSelect.addEventListener('change', (e) => {
+            currentTopN = e.target.value;
+            updateStockHistoryChart();   // 重新生成个股图
+        });
+    }
+
+    // 放大按钮事件
+    const zoomBtn = document.getElementById('zoomStockHistoryBtn');
+    if (zoomBtn) {
+        zoomBtn.addEventListener('click', () => {
+            const container = document.getElementById('stockHistoryContainer');
+            toggleFullscreen(container);
+        });
+    }
 
     document.getElementById('barBtn')?.addEventListener('click', () => setChartType('bar'));
     document.getElementById('lineBtn')?.addEventListener('click', () => setChartType('line'));
