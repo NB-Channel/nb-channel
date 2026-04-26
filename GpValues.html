@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/common.js"></script>
     <style>
-        /* 完整样式（与之前完全一致） */
+        /* 完整样式（与之前一致） */
         .chart-wrapper { padding: 20px 0 32px 0; }
         .canvas-container {
             position: relative; width: 100%; min-height: 550px; background: var(--card-bg);
@@ -327,27 +327,31 @@
                 <input type="text" id="searchInput" placeholder="🔍 搜索股票名称" autocomplete="off">
             </div>
             <table class="data-table">
-                <thead><tr><th>股票名称</th><th>市值</th><th>涨跌</th></thead>
-                <tbody id="tableBody"><tr><td colspan="3">加载中...<\/td><\/tr><\/tbody>
-            <\/table>
+                <thead>
+                    <tr><th>股票名称</th><th>市值</th><th>涨跌</th></tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="3">加载中...</td></tr>
+                </tbody>
+            </table>
             <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
-        <\/div>
+        </div>
 
         <div class="stats" id="statsPanel">
-            <div>📡 正在从服务器获取股票估值……<\/div>
-        <\/div>
-    <\/div>
-<\/div>
+            <div>📡 正在从服务器获取股票估值……</div>
+        </div>
+    </div>
+</div>
 
 <div class="site-stats">
-    <div class="stats-container" id="siteStats"><\/div>
+    <div class="stats-container" id="siteStats"></div>
     <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期可调<br>💡 提示：拖动滑动条平滑切换股票范围，点击“股票全貌”显示全部数据。</p>
-<\/div>
+</div>
 
 <div class="fixed-buttons">
     <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
     <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
-<\/div>
+</div>
 
 <script>
     if (typeof supabase === 'undefined' && typeof window.supabase !== 'undefined') { var supabase = window.supabase; }
@@ -684,7 +688,11 @@
                 if (idx !== -1) prevVal = previousSnapshot.values[idx];
             }
             const changeHtml = getChangeHtml(item.value, prevVal);
-            html += `<table><td>${escapeHtml(item.name)}</td><td>${formatValue(item.value)}</td><td>${changeHtml}</td></tr>`;
+            html += `<tr>
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>${formatValue(item.value)}</td>
+                        <td>${changeHtml}</td>
+                      </tr>`;
         }
         tbody.innerHTML = html;
         const toggleBtn = document.getElementById('toggleTableBtn');
