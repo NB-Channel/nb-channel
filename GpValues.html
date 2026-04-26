@@ -544,29 +544,66 @@
     }
 
     // ---------- 直方图逻辑 ----------
-    function computeHistogram(values, bins = 10) {
-        if (!values.length) return { labels: [], counts: [] };
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        if (min === max) {
-            // 所有值相等，只显示一个区间
-            return { labels: [`≈${formatValue(min)}`], counts: [values.length] };
-        }
-        const step = (max - min) / bins;
-        const binsData = new Array(bins).fill(0);
-        const binLabels = [];
-        for (let i = 0; i < bins; i++) {
-            const lower = min + i * step;
-            const upper = min + (i + 1) * step;
-            binLabels.push(`${formatValue(lower)}～${formatValue(upper)}`);
-        }
-        for (const val of values) {
-            let idx = Math.floor((val - min) / step);
-            if (idx === bins) idx = bins - 1;
-            binsData[idx]++;
-        }
-        return { labels: binLabels, counts: binsData };
+   // 固定区间：0-2000, 2001-4000, 4001-6000, ... 步长2000
+function computeHistogram(values, step = 2000) {
+    if (!values.length) return { labels: [], counts: [] };
+    const maxVal = Math.max(...values);
+    // 计算需要的区间数（从0开始，向上取整）
+    const maxBinEnd = Math.ceil(maxVal / step) * step;
+    const binCount = maxBinEnd / step;
+    const labels = [];
+    const counts = new Array(binCount).fill(0);
+    for (let i = 0; i < binCount; i++) {
+        const start = i * step;
+        const end = (i + 1) * step;
+        labels.push(`${start}～${end}`);
     }
+    for (const val of values) {
+        let binIndex = Math.floor(val / step);
+        if (binIndex >= binCount) binIndex = binCount - 1;
+        counts[binIndex]++;
+    }
+    return { labels, counts };
+}
+
+// 更新直方图（增量更新，不重建实例）
+function updateHistogramChart() {
+    if (!rawData.values.length) return;
+    const { labels, counts } = computeHistogram(rawData.values, 2000);
+    const ctx = document.getElementById('histogramChart').getContext('2d');
+    const colors = getChartColors(); // 用于后续可能的主题颜色适配，但不影响柱状图颜色
+    if (histogramChart) {
+        histogramChart.data.labels = labels;
+        histogramChart.data.datasets[0].data = counts;
+        histogramChart.update();
+    } else {
+        histogramChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '股票数量',
+                    data: counts,
+                    backgroundColor: 'rgba(0,161,214,0.6)',
+                    borderColor: '#00a1d6',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} 只` } },
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: '股票数量' }, ticks: { stepSize: 1 } },
+                    x: { title: { display: true, text: '市值区间' }, ticks: { maxRotation: 45, autoSkip: true } }
+                }
+            }
+        });
+    }
+}
 
     function updateHistogramChart() {
         if (!rawData.values.length) return;
