@@ -544,16 +544,15 @@
     }
 
     // ---------- 直方图逻辑 ----------
-   // 固定区间：0-2000, 2001-4000, 4001-6000, ... 步长2000
+ // 固定区间：0-10000, 10001-20000, 20001-30000 ... 步长10000
 function computeHistogram(values, step = 10000) {
     if (!values || values.length === 0) return { labels: [], counts: [] };
     const maxVal = Math.max(...values);
-    // 需要的区间数量（从0开始）
     const binCount = Math.ceil(maxVal / step);
     const labels = [];
     const counts = new Array(binCount).fill(0);
     for (let i = 0; i < binCount; i++) {
-        const start = i * step + (i === 0 ? 0 : 1);
+        const start = i === 0 ? 0 : (i * step + 1);
         const end = (i + 1) * step;
         labels.push(`${start}～${end}`);
     }
@@ -568,9 +567,8 @@ function computeHistogram(values, step = 10000) {
 // 更新直方图（增量更新，不重建实例）
 function updateHistogramChart() {
     if (!rawData.values.length) return;
-    const { labels, counts } = computeHistogram(rawData.values, 2000);
+    const { labels, counts } = computeHistogram(rawData.values, 10000);
     const ctx = document.getElementById('histogramChart').getContext('2d');
-    const colors = getChartColors(); // 用于后续可能的主题颜色适配，但不影响柱状图颜色
     if (histogramChart) {
         histogramChart.data.labels = labels;
         histogramChart.data.datasets[0].data = counts;
@@ -596,8 +594,8 @@ function updateHistogramChart() {
                     legend: { position: 'top' }
                 },
                 scales: {
-                    y: { beginAtZero: true, title: { display: true, text: '股票数量' }, ticks: { stepSize: 1 } },
-                    x: { title: { display: true, text: '市值区间' }, ticks: { maxRotation: 45, autoSkip: true } }
+                    y: { beginAtZero: true, title: { display: true, text: '股票数量 (只)' }, ticks: { stepSize: 1 } },
+                    x: { title: { display: true, text: '市值区间 (点)' }, ticks: { maxRotation: 45, autoSkip: true } }
                 }
             }
         });
