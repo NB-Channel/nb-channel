@@ -747,71 +747,75 @@
     }
 
     async function fetchStockData(isAuto = false) {
-        if (isLoading) return;
-        isLoading = true;
-        const refreshBtn = document.getElementById('refreshDataBtn');
-        if (refreshBtn) refreshBtn.classList.add('loading');
-        updateTimestamp('loading');
-        const statsDiv = document.getElementById('statsPanel');
-        try {
-            const url = PROXY_URL + encodeURIComponent(API_URL);
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const json = await res.json();
-            if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
+    if (isLoading) return;
+    isLoading = true;
+    const refreshBtn = document.getElementById('refreshDataBtn');
+    if (refreshBtn) refreshBtn.classList.add('loading');
+    updateTimestamp('loading');
+    const statsDiv = document.getElementById('statsPanel');
+    try {
+        const url = PROXY_URL + encodeURIComponent(API_URL);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (json.code !== 200 || !json.names || !json.values) throw new Error('数据格式异常');
 
-            const newNames = json.names;
-            const newValues = json.values.map(v => Number(v));
-            const newTotal = newValues.reduce((a,b)=>a+b,0);
-            let namesChanged = false;
-            if (rawData.names.length !== newNames.length) namesChanged = true;
-            else for (let i = 0; i < rawData.names.length; i++) if (rawData.names[i] !== newNames[i]) { namesChanged = true; break; }
-            
-            rawData.names = newNames;
-            rawData.values = newValues;
-            totalStocks = rawData.names.length;
-            const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
-            combined.sort((a, b) => b.value - a.value);
-            sortedCombined = combined;
-            
-            await saveFullSnapshot(newTotal);
-            await loadFullHistory();      // 从数据库加载最新30条（会自动调用图表更新）
-            await loadPreviousSnapshot(); // 获取上次快照
-            
-            updateTimestamp('success');
-            updateStatsPanel(newTotal);
-            updateDataTable();
-            updateMiniPieChart();
-            
-            if (namesChanged) {
-                isFullViewMode = false;
-                currentStartIndex = 0;
-                updateSliderUI();
-                await buildChartWithFade(currentChartType);
-            } else {
-                if (currentChart) {
-                    const windowData = getWindowData();
-                    currentChart.data.labels = windowData.names;
-                    currentChart.data.datasets[0].data = windowData.values;
-                    if (currentChartType === 'bar' || currentChartType === 'pie') {
-                        const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
-                        currentChart.data.datasets[0].backgroundColor = barColors;
-                    }
-                    currentChart.update({ duration: 300 });
+        const newNames = json.names;
+        const newValues = json.values.map(v => Number(v));
+        const newTotal = newValues.reduce((a,b)=>a+b,0);
+        let namesChanged = false;
+        if (rawData.names.length !== newNames.length) namesChanged = true;
+        else for (let i = 0; i < rawData.names.length; i++) if (rawData.names[i] !== newNames[i]) { namesChanged = true; break; }
+        
+        // ✅ 1. 先获取上一次的快照（用于涨跌对比）
+        await loadPreviousSnapshot();
+        
+        // 更新 rawData
+        rawData.names = newNames;
+        rawData.values = newValues;
+        totalStocks = rawData.names.length;
+        const combined = rawData.names.map((name, idx) => ({ name, value: rawData.values[idx] }));
+        combined.sort((a, b) => b.value - a.value);
+        sortedCombined = combined;
+        
+        // 2. 保存新快照到数据库（会删除旧记录并插入新记录）
+        await saveFullSnapshot(newTotal);
+        await loadFullHistory();      // 从数据库加载最新30条（会自动调用图表更新）
+        
+        updateTimestamp('success');
+        updateStatsPanel(newTotal);
+        updateDataTable();
+        updateMiniPieChart();
+        
+        if (namesChanged) {
+            isFullViewMode = false;
+            currentStartIndex = 0;
+            updateSliderUI();
+            await buildChartWithFade(currentChartType);
+        } else {
+            if (currentChart) {
+                const windowData = getWindowData();
+                currentChart.data.labels = windowData.names;
+                currentChart.data.datasets[0].data = windowData.values;
+                if (currentChartType === 'bar' || currentChartType === 'pie') {
+                    const barColors = windowData.values.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
+                    currentChart.data.datasets[0].backgroundColor = barColors;
                 }
-                updateSliderUI();
+                currentChart.update({ duration: 300 });
             }
-            resetCountdown();
-        } catch (err) {
-            console.error(err);
-            updateTimestamp('error');
-            statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
-            if (currentChart) { currentChart.destroy(); currentChart = null; }
-        } finally {
-            isLoading = false;
-            if (refreshBtn) refreshBtn.classList.remove('loading');
+            updateSliderUI();
         }
+        resetCountdown();
+    } catch (err) {
+        console.error(err);
+        updateTimestamp('error');
+        statsDiv.innerHTML = `<div class="error-msg">❌ 获取失败: ${err.message}<br>将自动重试</div>`;
+        if (currentChart) { currentChart.destroy(); currentChart = null; }
+    } finally {
+        isLoading = false;
+        if (refreshBtn) refreshBtn.classList.remove('loading');
     }
+}
 
     function setChartType(type) {
         if (!['bar','line','pie'].includes(type) || type === currentChartType) return;
