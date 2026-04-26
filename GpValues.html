@@ -523,17 +523,24 @@
         setTimeout(() => container.classList.remove('fade-in'), 150);
     }
 
-    // 保存数据到数据库（由触发器自动维护最多30条）
     async function saveFullSnapshot(totalValue) {
-        const snapshotData = { names: rawData.names, values: rawData.values };
-        await supabaseClient.from('stock_history_full').insert({
-            recorded_at: new Date(),
-            total_value: totalValue,
-            snapshot: snapshotData
-        });
-        await supabaseClient.from('stock_history').insert({ total_value: totalValue });
-    }
-
+    const snapshotData = { names: rawData.names, values: rawData.values };
+    // 1. 保存到完整历史表（用于个股/总市值历史走势）
+    await supabaseClient.from('stock_history_full').insert({
+        recorded_at: new Date(),
+        total_value: totalValue,
+        snapshot: snapshotData
+    });
+    // 2. 保存到总市值历史表（兼容旧逻辑）
+    await supabaseClient.from('stock_history').insert({ total_value: totalValue });
+    // 3. 更新最新快照表（用于涨跌对比）：先清空再插入最新数据
+    await supabaseClient.from('stock_latest').delete().neq('id', 0);
+    await supabaseClient.from('stock_latest').insert({
+        created_at: new Date(),
+        total_value: totalValue,
+        snapshot_data: snapshotData
+    });
+}
     // 从数据库加载最新的30条记录（时间升序）
     async function loadFullHistory() {
         const { data, error } = await supabaseClient
