@@ -545,16 +545,15 @@
 
     // ---------- 直方图逻辑 ----------
    // 固定区间：0-2000, 2001-4000, 4001-6000, ... 步长2000
-function computeHistogram(values, step = 2000) {
-    if (!values.length) return { labels: [], counts: [] };
+function computeHistogram(values, step = 10000) {
+    if (!values || values.length === 0) return { labels: [], counts: [] };
     const maxVal = Math.max(...values);
-    // 计算需要的区间数（从0开始，向上取整）
-    const maxBinEnd = Math.ceil(maxVal / step) * step;
-    const binCount = maxBinEnd / step;
+    // 需要的区间数量（从0开始）
+    const binCount = Math.ceil(maxVal / step);
     const labels = [];
     const counts = new Array(binCount).fill(0);
     for (let i = 0; i < binCount; i++) {
-        const start = i * step;
+        const start = i * step + (i === 0 ? 0 : 1);
         const end = (i + 1) * step;
         labels.push(`${start}～${end}`);
     }
