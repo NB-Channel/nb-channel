@@ -226,7 +226,7 @@
             .search-box input { width: 100%; }
             .chart-controls { width: 100%; justify-content: space-between; }
         } 
-.histogram-container {
+        .histogram-container {
             margin-top: 20px;
             background: var(--card-bg);
             border-radius: 24px;
@@ -329,7 +329,7 @@
             <canvas id="totalHistoryChart" width="1100" height="200"></canvas>
         </div>
 
-        <!-- 新增：市值分布直方图 -->
+        <!-- 市值分布直方图 -->
         <div class="histogram-container">
             <div class="histogram-title">📊 市值分布直方图</div>
             <canvas id="histogramChart" width="1100" height="250"></canvas>
@@ -349,30 +349,29 @@
                     <tr><th>股票名称</th><th>市值</th><th>与旧数据相比涨跌百分比</th></tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="3">加载中...</td></tr>
+                    <tr><td colspan="3">加载中...<\/td><\/tr>
                 </tbody>
-            </table>
+            <\/table>
             <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
-        </div>
+        <\/div>
 
         <div class="stats" id="statsPanel">
-            <div>📡 正在从服务器获取股票估值……</div>
-        </div>
-    </div>
-</div>
+            <div>📡 正在从服务器获取股票估值……<\/div>
+        <\/div>
+    <\/div>
+<\/div>
 
 <div class="site-stats">
-    <div class="stats-container" id="siteStats"></div>
-    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期可调<br></p>
-</div>
+    <div class="stats-container" id="siteStats"><\/div>
+    <p style="margin-top: 12px;">数据来源：<a href="https://orgent.pythonanywhere.com" target="_blank" style="color: var(--status-border);">Orgent网站</a> API | 通过 Deno Deploy 专属代理 | 自动刷新周期可调<br><\/p>
+<\/div>
 
 <div class="fixed-buttons">
     <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
     <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
-</div>
+<\/div>
 
 <script>
-    // 以下为完整 JavaScript，已在原版基础上添加直方图相关逻辑，其余部分完全一致
     if (typeof supabase === 'undefined' && typeof window.supabase !== 'undefined') { var supabase = window.supabase; }
     if (typeof supabase === 'undefined') {
         document.body.innerHTML = '<div style="color:red; padding:20px; text-align:center;">❌ 无法同步 Supabase 数据，请检查网络后刷新页面</div>';
@@ -388,7 +387,7 @@
     let miniPieChart = null;
     let stockHistoryChart = null;
     let totalHistoryChart = null;
-    let histogramChart = null;          // 新增直方图实例
+    let histogramChart = null;
     let currentChartType = 'bar';
     let rawData = { names: [], values: [] };
     let sortedCombined = [];
@@ -543,70 +542,30 @@
         setTimeout(() => container.classList.remove('fade-in'), 150);
     }
 
-    // ---------- 直方图逻辑 ----------
- // 固定区间：0-10000, 10001-20000, 20001-30000 ... 步长10000
-function computeHistogram(values, step = 10000) {
-    if (!values || values.length === 0) return { labels: [], counts: [] };
-    const maxVal = Math.max(...values);
-    const binCount = Math.ceil(maxVal / step);
-    const labels = [];
-    const counts = new Array(binCount).fill(0);
-    for (let i = 0; i < binCount; i++) {
-        const start = i === 0 ? 0 : (i * step + 1);
-        const end = (i + 1) * step;
-        labels.push(`${start}～${end}`);
+    // ==================== 直方图（固定步长10000） ====================
+    function computeHistogram(values, step = 10000) {
+        if (!values || values.length === 0) return { labels: [], counts: [] };
+        const maxVal = Math.max(...values);
+        const binCount = Math.ceil(maxVal / step);
+        const labels = [];
+        const counts = new Array(binCount).fill(0);
+        for (let i = 0; i < binCount; i++) {
+            const start = i === 0 ? 0 : (i * step + 1);
+            const end = (i + 1) * step;
+            labels.push(`${start}～${end}`);
+        }
+        for (const val of values) {
+            let binIndex = Math.floor(val / step);
+            if (binIndex >= binCount) binIndex = binCount - 1;
+            counts[binIndex]++;
+        }
+        return { labels, counts };
     }
-    for (const val of values) {
-        let binIndex = Math.floor(val / step);
-        if (binIndex >= binCount) binIndex = binCount - 1;
-        counts[binIndex]++;
-    }
-    return { labels, counts };
-}
-
-// 更新直方图（增量更新，不重建实例）
-function updateHistogramChart() {
-    if (!rawData.values.length) return;
-    const { labels, counts } = computeHistogram(rawData.values, 10000);
-    const ctx = document.getElementById('histogramChart').getContext('2d');
-    if (histogramChart) {
-        histogramChart.data.labels = labels;
-        histogramChart.data.datasets[0].data = counts;
-        histogramChart.update();
-    } else {
-        histogramChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '股票数量',
-                    data: counts,
-                    backgroundColor: 'rgba(0,161,214,0.6)',
-                    borderColor: '#00a1d6',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} 只` } },
-                    legend: { position: 'top' }
-                },
-                scales: {
-                    y: { beginAtZero: true, title: { display: true, text: '股票数量 (只)' }, ticks: { stepSize: 1 } },
-                    x: { title: { display: true, text: '市值区间 (点)' }, ticks: { maxRotation: 45, autoSkip: true } }
-                }
-            }
-        });
-    }
-}
 
     function updateHistogramChart() {
         if (!rawData.values.length) return;
-        const { labels, counts } = computeHistogram(rawData.values, 10);
+        const { labels, counts } = computeHistogram(rawData.values, 10000);
         const ctx = document.getElementById('histogramChart').getContext('2d');
-        const colors = getChartColors();
         if (histogramChart) {
             histogramChart.data.labels = labels;
             histogramChart.data.datasets[0].data = counts;
@@ -640,7 +599,7 @@ function updateHistogramChart() {
         }
     }
 
-    // 其余界面函数（保留原有，未改动）
+    // ---------- 历史图表逻辑（与之前一致） ----------
     async function saveFullSnapshot(totalValue) {
         const snapshotData = { names: rawData.names, values: rawData.values };
         await supabaseClient.from('stock_history_full').insert({
@@ -782,7 +741,7 @@ function updateHistogramChart() {
     }
     function updateDataTable() {
         const tbody = document.getElementById('tableBody');
-        if (!sortedCombined.length) { tbody.innerHTML = '<tr><td colspan="3">暂无数据</td></tr>'; return; }
+        if (!sortedCombined.length) { tbody.innerHTML = '<td><td colspan="3">暂无数据</td></tr>'; return; }
         let filtered = sortedCombined;
         if (searchKeyword.trim() !== '') {
             const kw = searchKeyword.trim().toLowerCase();
@@ -797,7 +756,11 @@ function updateHistogramChart() {
                 if (idx !== -1) prevVal = previousSnapshot.values[idx];
             }
             const changeHtml = getChangeHtml(item.value, prevVal);
-            html += `<tr><td>${escapeHtml(item.name)}</td><td>${formatValue(item.value)}</td><td>${changeHtml}</td></tr>`;
+            html += `<tr>
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>${formatValue(item.value)}</td>
+                        <td>${changeHtml}</td>
+                      </tr>`;
         }
         tbody.innerHTML = html;
         const toggleBtn = document.getElementById('toggleTableBtn');
