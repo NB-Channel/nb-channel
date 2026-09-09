@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -1160,11 +1160,14 @@
                 .neq('id', currentUser.id)
                 .maybeSingle();
             if (existing) throw new Error('用户名已被占用');
-            const { error: updateError } = await supabaseClient
-                .from('profiles')
-                .update({ username: newUsername })
-                .eq('id', currentUser.id);
-            if (updateError) throw updateError;
+            // 走 RPC 改名(匿名不再允许直写 profiles)
+            const { data: up, error: upErr } = await supabaseClient.rpc('update_username', {
+                user_id: currentUser.id,
+                new_username: newUsername,
+                old_password: oldPassword
+            });
+            if (upErr) throw upErr;
+            if (!up || !up.success) throw new Error((up && up.message) || '修改失败');
             const storedUser = JSON.parse(localStorage.getItem('nb_user'));
             storedUser.username = newUsername;
             localStorage.setItem('nb_user', JSON.stringify(storedUser));
