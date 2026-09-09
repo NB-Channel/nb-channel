@@ -1440,8 +1440,11 @@ import json
 import urllib.request
 
 # ==================== 邮件配置 ====================
-# provider: 'brevo'(推荐) / 'resend' / 'smtp'(仅当部署环境允许外连 SMTP 端口)
-EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'brevo')
+# provider: 'scf'(腾讯云函数SMTP,推荐) / 'brevo' / 'resend' / 'smtp'
+EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'scf')
+# 腾讯云 SCF 通道(provider=scf 时用)
+SCF_URL = os.environ.get('SCF_URL', '')            # 函数 URL(WSGI 环境变量)
+SCF_KEY = os.environ.get('SCF_KEY', '')            # 与函数 SEND_KEY 一致
 # Brevo/Resend 的 API Key(放 WSGI 环境变量 EMAIL_API_KEY,勿提交仓库)
 EMAIL_API_KEY = os.environ.get('EMAIL_API_KEY', '')
 EMAIL_ADDR = os.environ.get('EMAIL_FROM', 'nbchannel@163.com')   # 发件显示邮箱(brevo 后台建议验证)
@@ -1492,6 +1495,17 @@ def _send_otp_email(to_addr, code):
             '—— NB频道(NB搞事局)').format(code=code, mins=EMAIL_CODE_MINUTES)
     subject = 'NB频道 邮箱验证码'
     try:
+        if EMAIL_PROVIDER == 'scf':
+            if not SCF_URL:
+                return '未配置 SCF_URL(请在 WSGI 环境变量中设置)'
+            if not SCF_KEY:
+                return '未配置 SCF_KEY(请在 WSGI 环境变量中设置)'
+            ok, err = _http_json(
+                SCF_URL,
+                {'to': to_addr, 'subject': subject, 'text': text},
+                {'Content-Type': 'application/json',
+                 'x-send-key': SCF_KEY})
+            return None if ok else ('邮件发送失败: ' + err)
         if EMAIL_PROVIDER == 'brevo':
             if not EMAIL_API_KEY:
                 return '未配置 EMAIL_API_KEY(请在 WSGI 环境变量中设置)'
