@@ -1552,6 +1552,10 @@ def _send_otp_email(to_addr, code):
 
 @app.route('/api/send-code', methods=['POST'])
 def api_send_code():
+    """(已迁移)验证码发信已改由腾讯云 SCF 直连完成,本端点不再发信。
+    前端请直连 SCF 函数 URL(见前端配置 SCF_MAIL_URL)。"""
+    return jsonify({'ok': False, 'message': '验证码通道已迁移,请刷新页面使用新版入口'})
+    # ---- 以下旧逻辑保留注释,不再执行 ----
     """注册/登录/绑定邮箱验证码。PA 生成码 -> DB 存哈希 -> SMTP 发送。"""
     try:
         body = request.get_json(force=True, silent=True) or {}

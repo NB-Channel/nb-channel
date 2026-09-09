@@ -710,6 +710,17 @@ html.dark .bk-toast.err { background: #991b1b; }
 .lg-back { text-align: center; margin-top: 18px; }
 .lg-back a { color: var(--ink-faint); text-decoration: none; font-size: .86rem; }
 .lg-back a:hover { color: var(--brand); }
+.lg-hint {
+    font-size: .85rem; color: var(--ink-soft); line-height: 1.8;
+    background: rgba(59,130,246,.07); border: 1px dashed rgba(59,130,246,.3);
+    border-radius: 12px; padding: 9px 14px; margin: 4px 0 12px;
+}
+.lg-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 4px; }
+.lg-btn.mini {
+    width: auto; padding: 11px 22px; font-size: .9rem; letter-spacing: 1px;
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
+}
+.lg-btn.mini:disabled { opacity: .6; cursor: wait; }
 
 </style>
 </head>
@@ -777,33 +788,69 @@ html.dark .bk-toast.err { background: #991b1b; }
             <button type="button" class="lg-opt" id="registerTab">✨ 注册</button>
         </div>
 
-        <!-- 登录表单 -->
+        <!-- 登录表单(两步:账号密码 -> 邮箱验证码) -->
         <form id="loginForm" autocomplete="off">
             <div class="lg-field-wrap">
                 <span class="lg-ic">👤</span>
-                <input type="text" id="loginUsername" class="lg-field" placeholder="用户名" maxlength="20">
+                <input type="text" id="loginUsername" class="lg-field" placeholder="用户名" maxlength="20" autocomplete="username">
             </div>
-            <div class="lg-field-wrap">
+            <div class="lg-field-wrap" id="pwdWrap">
                 <span class="lg-ic">🔒</span>
-                <input type="password" id="loginPassword" class="lg-field" placeholder="密码" maxlength="40">
+                <input type="password" id="loginPassword" class="lg-field" placeholder="密码" maxlength="40" autocomplete="current-password">
+            </div>
+            <div class="lg-hint" id="loginHint" style="display:none;"></div>
+            <div class="lg-field-wrap" id="codeWrap" style="display:none;">
+                <span class="lg-ic">📧</span>
+                <input type="text" id="loginCode" class="lg-field" placeholder="6位邮箱验证码" maxlength="6" inputmode="numeric">
             </div>
             <div id="loginError" class="lg-err"></div>
             <button type="button" class="lg-btn" id="doLogin">登录</button>
+            <div class="lg-back" id="loginBack2" style="display:none;"><a href="javascript:void(0)" id="backToPwd">← 重新输入账号密码</a></div>
         </form>
 
-        <!-- 注册表单 -->
+        <!-- 绑定邮箱面板(老账号首次登录) -->
+        <div id="bindPanel" style="display:none;">
+            <div class="lg-hint">该账号还未绑定邮箱,请先绑定:绑定后每次登录需邮箱验证码</div>
+            <div class="lg-field-wrap">
+                <span class="lg-ic">📧</span>
+                <input type="text" id="bindEmail" class="lg-field" placeholder="你的邮箱(用于登录验证)" maxlength="80">
+            </div>
+            <button type="button" class="lg-btn mini" id="bindSend">发送绑定验证码</button>
+            <div class="lg-hint" id="bindHint" style="display:none;"></div>
+            <div class="lg-field-wrap" id="bindCodeWrap" style="display:none;">
+                <span class="lg-ic">🔢</span>
+                <input type="text" id="bindCode" class="lg-field" placeholder="6位验证码" maxlength="6" inputmode="numeric">
+            </div>
+            <div id="bindError" class="lg-err"></div>
+            <button type="button" class="lg-btn" id="doBind" style="display:none;">完成绑定</button>
+            <div class="lg-back"><a href="javascript:void(0)" id="backFromBind">← 返回登录</a></div>
+        </div>
+
+        <!-- 注册表单(邮箱 -> 验证码 -> 用户名密码) -->
         <form id="registerForm" style="display:none;" autocomplete="off">
+            <div class="lg-field-wrap">
+                <span class="lg-ic">📧</span>
+                <input type="text" id="regEmail" class="lg-field" placeholder="你的邮箱(用于登录验证)" maxlength="80" autocomplete="email">
+            </div>
+            <div class="lg-row">
+                <button type="button" class="lg-btn mini" id="regSend">发送验证码</button>
+                <span class="lg-hint" id="regSendHint" style="display:none;"></span>
+            </div>
+            <div class="lg-field-wrap" id="regCodeWrap" style="display:none;">
+                <span class="lg-ic">🔢</span>
+                <input type="text" id="regCode" class="lg-field" placeholder="6位邮箱验证码" maxlength="6" inputmode="numeric">
+            </div>
             <div class="lg-field-wrap">
                 <span class="lg-ic">👤</span>
                 <input type="text" id="regUsername" class="lg-field" placeholder="用户名(1-20字,中文/字母/数字)" maxlength="20">
             </div>
             <div class="lg-field-wrap">
                 <span class="lg-ic">🔒</span>
-                <input type="password" id="regPassword" class="lg-field" placeholder="密码(至少4位)" maxlength="40">
+                <input type="password" id="regPassword" class="lg-field" placeholder="密码(至少4位)" maxlength="40" autocomplete="new-password">
             </div>
             <div class="lg-field-wrap">
                 <span class="lg-ic">🔒</span>
-                <input type="password" id="regPassword2" class="lg-field" placeholder="确认密码" maxlength="40">
+                <input type="password" id="regPassword2" class="lg-field" placeholder="确认密码" maxlength="40" autocomplete="new-password">
             </div>
             <div id="regError" class="lg-err"></div>
             <button type="button" class="lg-btn" id="doRegister">注册并登录</button>
@@ -898,11 +945,11 @@ html.dark .bk-toast.err { background: #991b1b; }
         if (storedU && storedU.id) {
             if (abEl) {
                 abEl.textContent = '登出账号';
-                abEl.onclick = function () { localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session'); location.reload(); };
+                abEl.onclick = function () { localStorage.removeItem('nb_user'); location.reload(); };
             }
             if (pbEl) {
                 pbEl.textContent = '👤 ' + (storedU.username || storedU.name || '个人中心');
-                pbEl.href = 'profile-Beta.html';
+                pbEl.href = '/profile.html';
             }
         } else {
             var loginHref = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
@@ -1010,7 +1057,7 @@ html.dark .bk-toast.err { background: #991b1b; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
-    // ===== 登录 / 注册(与经典版一致;回跳白名单改为同源/相对) =====
+    // ===== 登录/注册(邮箱验证码;发信走腾讯云 SCF,前端直连) =====
     var supabaseClient = null;
     try {
         supabaseClient = supabase.createClient(
@@ -1018,24 +1065,29 @@ html.dark .bk-toast.err { background: #991b1b; }
             'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
         );
     } catch (e) { supabaseClient = null; }
+    var SCF_MAIL_URL = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
 
     function safeRedirect(raw) {
         if (!raw) return null;
         if (raw.indexOf('\\') !== -1 || /[\r\n]/.test(raw)) return null;
         try {
-            var u = new URL(raw, window.location.href);   // 以当前页为基准解析相对路径
+            var u = new URL(raw, window.location.href);
             if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
             if (u.origin !== window.location.origin) return null;
             return u.pathname + u.search + u.hash;
         } catch (e) { return null; }
     }
     var redirectUrl = safeRedirect(new URLSearchParams(window.location.search).get('redirect'));
+    var bindUser = null;   // 绑定中的 {username,password}
+    var loginStep = 'pwd';
+    var sendTimer = null;
 
     function setMode(reg) {
         document.getElementById('loginTab').classList.toggle('on', !reg);
         document.getElementById('registerTab').classList.toggle('on', reg);
         document.getElementById('loginForm').style.display = reg ? 'none' : 'block';
         document.getElementById('registerForm').style.display = reg ? 'block' : 'none';
+        document.getElementById('bindPanel').style.display = 'none';
         document.getElementById('lgTitle').textContent = reg ? '注册新账号' : '登录账号';
     }
     document.getElementById('loginTab').addEventListener('click', function () { setMode(false); });
@@ -1043,88 +1095,229 @@ html.dark .bk-toast.err { background: #991b1b; }
     var qp = new URLSearchParams(window.location.search);
     if (qp.get('register') === '1') setMode(true);
 
-    async function getClientIP() {
-        var services = ['https://icanhazip.com', 'https://api.ipify.org?format=text'];
-        for (var i = 0; i < services.length; i++) {
-            try {
-                var resp = await fetch(services[i]);
-                if (resp.ok) return (await resp.text()).trim();
-            } catch (e) { console.warn(services[i], e); }
-        }
-        throw new Error('无法获取IP地址');
+    function errBox(id, msg) { document.getElementById(id).innerText = msg || ''; }
+
+    function sendCodeApi(payload) {
+        return fetch(SCF_MAIL_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(function (r) {
+            return r.json().catch(function () { return { ok: false, message: '响应解析失败(' + r.status + ')' }; });
+        }).catch(function (e) { return { ok: false, message: '网络错误:' + (e && e.message) || e }; });
     }
 
-    function onLoginSuccess(user) {
-        localStorage.setItem('nb_user', JSON.stringify({ id: user.id, username: user.username }));
-        if (redirectUrl) { window.location.href = redirectUrl; }
-        else { window.location.href = 'stock-Beta.html'; }
-    }
-
-    async function doLogin() {
-        var btn = document.getElementById('doLogin');
+    // ===== 登录 =====
+    function doLogin() {
         var username = document.getElementById('loginUsername').value.trim();
         var password = document.getElementById('loginPassword').value;
         var errorDiv = document.getElementById('loginError');
+        var btn = document.getElementById('doLogin');
         errorDiv.innerText = '';
-        if (!username || !password) { errorDiv.innerText = '请输入用户名和密码'; return; }
-        btn.disabled = true; btn.textContent = '登录中…';
-        try {
-            var lg = await supabaseClient.rpc('login_user2', { input_username: username, input_password: password });
-            if (lg.error) throw new Error(lg.error.message);
-            if (!lg.data || !lg.data.ok) throw new Error((lg.data && lg.data.message) || '用户名或密码错误');
-            try { localStorage.setItem('nb_session', lg.data.token); } catch (e) {}
-            var prof = await supabaseClient.from('profiles').select('id, username, is_banned, banned_reason').eq('id', lg.data.id).single();
-            if (prof.error || !prof.data) throw new Error('用户资料异常');
-            if (prof.data.is_banned) throw new Error('账号已被封禁,有任何问题请联系管理员');
-            onLoginSuccess({ id: prof.data.id, username: prof.data.username });
-        } catch (err) {
-            errorDiv.innerText = err.message;
-            btn.disabled = false; btn.textContent = '登录';
+        if (loginStep === 'pwd') {
+            if (!username || !password) { errorDiv.innerText = '请输入用户名和密码'; return; }
+            btn.disabled = true; btn.textContent = '发送中…';
+            sendCodeApi({ kind: 'login', username: username, password: password }).then(function (r) {
+                btn.disabled = false;
+                if (r && r.need_bind) {
+                    bindUser = { username: username, password: password };
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('bindPanel').style.display = 'block';
+                    errBox('bindError', '');
+                    return;
+                }
+                if (!r || !r.ok) { errorDiv.innerText = (r && r.message) || '发送失败'; btn.textContent = '登录'; return; }
+                loginStep = 'code';
+                document.getElementById('loginHint').style.display = 'block';
+                document.getElementById('loginHint').textContent = '验证码已发送至 ' + (r.masked || '你的邮箱') + ',10 分钟内有效';
+                document.getElementById('codeWrap').style.display = 'block';
+                document.getElementById('loginCode').focus();
+                document.getElementById('loginBack2').style.display = 'block';
+                btn.textContent = '✅ 验证并登录';
+            });
+            return;
         }
+        // 输码完成登录
+        var code = document.getElementById('loginCode').value.trim();
+        if (!/^\d{6}$/.test(code)) { errorDiv.innerText = '请输入 6 位数字验证码'; return; }
+        btn.disabled = true; btn.textContent = '验证中…';
+        supabaseClient.rpc('login_finish', { p_username: username, p_code: code })
+            .then(function (res) {
+                btn.disabled = false;
+                if (res.error || !res.data || !res.data.ok) {
+                    errorDiv.innerText = (res.error && res.error.message) || (res.data && res.data.message) || '验证失败';
+                    btn.textContent = '✅ 验证并登录';
+                    return;
+                }
+                try { localStorage.setItem('nb_session', res.data.token); } catch (e) {}
+                var prof = null;
+                return supabaseClient.from('profiles').select('id, username, is_banned, banned_reason').eq('id', res.data.id).single()
+                    .then(function (p) { prof = p.data; })
+                    .catch(function () { prof = null; })
+                    .then(function () {
+                        if (prof && prof.is_banned) { errorDiv.innerText = '账号已被封禁,请联系管理员'; btn.textContent = '✅ 验证并登录'; return; }
+                        onLoginSuccess({ id: res.data.id, username: username });
+                    });
+            })
+            .catch(function (e) { btn.disabled = false; errorDiv.innerText = e.message || '登录失败'; btn.textContent = '✅ 验证并登录'; });
     }
+    function backToPwd() {
+        loginStep = 'pwd';
+        errBox('loginError', '');
+        document.getElementById('loginHint').style.display = 'none';
+        document.getElementById('codeWrap').style.display = 'none';
+        document.getElementById('loginBack2').style.display = 'none';
+        var btn = document.getElementById('doLogin');
+        btn.textContent = '登录';
+    }
+    document.getElementById('backToPwd').addEventListener('click', backToPwd);
 
-    async function doRegister() {
+    // ===== 老账号绑定邮箱 =====
+    function doBindSend() {
+        if (!bindUser) return;
+        var email = document.getElementById('bindEmail').value.trim();
+        errBox('bindError', '');
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errBox('bindError', '邮箱格式不正确'); return; }
+        var btn = document.getElementById('bindSend');
+        btn.disabled = true; btn.textContent = '发送中…';
+        sendCodeApi({ kind: 'bind', email: email, username: bindUser.username, password: bindUser.password }).then(function (r) {
+            btn.disabled = false; btn.textContent = '重新发送';
+            if (!r || !r.ok) { errBox('bindError', (r && r.message) || '发送失败'); return; }
+            document.getElementById('bindHint').style.display = 'block';
+            document.getElementById('bindHint').textContent = '验证码已发送至 ' + (r.masked || email);
+            document.getElementById('bindCodeWrap').style.display = 'block';
+            document.getElementById('doBind').style.display = 'block';
+            document.getElementById('bindCode').focus();
+        });
+    }
+    function doBind() {
+        if (!bindUser) return;
+        var email = document.getElementById('bindEmail').value.trim();
+        var code = document.getElementById('bindCode').value.trim();
+        var btn = document.getElementById('doBind');
+        errBox('bindError', '');
+        if (!/^\d{6}$/.test(code)) { errBox('bindError', '请输入 6 位数字验证码'); return; }
+        btn.disabled = true; btn.textContent = '绑定中…';
+        supabaseClient.rpc('bind_email_finish', {
+            p_username: bindUser.username, p_password: bindUser.password,
+            p_new_email: email, p_code: code
+        }).then(function (res) {
+            btn.disabled = false;
+            if (res.error || !res.data || !res.data.ok) {
+                errBox('bindError', (res.error && res.error.message) || (res.data && res.data.message) || '绑定失败');
+                btn.textContent = '完成绑定';
+                return;
+            }
+            // 绑定成功 -> 回到登录表单并自动发登录验证码
+            document.getElementById('bindPanel').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            backToPwd();
+            errBox('loginError', '');
+            var btnLogin = document.getElementById('doLogin');
+            btnLogin.disabled = true; btnLogin.textContent = '发送中…';
+            sendCodeApi({ kind: 'login', username: bindUser.username, password: bindUser.password }).then(function (r2) {
+                btnLogin.disabled = false;
+                if (!r2 || !r2.ok) { errBox('loginError', '绑定成功,但登录码发送失败:' + ((r2 && r2.message) || '')); btnLogin.textContent = '登录'; return; }
+                loginStep = 'code';
+                document.getElementById('loginHint').style.display = 'block';
+                document.getElementById('loginHint').textContent = '绑定成功!登录验证码已发送至 ' + (r2.masked || '你的邮箱');
+                document.getElementById('codeWrap').style.display = 'block';
+                document.getElementById('loginBack2').style.display = 'block';
+                document.getElementById('loginCode').focus();
+                btnLogin.textContent = '✅ 验证并登录';
+            });
+        }).catch(function (e) { btn.disabled = false; errBox('bindError', e.message || '绑定失败'); btn.textContent = '完成绑定'; });
+    }
+    document.getElementById('bindSend').addEventListener('click', doBindSend);
+    document.getElementById('doBind').addEventListener('click', doBind);
+    document.getElementById('backFromBind').addEventListener('click', function () {
+        bindUser = null;
+        document.getElementById('bindPanel').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'block';
+        backToPwd();
+    });
+
+    // ===== 注册(邮箱 -> 验证码) =====
+    function doRegSend() {
+        var email = document.getElementById('regEmail').value.trim();
+        errBox('regError', '');
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errBox('regError', '邮箱格式不正确'); return; }
+        var btn = document.getElementById('regSend');
+        btn.disabled = true; btn.textContent = '发送中…';
+        sendCodeApi({ kind: 'register', email: email }).then(function (r) {
+            if (!r || !r.ok) {
+                btn.disabled = false; btn.textContent = '发送验证码';
+                errBox('regError', (r && r.message) || '发送失败');
+                return;
+            }
+            document.getElementById('regCodeWrap').style.display = 'block';
+            document.getElementById('regSendHint').style.display = 'block';
+            document.getElementById('regSendHint').textContent = '验证码已发送至 ' + (r.masked || email);
+            var left = 60;
+            btn.textContent = '重新发送(' + left + 's)';
+            clearInterval(sendTimer);
+            sendTimer = setInterval(function () {
+                left--;
+                if (left <= 0) { clearInterval(sendTimer); btn.disabled = false; btn.textContent = '重新发送'; }
+                else btn.textContent = '重新发送(' + left + 's)';
+            }, 1000);
+            document.getElementById('regCode').focus();
+        });
+    }
+    function doRegister() {
         var btn = document.getElementById('doRegister');
         var rawName = document.getElementById('regUsername').value.trim();
         var username = rawName.replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '').trim();
         var password = document.getElementById('regPassword').value;
         var password2 = document.getElementById('regPassword2').value;
+        var email = document.getElementById('regEmail').value.trim();
+        var code = document.getElementById('regCode').value.trim();
         var errorDiv = document.getElementById('regError');
         errorDiv.innerText = '';
         if (!/^[\u4e00-\u9fa5a-zA-Z0-9]+$/.test(username)) { errorDiv.innerText = '用户名只能包含中文、字母和数字'; return; }
         if (password !== password2) { errorDiv.innerText = '两次输入的密码不一致'; return; }
         if (password.length < 4) { errorDiv.innerText = '密码长度至少4位'; return; }
+        if (!email || !/^\d{6}$/.test(code)) { errorDiv.innerText = '请先获取邮箱验证码并填写 6 位数字'; return; }
         btn.disabled = true; btn.textContent = '注册中…';
-        try {
-            var ip;
-            try { ip = await getClientIP(); } catch (e) { throw new Error('无法验证注册限制'); }
-            var canReg = await supabaseClient.rpc('can_register', { ip: ip });
-            if (canReg.error || !canReg.data) throw new Error('您的IP今日注册次数已达上限(3次)');
-            var reg = await supabaseClient.rpc('register_user', { input_username: username, input_password: password });
-            if (reg.error) throw new Error(reg.error.message);
-            if (!reg.data) throw new Error('用户名已存在');
-            await supabaseClient.rpc('record_registration', { ip: ip });
-            var lg2 = await supabaseClient.rpc('login_user2', { input_username: username, input_password: password });
-            if (!lg2.data || !lg2.data.ok) throw new Error('注册成功但自动登录失败,请手动登录');
-            try { localStorage.setItem('nb_session', lg2.data.token); } catch (e) {}
-            var prof = await supabaseClient.from('profiles').select('id, username, is_banned').eq('id', lg2.data.id).single();
-            onLoginSuccess({ id: prof.data.id, username: prof.data.username });
-        } catch (err) {
-            errorDiv.innerText = err.message;
-            btn.disabled = false; btn.textContent = '注册并登录';
-        }
+        supabaseClient.rpc('register_finish', {
+            p_username: username, p_password: password, p_email: email, p_code: code
+        }).then(function (res) {
+            if (res.error || !res.data || !res.data.ok) {
+                errorDiv.innerText = (res.error && res.error.message) || (res.data && res.data.message) || '注册失败';
+                btn.disabled = false; btn.textContent = '注册并登录';
+                return;
+            }
+            // 注册成功,自动登录(签发会话令牌)
+            return supabaseClient.rpc('login_user2', { input_username: username, input_password: password }).then(function (lg) {
+                if (!lg.data || !lg.data.ok) { errorDiv.innerText = '注册成功但自动登录失败,请手动登录'; btn.disabled = false; btn.textContent = '注册并登录'; return; }
+                try { localStorage.setItem('nb_session', lg.data.token); } catch (e) {}
+                onLoginSuccess({ id: lg.data.id, username: username });
+            });
+        }).catch(function (e) { errorDiv.innerText = e.message || '注册失败'; btn.disabled = false; btn.textContent = '注册并登录'; });
+    }
+
+    // ===== 完成登录后跳转 =====
+    function onLoginSuccess(user) {
+        try { localStorage.setItem('nb_user', JSON.stringify({ id: user.id, username: user.username })); } catch (e) {}
+        if (redirectUrl) { window.location.href = redirectUrl; }
+        else { window.location.href = 'index-Beta.html'; }
     }
 
     document.getElementById('doLogin').addEventListener('click', doLogin);
     document.getElementById('doRegister').addEventListener('click', doRegister);
+    document.getElementById('regSend').addEventListener('click', doRegSend);
     function keyGo(e, fn) { if (e.key === 'Enter') { e.preventDefault(); fn(); } }
     document.getElementById('loginUsername').addEventListener('keydown', function (e) { keyGo(e, doLogin); });
     document.getElementById('loginPassword').addEventListener('keydown', function (e) { keyGo(e, doLogin); });
+    document.getElementById('loginCode').addEventListener('keydown', function (e) { keyGo(e, doLogin); });
+    document.getElementById('bindCode').addEventListener('keydown', function (e) { keyGo(e, doBind); });
+    document.getElementById('regEmail').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doRegSend(); } });
     document.getElementById('regUsername').addEventListener('keydown', function (e) { keyGo(e, doRegister); });
     document.getElementById('regPassword').addEventListener('keydown', function (e) { keyGo(e, doRegister); });
     document.getElementById('regPassword2').addEventListener('keydown', function (e) { keyGo(e, doRegister); });
+    document.getElementById('regCode').addEventListener('keydown', function (e) { keyGo(e, doRegister); });
 
-    // 登录页自身导航:把"登录/注册/个人中心"入口改为回首页/去注册,避免自我跳转
+    // 登录页自身导航:把"登录/注册/个人中心"入口改为回首页,避免自我跳转
     var navRewrite = { betaAuthBtn: '🏠 回首页', betaProfileBtn: '🏠 回首页', dAuthBtn: '🏠 回首页', dProfileBtn: '🏠 回首页' };
     Object.keys(navRewrite).forEach(function (id) {
         var el = document.getElementById(id);
@@ -1236,72 +1429,5 @@ html.dark .bk-toast.err { background: #991b1b; }
         .catch(function () {});
     })();
 </script>
-
-<script>
-    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
-    (function () {
-        function patch(sb) {
-            if (!sb || sb.__secPatched) return;
-            sb.__secPatched = true;
-            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
-            var orig = sb.rpc.bind(sb);
-            sb.rpc = function (fn, args) {
-                if (names.indexOf(fn) !== -1) {
-                    args = Object.assign({}, args || {});
-                    var t = null;
-                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
-                    args.p_session = t;
-                }
-                return orig(fn, args);
-            };
-        }
-        var cands = [];
-        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
-        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
-        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
-        cands.forEach(patch);
-    })();
-</script>
-
-
-<script>
-    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
-    (function () {
-        try {
-            var u = localStorage.getItem('nb_user');
-            var s = localStorage.getItem('nb_session');
-            if (u && !s) {
-                localStorage.removeItem('nb_user');
-                location.reload();
-            }
-        } catch (e) {}
-    })();
-</script>
-
-
-<script>
-    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
-    (function () {
-        function applyBal() {
-            var u = null, t = null;
-            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
-            if (!u || !u.id || !t) return;
-            var el = document.getElementById('balanceDisplay') ||
-                     document.getElementById('balanceSpan') ||
-                     document.getElementById('tradeBalance');
-            if (!el) return;
-            var sb = null;
-            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
-            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
-            if (!sb) return;
-            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
-                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
-            }).catch(function () {});
-        }
-        var tries = 0;
-        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
-    })();
-</script>
-
 </body>
 </html>
