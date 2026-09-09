@@ -898,11 +898,11 @@ html.dark .bk-toast.err { background: #991b1b; }
         if (storedU && storedU.id) {
             if (abEl) {
                 abEl.textContent = '登出账号';
-                abEl.onclick = function () { localStorage.removeItem('nb_user'); location.reload(); };
+                abEl.onclick = function () { localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session'); location.reload(); };
             }
             if (pbEl) {
                 pbEl.textContent = '👤 ' + (storedU.username || storedU.name || '个人中心');
-                pbEl.href = 'profile-Beta.html';
+                pbEl.href = '/profile.html';
             }
         } else {
             var loginHref = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
@@ -1069,10 +1069,11 @@ html.dark .bk-toast.err { background: #991b1b; }
         if (!username || !password) { errorDiv.innerText = '请输入用户名和密码'; return; }
         btn.disabled = true; btn.textContent = '登录中…';
         try {
-            var userId = await supabaseClient.rpc('login_user', { input_username: username, input_password: password });
-            if (userId.error) throw new Error(userId.error.message);
-            if (!userId.data) throw new Error('用户名或密码错误');
-            var prof = await supabaseClient.from('profiles').select('id, username, is_banned, banned_reason').eq('id', userId.data).single();
+            var lg = await supabaseClient.rpc('login_user2', { input_username: username, input_password: password });
+            if (lg.error) throw new Error(lg.error.message);
+            if (!lg.data || !lg.data.ok) throw new Error((lg.data && lg.data.message) || '用户名或密码错误');
+            try { localStorage.setItem('nb_session', lg.data.token); } catch (e) {}
+            var prof = await supabaseClient.from('profiles').select('id, username, is_banned, banned_reason').eq('id', lg.data.id).single();
             if (prof.error || !prof.data) throw new Error('用户资料异常');
             if (prof.data.is_banned) throw new Error('账号已被封禁,有任何问题请联系管理员');
             onLoginSuccess({ id: prof.data.id, username: prof.data.username });
@@ -1103,9 +1104,10 @@ html.dark .bk-toast.err { background: #991b1b; }
             if (reg.error) throw new Error(reg.error.message);
             if (!reg.data) throw new Error('用户名已存在');
             await supabaseClient.rpc('record_registration', { ip: ip });
-            var user = await supabaseClient.rpc('login_user', { input_username: username, input_password: password });
-            if (!user.data) throw new Error('注册成功但自动登录失败,请手动登录');
-            var prof = await supabaseClient.from('profiles').select('id, username, is_banned').eq('id', user.data).single();
+            var lg2 = await supabaseClient.rpc('login_user2', { input_username: username, input_password: password });
+            if (!lg2.data || !lg2.data.ok) throw new Error('注册成功但自动登录失败,请手动登录');
+            try { localStorage.setItem('nb_session', lg2.data.token); } catch (e) {}
+            var prof = await supabaseClient.from('profiles').select('id, username, is_banned').eq('id', lg2.data.id).single();
             onLoginSuccess({ id: prof.data.id, username: prof.data.username });
         } catch (err) {
             errorDiv.innerText = err.message;
@@ -1234,5 +1236,34 @@ html.dark .bk-toast.err { background: #991b1b; }
         .catch(function () {});
     })();
 </script>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket',
+                'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item',
+                'use_shop_item', 'set_item_settings'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
 </body>
 </html>

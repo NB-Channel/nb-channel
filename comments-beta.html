@@ -1921,7 +1921,7 @@
                     .maybeSingle();
                 if (error) throw error;
                 if (!profile) {
-                    localStorage.removeItem('nb_user');
+                    localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session');
                     showMessage('提示', '登录信息已失效，请重新登录');
                     currentUser = null;
                     userStatusSpan.innerHTML = `<a href="login.html?redirect=${encodeURIComponent(window.location.href)}" style="background:none; border:none; color:var(--status-border); cursor:pointer;">登录</a> / <a href="login.html?register=1&redirect=${encodeURIComponent(window.location.href)}" style="background:none; border:none; color:var(--status-border); cursor:pointer;">注册</a>`;
@@ -1941,7 +1941,7 @@
                 currentUser = { id: profile.id, username: profile.username };
                 userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
                 document.getElementById('logout-btn').onclick = () => {
-                    localStorage.removeItem('nb_user');
+                    localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session');
                     location.reload();
                 };
                 newCommentArea.style.display = 'block';
@@ -2062,5 +2062,34 @@
         }
     });
 </script>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket',
+                'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item',
+                'use_shop_item', 'set_item_settings'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
 </body>
 </html>

@@ -647,7 +647,7 @@
                     currentUser = user;
                     userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
                     document.getElementById('logout-btn').onclick = () => {
-                        localStorage.removeItem('nb_user');
+                        localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session');
                         location.reload();
                     };
                     newCommentArea.style.display = 'block';
@@ -720,5 +720,34 @@
     制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
     托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a> <br>     资源致谢：<a href="https://www.jsdelivr.com/" target="_blank" rel="noopener noreferrer">jsDelivr</a> · <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer">Supabase</a> · <a href="https://www.flaticon.com/" target="_blank" rel="noopener noreferrer">Flaticon</a> · <a href="https://www.ax1x.com/" target="_blank" rel="noopener noreferrer">聚合图床</a>
 </div>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket',
+                'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item',
+                'use_shop_item', 'set_item_settings'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
 </body>
 </html>
