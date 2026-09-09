@@ -28,5 +28,20 @@
 <body style="font-family:sans-serif; text-align:center; padding:60px 20px; background:#f5f7fa; color:#333;">
     <h2>🔄 正在跳转到新版页面...</h2>
     <p>如果长时间未跳转，<a href="index.html" style="color:#00a1d6;">点此返回首页</a></p>
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
 </body>
 </html>

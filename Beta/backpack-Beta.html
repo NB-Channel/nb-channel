@@ -1383,5 +1383,20 @@ html.dark .pk-total { color: #fbbf24; }
     })();
 </script>
 
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
 </body>
 </html>
