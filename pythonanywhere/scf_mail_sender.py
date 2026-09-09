@@ -98,7 +98,7 @@ def index():
         return jsonify({'ok': False, 'message': '未知类型'})
     if not _rt_check('ip:' + ip, 5, 600):
         return jsonify({'ok': False, 'message': '操作过于频繁,请稍后再试'})
-    if not _rt_check('email:' + email, 3, 600):
+    if not _rt_check('email:' + kind + ':' + email, 3, 600):
         return jsonify({'ok': False, 'message': '该邮箱请求过于频繁,请稍后再试'})
 
     code = str(random.randint(100000, 999999))
