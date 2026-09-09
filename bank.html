@@ -476,5 +476,30 @@
     })();
 </script>
 
+
+<script>
+    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
+    (function () {
+        function applyBal() {
+            var u = null, t = null;
+            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
+            if (!u || !u.id || !t) return;
+            var el = document.getElementById('balanceDisplay') ||
+                     document.getElementById('balanceSpan') ||
+                     document.getElementById('tradeBalance');
+            if (!el) return;
+            var sb = null;
+            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
+            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
+            if (!sb) return;
+            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
+                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
+            }).catch(function () {});
+        }
+        var tries = 0;
+        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
+    })();
+</script>
+
 </body>
 </html>
