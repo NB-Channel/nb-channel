@@ -1426,25 +1426,31 @@ if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)
 
 # ============================================================
-# 【邮箱验证码补丁】把本段代码追加到 pythonanywhere/app.py 末尾
+# 【邮箱验证码补丁】发信走 HTTP API(PA 禁了 465/587 端口,SMTP 不可用)
 # 使用前:
 #   1) 先把 sql/email_code.sql 在 Supabase SQL Editor 执行
-#   2) 改下面 EMAIL_* 配置为你的邮箱与 SMTP 授权码
-#   3) 保存并 Reload PythonAnywhere Web 应用
+#   2) 注册 Brevo(https://www.brevo.com)拿 API Key
+#   3) 密钥放 WSGI 环境变量 EMAIL_API_KEY(不要写进代码/仓库)
 # ============================================================
 
-import smtplib
-import ssl
+import os
 import random
 import hashlib
-import time
+import json
+import urllib.request
 
-# ==================== 邮箱配置(改成你的) ====================
-EMAIL_SMTP_HOST = 'smtp.163.com'      # 163 用 smtp.163.com,QQ 用 smtp.qq.com
-EMAIL_SMTP_PORT = 465                  # 465 SSL
-EMAIL_ADDR = '你的邮箱地址@163.com'     # 发件邮箱
-EMAIL_AUTH = '你的SMTP授权码'           # 邮箱设置里开的 SMTP 授权码(不是登录密码)
+# ==================== 邮件配置 ====================
+# provider: 'brevo'(推荐) / 'resend' / 'smtp'(仅当部署环境允许外连 SMTP 端口)
+EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'brevo')
+# Brevo/Resend 的 API Key(放 WSGI 环境变量 EMAIL_API_KEY,勿提交仓库)
+EMAIL_API_KEY = os.environ.get('EMAIL_API_KEY', '')
+EMAIL_ADDR = os.environ.get('EMAIL_FROM', 'nbchannel@163.com')   # 发件显示邮箱(brevo 后台建议验证)
+EMAIL_NAME = 'NB频道'
 EMAIL_CODE_MINUTES = 10
+# SMTP 兼容(provider=smtp 时才用)
+EMAIL_SMTP_HOST = os.environ.get('EMAIL_SMTP_HOST', 'smtp.163.com')
+EMAIL_SMTP_PORT = int(os.environ.get('EMAIL_SMTP_PORT', '465'))
+EMAIL_SMTP_AUTH = os.environ.get('EMAIL_SMTP_AUTH', '')
 # ============================================================
 
 _otp_last_send = {}        # email -> 上次成功发送时间
@@ -1459,35 +1465,75 @@ def _gen_code():
     return str(random.randint(100000, 999999))
 
 
+def _http_json(url, payload, headers, timeout=20):
+    """POST JSON,返回 (ok_bool, error_str 或 None)。"""
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status in (200, 201, 202):
+                return True, None
+            return False, 'HTTP %s' % resp.status
+    except urllib.error.HTTPError as e:
+        try:
+            detail = e.read().decode('utf-8', 'ignore')[:400]
+        except Exception:
+            detail = ''
+        return False, 'HTTP %s: %s' % (e.code, detail)
+    except Exception as e:
+        return False, str(e)
+
+
 def _send_otp_email(to_addr, code):
     """返回 None=成功,否则返回错误信息字符串。"""
     text = ('你的 NB频道 登录/注册验证码是: {code}\n'
             '有效 {mins} 分钟,请勿告诉任何人。\n'
             '如果这不是你本人的操作,请忽略本邮件。\n'
             '—— NB频道(NB搞事局)').format(code=code, mins=EMAIL_CODE_MINUTES)
-    msg = ('From: NB频道 <{addr}>\r\n'
-           'To: {to}\r\n'
-           'Subject: =?UTF-8?B?{subj}?=\r\n'
-           'MIME-Version: 1.0\r\n'
-           'Content-Type: text/plain; charset=utf-8\r\n'
-           'Content-Transfer-Encoding: base64\r\n\r\n').format(
-        addr=EMAIL_ADDR, to=to_addr,
-        subj=_b64('NB频道 邮箱验证码'))
-    import base64
-    msg += base64.b64encode(text.encode('utf-8')).decode('ascii')
+    subject = 'NB频道 邮箱验证码'
     try:
+        if EMAIL_PROVIDER == 'brevo':
+            if not EMAIL_API_KEY:
+                return '未配置 EMAIL_API_KEY(请在 WSGI 环境变量中设置)'
+            ok, err = _http_json(
+                'https://api.brevo.com/v3/smtp/email',
+                {'sender': {'name': EMAIL_NAME, 'email': EMAIL_ADDR},
+                 'to': [{'email': to_addr}],
+                 'subject': subject,
+                 'textContent': text},
+                {'api-key': EMAIL_API_KEY,
+                 'Content-Type': 'application/json',
+                 'Accept': 'application/json'})
+            return None if ok else ('邮件发送失败: ' + err)
+        if EMAIL_PROVIDER == 'resend':
+            if not EMAIL_API_KEY:
+                return '未配置 EMAIL_API_KEY(请在 WSGI 环境变量中设置)'
+            ok, err = _http_json(
+                'https://api.resend.com/emails',
+                {'from': '%s <%s>' % (EMAIL_NAME, EMAIL_ADDR),
+                 'to': [to_addr],
+                 'subject': subject,
+                 'text': text},
+                {'Authorization': 'Bearer ' + EMAIL_API_KEY,
+                 'Content-Type': 'application/json'})
+            return None if ok else ('邮件发送失败: ' + err)
+        # ---- SMTP 兜底(默认不启用) ----
+        import smtplib
+        import ssl
+        import base64
+        msg = ('From: %s <%s>\r\nTo: %s\r\nSubject: =?UTF-8?B?%s?=\r\n'
+               'MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n'
+               'Content-Transfer-Encoding: base64\r\n\r\n').format(
+            EMAIL_NAME, EMAIL_ADDR, to_addr,
+            base64.b64encode(subject.encode('utf-8')).decode('ascii'))
+        msg += base64.b64encode(text.encode('utf-8')).decode('ascii')
         ctx = ssl.create_default_context()
         with smtplib.SMTP_SSL(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20, context=ctx) as s:
-            s.login(EMAIL_ADDR, EMAIL_AUTH)
+            s.login(EMAIL_ADDR, EMAIL_SMTP_AUTH)
             s.sendmail(EMAIL_ADDR, [to_addr], msg.encode('utf-8'))
         return None
     except Exception as e:
         return '邮件发送失败: %s' % e
-
-
-def _b64(s):
-    import base64
-    return base64.b64encode(s.encode('utf-8')).decode('ascii')
 
 
 @app.route('/api/send-code', methods=['POST'])
