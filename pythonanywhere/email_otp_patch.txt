@@ -1,0 +1,131 @@
+# ============================================================
+# 【邮箱验证码补丁】把本段代码追加到 pythonanywhere/app.py 末尾
+# 使用前:
+#   1) 先把 sql/email_code.sql 在 Supabase SQL Editor 执行
+#   2) 改下面 EMAIL_* 配置为你的邮箱与 SMTP 授权码
+#   3) 保存并 Reload PythonAnywhere Web 应用
+# ============================================================
+
+import smtplib
+import ssl
+import random
+import hashlib
+import time
+
+# ==================== 邮箱配置(改成你的) ====================
+EMAIL_SMTP_HOST = 'smtp.163.com'      # 163 用 smtp.163.com,QQ 用 smtp.qq.com
+EMAIL_SMTP_PORT = 465                  # 465 SSL
+EMAIL_ADDR = '你的邮箱地址@163.com'     # 发件邮箱
+EMAIL_AUTH = '你的SMTP授权码'           # 邮箱设置里开的 SMTP 授权码(不是登录密码)
+EMAIL_CODE_MINUTES = 10
+# ============================================================
+
+_otp_last_send = {}        # email -> 上次成功发送时间
+_otp_last_send_lock = threading.Lock()
+
+
+def _md5(s):
+    return hashlib.md5((s or '').encode('utf-8')).hexdigest()
+
+
+def _gen_code():
+    return str(random.randint(100000, 999999))
+
+
+def _send_otp_email(to_addr, code):
+    """返回 None=成功,否则返回错误信息字符串。"""
+    text = ('你的 NB频道 登录/注册验证码是: {code}\n'
+            '有效 {mins} 分钟,请勿告诉任何人。\n'
+            '如果这不是你本人的操作,请忽略本邮件。\n'
+            '—— NB频道(NB搞事局)').format(code=code, mins=EMAIL_CODE_MINUTES)
+    msg = ('From: NB频道 <{addr}>\r\n'
+           'To: {to}\r\n'
+           'Subject: =?UTF-8?B?{subj}?=\r\n'
+           'MIME-Version: 1.0\r\n'
+           'Content-Type: text/plain; charset=utf-8\r\n'
+           'Content-Transfer-Encoding: base64\r\n\r\n').format(
+        addr=EMAIL_ADDR, to=to_addr,
+        subj=_b64('NB频道 邮箱验证码'))
+    import base64
+    msg += base64.b64encode(text.encode('utf-8')).decode('ascii')
+    try:
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20, context=ctx) as s:
+            s.login(EMAIL_ADDR, EMAIL_AUTH)
+            s.sendmail(EMAIL_ADDR, [to_addr], msg.encode('utf-8'))
+        return None
+    except Exception as e:
+        return '邮件发送失败: %s' % e
+
+
+def _b64(s):
+    import base64
+    return base64.b64encode(s.encode('utf-8')).decode('ascii')
+
+
+@app.route('/api/send-code', methods=['POST'])
+def api_send_code():
+    """注册/登录/绑定邮箱验证码。PA 生成码 -> DB 存哈希 -> SMTP 发送。"""
+    try:
+        body = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        body = {}
+    kind = str(body.get('kind') or '').strip().lower()
+    email = str(body.get('email') or '').strip().lower()
+    username = str(body.get('username') or '').strip()
+    password = str(body.get('password') or '')
+    ip = (request.headers.get('X-Forwarded-For', '') or request.remote_addr or 'unknown')
+    if ',' in ip:
+        ip = ip.split(',')[0].strip()
+
+    if kind not in ('register', 'login', 'bind'):
+        return jsonify({'ok': False, 'message': '未知类型'})
+
+    # ---- 生成并存储(DB 限频:60秒/次、5次/天/邮箱、10次/时/IP) ----
+    code = _gen_code()
+    to_addr = email
+    if kind == 'login':
+        data, err = rpc('lookup_login_email', {'p_username': username, 'p_password': password})
+        if err:
+            return jsonify({'ok': False, 'message': '校验失败: ' + err})
+        if not data or not data.get('ok'):
+            return jsonify({'ok': False, 'message': (data or {}).get('message') or '用户名或密码错误'})
+        if data.get('need_bind'):
+            return jsonify({'ok': True, 'need_bind': True})
+        to_addr = data.get('email')
+        if not to_addr:
+            return jsonify({'ok': False, 'message': '账号邮箱缺失'})
+    elif kind == 'bind':
+        if not email or '@' not in email:
+            return jsonify({'ok': False, 'message': '请输入邮箱'})
+        data, err = rpc('lookup_login_email', {'p_username': username, 'p_password': password})
+        if err:
+            return jsonify({'ok': False, 'message': '校验失败: ' + err})
+        if not data or not data.get('ok'):
+            return jsonify({'ok': False, 'message': (data or {}).get('message') or '用户名或密码错误'})
+        if not data.get('need_bind'):
+            return jsonify({'ok': False, 'message': '该账号已绑定邮箱'})
+    else:  # register
+        if not email or '@' not in email:
+            return jsonify({'ok': False, 'message': '请输入邮箱'})
+
+    if '@' not in to_addr:
+        return jsonify({'ok': False, 'message': '邮箱格式不正确'})
+
+    data, err = rpc('store_email_code', {
+        'p_email': to_addr, 'p_purpose': kind, 'p_code_hash': _md5(code), 'p_ip': ip
+    })
+    if err:
+        return jsonify({'ok': False, 'message': '存储失败: ' + err})
+    if not data or not data.get('ok'):
+        return jsonify({'ok': False, 'message': (data or {}).get('message') or '发送失败'})
+
+    # ---- 发送邮件 ----
+    send_err = _send_otp_email(to_addr, code)
+    if send_err:
+        return jsonify({'ok': False, 'message': send_err})
+    masked = ''
+    if '@' in to_addr:
+        local, dom = to_addr.split('@', 1)
+        masked = local[0] + ('***' if len(local) > 1 else '*') + '@' + dom
+    return jsonify({'ok': True, 'masked': masked})
