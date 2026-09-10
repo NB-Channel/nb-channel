@@ -1859,12 +1859,15 @@
     }
 
     async function login(username, password) {
-        const { data: userId, error } = await supabaseClient.rpc('login_user', {
+        const { data: _loginRes, error } = await supabaseClient.rpc('login_user2', {
             input_username: username,
             input_password: password
         });
         if (error) throw new Error(error.message);
-        if (!userId) throw new Error('用户名或密码错误');
+        if (!_loginRes || !_loginRes.ok) throw new Error((_loginRes && _loginRes.message) || '用户名或密码错误');
+        const userId = _loginRes.id;
+        // 关键:写入会话令牌,否则发评论/改资料等敏感操作会被服务端拒绝
+        if (_loginRes.token) localStorage.setItem('nb_session', _loginRes.token);
         const { data: profile } = await supabaseClient
             .from('profiles')
             .select('id, username, is_banned, banned_reason')
@@ -1999,6 +2002,9 @@
     };
 
     document.getElementById('do-register').onclick = async () => {
+        // 注册统一走新版流程(必须邮箱验证码),直接跳转登录页的注册入口
+        location.href = 'Beta/login-Beta.html?register=1&redirect=' + encodeURIComponent(location.href);
+        return;
         // 清洗零宽字符（防伪装同名）
         const username = document.getElementById('reg-username').value.trim().replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '').trim();
         // 用户名只能包含中文、字母和数字
