@@ -22,11 +22,21 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_VERSION_CODE: ${{ github.run_number }}
-      APP_VERSION_NAME: 1.0.${{ github.run_number }}
       APP_RELEASE_NOTE: 支持 APP 内下载与自动更新
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 版本号从 app/version.txt 读取(想改版本就改那个文件,不用动 workflow)
+      # versionCode 用 run_number 保证单调递增(安卓靠它判断新旧),versionName 是给人看的
+      - name: Resolve version
+        id: ver
+        run: |
+          V=$(tr -d '\n\r ' < app/version.txt)
+          if [ -z "$V" ]; then V="1.0.1"; fi
+          echo "name=$V" >> $GITHUB_OUTPUT
+          echo "APP_VERSION_NAME=$V" >> $GITHUB_ENV
+          echo "版本号 name=$V  code=$APP_VERSION_CODE"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -53,7 +63,7 @@ jobs:
           node -e "
             const fs=require('fs');
             const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));
-            c.appendUserAgent='NBChannelApp/${{ env.APP_VERSION_NAME }}';
+            c.appendUserAgent='NBChannelApp/${APP_VERSION_NAME}';
             fs.writeFileSync('capacitor.config.json', JSON.stringify(c,null,2));
             console.log('appendUserAgent =', c.appendUserAgent);
           "
@@ -107,12 +117,12 @@ jobs:
       - name: Publish to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: app-v${{ env.APP_VERSION_NAME }}
-          name: NB频道 APP v${{ env.APP_VERSION_NAME }}
+          tag_name: app-v${{ steps.ver.outputs.name }}
+          name: NB频道 APP v${{ steps.ver.outputs.name }}
           body: |
-            ## NB频道 安卓客户端 v${{ env.APP_VERSION_NAME }}
+            ## NB频道 安卓客户端 v${{ steps.ver.outputs.name }}
 
-            **安装方法**:下载 `NB频道-v${{ env.APP_VERSION_NAME }}.apk` → 手机上点开安装 →
+            **安装方法**:下载 `NB频道-v${{ steps.ver.outputs.name }}.apk` → 手机上点开安装 →
             提示"未知来源"时允许一次即可。
 
             - 内容与 https://github.nb-channel.top/Beta/index-Beta.html 完全一致
@@ -129,7 +139,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           file_pattern: 'download/NBChannel.apk download/version.json'
-          commit_message: "自动发布 APP v${{ env.APP_VERSION_NAME }} [skip ci]"
+          commit_message: "自动发布 APP v${{ steps.ver.outputs.name }} [skip ci]"
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           commit_options: '--no-verify'
