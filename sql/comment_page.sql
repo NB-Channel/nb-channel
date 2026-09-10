@@ -27,12 +27,18 @@ SET search_path = public
 AS $$
 DECLARE
     v_total integer;
+    v_total_all integer;
     v_result jsonb;
 BEGIN
-    -- 主评论总数
+    -- 主评论总数(分页用:每页按主评论数切)
     SELECT count(*) INTO v_total
       FROM public.comments
      WHERE page_path = p_page_path AND parent_id IS NULL;
+
+    -- 全部评论数(含回复,页面"共 N 条评论"显示用)
+    SELECT count(*) INTO v_total_all
+      FROM public.comments
+     WHERE page_path = p_page_path;
 
     -- 本页主评论（最新优先）
     WITH page_mains AS (
@@ -82,6 +88,7 @@ BEGIN
     SELECT jsonb_build_object(
         'success', true,
         'total', v_total,
+        'total_all', v_total_all,
         'comments', coalesce((
             SELECT jsonb_agg(j ORDER BY grp, grp_key, created_at DESC, id DESC)
             FROM (

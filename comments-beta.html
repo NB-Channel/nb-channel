@@ -414,7 +414,8 @@
     const pagePath = 'nb_comments';
     const COMMENTS_PER_PAGE = 15;  // 每页显示15条主评论
     let currentPage = 1;           // 当前页码
-    let totalComments = 0;         // 评论总数
+    let totalComments = 0;         // 主评论数(分页用)
+    let totalAllComments = 0;      // 全部评论数含回复(显示用)         // 评论总数
     let allMainComments = [];      // 所有主评论（不含回复）
     let allRepliesMap = new Map(); // 所有回复，按 parent_id 分组
     let verifiedUsernames = [];
@@ -1656,6 +1657,7 @@
 
         const rows = rpcData.comments || [];
         totalComments = rpcData.total || 0;
+        totalAllComments = rpcData.total_all || rpcData.total || 0;
 
         // RPC 返回扁平字段：映射为渲染器需要的 profiles 结构
         for (const r of rows) {
@@ -1742,7 +1744,7 @@
         allRepliesMap = repliesMap;
 
         const toolbarTotal = document.getElementById('toolbarTotal');
-        if (toolbarTotal) toolbarTotal.innerText = `共 ${totalComments} 条评论`;
+        if (toolbarTotal) toolbarTotal.innerText = `共 ${totalAllComments} 条评论`;
 
         // 数据已加载完成：直接渲染当前页
         renderLoadedPage(targetPage);
