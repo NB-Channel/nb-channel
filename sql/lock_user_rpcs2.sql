@@ -55,7 +55,12 @@ BEGIN
             EXECUTE format('ALTER FUNCTION public.%I(%s) RENAME TO %I', r.proname, r.ident, '_orig_' || r.proname);
             EXECUTE format('REVOKE ALL ON FUNCTION public.%I(%s) FROM PUBLIC, anon, authenticated', '_orig_' || r.proname, r.ident);
 
-            IF r.ret LIKE 'TABLE(%' OR r.ret LIKE 'SETOF%' THEN
+            IF r.ret = 'void' THEN
+                v_body := format(
+                    'BEGIN IF p_session IS NULL OR NOT public._user_ok(%I, p_session) THEN RETURN; END IF; '
+                 || 'PERFORM public._orig_%I(%s); RETURN; END',
+                    cfg.userarg, r.proname, v_names);
+            ELSIF r.ret LIKE 'TABLE(%' OR r.ret LIKE 'SETOF%' THEN
                 v_body := format(
                     'BEGIN IF p_session IS NULL OR NOT public._user_ok(%I, p_session) THEN RETURN; END IF; '
                  || 'RETURN QUERY SELECT * FROM public._orig_%I(%s); END',
@@ -78,8 +83,20 @@ BEGIN
                 'CREATE FUNCTION public.%I(%s, p_session text DEFAULT NULL) RETURNS %s '
              || 'LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $w$ %s $w$',
                 r.proname, r.args, r.ret, v_body);
-            EXECUTE v_sql;
-            EXECUTE format('GRANT EXECUTE ON FUNCTION public.%I(%s, text) TO anon', r.proname, r.ident);
+            -- 单个函数建失败不影响整批:自动把原名改回去并跳过
+            BEGIN
+                EXECUTE v_sql;
+                EXECUTE format('GRANT EXECUTE ON FUNCTION public.%I(%s, text) TO anon', r.proname, r.ident);
+            EXCEPTION WHEN OTHERS THEN
+                BEGIN
+                    EXECUTE format('ALTER FUNCTION public.%I(%s) RENAME TO %I', '_orig_' || r.proname, r.ident, r.proname);
+                EXCEPTION WHEN OTHERS THEN
+                    NULL;
+                END;
+                RAISE NOTICE '跳过 %(返回类型 %): %', r.proname, r.ret, SQLERRM;
+                v_skip := v_skip + 1;
+                CONTINUE;
+            END;
 
             v_cnt := v_cnt + 1;
             RAISE NOTICE '已加令牌: %(%)', r.proname, r.args;
