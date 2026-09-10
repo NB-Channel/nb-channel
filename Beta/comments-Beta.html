@@ -1416,7 +1416,7 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
             <div class="comment" data-id="${node.id}">
                 <div class="comment-meta">
                     ${floorBadge}
-                    ${avatarHtml}<a class="comment-author" href="'profile-Beta.html?username='${encodeURIComponent(author)}" style="text-decoration:none;${nameStyle}"${nameClass} title="查看主页">${escapeHtml(author)}</a>${verifiedBadge}${companyTag}
+                    ${avatarHtml}<a class="comment-author" href="profile-Beta.html?username=${encodeURIComponent(author)}" style="text-decoration:none;${nameStyle}"${nameClass} title="查看主页">${escapeHtml(author)}</a>${verifiedBadge}${companyTag}
                     <span class="comment-time">${new Date(node.created_at).toLocaleString()}</span>
                 </div>
                 ${titleTag}
