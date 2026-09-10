@@ -1061,16 +1061,17 @@ button { border-radius: 999px; }
             await showMessage('提示', '自动支持金额不能超过2000 NB币');
             return false;
         }
-        await supabaseClient.from('support_rules').delete().eq('user_id', currentUserId).eq('company_id', companyId);
-        const { error } = await supabaseClient.from('support_rules').insert({
-            user_id: currentUserId,
-            company_id: companyId,
-            threshold: threshold,
-            amount: amount
+        const { data: setRes, error } = await supabaseClient.rpc('set_support_rule', {
+            p_user_id: currentUserId,
+            p_session: localStorage.getItem('nb_session'),
+            p_company_id: companyId,
+            p_threshold: threshold,
+            p_amount: amount
         });
-        if (error) await showMessage('设置失败', error.message);
+        const okSet = !error && setRes && setRes.ok;
+        if (!okSet) await showMessage('设置失败', (setRes && setRes.message) || (error && error.message) || '设置失败');
         else await showMessage('成功', '自动支持规则已设置');
-        return !error;
+        return okSet;
     }
 
     async function bankruptCompany() {
@@ -1126,7 +1127,7 @@ button { border-radius: 999px; }
                     await supportCompany(rule.company_id, rule.amount, true);
                     await new Promise(r => setTimeout(r, 1000));
                 } else {
-                    await supabaseClient.from('support_rules').delete().eq('id', rule.id);
+                    await supabaseClient.rpc('delete_support_rule', { p_user_id: currentUserId, p_session: localStorage.getItem('nb_session'), p_rule_id: rule.id });
                     console.log(`自动支持规则已删除：余额不足或金额超限 (rule ${rule.id})`);
                 }
             }

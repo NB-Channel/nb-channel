@@ -273,8 +273,8 @@
             return;
         }
         // 余额
-        const { data: prof } = await supabaseClient.from('profiles').select('nb_balance').eq('id', user.id).maybeSingle();
-        if (prof) document.getElementById('balanceDisplay').innerText = prof.nb_balance;
+        const { data: prof } = await supabaseClient.rpc('get_my_balance', { p_user_id: user.id, p_session: localStorage.getItem('nb_session') });
+        if (prof && prof.ok) document.getElementById('balanceDisplay').innerText = prof.balance;
 
         const { data: items, error } = await supabaseClient
             .from('shop_items')
@@ -371,8 +371,8 @@
                     }
                 }
                 // 刷新余额
-                const { data: prof2 } = await supabaseClient.from('profiles').select('nb_balance').eq('id', user.id).maybeSingle();
-                if (prof2) document.getElementById('balanceDisplay').innerText = prof2.nb_balance;
+                const { data: prof2 } = await supabaseClient.rpc('get_my_balance', { p_user_id: user.id, p_session: localStorage.getItem('nb_session') });
+                if (prof2 && prof2.ok) document.getElementById('balanceDisplay').innerText = prof2.balance;
                 if (qtyEl) qtyEl.innerText = '1';
                 const priceLine = body.querySelector(`[data-price-line="${key}"]`);
                 if (priceLine) priceLine.innerHTML = `💰 ${fmtPrice(price)} NB币`;

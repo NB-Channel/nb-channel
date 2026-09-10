@@ -1015,9 +1015,11 @@
             const ruleId = parseInt(btn.dataset.id);
             const confirmed = await showConfirm('确认取消', '确定要取消此自动支持规则吗？');
             if (confirmed) {
-                const { error } = await supabaseClient.from('support_rules').delete().eq('id', ruleId);
-                if (error) {
-                    await showMessage('删除失败', error.message);
+                const { data: delRes, error } = await supabaseClient.rpc('delete_support_rule', {
+                    p_user_id: currentUser.id, p_session: localStorage.getItem('nb_session'), p_rule_id: ruleId
+                });
+                if (error || !delRes || !delRes.ok) {
+                    await showMessage('删除失败', (delRes && delRes.message) || (error && error.message) || '删除失败');
                 } else {
                     await showMessage('成功', '已取消自动支持规则');
                     await loadAutoRules();  // 重新加载
@@ -1086,12 +1088,15 @@
             return;
         }
         // 原子更新（直接 UPDATE，不再"先删后插"，避免中间态丢数据）
-        const { error: updError } = await supabaseClient.from('support_rules')
-            .update({ threshold: newThreshold, amount: newAmount })
-            .eq('id', ruleId)
-            .eq('user_id', currentUser.id);
-        if (updError) {
-            await showMessage('修改失败', updError.message);
+        const { data: updRes, error: updError } = await supabaseClient.rpc('update_support_rule', {
+            p_user_id: currentUser.id,
+            p_session: localStorage.getItem('nb_session'),
+            p_rule_id: ruleId,
+            p_threshold: newThreshold,
+            p_amount: newAmount
+        });
+        if (updError || !updRes || !updRes.ok) {
+            await showMessage('修改失败', (updRes && updRes.message) || (updError && updError.message) || '修改失败');
         } else {
             await showMessage('成功', '修改成功');
             modal.style.display = 'none';

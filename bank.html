@@ -232,8 +232,8 @@
         const el = document.getElementById('balanceDisplay');
         if (!user || !el) return;
         try {
-            const { data } = await supabaseClient.from('profiles').select('nb_balance').eq('id', user.id).single();
-            if (data) el.innerText = Number(data.nb_balance).toLocaleString('zh-CN');
+            const { data } = await supabaseClient.rpc('get_my_balance', { p_user_id: user.id, p_session: localStorage.getItem('nb_session') });
+            if (data && data.ok) el.innerText = Number(data.balance).toLocaleString('zh-CN');
         } catch (e) { /* 忽略 */ }
     }
 

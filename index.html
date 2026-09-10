@@ -666,15 +666,14 @@
                 return;
             }
             // 已登录，获取余额
-            const { data: profile, error: profileError } = await supabaseClient
-                .from('profiles')
-                .select('nb_balance')
-                .eq('id', user.id)
-                .single();
-            if (profileError || !profile) {
+            const { data: balRes, error: profileError } = await supabaseClient.rpc('get_my_balance', {
+                p_user_id: user.id,
+                p_session: localStorage.getItem('nb_session')
+            });
+            if (profileError || !balRes || !balRes.ok) {
                 balanceSpan.innerHTML = '💰 NB币: --';
             } else {
-                balanceSpan.innerHTML = `💰 NB币: ${profile.nb_balance}`;
+                balanceSpan.innerHTML = `💰 NB币: ${balRes.balance}`;
             }
             
             // 获取签到状态

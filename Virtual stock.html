@@ -596,7 +596,7 @@
             const user = JSON.parse(stored);
             const { data, error } = await supabaseClient
                 .from('profiles')
-                .select('id, username, nb_balance')
+                .select('id, username')
                 .eq('id', user.id)
                 .maybeSingle();
             if (error || !data) return null;
@@ -608,14 +608,14 @@
 
     async function fetchUserBalance() {
         if (!currentUserId) return 0;
-        const { data, error } = await supabaseClient
-            .from('profiles')
-            .select('nb_balance')
-            .eq('id', currentUserId)
-            .single();
-        if (error) return 0;
-        document.getElementById('balanceSpan').innerHTML = `💰 NB币: ${data.nb_balance}`;
-        return data.nb_balance;
+        const { data, error } = await supabaseClient.rpc('get_my_balance', {
+            p_user_id: currentUserId,
+            p_session: localStorage.getItem('nb_session')
+        });
+        if (error || !data || !data.ok) return 0;
+        const bal = Number(data.balance) || 0;
+        document.getElementById('balanceSpan').innerHTML = `💰 NB币: ${bal}`;
+        return bal;
     }
 
    async function fetchMyCompany() {
@@ -695,14 +695,14 @@
             await showMessage('提示', '自动支持金额不能超过2000 NB币');
             return false;
         }
-        await supabaseClient.from('support_rules').delete().eq('user_id', currentUserId).eq('company_id', companyId);
-        const { error } = await supabaseClient.from('support_rules').insert({
-            user_id: currentUserId,
-            company_id: companyId,
-            threshold: threshold,
-            amount: amount
+        const { data: setRes, error } = await supabaseClient.rpc('set_support_rule', {
+            p_user_id: currentUserId,
+            p_session: localStorage.getItem('nb_session'),
+            p_company_id: companyId,
+            p_threshold: threshold,
+            p_amount: amount
         });
-        if (error) await showMessage('设置失败', error.message);
+        if (error || !setRes || !setRes.ok) await showMessage('设置失败', (setRes && setRes.message) || (error && error.message) || '设置失败');
         else await showMessage('成功', '自动支持规则已设置');
         return !error;
     }
@@ -760,7 +760,7 @@
                     await supportCompany(rule.company_id, rule.amount, true);
                     await new Promise(r => setTimeout(r, 1000));
                 } else {
-                    await supabaseClient.from('support_rules').delete().eq('id', rule.id);
+                    await supabaseClient.rpc('delete_support_rule', { p_user_id: currentUserId, p_session: localStorage.getItem('nb_session'), p_rule_id: rule.id });
                     console.log(`自动支持规则已删除：余额不足或金额超限 (rule ${rule.id})`);
                 }
             }
