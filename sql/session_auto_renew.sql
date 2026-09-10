@@ -50,13 +50,17 @@ REVOKE ALL ON FUNCTION public._user_ok(uuid, text) FROM PUBLIC;
 -- ---------- 验收 ----------
 SELECT p.proname AS 函数,
        l.lanname AS 语言,
-       p.provolatile AS 易变性,   -- 'v'=volatile(可写)  's'=stable(只读)
+       CASE p.provolatile
+            WHEN 'v' THEN 'volatile(可写)'
+            WHEN 's' THEN 'stable(只读)'
+            WHEN 'i' THEN 'immutable'
+            ELSE p.provolatile::text END AS 易变性,
        p.prosecdef AS security_definer
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid = p.pronamespace
-  JOIN pg_language l ON l.oid = p.language
+  JOIN pg_language l ON l.oid = p.prolang
  WHERE n.nspname = 'public' AND p.proname = '_user_ok';
--- 期望:语言=plpgsql,易变性=v,security_definer=true
+-- 期望:语言=plpgsql,易变性=volatile(可写),security_definer=true
 
 -- 看看现有会话的剩余时间(跑完这个 SQL 后,访问一下网站再跑一次,过期时间应该往后推了)
 SELECT user_id,
