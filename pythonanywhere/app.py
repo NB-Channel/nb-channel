@@ -23,6 +23,7 @@ import json
 import uuid
 import hmac
 import hashlib
+import ipaddress
 import datetime
 import subprocess
 import threading
@@ -865,10 +866,11 @@ def count_api_requests():
             try:
                 rows = _exec_rows(supabase.table('banned_ips').select('ip'))
                 _api_ban_cache['ips'] = {str(r['ip']) for r in rows}
+                _api_ban_cache['nets'] = None   # 网段缓存失效,下次匹配时重建
                 _api_ban_cache['ts'] = now
             except Exception:
                 _api_ban_cache['ts'] = now  # 查询失败也等 60s 再试,避免打爆
-        if ip in _api_ban_cache['ips']:
+        if _ip_banned(ip):
             return jsonify({'success': False, 'code': 'IP_BANNED',
                             'message': '该 IP 已被封禁,如有疑问请联系 nbchannel@163.com'}), 403
     except Exception:
@@ -882,7 +884,36 @@ def count_api_requests():
     _api_stats['by_endpoint'][request.path] = _api_stats['by_endpoint'].get(request.path, 0) + 1
 
 # IP 黑名单缓存(与 _api_stats 同级定义)
-_api_ban_cache = {'ts': 0.0, 'ips': set()}
+_api_ban_cache = {'ts': 0.0, 'ips': set(), 'nets': None}
+
+
+def _ip_banned(ip):
+    """命中黑名单?支持精确 IP 与 IPv6/IPv4 网段(如 2409:8a30:9c84:7241::/64)"""
+    if not ip:
+        return False
+    ips = _api_ban_cache['ips']
+    if ip in ips:
+        return True
+    nets = _api_ban_cache.get('nets')
+    if nets is None:
+        nets = []
+        for entry in ips:
+            if '/' in entry:
+                try:
+                    nets.append(ipaddress.ip_network(entry, strict=False))
+                except Exception:
+                    continue
+        _api_ban_cache['nets'] = nets
+    if not nets:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip)
+    except Exception:
+        return False
+    for net in nets:
+        if addr.version == net.version and addr in net:
+            return True
+    return False
 
 def _rate_limited(ip, limit=60, window=60):
     """返回 (是否受限, 剩余次数)。"""
