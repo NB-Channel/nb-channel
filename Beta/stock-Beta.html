@@ -1511,22 +1511,15 @@ button { border-radius: 999px; }
     let lastHistoryWrite = 0;
 
     async function saveFullSnapshot(totalValue) {
-        const snapshotData = { names: rawData.names, values: rawData.values };
         const now = Date.now();
 
-        // 最新快照：3秒内已写过则跳过（页面级节流）
+        // 快照一律由服务端计算并落库(前端不能再决定市值数字),这里只负责触发
         if (now - lastLatestWrite < 3000) return;
         lastLatestWrite = now;
-        await supabaseClient.from('stock_latest').delete().neq('id', 0);
-        await supabaseClient.from('stock_latest').insert({ created_at: new Date(), total_value: totalValue, snapshot_data: snapshotData });
-
-        // 历史快照：60秒内已写过则跳过
-        if (now - lastHistoryWrite < 60000) return;
         lastHistoryWrite = now;
-        await supabaseClient.from('stock_history_full').insert({ recorded_at: new Date(), total_value: totalValue, snapshot: snapshotData });
-        await supabaseClient.from('stock_history').insert({ total_value: totalValue });
-        // 日K线聚合（大智慧式：每天每公司一行，幂等 upsert）
-        try { await supabaseClient.rpc('record_daily_kline'); } catch (e) { console.warn('日K线聚合失败', e); }
+        try {
+            await supabaseClient.rpc('publish_stock_snapshot');
+        } catch (e) { console.warn('快照写入失败', e); }
     }
 
     async function loadFullHistory() {

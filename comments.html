@@ -513,11 +513,15 @@
                 if (!content) { showMessage('提示', '回复内容不能为空'); return; }
                 if (content.length > 200) { showMessage('提示', '回复内容不能超过200字'); return; }
                 if (!currentUser) { showMessage('提示', '请先登录'); return; }
-                const { error } = await supabaseClient
-                    .from('comments')
-                    .insert({ page_path: pagePath, user_id: currentUser.id, content, parent_id: parseInt(parentId) });
-                if (error) {
-                    showMessage('错误', '回复失败');
+                const { data: repRes, error } = await supabaseClient.rpc('insert_comment', {
+                    p_page_path: pagePath,
+                    p_user_id: currentUser.id,
+                    p_content: content,
+                    p_parent_id: parseInt(parentId),
+                    p_session: localStorage.getItem('nb_session')
+                });
+                if (error || !repRes || !repRes.success) {
+                    showMessage('错误', (repRes && repRes.message) || '回复失败');
                 } else {
                     replyForm.style.display = 'none';
                     fetchComments();
@@ -570,10 +574,14 @@
         let content = commentText.value.trim();
         if (!content) { showMessage('提示', '评论内容不能为空'); return; }
         if (content.length > 200) { showMessage('提示', '评论内容不能超过200字'); return; }
-        const { error } = await supabaseClient
-            .from('comments')
-            .insert({ page_path: pagePath, user_id: currentUser.id, content, parent_id: null });
-        if (error) showMessage('错误', '发表失败');
+        const { data: postRes, error } = await supabaseClient.rpc('insert_comment', {
+            p_page_path: pagePath,
+            p_user_id: currentUser.id,
+            p_content: content,
+            p_parent_id: null,
+            p_session: localStorage.getItem('nb_session')
+        });
+        if (error || !postRes || !postRes.success) showMessage('错误', (postRes && postRes.message) || '发表失败');
         else {
             commentText.value = '';
             charCountSpan.innerText = '0';

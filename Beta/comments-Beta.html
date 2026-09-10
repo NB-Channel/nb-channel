@@ -1686,7 +1686,8 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
                         p_user_id: currentUser.id,
                         p_content: content,
                         p_parent_id: parseInt(parentId)
-                    });
+                    ,
+                p_session: localStorage.getItem('nb_session')});
                     if (error) {
                         showMessage('错误', '回复失败: ' + error.message);
                     } else if (!data.success) {
@@ -1738,7 +1739,8 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
                     p_user_id: currentUser.id,
                     p_comment_id: commentId,
                     p_reaction: reaction
-                });
+                ,
+                p_session: localStorage.getItem('nb_session')});
                 btn.disabled = false;
                 if (error) { showMessage('错误', error.message); return; }
                 if (!data.success) { showMessage('提示', data.message); return; }
@@ -1806,7 +1808,8 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
                         p_user_id: currentUser.id,
                         p_comment_id: parseInt(commentId),
                         p_content: newContent
-                    });
+                    ,
+                p_session: localStorage.getItem('nb_session')});
                     if (error) { showMessage('错误', error.message); return; }
                     if (!data.success) { showMessage('提示', data.message); return; }
                     const savedPage = currentPage;
@@ -1934,7 +1937,8 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
         const { data, error } = await supabaseClient.rpc('delete_comment_cascade', {
             p_user_id: currentUser.id,
             p_comment_id: commentId
-        });
+        ,
+                p_session: localStorage.getItem('nb_session')});
         if (error) {
             showMessage('错误', '删除失败: ' + error.message);
         } else if (!data.success) {
@@ -2125,7 +2129,8 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
                 p_user_id: currentUser.id,
                 p_content: content,
                 p_parent_id: null
-            });
+            ,
+                p_session: localStorage.getItem('nb_session')});
 
             if (error) {
                 showMessage('错误', '发表失败: ' + error.message);
