@@ -1201,8 +1201,8 @@ html.dark .sk-toast.err { background: #991b1b; }
         var user = getUser();
         var el = document.getElementById('balanceDisplay');
         if (!user || !el) return;
-        supabaseClient.from('profiles').select('nb_balance').eq('id', user.id).maybeSingle()
-            .then(function (res) { if (res.data) el.innerText = Number(res.data.nb_balance).toLocaleString('zh-CN'); })
+        supabaseClient.rpc('get_my_balance', { p_user_id: user.id, p_session: localStorage.getItem('nb_session') })
+            .then(function (res) { if (res.data && res.data.ok) el.innerText = Number(res.data.balance).toLocaleString('zh-CN'); })
             .catch(function () {});
     }
     document.getElementById('refreshBtn').addEventListener('click', function () {

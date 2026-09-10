@@ -683,13 +683,12 @@ input[type="text"], input[type="number"], textarea, select {
     async function fetchUserBalance() {
         const user = getCurrentUser();
         if (!user) return 0;
-        const { data, error } = await supabaseClient
-            .from('profiles')
-            .select('nb_balance')
-            .eq('id', user.id)
-            .single();
-        if (error) return 0;
-        return data.nb_balance || 0;
+        const { data, error } = await supabaseClient.rpc('get_my_balance', {
+            p_user_id: user.id,
+            p_session: localStorage.getItem('nb_session')
+        });
+        if (error || !data || !data.ok) return 0;
+        return data.balance || 0;
     }
 
     async function updateUserUI() {

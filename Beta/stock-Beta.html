@@ -962,7 +962,7 @@ button { border-radius: 999px; }
             const user = JSON.parse(stored);
             const { data, error } = await supabaseClient
                 .from('profiles')
-                .select('id, username, nb_balance')
+                .select('id, username')
                 .eq('id', user.id)
                 .maybeSingle();
             if (error || !data) return null;
@@ -974,14 +974,14 @@ button { border-radius: 999px; }
 
     async function fetchUserBalance() {
         if (!currentUserId) return 0;
-        const { data, error } = await supabaseClient
-            .from('profiles')
-            .select('nb_balance')
-            .eq('id', currentUserId)
-            .single();
-        if (error) return 0;
-        document.getElementById('balanceSpan').innerHTML = `💰 NB币: ${data.nb_balance}`;
-        return data.nb_balance;
+        const { data, error } = await supabaseClient.rpc('get_my_balance', {
+            p_user_id: currentUserId,
+            p_session: localStorage.getItem('nb_session')
+        });
+        if (error || !data || !data.ok) return 0;
+        const bal = Number(data.balance) || 0;
+        document.getElementById('balanceSpan').innerHTML = `💰 NB币: ${bal}`;
+        return bal;
     }
 
    async function fetchMyCompany() {

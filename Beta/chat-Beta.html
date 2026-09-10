@@ -855,8 +855,8 @@ button { border-radius: 999px; }
         // 刷新余额
         const bal = document.getElementById('myBalance');
         if (bal) {
-            const { data: prof } = await supabaseClient.from('profiles').select('nb_balance').eq('id', currentUser.id).single();
-            if (prof) bal.innerText = `💰 ${prof.nb_balance} NB币`;
+            const { data: prof } = await supabaseClient.rpc('get_my_balance', { p_user_id: currentUser.id, p_session: localStorage.getItem('nb_session') });
+            if (prof && prof.ok) bal.innerText = `💰 ${prof.balance} NB币`;
         }
     }
 
@@ -1208,8 +1208,8 @@ button { border-radius: 999px; }
         // 刷新余额
         const bal = document.getElementById('myBalance');
         if (bal) {
-            const { data: prof } = await supabaseClient.from('profiles').select('nb_balance').eq('id', currentUser.id).single();
-            if (prof) bal.innerText = `💰 ${prof.nb_balance} NB币`;
+            const { data: prof } = await supabaseClient.rpc('get_my_balance', { p_user_id: currentUser.id, p_session: localStorage.getItem('nb_session') });
+            if (prof && prof.ok) bal.innerText = `💰 ${prof.balance} NB币`;
         }
         // 重新加载消息（红包卡片变为已领取样式）
         if (currentConvId) await loadMessages(currentConvId);
@@ -1424,8 +1424,8 @@ button { border-radius: 999px; }
         const bal = document.getElementById('myBalance');
         if (!bal) return;
         try {
-            const { data: prof } = await supabaseClient.from('profiles').select('nb_balance').eq('id', currentUser.id).single();
-            if (prof) bal.innerText = `💰 ${prof.nb_balance} NB币`;
+            const { data: prof } = await supabaseClient.rpc('get_my_balance', { p_user_id: currentUser.id, p_session: localStorage.getItem('nb_session') });
+            if (prof && prof.ok) bal.innerText = `💰 ${prof.balance} NB币`;
         } catch (e) { /* 忽略 */ }
     }
 
