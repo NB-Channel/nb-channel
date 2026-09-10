@@ -477,7 +477,7 @@
             if (remainEl) remainEl.innerText = '?';
             resultEl.innerText = '';
             // 剩余次数 = 基础上限 + 抽奖券加成 − 今日已抽（后端 RPC 统一计算）
-            lotteryClient.rpc('get_lottery_today', { p_user_id: user.id })
+            lotteryClient.rpc('get_lottery_today', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')})
                 .then(({ data }) => {
                     if (data && data.success && remainEl) {
                         remainEl.innerText = `${data.remaining}/${data.limit + data.extra}`;
@@ -702,7 +702,7 @@
             const fixBtn = document.getElementById('fixCheckinBtn');
             if (fixBtn) {
                 try {
-                    const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id });
+                    const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')});
                     const fixCount = (fx && fx.success) ? (fx.checkin_fix_count || 0) : 0;
                     if (fixCount > 0) {
                         fixBtn.style.display = 'inline-block';
@@ -766,7 +766,7 @@
             fixBtn.onclick = async () => {
                 const user = getCurrentUser();
                 if (!user) { await showMessage('提示', '请先登录'); return; }
-                const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id });
+                const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')});
                 const fixCount = (fx && fx.success) ? (fx.checkin_fix_count || 0) : 0;
                 if (fixCount <= 0) { await showMessage('提示', '没有可用的补签卡，去商店购买吧'); return; }
                 // 列出今天之前 1~5 天的日期选项
@@ -779,7 +779,7 @@
                 }
                 const pick = await showPickDate(opts, fixCount);
                 if (!pick) return;
-                const { data, error } = await supabaseClient.rpc('use_checkin_fix', { p_user_id: user.id, p_target_date: pick });
+                const { data, error } = await supabaseClient.rpc('use_checkin_fix', { p_user_id: user.id, p_target_date: pick , p_session: localStorage.getItem('nb_session')});
                 await showMessage(error || !data || !data.success ? '补签失败' : '✅ 补签成功', (error && error.message) || (data && data.message) || '');
                 location.reload();
             };

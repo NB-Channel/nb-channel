@@ -1547,7 +1547,7 @@
             discountCheck.checked = false;
             discountRow.style.display = 'none';
             try {
-                const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: currentUserId });
+                const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: currentUserId , p_session: localStorage.getItem('nb_session')});
                 if (fx && fx.success && fx.fee_discount_count > 0) {
                     discountRow.style.display = 'block';
                 }
@@ -1646,7 +1646,7 @@
             // 持仓盈亏汇总（若列表为空则主动查询一次，确保显示）
             let holdings = window.myHoldingsList;
             if (!holdings || !holdings.length) {
-                const { data: hd } = await supabaseClient.rpc('get_my_holdings', { p_user_id: currentUserId });
+                const { data: hd } = await supabaseClient.rpc('get_my_holdings', { p_user_id: currentUserId , p_session: localStorage.getItem('nb_session')});
                 if (hd) holdings = hd;
             }
             if (holdings && holdings.length) {
@@ -1680,7 +1680,7 @@
         }
         const { data, error } = await supabaseClient.rpc('get_my_holdings', {
             p_user_id: currentUserId
-        });
+        , p_session: localStorage.getItem('nb_session')});
         window.myHoldingsList = (error || !data) ? [] : data;
 
         if (window.myHoldingsList.length === 0) {

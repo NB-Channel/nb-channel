@@ -825,7 +825,7 @@ er = setTimeout(() => { toast.classList.remove('show'); }, 5000);
         if (!currentUser) return;
         const { data, error } = await supabaseClient.rpc('get_unread_counts', {
             p_user_id: currentUser.id
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) {
             console.error('获取未读数失败:', error);
             return;
@@ -835,7 +835,7 @@ er = setTimeout(() => { toast.classList.remove('show'); }, 5000);
         updateBadges();
         // 私信未读数
         try {
-            const chatRes = await supabaseClient.rpc('get_unread_messages', { p_user: currentUser.id });
+            const chatRes = await supabaseClient.rpc('get_unread_messages', { p_user: currentUser.id , p_session: localStorage.getItem('nb_session')});
             const chatTotal = (chatRes.data && chatRes.data.count) || 0;
             const chatBadge = document.getElementById('chatBadge');
             if (chatBadge) {
@@ -864,7 +864,7 @@ er = setTimeout(() => { toast.classList.remove('show'); }, 5000);
         p_type: currentType,
         p_limit: PAGE_SIZE,
         p_offset: from
-    });
+    , p_session: localStorage.getItem('nb_session')});
 
     isLoading = false;
     document.getElementById('loadMoreContainer').style.display = 'none';
@@ -934,7 +934,7 @@ er = setTimeout(() => { toast.classList.remove('show'); }, 5000);
         const { data, error } = await supabaseClient.rpc('delete_notification', {
             p_notification_id: notificationId,
             p_user_id: currentUser.id
-        });
+        , p_session: localStorage.getItem('nb_session')});
         
         if (error) {
             console.error('删除失败:', error);
@@ -966,7 +966,7 @@ er = setTimeout(() => { toast.classList.remove('show'); }, 5000);
     const { data, error } = await supabaseClient.rpc('mark_notification_read', {
         p_notification_id: notificationId,
         p_user_id: currentUser.id
-    });
+    , p_session: localStorage.getItem('nb_session')});
     
     if (error) {
         console.error('标记已读失败:', error);
@@ -983,7 +983,7 @@ er = setTimeout(() => { toast.classList.remove('show'); }, 5000);
         const { data, error } = await supabaseClient.rpc('mark_all_notifications_read', {
             p_user_id: currentUser.id,
             p_type: currentType
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) {
             console.error('全部已读失败:', error);
             alert('操作失败，请重试');
@@ -1000,7 +1000,7 @@ er = setTimeout(() => { toast.classList.remove('show'); }, 5000);
         const { data, error } = await supabaseClient.rpc('delete_read_notifications', {
             p_user_id: currentUser.id,
             p_type: currentType
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) {
             console.error('删除已读失败:', error);
             alert('操作失败，请重试');
@@ -1030,7 +1030,7 @@ er = setTimeout(() => { toast.classList.remove('show'); }, 5000);
         const container = document.getElementById('notificationList');
         if (!currentUser) return;
         container.innerHTML = '<div class="loading-spinner" style="text-align:center; padding:40px; color:var(--count-text);">加载中...</div>';
-        const { data, error } = await supabaseClient.rpc('get_conversations', { p_user: currentUser.id });
+        const { data, error } = await supabaseClient.rpc('get_conversations', { p_user: currentUser.id , p_session: localStorage.getItem('nb_session')});
         if (error) {
             container.innerHTML = `<div class="empty-state"><p>加载失败: ${escapeHtml(error.message)}</p></div>`;
             return;

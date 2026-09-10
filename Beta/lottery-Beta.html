@@ -1231,7 +1231,7 @@ html.dark .lt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
             })
             .catch(function () {});
         // 补签按钮:有补签卡即显示
-        supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id })
+        supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')})
             .then(function (res) {
                 var fx = res.data || {};
                 var n = (fx.success && fx.checkin_fix_count) ? fx.checkin_fix_count : 0;
@@ -1271,7 +1271,7 @@ html.dark .lt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
     function openFixPick() {
         var user = getUser();
         if (!user) return;
-        supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id })
+        supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')})
             .then(function (res) {
                 var fx = res.data || {};
                 var n = (fx.success && fx.checkin_fix_count) ? fx.checkin_fix_count : 0;
@@ -1296,7 +1296,7 @@ html.dark .lt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
                     b.addEventListener('click', function () {
                         m.close();
                         var pick = b.dataset.d;
-                        supabaseClient.rpc('use_checkin_fix', { p_user_id: user.id, p_target_date: pick })
+                        supabaseClient.rpc('use_checkin_fix', { p_user_id: user.id, p_target_date: pick , p_session: localStorage.getItem('nb_session')})
                             .then(function (res) {
                                 if (res.error || !res.data || !res.data.success) {
                                     return showMessage('补签失败', (res.error && res.error.message) || (res.data && res.data.message) || '未知错误');
@@ -1369,7 +1369,7 @@ html.dark .lt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
         if (!user) return;
         var el = document.getElementById('lotteryRemain');
         var ex = document.getElementById('lotteryExtra');
-        supabaseClient.rpc('get_lottery_today', { p_user_id: user.id })
+        supabaseClient.rpc('get_lottery_today', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')})
             .then(function (res) {
                 var d = res.data || {};
                 if (d && d.success) {

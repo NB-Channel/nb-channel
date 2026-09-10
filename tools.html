@@ -561,7 +561,7 @@
                 if (u && window.supabaseClient) {
                     const user = JSON.parse(u);
                     if (user && user.id) {
-                        window.supabaseClient.rpc('record_balance_count', { p_user_id: user.id })
+                        window.supabaseClient.rpc('record_balance_count', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')})
                             .then(() => {}).catch(() => {});
                     }
                 }

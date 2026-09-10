@@ -513,7 +513,7 @@
         window.__titleSlotChosen = null;
         let bannerUrl = null;
         try {
-            const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: viewUid });
+            const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: viewUid , p_session: localStorage.getItem('nb_session')});
             if (fx && fx.success) {
                 if (fx.particle_fx) startParticleFx(fx.particle_fx);
                 if (fx.title_slot && fx.title_slot.count) {
@@ -607,7 +607,7 @@
         if (!isOwner) {
             const visitKey = 'nb_visit_' + viewUid + '_' + new Date().toISOString().slice(0, 10);
             if (!sessionStorage.getItem(visitKey)) {
-                supabaseClient.rpc('visit_profile', { p_user_id: viewUid }).then(() => {
+                supabaseClient.rpc('visit_profile', { p_user_id: viewUid , p_session: localStorage.getItem('nb_session')}).then(() => {
                     sessionStorage.setItem(visitKey, '1');
                 }).catch(() => {});
             }
@@ -722,7 +722,7 @@
     async function renderHeatmap(uid) {
         const wrap = document.getElementById('homeHeatmap');
         wrap.innerHTML = '<div class="no-data" style="padding:10px;">加载签到数据...</div>';
-        const { data, error } = await supabaseClient.rpc('get_checkin_heatmap', { p_user_id: uid, p_days: 365 });
+        const { data, error } = await supabaseClient.rpc('get_checkin_heatmap', { p_user_id: uid, p_days: 365 , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) {
             wrap.innerHTML = '';
             return;
@@ -1170,7 +1170,7 @@
                 user_id: currentUser.id,
                 new_username: newUsername,
                 old_password: oldPassword
-            });
+            , p_session: localStorage.getItem('nb_session')});
             if (upErr) throw upErr;
             if (!up || !up.success) throw new Error((up && up.message) || '修改失败');
             const storedUser = JSON.parse(localStorage.getItem('nb_user'));

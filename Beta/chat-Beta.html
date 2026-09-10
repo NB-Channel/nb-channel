@@ -909,17 +909,17 @@ button { border-radius: 999px; }
     }
 
     async function loadFriends() {
-        const { data } = await supabaseClient.rpc('get_friends', { p_user_id: currentUser.id });
+        const { data } = await supabaseClient.rpc('get_friends', { p_user_id: currentUser.id , p_session: localStorage.getItem('nb_session')});
         friendsList = data || [];
     }
     async function loadRequests() {
-        const { data } = await supabaseClient.rpc('get_friend_requests', { p_user_id: currentUser.id });
+        const { data } = await supabaseClient.rpc('get_friend_requests', { p_user_id: currentUser.id , p_session: localStorage.getItem('nb_session')});
         window.pendingRequests = data || [];
         const b = document.getElementById('reqBadge');
         if (b) b.innerText = window.pendingRequests.length ? ' ' + window.pendingRequests.length : '';
     }
     async function loadConvs() {
-        const { data } = await supabaseClient.rpc('get_conversations', { p_user: currentUser.id });
+        const { data } = await supabaseClient.rpc('get_conversations', { p_user: currentUser.id , p_session: localStorage.getItem('nb_session')});
         convs = data || [];
         renderConvs();
     }
@@ -1030,8 +1030,8 @@ button { border-radius: 999px; }
         currentUser.slotTitle = null;
         try {
             const [{ data: oFx }, { data: mFx }] = await Promise.all([
-                supabaseClient.rpc('get_active_shop_effects', { p_user_id: otherId }),
-                supabaseClient.rpc('get_active_shop_effects', { p_user_id: currentUser.id })
+                supabaseClient.rpc('get_active_shop_effects', { p_user_id: otherId , p_session: localStorage.getItem('nb_session')}),
+                supabaseClient.rpc('get_active_shop_effects', { p_user_id: currentUser.id , p_session: localStorage.getItem('nb_session')})
             ]);
             currentOther.bubbleFx = (oFx && oFx.success && oFx.chat_bubble) ? oFx.chat_bubble : null;
             currentUser.bubbleFx = (mFx && mFx.success && mFx.chat_bubble) ? mFx.chat_bubble : null;
@@ -1045,14 +1045,14 @@ button { border-radius: 999px; }
         document.getElementById('chatInputBar').style.display = 'flex';
         if (currentTab === 'convs') renderConvs();
         await loadMessages(convId);
-        await supabaseClient.rpc('mark_conversation_read', { p_user: currentUser.id, p_conversation_id: convId });
+        await supabaseClient.rpc('mark_conversation_read', { p_user: currentUser.id, p_conversation_id: convId , p_session: localStorage.getItem('nb_session')});
         loadConvs();
     }
 
     async function startChatWith(otherId, otherName, otherAvatar) {
         const { data: convId, error } = await supabaseClient.rpc('get_or_create_conversation', {
             p_user_a: currentUser.id, p_user_b: otherId
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error || !convId) {
             alert(error ? error.message : '无法发起私信（仅好友可私信）');
             return;
@@ -1066,7 +1066,7 @@ button { border-radius: 999px; }
         body.innerHTML = '<div class="empty-tip">加载中...</div>';
         const { data, error } = await supabaseClient.rpc('get_messages', {
             p_user: currentUser.id, p_conversation_id: convId, p_before_id: null, p_limit: 100
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) { body.innerHTML = `<div class="empty-tip">加载失败：${escapeHtml(error.message)}</div>`; return; }
         const msgs = (data || []).reverse();
         if (!msgs.length) { body.innerHTML = '<div class="empty-tip">还没有消息，说点什么吧～</div>'; }
@@ -1100,7 +1100,7 @@ button { border-radius: 999px; }
         const { data, error } = await supabaseClient.rpc('get_messages', {
             p_user: currentUser.id, p_conversation_id: currentConvId,
             p_before_id: oldestMsgId, p_limit: 50
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (!error && data && data.length) {
             const msgs = data.reverse();   // 返回倒序，翻转为正序后插到顶部
             const frag = document.createDocumentFragment();
@@ -1366,7 +1366,7 @@ button { border-radius: 999px; }
             }
             const { data, error } = await supabaseClient.rpc('recall_message', {
                 p_user: currentUser.id, p_message_id: msgId
-            });
+            , p_session: localStorage.getItem('nb_session')});
             if (error || !data || !data.success) {
                 alert((error && error.message) || (data && data.message) || '撤回失败');
                 return;
@@ -1384,7 +1384,7 @@ button { border-radius: 999px; }
         } else if (act === 'del') {
             const { data, error } = await supabaseClient.rpc('delete_my_message', {
                 p_user: currentUser.id, p_message_id: msgId
-            });
+            , p_session: localStorage.getItem('nb_session')});
             if (error || !data || !data.success) {
                 alert((error && error.message) || (data && data.message) || '删除失败');
                 return;
@@ -1408,7 +1408,7 @@ button { border-radius: 999px; }
     async function doUnrecall(msgId) {
         const { data, error } = await supabaseClient.rpc('unrecall_message', {
             p_user: currentUser.id, p_message_id: msgId
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) {
             alert((error && error.message) || (data && data.message) || '取消撤回失败');
             return;
@@ -1436,7 +1436,7 @@ button { border-radius: 999px; }
         if (!ok) return;
         const { data, error } = await supabaseClient.rpc('clear_conversation', {
             p_user: currentUser.id, p_conversation_id: currentConvId
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) {
             alert((error && error.message) || (data && data.message) || '清空失败');
             return;
@@ -1524,7 +1524,7 @@ button { border-radius: 999px; }
             const target = cur ? !cur.muted : true;
             const { data, error } = await supabaseClient.rpc('set_conversation_mute', {
                 p_user: currentUser.id, p_conversation_id: currentConvId, p_muted: target
-            });
+            , p_session: localStorage.getItem('nb_session')});
             if (error || !data || !data.success) {
                 alert((error && error.message) || (data && data.message) || '设置失败');
                 return;
@@ -1578,7 +1578,7 @@ button { border-radius: 999px; }
     async function sendContent(content) {
         const { data, error } = await supabaseClient.rpc('send_message', {
             p_sender: currentUser.id, p_conversation_id: currentConvId, p_content: content
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) {
             alert((error && error.message) || (data && data.message) || '发送失败');
             return;
@@ -1611,7 +1611,7 @@ button { border-radius: 999px; }
                 if (currentConvId && msg.conversation_id === currentConvId) {
                     appendLocalMessage(msg);
                     if (msg.sender_id !== currentUser.id) {
-                        supabaseClient.rpc('mark_conversation_read', { p_user: currentUser.id, p_conversation_id: currentConvId });
+                        supabaseClient.rpc('mark_conversation_read', { p_user: currentUser.id, p_conversation_id: currentConvId , p_session: localStorage.getItem('nb_session')});
                     }
                 }
                 // 刷新会话列表与未读
@@ -1649,7 +1649,7 @@ button { border-radius: 999px; }
     // ========== 未读红点（导航） ==========
     async function updateBadge() {
         if (!currentUser) return;
-        const { data } = await supabaseClient.rpc('get_unread_messages', { p_user: currentUser.id });
+        const { data } = await supabaseClient.rpc('get_unread_messages', { p_user: currentUser.id , p_session: localStorage.getItem('nb_session')});
         const total = (data && data.count) || 0;
         const link = document.querySelector('a[href="chat.html"]');
         if (!link) return;
@@ -1675,14 +1675,14 @@ button { border-radius: 999px; }
             } else if (act === 'del') {
                 const ok = await showConfirm('删除好友', `确定删除好友 ${btn.dataset.name} 吗？删除后需要重新申请才能恢复好友关系。`);
                 if (!ok) return;
-                await supabaseClient.rpc('remove_friend', { p_user_id: currentUser.id, p_other: btn.dataset.id });
+                await supabaseClient.rpc('remove_friend', { p_user_id: currentUser.id, p_other: btn.dataset.id , p_session: localStorage.getItem('nb_session')});
                 await loadFriends(); renderSide(); loadConvs();
             } else if (act === 'transfer') {
                 openTransferModal(btn.dataset.id, btn.dataset.name);
             } else if (act === 'delconv') {
                 const ok = await showConfirm('删除会话', `确定删除与 ${btn.dataset.name} 的会话吗？聊天记录将从你的列表消失（不影响对方）。`);
                 if (!ok) return;
-                const res = await supabaseClient.rpc('delete_conversation', { p_user: currentUser.id, p_conversation_id: parseInt(btn.dataset.id) });
+                const res = await supabaseClient.rpc('delete_conversation', { p_user: currentUser.id, p_conversation_id: parseInt(btn.dataset.id) , p_session: localStorage.getItem('nb_session')});
                 if (res.error) { alert(res.error.message); return; }
                 if (currentConvId === parseInt(btn.dataset.id)) {
                     currentConvId = null; currentOther = null;
@@ -1693,13 +1693,13 @@ button { border-radius: 999px; }
                 }
                 await loadConvs();
             } else if (act === 'accept') {
-                await supabaseClient.rpc('respond_friend_request', { p_request_id: parseInt(btn.dataset.id), p_user_id: currentUser.id, p_accept: true });
+                await supabaseClient.rpc('respond_friend_request', { p_request_id: parseInt(btn.dataset.id), p_user_id: currentUser.id, p_accept: true , p_session: localStorage.getItem('nb_session')});
                 await refreshAll(); renderSide();
             } else if (act === 'reject') {
-                await supabaseClient.rpc('respond_friend_request', { p_request_id: parseInt(btn.dataset.id), p_user_id: currentUser.id, p_accept: false });
+                await supabaseClient.rpc('respond_friend_request', { p_request_id: parseInt(btn.dataset.id), p_user_id: currentUser.id, p_accept: false , p_session: localStorage.getItem('nb_session')});
                 await refreshAll(); renderSide();
             } else if (act === 'add') {
-                const res = await supabaseClient.rpc('send_friend_request', { p_from: currentUser.id, p_to: btn.dataset.id });
+                const res = await supabaseClient.rpc('send_friend_request', { p_from: currentUser.id, p_to: btn.dataset.id , p_session: localStorage.getItem('nb_session')});
                 alert((res.error && res.error.message) || (res.data && res.data.message) || '已发送');
             }
         });

@@ -846,7 +846,7 @@ html.dark .tt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
                 })();
                 // 展示位道具信息
                 var slotInfo = { count: 0, chosen_title_key: null };
-                return supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id }).then(function (fx) {
+                return supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')}).then(function (fx) {
                     if (fx && fx.data && fx.data.success && fx.data.title_slot && fx.data.title_slot.count) {
                         slotInfo = fx.data.title_slot;
                     }
@@ -983,7 +983,7 @@ html.dark .tt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
     function equipTitle(key) {
         var user = getUser();
         if (!user) return;
-        supabaseClient.rpc('equip_title', { p_user_id: user.id, p_title_key: key }).then(function (res) {
+        supabaseClient.rpc('equip_title', { p_user_id: user.id, p_title_key: key , p_session: localStorage.getItem('nb_session')}).then(function (res) {
             if (res.error || !res.data || !res.data.success) {
                 alert((res.error && res.error.message) || (res.data && res.data.message) || '操作失败');
                 return;
@@ -995,7 +995,7 @@ html.dark .tt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
     function unequipTitle() {
         var user = getUser();
         if (!user) return;
-        supabaseClient.rpc('equip_title', { p_user_id: user.id, p_title_key: '' }).then(function (res) {
+        supabaseClient.rpc('equip_title', { p_user_id: user.id, p_title_key: '' , p_session: localStorage.getItem('nb_session')}).then(function (res) {
             if (res.error || !res.data || !res.data.success) {
                 alert((res.error && res.error.message) || (res.data && res.data.message) || '操作失败');
                 return;
@@ -1008,7 +1008,7 @@ html.dark .tt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
         var user = getUser();
         if (!user) return;
         if (!confirm('确认购买该称号？将扣除相应 NB币。')) return;
-        supabaseClient.rpc('buy_title', { p_user_id: user.id, p_title_key: key }).then(function (res) {
+        supabaseClient.rpc('buy_title', { p_user_id: user.id, p_title_key: key , p_session: localStorage.getItem('nb_session')}).then(function (res) {
             if (res.error || !res.data || !res.data.success) {
                 alert((res.error && res.error.message) || (res.data && res.data.message) || '购买失败');
                 return;
@@ -1020,7 +1020,7 @@ html.dark .tt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
     function setTitleSlot(key) {
         var user = getUser();
         if (!user) return;
-        supabaseClient.rpc('set_title_slot', { p_user_id: user.id, p_title_key: key }).then(function (res) {
+        supabaseClient.rpc('set_title_slot', { p_user_id: user.id, p_title_key: key , p_session: localStorage.getItem('nb_session')}).then(function (res) {
             if (res.error || !res.data || !res.data.success) {
                 alert((res.error && res.error.message) || (res.data && res.data.message) || '设置失败');
                 return;
@@ -1033,7 +1033,7 @@ html.dark .tt-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
         var user = getUser();
         if (!user) return;
         if (!confirm('取消展示位称号？（主页展示位将自动显示最高星称号）')) return;
-        supabaseClient.rpc('set_title_slot', { p_user_id: user.id, p_title_key: '' }).then(function (res) {
+        supabaseClient.rpc('set_title_slot', { p_user_id: user.id, p_title_key: '' , p_session: localStorage.getItem('nb_session')}).then(function (res) {
             if (res.error || !res.data || !res.data.success) {
                 alert((res.error && res.error.message) || (res.data && res.data.message) || '操作失败');
                 return;

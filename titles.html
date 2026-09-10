@@ -299,7 +299,7 @@
             // 称号展示位：查询是否生效 + 当前设置的展示称号
             let slotInfo = { count: 0, chosen_title_key: null };
             try {
-                const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id });
+                const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')});
                 if (fx && fx.success && fx.title_slot && fx.title_slot.count) {
                     slotInfo = fx.title_slot;
                 }
@@ -429,7 +429,7 @@
     async function equipTitle(key) {
         const user = getUser();
         if (!user) return;
-        const { data, error } = await supabaseClient.rpc('equip_title', { p_user_id: user.id, p_title_key: key });
+        const { data, error } = await supabaseClient.rpc('equip_title', { p_user_id: user.id, p_title_key: key , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) { alert((error && error.message) || (data && data.message) || '操作失败'); return; }
         showToast('✅ 已佩戴称号');
         loadTitles();    }
@@ -437,7 +437,7 @@
     async function unequipTitle() {
         const user = getUser();
         if (!user) return;
-        const { data, error } = await supabaseClient.rpc('equip_title', { p_user_id: user.id, p_title_key: '' });
+        const { data, error } = await supabaseClient.rpc('equip_title', { p_user_id: user.id, p_title_key: '' , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) { alert((error && error.message) || (data && data.message) || '操作失败'); return; }
         showToast('✅ 已取消佩戴');
         loadTitles();
@@ -448,7 +448,7 @@
         if (!user) return;
         const ok = confirm('确认购买该称号？将扣除相应 NB币。');
         if (!ok) return;
-        const { data, error } = await supabaseClient.rpc('buy_title', { p_user_id: user.id, p_title_key: key });
+        const { data, error } = await supabaseClient.rpc('buy_title', { p_user_id: user.id, p_title_key: key , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) { alert((error && error.message) || (data && data.message) || '购买失败'); return; }
         showToast(`🎉 ${data.message || '购买成功'}`);
         loadTitles();
@@ -458,7 +458,7 @@
     async function setTitleSlot(key) {
         const user = getUser();
         if (!user) return;
-        const { data, error } = await supabaseClient.rpc('set_title_slot', { p_user_id: user.id, p_title_key: key });
+        const { data, error } = await supabaseClient.rpc('set_title_slot', { p_user_id: user.id, p_title_key: key , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) { alert((error && error.message) || (data && data.message) || '设置失败'); return; }
         showToast('🎖️ 已设为展示位称号');
         loadTitles();
@@ -469,7 +469,7 @@
         if (!user) return;
         const ok = confirm('取消展示位称号？（主页展示位将自动显示最高星称号）');
         if (!ok) return;
-        const { data, error } = await supabaseClient.rpc('set_title_slot', { p_user_id: user.id, p_title_key: '' });
+        const { data, error } = await supabaseClient.rpc('set_title_slot', { p_user_id: user.id, p_title_key: '' , p_session: localStorage.getItem('nb_session')});
         if (error || !data || !data.success) { alert((error && error.message) || (data && data.message) || '操作失败'); return; }
         showToast('✅ 已取消展示位称号');
         loadTitles();

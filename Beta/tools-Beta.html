@@ -1460,7 +1460,7 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
                 if (u && supabaseClient) {
                     var user = JSON.parse(u);
                     if (user && user.id) {
-                        supabaseClient.rpc('record_balance_count', { p_user_id: user.id }).then(function () {}).catch(function () {});
+                        supabaseClient.rpc('record_balance_count', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')}).then(function () {}).catch(function () {});
                     }
                 }
             } catch (e) {}

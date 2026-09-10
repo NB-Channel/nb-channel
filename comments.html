@@ -622,7 +622,7 @@
             user_id: currentUser.id,
             new_username: newUsername,
             old_password: oldPassword
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) throw new Error(error.message);
         if (!data.success) throw new Error(data.message);
         return data;
