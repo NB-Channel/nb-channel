@@ -625,6 +625,13 @@ html { -webkit-text-size-adjust: 100%; }
                         <a class="p-link go" href="/download/NBChannel.apk" download>⬇️ 下载 APK(约 4MB)</a>
                         <a class="p-link" href="https://github.com/NB-Channel/nb-channel/releases/latest" target="_blank" rel="noopener noreferrer">GitHub 备用下载 ↗</a>
                     </div>
+                    <p style="margin:10px 0 0; font-size:.82rem; line-height:1.8; color:#f59e0b; background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.32); border-radius:12px; padding:10px 12px;">
+                        💡 <b>点了没反应?</b>说明你正在 <b>APP 内</b> 或 <b>微信里</b> —— 这两个环境都不允许下载安装包。<br>
+                        请用<b>手机浏览器</b>(Chrome / 夸克 / 系统浏览器)打开本页,或在地址栏输入:<br>
+                        <b style="word-break:break-all;">github.nb-channel.top/Beta/APP-Beta.html</b>
+                    </p>
+                    <div style="display:none;">
+                    </div>
                     <p class="p-sub" style="margin-top:12px; font-size:.85rem; line-height:1.85; opacity:.85;">
                         📱 <b>安卓安装</b>:下载后点开 APK → 提示「未知来源应用」时允许一次即可<br>
                         🍎 <b>iPhone 用户</b>:用 <b>Safari</b> 打开官网 → 点底部「分享」→「添加到主屏幕」,效果相同<br>
@@ -1002,35 +1009,35 @@ html { -webkit-text-size-adjust: 100%; }
 </script>
 
 
+
 <script>
-// ===== APK 下载按钮兼容处理 =====
-// 三种环境分别处理:
-//  ① 套壳 APP 内部:WebView 不处理文件下载,点了没反应 → 提示改用分享链接
-//  ② 微信内置浏览器:会拦截 APK 下载 → 引导"在浏览器打开"
-//  ③ 普通浏览器:新窗口下载,避免当前页被安装包数据流顶掉
+// ===== APK 下载:环境适配 =====
+// 说明:套壳 APP 用 server.url 加载远程站点时,Capacitor 不会注入 bridge,
+// 所以只能靠 UA 标识判断(需在 capacitor.config.json 里配 appendUserAgent)。
+// 现在这段做了双保险:识别到 APP 就把按钮改成"分享链接",否则正常新窗口下载。
 (function () {
     var ua = navigator.userAgent || '';
-    var isApp = !!window.Capacitor || /Capacitor/i.test(ua) || (/Android/i.test(ua) && /; wv\)/i.test(ua));
+    var isApp = /NBChannelApp/i.test(ua);
     var isWechat = /MicroMessenger/i.test(ua);
-    var links = document.querySelectorAll('a[href*="NBChannel.apk"], a[href*=".apk"]');
+    var links = document.querySelectorAll('a[href*=".apk"]');
     if (!links.length) return;
-
     Array.prototype.forEach.call(links, function (a) {
         if (isApp) {
-            a.textContent = '✅ 你正在使用 APP(已是最新版)';
+            a.textContent = '📤 分享给朋友(你已安装)';
             a.setAttribute('href', 'javascript:void(0)');
             a.addEventListener('click', function (e) {
                 e.preventDefault();
-                alert('你正在使用 NB频道 APP,已经是最新版啦~\n\n' +
-                      '想让朋友也装上?把这个网址发给他们:\n' +
-                      location.origin + '/Beta/APP-Beta.html\n\n' +
-                      '他们用手机浏览器打开后点「下载 APK」即可安装。');
+                var share = location.origin + '/Beta/APP-Beta.html';
+                if (navigator.share) {
+                    navigator.share({ title: 'NB频道 APP', text: 'NB频道官网,装个 APP 玩玩', url: share }).catch(function(){});
+                } else {
+                    alert('把下面这个网址发给朋友,他们用手机浏览器打开就能装:\n\n' + share);
+                }
             });
         } else if (isWechat) {
             a.addEventListener('click', function (e) {
                 e.preventDefault();
-                alert('微信内无法直接下载安装包\n\n' +
-                      '请点右上角「···」→「在浏览器打开」,\n然后再点「下载 APK」就能装了。');
+                alert('微信内无法下载安装包\n\n请点右上角「···」→「在浏览器打开」,再点下载即可。');
             });
         } else {
             a.setAttribute('target', '_blank');

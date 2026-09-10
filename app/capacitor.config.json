@@ -1,6 +1,7 @@
 {
   "appId": "top.nbchannel.app",
   "appName": "NB频道",
+  "appendUserAgent": "NBChannelApp",
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
