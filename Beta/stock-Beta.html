@@ -1116,6 +1116,38 @@ html { -webkit-text-size-adjust: 100%; }
         });
     }
 
+    // 带输入框的弹窗(复用提示弹窗样式)
+    function showPrompt(title, msg, placeholder, defaultValue) {
+        return new Promise((resolve) => {
+            const old = document.getElementById('nbPromptModal');
+            if (old) old.remove();
+            const modal = document.createElement('div');
+            modal.id = 'nbPromptModal';
+            modal.className = 'modal-overlay';
+            modal.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:20px;';
+            modal.innerHTML =
+                '<div class="modal-card" style="max-width:400px;width:100%;">' +
+                    '<h3 style="margin:0 0 10px;font-size:1.05rem;font-weight:800;">' + title + '</h3>' +
+                    '<p style="margin:0 0 14px;font-size:.86rem;line-height:1.7;color:var(--ink-soft,#5a6270);white-space:pre-line;">' + msg + '</p>' +
+                    '<input id="nbPromptInput" type="number" min="1" step="1" placeholder="' + (placeholder || '') + '" ' +
+                        'style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--card-border,#e5e7eb);background:var(--bg-color,#f7f8fa);color:var(--text-color,#1a1d23);font-size:16px;font-family:inherit;box-sizing:border-box;">' +
+                    '<div style="display:flex;gap:10px;margin-top:16px;">' +
+                        '<button id="nbPromptOk" style="flex:1;padding:11px;border-radius:999px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-family:inherit;font-weight:700;font-size:.9rem;cursor:pointer;">确认</button>' +
+                        '<button id="nbPromptCancel" style="padding:11px 22px;border-radius:999px;border:1px solid var(--card-border,#e5e7eb);background:transparent;color:var(--ink-soft,#5a6270);font-family:inherit;font-size:.9rem;cursor:pointer;">取消</button>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(modal);
+            const input = modal.querySelector('#nbPromptInput');
+            if (defaultValue) input.value = defaultValue;
+            const done = (val) => { modal.remove(); resolve(val); };
+            modal.querySelector('#nbPromptOk').addEventListener('click', () => done(input.value));
+            modal.querySelector('#nbPromptCancel').addEventListener('click', () => done(null));
+            modal.addEventListener('click', (e) => { if (e.target === modal) done(null); });
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(input.value); });
+            setTimeout(() => { try { input.focus(); } catch (e) {} }, 80);
+        });
+    }
+
     // ========== 全局变量 ==========
     let currentUser = null;
     let currentUserId = null;
@@ -1303,6 +1335,47 @@ html { -webkit-text-size-adjust: 100%; }
         await showMessage('破产成功', data.message);
     }
 
+    // 提取公司资金:把自己公司的市值变现成 NB币(市值保底 20000)
+    async function withdrawCompanyValue() {
+        if (!myCompany) { await showMessage('提示', '您还没有虚拟公司'); return; }
+        const mv = Number(myCompany.market_value || 0);
+        const maxV = Math.floor(mv - 20000);
+        if (maxV <= 0) {
+            await showMessage('无法提取', `公司当前市值 ${formatValue(mv)} NB币,提取后市值不能低于 20000,暂无可提取资金。`);
+            return;
+        }
+        const val = await showPrompt(
+            '💰 提取公司资金',
+            `公司:${myCompany.company_name}\n当前市值:${formatValue(mv)} NB币\n最多可提取:${formatValue(maxV)} NB币\n\n提取后公司市值不得低于 20000(保留初始投资),股东持仓价值会同步下降。`,
+            `最多 ${maxV}`,
+            ''
+        );
+        if (val === null) return;
+        const amount = Math.floor(Number(val));
+        if (!amount || amount <= 0) { await showMessage('提示', '请输入有效的提取金额'); return; }
+        if (amount > maxV) { await showMessage('提示', `最多只能提取 ${formatValue(maxV)} NB币`); return; }
+
+        const ok = await showConfirm('确认提取', `确定从「${myCompany.company_name}」提取 ${formatValue(amount)} NB币到你的账户吗?\n公司市值将降为 ${formatValue(mv - amount)} NB币。`);
+        if (!ok) return;
+
+        const { data, error } = await supabaseClient.rpc('withdraw_company_value', {
+            p_user_id: currentUserId,
+            p_session: localStorage.getItem('nb_session'),
+            p_company_id: myCompany.id,
+            p_amount: amount
+        });
+        if (error) { await showMessage('提取失败', error.message); return; }
+        if (!data || !data.ok) { await showMessage('提取失败', (data && data.message) || '未知错误'); return; }
+
+        let tip = data.message;
+        if (data.holders_tip) tip += '\n\n' + data.holders_tip;
+        myCompany.market_value = data.market_value;
+        await fetchUserBalance();
+        await refreshStockDataFromDB();
+        renderMyCompanySection();
+        await showMessage('提取成功', tip);
+    }
+
     async function checkAutoSupportRules() {
         if (!currentUserId) return;
         const { data: rules, error } = await supabaseClient
@@ -1432,11 +1505,13 @@ html { -webkit-text-size-adjust: 100%; }
             </div>
             <div>
                 ${actionButtons}
+                <button id="withdrawCompanyBtn" class="company-btn" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;">💰 提取公司资金</button>
                 <button id="bankruptBtn" class="company-btn danger-btn">💥 破产</button>
             </div>
         `;
 
         document.getElementById('bankruptBtn')?.addEventListener('click', bankruptCompany);
+        document.getElementById('withdrawCompanyBtn')?.addEventListener('click', withdrawCompanyValue);
 
         const applyBtn = document.getElementById('applyVerifyBtn');
         if (applyBtn) {
