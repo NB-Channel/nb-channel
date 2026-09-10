@@ -785,6 +785,19 @@ html { -webkit-text-size-adjust: 100%; }
     .history-title, .histogram-title, .mini-pie-title { font-size: .86rem; padding: 0 4px 8px; }
     #kLineTitle { font-size: .82rem; line-height: 1.6; }
 }
+
+/* ===== 手机上「更多功能」下拉的处理 =====
+   原因:窄屏导航菜单是横向滚动的,而「更多功能」排在菜单最右端,
+        初始位置在屏幕外;且菜单的 overflow 会把弹出面板裁掉。
+   处理:手机上隐藏这个下拉(核心功能在 ☰ 抽屉里都有),平板/桌面保持可用。 */
+@media (max-width: 900px) {
+    .nav-more { display: none !important; }
+    .nav-more-panel { display: none !important; }
+}
+/* 平板/桌面:面板靠右弹出时留出边距,避免贴边 */
+@media (min-width: 901px) {
+    .nav-more-panel { max-width: calc(100vw - 24px); }
+}
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
