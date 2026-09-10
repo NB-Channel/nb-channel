@@ -728,6 +728,49 @@ html.dark .bk-toast.err { background: #991b1b; }
 .nav-menu::-webkit-scrollbar { display: none; }
 .nav-menu a { padding: 10px 11px; font-size: .88rem; }
 .nav-menu a::after { left: 11px; right: 11px; }
+
+/* ===== 导航改上下两行:第一行 LOGO + 右侧功能区,第二行菜单 ===== */
+.nav {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0 44px;
+}
+.nav-logo { order: 1; height: 60px; margin-left: 0; }
+.nav-right-group { order: 2; height: 60px; }
+.nav-burger { order: 2; margin-left: auto; }
+.nav-menu {
+    order: 3;
+    flex-basis: 100%;
+    width: 100%;
+    justify-content: center;
+    padding: 3px 0 9px;
+    border-top: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.nav-menu::-webkit-scrollbar { display: none; }
+.nav-menu a { padding: 7px 11px; font-size: .87rem; letter-spacing: .2px; }
+.nav-menu a::after { left: 11px; right: 11px; bottom: 0; }
+
+/* 导航变高了,锚点滚动偏移同步调整 */
+[id] { scroll-margin-top: 124px; }
+
+/* 移动端:回到单行,菜单走抽屉 */
+@media (max-width: 900px) {
+    .nav { padding: 0 20px; flex-wrap: nowrap; height: 58px; }
+    .nav-menu { display: none; }
+    .nav-logo, .nav-right-group { height: 58px; }
+    [id] { scroll-margin-top: 74px; }
+}
+
+/* ===== 平板尺寸:菜单行自动换行(项多时排成两行,全部可见) ===== */
+@media (max-width: 1150px) and (min-width: 901px) {
+    .nav-menu { flex-wrap: wrap; justify-content: center; row-gap: 1px; padding-bottom: 8px; }
+    .nav-menu a { padding: 6px 9px; font-size: .83rem; }
+    .nav-menu a::after { left: 9px; right: 9px; }
+    [id] { scroll-margin-top: 166px; }
+}
 </style>
 </head>
 <body>
