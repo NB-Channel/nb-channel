@@ -576,11 +576,31 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
         html { scroll-behavior: smooth; }
         [id] { scroll-margin-top: 86px; }
 
-/* ===== 菜单项变多:紧凑排版 + 极窄屏可横向滑动 ===== */
-.nav-menu { gap: 0; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
-.nav-menu::-webkit-scrollbar { display: none; }
-.nav-menu a { padding: 10px 11px; font-size: .88rem; }
-.nav-menu a::after { left: 11px; right: 11px; }
+
+/* ===== 「更多功能」下拉(原菜单保留,新增功能收在这里) ===== */
+.nav-more { position: relative; display: flex; align-items: center; }
+.nav-more-btn {
+    padding: 10px 14px; font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); background: none; border: none; cursor: pointer;
+    font-family: inherit; white-space: nowrap; transition: color .3s ease;
+}
+.nav-more-btn:hover, .nav-more.open .nav-more-btn { color: var(--brand); }
+.nav-more-panel {
+    display: none; position: absolute; top: calc(100% + 12px); right: 0;
+    min-width: 178px; padding: 8px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 18px 44px -20px rgba(15,23,42,.42);
+    z-index: 300;
+}
+.nav-more.open .nav-more-panel { display: block; }
+.nav-more-panel a {
+    display: block; padding: 9px 12px; border-radius: 9px;
+    font-size: .88rem; color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+    transition: background .18s ease, color .18s ease;
+}
+.nav-more-panel a:hover { background: rgba(59,130,246,.1); color: var(--brand); }
+html.dark .nav-more-panel { background: #0f1a30; border-color: rgba(148,163,184,.22); }
+html.dark .nav-more-panel a:hover { background: rgba(59,130,246,.2); color: #fff; }
 </style>
 </head>
 <body>
@@ -588,15 +608,6 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
     <a class="nav-logo" href="index-Beta.html"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"></a>
     <div class="nav-menu">
         <a href="index-Beta.html">首页</a>
-        <a href="stock-Beta.html">虚拟股票</a>
-        <a href="bank-Beta.html">NB银行</a>
-        <a href="shop-Beta.html">NB商店</a>
-        <a href="backpack-Beta.html">我的背包</a>
-        <a href="titles-Beta.html">称号大全</a>
-        <a href="tools-Beta.html">化学工具</a>
-        <a href="product_share-Beta.html">作品分享</a>
-        <a href="comments-Beta.html">评论区</a>
-        <a href="ban-Beta.html">小黑屋</a>
         <a href="videos-Beta.html">视频</a>
         <a href="about-Beta.html">关于</a>
         <a href="changelog-Beta.html">更新日志</a>
@@ -604,6 +615,20 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
         <a href="APP-Beta.html">软件/APP</a>
         <a href="index-Beta.html#friends">友商</a>
         <a class="nav-api" href="/api-sdk/" target="_blank" rel="noopener noreferrer" title="NB频道 API 文档">API<i>↗</i></a>
+        <div class="nav-more">
+            <button class="nav-more-btn" type="button">更多功能 ▾</button>
+            <div class="nav-more-panel">
+                <a href="stock-Beta.html">📈 虚拟股票</a>
+                <a href="bank-Beta.html">🏦 NB银行</a>
+                <a href="shop-Beta.html">🛍️ NB商店</a>
+                <a href="backpack-Beta.html">🎒 我的背包</a>
+                <a href="titles-Beta.html">🏅 称号大全</a>
+                <a href="tools-Beta.html">🔬 化学工具</a>
+                <a href="product_share-Beta.html">📦 作品分享</a>
+                <a href="comments-Beta.html">💬 评论区</a>
+                <a href="ban-Beta.html">🚫 小黑屋</a>
+            </div>
+        </div>
     </div>
     <div class="nav-right-group">
         <div class="nav-clock" id="navClock" title="北京时间（UTC+8）">
@@ -618,6 +643,20 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
     </div>
     <button class="nav-burger" id="navBurger" aria-label="打开菜单">☰</button>
 </nav>
+<script>
+// ===== 导航「更多功能」下拉 =====
+(function () {
+    var box = document.querySelector('.nav-more');
+    if (!box) return;
+    var btn = box.querySelector('.nav-more-btn');
+    btn.addEventListener('click', function (e) { e.stopPropagation(); box.classList.toggle('open'); });
+    document.addEventListener('click', function () { box.classList.remove('open'); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') box.classList.remove('open'); });
+    var here = (location.pathname.split('/').pop() || '').toLowerCase();
+    if (here && box.querySelector('.nav-more-panel a[href="' + here + '"]')) btn.style.color = 'var(--brand)';
+})();
+</script>
+
 <!-- Hero -->
 <header class="vhero">
     <div class="vhero-inner">
