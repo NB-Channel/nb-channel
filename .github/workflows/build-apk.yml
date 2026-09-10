@@ -114,25 +114,52 @@ jobs:
           name: NB频道-APK
           path: out/*.apk
 
+      # 发布到 Release:tag 固定为 app-latest → Releases 列表永远只有一条(不再每次堆积)
+      # 版本号写在标题和说明里;要下载具体版本请看版本号与构建时间
       - name: Publish to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: app-v${{ steps.ver.outputs.name }}
+          tag_name: app-latest
           name: NB频道 APP v${{ steps.ver.outputs.name }}
           body: |
             ## NB频道 安卓客户端 v${{ steps.ver.outputs.name }}
 
-            **安装方法**:下载 `NB频道-v${{ steps.ver.outputs.name }}.apk` → 手机上点开安装 →
+            **安装方法**:下载下面的 APK → 手机上点开安装 →
             提示"未知来源"时允许一次即可。
 
             - 内容与 https://github.nb-channel.top/Beta/index-Beta.html 完全一致
             - **网站更新后 APP 自动同步**,只有外壳变化才需要更新 APP
-            - 国内直连下载:https://github.nb-channel.top/download/NBChannel.apk
+            - 国内直连下载(推荐):https://github.nb-channel.top/download/NBChannel.apk
             - 已安装旧版的用户:APP 会自己提示更新,点一下就能装
             - iPhone 用户:用 Safari 打开官网 → 分享 → 添加到主屏幕,效果相同
+
+            构建信息:versionCode ${{ env.APP_VERSION_CODE }} · 构建于 ${{ github.run_started_at }}
           files: out/*.apk
           draft: false
           prerelease: false
+          make_latest: true
+
+      # 清理历史 Release:每次构建都发一条会让列表越来越长,这里只保留 app-latest
+      - name: Clean old APP releases
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const rels = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+            let cleaned = 0;
+            for (const r of rels.data) {
+              if (r.tag_name === 'app-latest') continue;
+              try {
+                await github.rest.repos.deleteRelease({ owner, repo, release_id: r.id });
+                try { await github.rest.git.deleteRef({ owner, repo, ref: `tags/${r.tag_name}` }); } catch (e) {}
+                core.info(`已清理旧版本: ${r.tag_name}`);
+                cleaned++;
+              } catch (e) {
+                core.warning(`清理 ${r.tag_name} 失败: ${e.message}`);
+              }
+            }
+            core.info(cleaned ? `共清理 ${cleaned} 条历史 Release` : '没有需要清理的历史 Release');
+
 
       # 把 APK 与 version.json 提交进仓库 → 网站直接对外提供(国内可直连)
       - name: Publish APK to website
