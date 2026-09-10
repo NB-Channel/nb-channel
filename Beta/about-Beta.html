@@ -448,14 +448,27 @@ html.dark .panel.warn .thanks b { color: #fbbf24; }
         [id] { scroll-margin-top: 86px; }
 
 
-/* ===== 「更多功能」下拉(原菜单保留,新增功能收在这里) ===== */
+/* ===== 「更多功能」下拉(动画与原菜单项完全一致) ===== */
 .nav-more { position: relative; display: flex; align-items: center; }
 .nav-more-btn {
-    padding: 10px 14px; font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
     color: var(--ink-soft); background: none; border: none; cursor: pointer;
-    font-family: inherit; white-space: nowrap; transition: color .3s ease;
+    font-family: inherit; white-space: nowrap;
+    transition: color .3s ease;
 }
-.nav-more-btn:hover, .nav-more.open .nav-more-btn { color: var(--brand); }
+.nav-more-btn::after {
+    content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);
+}
+.nav-more-btn:hover { color: var(--ink); }
+.nav-more-btn:hover::after { transform: scaleX(1); }
+.nav-more.open .nav-more-btn { color: var(--ink); }
+.nav-more.open .nav-more-btn::after { transform: scaleX(1); }
+.nav-more-btn.active { color: var(--brand); font-weight: 600; }
+.nav-more-btn.active::after { transform: scaleX(1); }
 .nav-more-panel {
     display: none; position: absolute; top: calc(100% + 12px); right: 0;
     min-width: 178px; padding: 8px;
@@ -526,7 +539,7 @@ html.dark .nav-more-panel a:hover { background: rgba(59,130,246,.2); color: #fff
     document.addEventListener('click', function () { box.classList.remove('open'); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') box.classList.remove('open'); });
     var here = (location.pathname.split('/').pop() || '').toLowerCase();
-    if (here && box.querySelector('.nav-more-panel a[href="' + here + '"]')) btn.style.color = 'var(--brand)';
+    if (here && box.querySelector('.nav-more-panel a[href="' + here + '"]')) btn.classList.add('active');
 })();
 </script>
 
