@@ -551,24 +551,8 @@ html { -webkit-text-size-adjust: 100%; }
     border: 1px dashed var(--line); color: var(--ink-soft); font-size: .88rem;
 }
 
-/* ===== 链接颜色统一(去掉浏览器默认的纯蓝/紫,改用站点品牌色) ===== */
-a { color: var(--brand, #3b82f6); }
-a:visited { color: var(--brand, #3b82f6); }
-a:active { color: var(--brand-deep, #2563eb); }
-/* 只兜底没有自定义样式的裸链接,已有 class 的链接不受影响 */
-.comment-content a, .bn-rule a, .faq a, .pd-tip a {
-    color: var(--brand, #3b82f6);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(59,130,246,.35);
-    word-break: break-all;
-}
-.comment-content a:hover, .bn-rule a:hover, .faq a:hover, .pd-tip a:hover {
-    border-bottom-color: var(--brand, #3b82f6);
-}
-html.dark a, html.dark a:visited { color: #60a5fa; }
-html.dark .comment-content a { color: #60a5fa; border-bottom-color: rgba(96,165,250,.4); }
 
-/* ===== 评论富文本:粗体 / 斜体 / 行内代码 ===== */
+/* ===== 评论富文本:粗体 / 斜体 / 行内代码(不动链接颜色) ===== */
 .comment-content b, .comment-content strong { font-weight: 800; }
 .comment-content i, .comment-content em { font-style: italic; opacity: .95; }
 .comment-content code {
