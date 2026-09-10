@@ -118,7 +118,89 @@
             margin-left: 4px;
             font-size: 1rem;
         }
-    </style>
+    
+/* ===== 评论区布局:左侧评论 + 右侧封禁公示 ===== */
+.comments-layout {
+    display: flex;
+    gap: 26px;
+    align-items: flex-start;
+    justify-content: center;
+    max-width: 1420px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+.comments-layout .comment-section { margin: 22px 0 90px; flex: 1 1 auto; min-width: 0; }
+.ban-notice {
+    flex: 0 0 276px;
+    width: 276px;
+    margin: 22px 0 90px;
+    position: sticky;
+    top: 96px;
+    padding: 20px 18px 18px;
+    background: var(--card, var(--card-bg, #fff));
+    border: 1px solid var(--line, var(--card-border, #e5e7eb));
+    border-top: 3px solid #e5484d;
+    border-radius: 18px;
+    box-shadow: var(--shadow-1, 0 4px 12px rgba(0,0,0,.08));
+    font-size: 0.83rem;
+    line-height: 1.75;
+    color: var(--ink-soft, var(--text-color, #5a6270));
+}
+.bn-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.bn-ico { font-size: 1.5rem; line-height: 1; }
+.bn-title { font-size: 0.98rem; font-weight: 800; color: var(--ink, var(--text-color, #1a1d23)); }
+.bn-date { font-size: 0.72rem; opacity: .65; }
+.bn-name {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: rgba(229,72,77,.12);
+    color: #e5484d;
+    font-weight: 800;
+    font-size: 0.92rem;
+    margin-bottom: 8px;
+    text-decoration: line-through;
+    text-decoration-color: rgba(229,72,77,.55);
+}
+.bn-status { font-size: 0.78rem; color: #e5484d; font-weight: 600; margin-bottom: 14px; }
+.bn-list { list-style: none; padding: 0; margin: 0 0 14px; }
+.bn-list li { position: relative; padding-left: 14px; margin-bottom: 9px; font-size: 0.8rem; line-height: 1.7; }
+.bn-list li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 9px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .45;
+}
+.bn-list b { display: block; color: var(--ink, var(--text-color, #1a1d23)); font-size: 0.78rem; }
+.bn-warn {
+    padding: 12px 13px;
+    border-radius: 12px;
+    background: rgba(245,158,11,.10);
+    border: 1px solid rgba(245,158,11,.32);
+    font-size: 0.78rem;
+    line-height: 1.75;
+    margin-bottom: 12px;
+}
+.bn-warn b { color: #b45309; }
+.bn-foot {
+    font-size: 0.74rem;
+    opacity: .7;
+    text-align: center;
+    padding-top: 11px;
+    border-top: 1px dashed var(--line, var(--card-border, #e5e7eb));
+}
+@media (max-width: 1180px) {
+    .comments-layout { flex-direction: column; align-items: stretch; }
+    .comments-layout .comment-section { margin: 22px auto 0; width: 100%; }
+    .ban-notice { width: auto; flex: none; position: static; margin: 18px auto 70px; max-width: 880px; }
+}
+html.dark .bn-name { background: rgba(229,72,77,.2); }
+html.dark .bn-warn { background: rgba(245,158,11,.13); }
+html.dark .bn-warn b { color: #fbbf24; }
+</style>
 </head>
 <body>
 <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
@@ -145,6 +227,7 @@
 </div>
     </div>
 
+    <div class="comments-layout">
     <div class="comment-section">
         <div class="auth-bar">
             <span id="user-status">未登录</span>
@@ -162,6 +245,30 @@
 
         <div id="comment-list"></div>
     </div>
+
+    <!-- ===== 右侧封禁公示(宽屏显示在评论区右侧,窄屏自动移到下方) ===== -->
+    <aside class="ban-notice" aria-label="封禁公示">
+        <div class="bn-head">
+            <span class="bn-ico">🚫</span>
+            <div>
+                <div class="bn-title">封禁公示</div>
+                <div class="bn-date">2026-09-10</div>
+            </div>
+        </div>
+        <div class="bn-name">小NB官号</div>
+        <div class="bn-status">已永久封禁 · 账号与数据已清除</div>
+        <ul class="bn-list">
+            <li><b>违规行为</b>冒充官方身份,盗取他人账号与虚拟财产</li>
+            <li><b>处理结果</b>账号及其全部数据已删除,关联来源已列入访问黑名单</li>
+        </ul>
+        <div class="bn-warn">
+            <b>⚠️ 请认准官方账号</b><br>
+            NB频道官方只有一个:「<b>NB频道官方</b>」。其他名字带「官号 / 官方 / 客服 / 小号」字样的,均与我们无关 ——
+            <b>不要向任何人提供密码或邮箱验证码</b>,官方任何时候都不会索要。
+        </div>
+        <div class="bn-foot">账号出现异常 → nbchannel@163.com</div>
+    </aside>
+</div>
 </div>
 
 <!-- 登录弹窗 -->
