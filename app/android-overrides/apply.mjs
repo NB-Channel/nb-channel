@@ -54,9 +54,13 @@ fs.writeFileSync(gradlePath, gradle, 'utf8');
 log(`✅ 版本号写入: versionCode=${versionCode} versionName=${versionName}`);
 
 // ---------- ④ 产出 version.json(放到网站,供 APP 检查更新) ----------
-const siteDir = path.join(process.cwd(), 'download');
+// 注意:本脚本在 app/ 目录下执行,process.cwd() 是 app/;
+// 而 APK 和 version.json 必须放到【仓库根】的 download/,所以用 GITHUB_WORKSPACE 定位
+const repoRoot = process.env.GITHUB_WORKSPACE || path.join(process.cwd(), '..');
+const siteDir = path.join(repoRoot, 'download');
 fs.mkdirSync(siteDir, { recursive: true });
-fs.writeFileSync(path.join(siteDir, 'version.json'), JSON.stringify({
+const versionFile = path.join(siteDir, 'version.json');
+fs.writeFileSync(versionFile, JSON.stringify({
   version: parseInt(versionCode, 10),
   versionName: versionName,
   url: 'https://github.nb-channel.top/download/NBChannel.apk',
@@ -64,6 +68,6 @@ fs.writeFileSync(path.join(siteDir, 'version.json'), JSON.stringify({
   note: process.env.APP_RELEASE_NOTE || '修复与优化',
   updatedAt: new Date().toISOString().slice(0, 10),
 }, null, 2), 'utf8');
-log('✅ 已生成 download/version.json(APP 启动时用它比对版本)');
+log(`✅ 已生成 version.json → ${versionFile}`);
 
 console.log('\n注入完成,可以开始构建了。');

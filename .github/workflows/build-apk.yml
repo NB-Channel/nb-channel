@@ -87,7 +87,16 @@ jobs:
           mkdir -p out download
           cp app/android/app/build/outputs/apk/debug/app-debug.apk "out/NB频道-v${APP_VERSION_NAME}.apk"
           cp app/android/app/build/outputs/apk/debug/app-debug.apk "download/NBChannel.apk"
+          # 兜底:确保 version.json 一定存在,否则"发布到网站"那步会因找不到文件整体失败
+          if [ ! -f download/version.json ]; then
+            printf '{\n  "version": %s,\n  "versionName": "%s",\n  "url": "https://github.nb-channel.top/download/NBChannel.apk",\n  "apkSize": "约 5MB",\n  "note": "%s",\n  "updatedAt": "%s"\n}\n' \
+              "${APP_VERSION_CODE}" "${APP_VERSION_NAME}" "${APP_RELEASE_NOTE}" "$(date +%F)" > download/version.json
+            echo "已兜底生成 version.json"
+          fi
+          echo "--- download/ ---"
           ls -lh out/ download/
+          echo "--- version.json ---"
+          cat download/version.json
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
