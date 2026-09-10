@@ -2,8 +2,10 @@ name: Build Android APK
 
 # 触发方式:
 #   1) 手动:仓库 → Actions → Build Android APK → Run workflow
-#   2) 推送时自动:改动 app/ 目录下的文件
-# 构建产物会发布到 Releases,手机直接点链接下载安装。
+#   2) 推送时自动:改动 app/ 目录或本文件
+# 构建产物会:
+#   ① 发布到 Releases(带版本号存档)
+#   ② 自动提交到网站 download/ 目录 → 国内可直连下载
 on:
   workflow_dispatch:
   push:
@@ -58,15 +60,12 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Show APK info
-        working-directory: app/android
-        run: ls -lh app/build/outputs/apk/debug/
-
-      - name: Rename APK
+      - name: Collect APK
         run: |
-          mkdir -p out
+          mkdir -p out download
           cp app/android/app/build/outputs/apk/debug/app-debug.apk "out/NB频道-v1.0.${{ github.run_number }}.apk"
-          ls -lh out/
+          cp app/android/app/build/outputs/apk/debug/app-debug.apk "download/NBChannel.apk"
+          ls -lh out/ download/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -82,12 +81,27 @@ jobs:
           body: |
             ## NB频道 安卓客户端
 
-            **安装方法**:下载下面的 `NB频道-v1.0.${{ github.run_number }}.apk` → 手机上点开安装 →
-            如果提示"未知来源",允许一次即可。
+            **安装方法**:下载 `NB频道-v1.0.${{ github.run_number }}.apk` → 手机上点开安装 →
+            提示"未知来源"时允许一次即可。
 
-            - 本 APP 是**官网的客户端外壳**,内容与 https://github.nb-channel.top/Beta/index-Beta.html 完全一致
-            - 网站更新后 APP **自动同步**,不用重新下载
-            - 构建时间:${{ github.event.repository.updated_at }}
+            - 本 APP 是官网的客户端外壳,内容与 https://github.nb-channel.top/Beta/index-Beta.html 完全一致
+            - **网站更新后 APP 自动同步,无需重新下载**
+            - 国内直连下载(同一版本的稳定链接):https://github.nb-channel.top/download/NBChannel.apk
+            - iPhone 用户:用 Safari 打开官网 → 分享 → 添加到主屏幕,效果相同
           files: out/*.apk
           draft: false
           prerelease: false
+
+      # 把 APK 提交进仓库 → GitHub Pages 直接对外提供下载(国内可直连)
+      - name: Publish APK to website
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f download/NBChannel.apk
+          if git diff --staged --quiet; then
+            echo "APK 未变化,跳过提交"
+          else
+            git commit -m "自动发布 APK: v1.0.${{ github.run_number }} [skip ci]"
+            git push
+            echo "已把 APK 提交到 download/NBChannel.apk,网站可直接下载"
+          fi
