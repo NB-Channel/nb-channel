@@ -727,6 +727,12 @@ html.dark .bk-toast.err { background: #991b1b; }
 .rc-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 html.dark .rc-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2); }
 
+
+/* ===== 菜单项变多:紧凑排版 + 极窄屏可横向滑动 ===== */
+.nav-menu { gap: 0; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.nav-menu::-webkit-scrollbar { display: none; }
+.nav-menu a { padding: 10px 11px; font-size: .88rem; }
+.nav-menu a::after { left: 11px; right: 11px; }
 </style>
 </head>
 <body>
@@ -734,6 +740,15 @@ html.dark .rc-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
     <a class="nav-logo" href="index-Beta.html"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span class="logo-text">NB频道</span></a>
     <div class="nav-menu">
         <a href="index-Beta.html">首页</a>
+        <a href="stock-Beta.html">虚拟股票</a>
+        <a href="bank-Beta.html">NB银行</a>
+        <a href="shop-Beta.html">NB商店</a>
+        <a href="backpack-Beta.html">我的背包</a>
+        <a href="titles-Beta.html">称号大全</a>
+        <a href="tools-Beta.html">化学工具</a>
+        <a href="product_share-Beta.html">作品分享</a>
+        <a href="comments-Beta.html">评论区</a>
+        <a href="ban-Beta.html">小黑屋</a>
         <a href="videos-Beta.html">视频</a>
         <a href="about-Beta.html">关于</a>
         <a href="changelog-Beta.html">更新日志</a>
@@ -852,6 +867,15 @@ html.dark .rc-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
         <button class="d-close" id="drawerClose" aria-label="关闭菜单">✕</button>
     </div>
     <a class="d-item" href="index-Beta.html">首页</a>
+        <a class="d-item" href="stock-Beta.html">虚拟股票</a>
+        <a class="d-item" href="bank-Beta.html">NB银行</a>
+        <a class="d-item" href="shop-Beta.html">NB商店</a>
+        <a class="d-item" href="backpack-Beta.html">我的背包</a>
+        <a class="d-item" href="titles-Beta.html">称号大全</a>
+        <a class="d-item" href="tools-Beta.html">化学工具</a>
+        <a class="d-item" href="product_share-Beta.html">作品分享</a>
+        <a class="d-item" href="comments-Beta.html">评论区</a>
+        <a class="d-item" href="ban-Beta.html">小黑屋</a>
     <a class="d-item" href="videos-Beta.html">视频</a>
     <a class="d-item" href="about-Beta.html">关于</a>
     <a class="d-item" href="changelog-Beta.html">更新日志</a>
