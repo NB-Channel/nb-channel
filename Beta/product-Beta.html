@@ -418,6 +418,39 @@ html.dark .nav-auth:hover { background: rgba(255,255,255,.1); border-color: rgba
 .nav-more-panel a:hover { background: rgba(59,130,246,.1); color: var(--brand); }
 html.dark .nav-more-panel { background: #0f1a30; border-color: rgba(148,163,184,.22); }
 html.dark .nav-more-panel a:hover { background: rgba(59,130,246,.2); color: #fff; }
+
+/* ===== 移动端:也显示这条菜单栏(左右滑动看全部),不再只靠汉堡 ===== */
+@media (max-width: 900px) {
+    .nav { padding: 0 12px; gap: 6px; }
+    .nav-logo { flex: 0 0 auto; margin-left: 0; }
+    .nav-menu {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: flex-start;
+        gap: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+        /* 右侧渐隐,提示还能往右滑 */
+        -webkit-mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+        mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+    }
+    .nav-menu::-webkit-scrollbar { display: none; }
+    .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 11px; font-size: .86rem; letter-spacing: .2px; }
+    .nav-menu > a::after, .nav-menu .nav-more-btn::after { left: 11px; right: 11px; }
+    .nav-right-group { flex: 0 0 auto; gap: 6px; }
+    .theme-btn { width: 38px; height: 38px; border-radius: 11px; font-size: 1rem; }
+    .nav-burger { flex: 0 0 auto; }
+    /* 下拉面板在手机上居中一点,避免贴边被裁 */
+    .nav-more-panel { right: auto; left: 0; }
+}
+@media (max-width: 420px) {
+    .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 9px; font-size: .82rem; }
+    .nav-logo .logo-img { height: 28px; }
+}
 </style>
 </head>
 <body>
