@@ -1144,21 +1144,14 @@ html += `
         if (!reason) { statusEl.innerText = '请填写举报原因'; return; }
         if (reason.length > 100) { statusEl.innerText = '举报原因不能超过100字'; return; }
         try {
-            const { data: dup, error: dupErr } = await supabaseClient
-                .from('reports')
-                .select('id')
-                .eq('product_id', pid)
-                .eq('reporter_user_id', u.id)
-                .maybeSingle();
-            if (dupErr) throw dupErr;
-            if (dup) { statusEl.innerText = '你已经举报过该作品,管理员会尽快处理'; return; }
-            const { error } = await supabaseClient.from('reports').insert({
-                target_type: 'product',
-                product_id: pid,
-                reporter_user_id: u.id,
-                reason: reason
+            const { data: repRes, error: repErr } = await supabaseClient.rpc('submit_product_report', {
+                p_user_id: u.id,
+                p_session: localStorage.getItem('nb_session'),
+                p_product_id: pid,
+                p_reason: reason
             });
-            if (error) throw error;
+            if (repErr) throw repErr;
+            if (!repRes || !repRes.ok) { statusEl.innerText = (repRes && repRes.message) || '提交失败,请稍后重试'; return; }
             closeReportProduct();
             if (pendingReportProductBtn) {
                 pendingReportProductBtn.disabled = true;
