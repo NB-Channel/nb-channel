@@ -10,7 +10,6 @@
 import json
 import os
 import hashlib
-import base64
 import random
 import time
 import smtplib
@@ -56,23 +55,64 @@ def supa_rpc(fn, params):
         return {'ok': False, 'message': str(e)}
 
 
-def send_mail(to_addr, subject, text):
+def build_otp_html(code, minutes=10):
+    """品牌化 HTML 邮件(内联样式,兼容 QQ/163 邮箱)"""
+    return '''<div style="background:#f5f7fa;padding:28px 12px;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(16,24,40,.08);">
+    <div style="background:linear-gradient(135deg,#3b82f6,#6366f1);padding:22px 28px;color:#ffffff;">
+      <div style="font-size:19px;font-weight:800;letter-spacing:1px;">NB频道</div>
+      <div style="font-size:12px;opacity:.88;margin-top:5px;letter-spacing:3px;">NB CHANNEL · 账号安全</div>
+    </div>
+    <div style="padding:30px 28px 26px;">
+      <div style="font-size:16px;color:#1a1d23;font-weight:700;">你的邮箱验证码</div>
+      <div style="font-size:13px;color:#5a6270;line-height:1.9;margin-top:8px;">请在登录 / 注册页面输入下面的验证码完成验证:</div>
+      <div style="margin:24px 0;text-align:center;">
+        <div style="display:inline-block;background:#f1f5ff;border:1px dashed #93b4ff;border-radius:14px;padding:16px 30px;">
+          <span style="font-size:34px;font-weight:900;letter-spacing:9px;color:#2563eb;">''' + code + '''</span>
+        </div>
+      </div>
+      <div style="font-size:13px;color:#5a6270;line-height:2;">
+        · 验证码 <b>''' + str(minutes) + ''' 分钟内</b>有效,过期请重新获取<br>
+        · 请勿把验证码告诉任何人(包括自称客服的人)<br>
+        · 如果这不是你本人的操作,忽略本邮件即可
+      </div>
+      <div style="margin-top:22px;padding-top:18px;border-top:1px solid #e8eaee;font-size:12px;color:#8b93a3;line-height:1.9;">
+        本邮件由系统自动发送,请勿直接回复。<br>
+        NB频道(NoBook频道) · 虚拟公司 · <a href="https://nb-channel.top" style="color:#3b82f6;text-decoration:none;">nb-channel.top</a>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:520px;margin:14px auto 0;font-size:11px;color:#98a2b3;text-align:center;">
+    © 2026 NB频道 · 制作:NB搞事局
+  </div>
+</div>'''
+
+
+def send_mail(to_addr, code, minutes=10):
+    """发送 HTML + 纯文本双格式验证码邮件"""
     addr = os.environ.get('EMAIL_ADDR', '')
     auth = os.environ.get('EMAIL_AUTH', '')
     if not addr or not auth:
         return 'EMAIL_ADDR/EMAIL_AUTH 未配置'
-    msg = ('From: NB频道 <%s>\r\nTo: %s\r\n'
-           'Subject: =?UTF-8?B?%s?=\r\n'
-           'MIME-Version: 1.0\r\n'
-           'Content-Type: text/plain; charset=utf-8\r\n'
-           'Content-Transfer-Encoding: base64\r\n\r\n') % (
-        addr, to_addr, base64.b64encode(subject.encode('utf-8')).decode('ascii'))
-    msg += base64.b64encode(text.encode('utf-8')).decode('ascii')
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.header import Header
+    from email.utils import formataddr
+    text = ('你的 NB频道 登录/注册验证码是: %s\n'
+            '有效 %d 分钟,请勿告诉任何人。\n'
+            '如果这不是你本人的操作,请忽略本邮件。\n'
+            '—— NB频道(NB搞事局)') % (code, minutes)
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = Header('【NB频道】邮箱验证码 %s' % code, 'utf-8')
+    msg['From'] = formataddr((str(Header('NB频道', 'utf-8')), addr))
+    msg['To'] = to_addr
+    msg.attach(MIMEText(text, 'plain', 'utf-8'))
+    msg.attach(MIMEText(build_otp_html(code, minutes), 'html', 'utf-8'))
     try:
         ctx = ssl.create_default_context()
         with smtplib.SMTP_SSL('smtp.163.com', 465, timeout=20, context=ctx) as s:
             s.login(addr, auth)
-            s.sendmail(addr, [to_addr], msg.encode('utf-8'))
+            s.sendmail(addr, [to_addr], msg.as_string())
         return None
     except Exception as e:
         return str(e)
@@ -96,11 +136,6 @@ def index():
          request.headers.get('X-Real-IP') or 'unknown'
     if kind not in ('register', 'login', 'bind'):
         return jsonify({'ok': False, 'message': '未知类型'})
-    if not _rt_check('ip:' + ip, 5, 600):
-        return jsonify({'ok': False, 'message': '操作过于频繁,请稍后再试'})
-    if not _rt_check('email:' + kind + ':' + email, 3, 600):
-        return jsonify({'ok': False, 'message': '该邮箱请求过于频繁,请稍后再试'})
-
     code = str(random.randint(100000, 999999))
     to_addr = email
     if kind == 'login':
@@ -124,6 +159,8 @@ def index():
             return jsonify({'ok': False, 'message': '该账号已绑定邮箱'})
     if '@' not in to_addr:
         return jsonify({'ok': False, 'message': '邮箱格式不正确'})
+    if not _rt_check('email:' + kind + ':' + to_addr, 1, 60):
+        return jsonify({'ok': False, 'message': '发送太频繁,请 60 秒后再试'})
 
     r = supa_rpc('store_email_code', {
         'p_email': to_addr, 'p_purpose': kind,
@@ -135,11 +172,7 @@ def index():
     if not d.get('ok'):
         return jsonify({'ok': False, 'message': d.get('message') or '发送失败'})
 
-    text = ('你的 NB频道 登录/注册验证码是: {code}\n'
-            '有效 10 分钟,请勿告诉任何人。\n'
-            '如果这不是你本人的操作,请忽略本邮件。\n'
-            '—— NB频道(NB搞事局)').format(code=code)
-    err = send_mail(to_addr, 'NB频道 邮箱验证码', text)
+    err = send_mail(to_addr, code)
     if err:
         return jsonify({'ok': False, 'message': '邮件发送失败: ' + err})
     return jsonify({'ok': True, 'masked': masked_email(to_addr)})
