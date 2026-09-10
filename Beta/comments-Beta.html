@@ -706,6 +706,46 @@ html { -webkit-text-size-adjust: 100%; }
 @media (min-width: 901px) {
     .nav-more-panel { max-width: calc(100vw - 24px); }
 }
+
+/* ===== 链接颜色统一(去掉浏览器默认的纯蓝/紫,改用站点品牌色) ===== */
+a { color: var(--brand, #3b82f6); }
+a:visited { color: var(--brand, #3b82f6); }
+a:active { color: var(--brand-deep, #2563eb); }
+/* 只兜底没有自定义样式的裸链接,已有 class 的链接不受影响 */
+.comment-content a, .bn-rule a, .faq a, .pd-tip a {
+    color: var(--brand, #3b82f6);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(59,130,246,.35);
+    word-break: break-all;
+}
+.comment-content a:hover, .bn-rule a:hover, .faq a:hover, .pd-tip a:hover {
+    border-bottom-color: var(--brand, #3b82f6);
+}
+html.dark a, html.dark a:visited { color: #60a5fa; }
+html.dark .comment-content a { color: #60a5fa; border-bottom-color: rgba(96,165,250,.4); }
+
+/* ===== 评论富文本:粗体 / 斜体 / 行内代码 ===== */
+.comment-content b, .comment-content strong { font-weight: 800; }
+.comment-content i, .comment-content em { font-style: italic; opacity: .95; }
+.comment-content code {
+    padding: 1px 6px; border-radius: 6px;
+    background: rgba(120,120,120,.14);
+    font-family: ui-monospace, Consolas, monospace; font-size: .92em;
+}
+.md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
+.md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
+
+/* ===== 举报弹窗:屏蔽选项 ===== */
+.report-block-opt {
+    display: flex; align-items: center; gap: 9px;
+    margin: 12px 0 4px; padding: 10px 12px;
+    border-radius: 12px; cursor: pointer;
+    background: rgba(120,120,120,.07);
+    border: 1px solid var(--card-border);
+    font-size: .84rem; color: var(--ink-soft); line-height: 1.5;
+}
+.report-block-opt input { width: 18px; height: 18px; flex: 0 0 18px; cursor: pointer; accent-color: var(--brand, #3b82f6); }
+.report-block-opt:hover { background: rgba(59,130,246,.08); }
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -803,6 +843,7 @@ html { -webkit-text-size-adjust: 100%; }
 
         <div id="new-comment-area" class="new-comment-area" style="display: none;">
             <textarea id="comment-text" rows="3" placeholder="写下你的评论... (最多200字，图片约占41字)" maxlength="200"></textarea>
+            <div class="md-tip">支持格式:<code>**粗体**</code> <code>*斜体*</code> <code>`代码`</code> <code>[文字](链接)</code> · 也可直接粘贴网址</div>
             <div class="char-counter"><span id="char-count">0</span>/200</div>
             <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
                 <button type="button" id="btn-comment-image" title="发图片（相册/拍照）" style="background:none; border:1px solid var(--card-border); border-radius:8px; padding:6px 12px; cursor:pointer; font-size:0.95rem;">📷 图片</button>
@@ -901,6 +942,10 @@ html { -webkit-text-size-adjust: 100%; }
         <h3>举报评论</h3>
         <textarea id="report-reason" rows="3" placeholder="请填写举报原因（例如：辱骂、广告、冒充等）" maxlength="100"></textarea>
         <div class="char-counter"><span id="report-char-count">0</span>/100</div>
+        <label class="report-block-opt">
+            <input type="checkbox" id="report-also-block">
+            <span>同时屏蔽该作者(不再显示 TA 的评论)</span>
+        </label>
         <button id="submit-report">提交举报</button>
         <button id="close-report">取消</button>
     </div>
@@ -935,6 +980,23 @@ html { -webkit-text-size-adjust: 100%; }
     let allRepliesMap = new Map(); // 所有回复，按 parent_id 分组
     let verifiedUsernames = [];
     let pendingReportCommentId = null;
+    var blockedUserIds = {};      // 我屏蔽的用户(评论区不再显示他们的评论)
+    async function loadBlockedUsers() {
+        if (!currentUser) return;
+        try {
+            var r = await supabaseClient.rpc('get_blocked_users', {
+                p_user_id: currentUser.id,
+                p_session: localStorage.getItem('nb_session')
+            });
+            var arr = (r && r.data) || [];
+            if (!Array.isArray(arr)) arr = arr.users || arr.blocked || [];
+            blockedUserIds = {};
+            arr.forEach(function (x) {
+                var id = (typeof x === 'string') ? x : (x.blocked_id || x.user_id || x.id);
+                if (id) blockedUserIds[id] = true;
+            });
+        } catch (e) { /* 失败就不过滤 */ }
+    }
     let highlightApplied = false;
     let pendingHighlightId = null;
     let commentSort = 'latest';    // 排序方式：latest=最新 hot=最热
@@ -1326,6 +1388,13 @@ html { -webkit-text-size-adjust: 100%; }
         if (!text) return '';
         let escaped = escapeHtml(text);
         // http(s) 链接 → 蓝色可点击（必须先于 [img] 替换，避免误伤图片 URL）
+        // ===== 精简 Markdown:粗体 / 斜体 / 行内代码 / 文字链接 =====
+        // 注意:必须先 escapeHtml 再解析,避免 XSS
+        escaped = escaped.replace(/\[([^\]\n]{1,40})\]\((https?:\/\/[^\s)]{1,300})\)/g,
+            '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        escaped = escaped.replace(/\*\*([^*\n]{1,120})\*\*/g, '<b>$1</b>');
+        escaped = escaped.replace(/(^|[^*])\*([^*\n]{1,120})\*(?!\*)/g, '$1<i>$2</i>');
+        escaped = escaped.replace(/`([^`\n]{1,120})`/g, '<code>$1</code>');
         escaped = linkify(escaped);
         // [img]key[/img] → 图片（公开桶 URL 由前端拼接，点击放大）
         escaped = escaped.replace(/\[img\]([a-zA-Z0-9_.\-]+)\[\/img\]/g, (m, key) =>
@@ -1580,7 +1649,7 @@ html { -webkit-text-size-adjust: 100%; }
             ? ` style="color:${fx.comment_color};"` : '';
 
         return `
-            <div class="comment" data-id="${node.id}">
+            <div class="comment" data-id="${node.id}" data-uid="${node.user_id}">
                 <div class="comment-meta">
                     ${floorBadge}
                     ${avatarHtml}<a class="comment-author" href="profile-Beta.html?username=${encodeURIComponent(author)}" style="text-decoration:none;${nameStyle}"${nameClass} title="查看主页">${escapeHtml(author)}</a>${verifiedBadge}${companyTag}
@@ -1881,6 +1950,13 @@ html { -webkit-text-size-adjust: 100%; }
                 e.stopPropagation();
                 const commentId = btn.dataset.id;
                 pendingReportCommentId = parseInt(commentId);
+                // 记下被举报评论的作者,供"同时屏蔽该作者"用
+                (function () {
+                    var _el = document.querySelector('.comment[data-id="' + commentId + '"]');
+                    var _uid = _el ? _el.dataset.uid : null;
+                    var _a = _el ? _el.querySelector('.comment-author') : null;
+                    window.__nbReportTarget = _uid ? { id: _uid, name: _a ? _a.textContent.trim() : '' } : null;
+                })();
                 reportReason.value = '';
                 reportCharCountSpan.innerText = '0';
                 reportModal.style.display = 'flex';
@@ -2121,6 +2197,7 @@ html { -webkit-text-size-adjust: 100%; }
     }
 
     async function fetchComments(page) {
+        if (currentUser && !Object.keys(blockedUserIds).length) await loadBlockedUsers();
         let targetPage = page !== undefined ? page : currentPage;
 
         // ===== highlight 跳转：先定位目标评论所在页码，再拉该页数据 =====
@@ -2170,7 +2247,12 @@ html { -webkit-text-size-adjust: 100%; }
             return;
         }
 
-        const rows = rpcData.comments || [];
+        let rows = rpcData.comments || [];
+        // 过滤掉被我屏蔽的用户的评论
+        if (Object.keys(blockedUserIds).length) {
+            rows = rows.filter(function (r) { return !blockedUserIds[r.user_id]; });
+        }
+
         totalComments = rpcData.total || 0;
         totalAllComments = rpcData.total_all || rpcData.total || 0;
 
@@ -2495,6 +2577,29 @@ html { -webkit-text-size-adjust: 100%; }
         pendingReportCommentId = null;
     };
     submitReportBtn.onclick = submitReport;
+    // ===== 举报成功后:若勾选了"同时屏蔽该作者",写入屏蔽列表并移除其评论 =====
+    window.__nbBlockAfterReport = async function () {
+        var box = document.getElementById('report-also-block');
+        var tgt = window.__nbReportTarget;
+        if (box) { var checked = box.checked; box.checked = false; }
+        if (!checked || !currentUser || !tgt || !tgt.id || tgt.id === currentUser.id) return;
+        try {
+            await supabaseClient.rpc('block_user', {
+                p_user_id: currentUser.id,
+                p_target: tgt.id,
+                p_session: localStorage.getItem('nb_session')
+            });
+            blockedUserIds[tgt.id] = true;
+            document.querySelectorAll('.comment').forEach(function (el) {
+                if (el.dataset.uid === tgt.id) el.remove();
+            });
+            showMessage('已屏蔽', '已同时屏蔽 ' + (tgt.name || '该作者') + ',不再显示 TA 的评论');
+        } catch (e) { /* 屏蔽失败不影响举报 */ }
+    };
+    // 举报提交是异步的,错开一点再执行屏蔽(且只在真的提交成功时才提示)
+    submitReportBtn.addEventListener('click', function () {
+        setTimeout(function () { window.__nbBlockAfterReport(); }, 900);
+    });
 
     // 弹窗绑定
     const loginModal = document.getElementById('login-modal');
@@ -2985,6 +3090,7 @@ html { -webkit-text-size-adjust: 100%; }
     // 启动自动查一次,之后每 30 分钟
     setTimeout(function () { check(false); }, 2000);
     setInterval(function () { check(false); }, 30 * 60 * 1000);
+
 })();
 </script>
 </body>

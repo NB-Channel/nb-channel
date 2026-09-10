@@ -798,6 +798,34 @@ html { -webkit-text-size-adjust: 100%; }
 @media (min-width: 901px) {
     .nav-more-panel { max-width: calc(100vw - 24px); }
 }
+
+/* ===== 链接颜色统一(去掉浏览器默认的纯蓝/紫,改用站点品牌色) ===== */
+a { color: var(--brand, #3b82f6); }
+a:visited { color: var(--brand, #3b82f6); }
+a:active { color: var(--brand-deep, #2563eb); }
+/* 只兜底没有自定义样式的裸链接,已有 class 的链接不受影响 */
+.comment-content a, .bn-rule a, .faq a, .pd-tip a {
+    color: var(--brand, #3b82f6);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(59,130,246,.35);
+    word-break: break-all;
+}
+.comment-content a:hover, .bn-rule a:hover, .faq a:hover, .pd-tip a:hover {
+    border-bottom-color: var(--brand, #3b82f6);
+}
+html.dark a, html.dark a:visited { color: #60a5fa; }
+html.dark .comment-content a { color: #60a5fa; border-bottom-color: rgba(96,165,250,.4); }
+
+/* ===== 评论富文本:粗体 / 斜体 / 行内代码 ===== */
+.comment-content b, .comment-content strong { font-weight: 800; }
+.comment-content i, .comment-content em { font-style: italic; opacity: .95; }
+.comment-content code {
+    padding: 1px 6px; border-radius: 6px;
+    background: rgba(120,120,120,.14);
+    font-family: ui-monospace, Consolas, monospace; font-size: .92em;
+}
+.md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
+.md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
