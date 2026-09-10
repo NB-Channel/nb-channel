@@ -1017,7 +1017,7 @@ html { -webkit-text-size-adjust: 100%; }
         if (!ok) return;
         const { data, error } = await supabaseClient.rpc('transfer_nb', {
             p_from: currentUser.id, p_to: transferState.toId, p_amount: amount
-        });
+        , p_session: localStorage.getItem('nb_session') });
         document.getElementById('transferModal').style.display = 'none';
         if (error) { alert('转账失败：' + error.message); return; }
         if (!data || !data.success) { alert((data && data.message) || '转账失败'); return; }
@@ -1378,7 +1378,7 @@ html { -webkit-text-size-adjust: 100%; }
         if (!currentUser) return;
         const { data, error } = await supabaseClient.rpc('claim_redpacket', {
             p_transfer_id: parseInt(transferId), p_user: currentUser.id
-        });
+        , p_session: localStorage.getItem('nb_session') });
         if (error || !data || !data.success) {
             alert((error && error.message) || (data && data.message) || '领取失败');
             return;

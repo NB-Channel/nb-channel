@@ -1355,7 +1355,7 @@ html { -webkit-text-size-adjust: 100%; }
                         if (!ok) return;
                         var doNext = function (k) {
                             if (k >= qty) return finish();
-                            supabaseClient.rpc('buy_shop_item', { p_user_id: user.id, p_item_key: key })
+                            supabaseClient.rpc('buy_shop_item', { p_user_id: user.id, p_item_key: key , p_session: localStorage.getItem('nb_session') })
                                 .then(function (res) {
                                     if (res.error || !res.data || !res.data.success) {
                                         showMessage('购买失败', (res.error && res.error.message) || (res.data && res.data.message) || '未知错误');

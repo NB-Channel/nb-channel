@@ -1318,7 +1318,7 @@ html { -webkit-text-size-adjust: 100%; }
         // 统一走 bankrupt_company RPC（服务端处理：删公司/蓝标/规则/持仓/快照/奖励）
         const { data, error } = await supabaseClient.rpc('bankrupt_company', {
             p_user_id: currentUserId
-        });
+        , p_session: localStorage.getItem('nb_session') });
         if (error) {
             await showMessage('破产失败', error.message);
             return;
@@ -1333,6 +1333,39 @@ html { -webkit-text-size-adjust: 100%; }
         await refreshStockDataFromDB();
         renderMyCompanySection();
         await showMessage('破产成功', data.message);
+    }
+
+    // 提升公司市值:花 NB币给公司加值(1:1)
+    async function upgradeCompanyValue() {
+        if (!myCompany) { await showMessage('提示', '您还没有虚拟公司'); return; }
+        const val = await showPrompt(
+            '💎 提升公司市值',
+            `公司:${myCompany.company_name}\n当前市值:${formatValue(myCompany.market_value)} NB币\n\n花 NB币给公司市值加值(1:1),单次最多 1 亿。`,
+            '要投入的 NB币金额',
+            ''
+        );
+        if (val === null) return;
+        const amount = Math.floor(Number(val));
+        if (!amount || amount <= 0) { await showMessage('提示', '请输入有效的投入金额'); return; }
+        if (amount > 100000000) { await showMessage('提示', '单次提升不能超过 1 亿 NB币'); return; }
+
+        const ok = await showConfirm('确认投入', `确定花费 ${formatValue(amount)} NB币把「${myCompany.company_name}」市值提升到 ${formatValue(Number(myCompany.market_value || 0) + amount)} NB币吗?`);
+        if (!ok) return;
+
+        const { data, error } = await supabaseClient.rpc('upgrade_company_value', {
+            p_user_id: currentUserId,
+            p_session: localStorage.getItem('nb_session'),
+            p_company_id: myCompany.id,
+            p_amount: amount
+        });
+        if (error) { await showMessage('提升失败', error.message); return; }
+        if (!data || !data.ok) { await showMessage('提升失败', (data && data.message) || '未知错误'); return; }
+
+        myCompany.market_value = data.market_value;
+        await fetchUserBalance();
+        await refreshStockDataFromDB();
+        renderMyCompanySection();
+        await showMessage('提升成功', data.message);
     }
 
     // 提取公司资金:把自己公司的市值变现成 NB币(市值保底 20000)
@@ -1505,12 +1538,14 @@ html { -webkit-text-size-adjust: 100%; }
             </div>
             <div>
                 ${actionButtons}
+                <button id="upgradeCompanyBtn" class="company-btn" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border:none;">💎 提升市值</button>
                 <button id="withdrawCompanyBtn" class="company-btn" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;">💰 提取公司资金</button>
                 <button id="bankruptBtn" class="company-btn danger-btn">💥 破产</button>
             </div>
         `;
 
         document.getElementById('bankruptBtn')?.addEventListener('click', bankruptCompany);
+        document.getElementById('upgradeCompanyBtn')?.addEventListener('click', upgradeCompanyValue);
         document.getElementById('withdrawCompanyBtn')?.addEventListener('click', withdrawCompanyValue);
 
         const applyBtn = document.getElementById('applyVerifyBtn');
@@ -2245,12 +2280,19 @@ html { -webkit-text-size-adjust: 100%; }
 
         const rpcName = mode === 'buy' ? 'buy_stock' : 'sell_stock';
         const useDiscount = document.getElementById('tradeUseDiscount') ? document.getElementById('tradeUseDiscount').checked : false;
-        const { data, error } = await supabaseClient.rpc(rpcName, {
+        const tradeArgs = {
             p_user_id: currentUserId,
             p_company_id: tradeState.companyId,
             p_amount: amount,
             p_use_discount: useDiscount
-        });
+        };
+        // 带会话令牌(后端已令牌化);若后端还是旧版本则自动回退成不带令牌调用
+        const sessionTok = localStorage.getItem('nb_session');
+        let tradeRes = await supabaseClient.rpc(rpcName, Object.assign({ p_session: sessionTok }, tradeArgs));
+        if (tradeRes.error && /p_session|Could not find the function|PGRST202/i.test(tradeRes.error.message || '')) {
+            tradeRes = await supabaseClient.rpc(rpcName, tradeArgs);
+        }
+        const { data, error } = tradeRes;
         if (error) {
             await showMessage('交易失败', error.message);
             return;

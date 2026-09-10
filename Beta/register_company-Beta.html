@@ -704,6 +704,29 @@ html.dark .bk-toast.err { background: #991b1b; }
     font-size: .86rem; color: var(--ink-soft); line-height: 1.7; cursor: pointer;
 }
 .rc-check input { width: 18px; height: 18px; margin-top: 3px; flex-shrink: 0; accent-color: var(--brand); cursor: pointer; }
+/* 注册方式选择 */
+.rc-plan { display: flex; gap: 10px; margin-bottom: 14px; }
+.rc-plan button {
+    flex: 1; padding: 12px 10px; border-radius: 14px; cursor: pointer; font-family: inherit;
+    border: 1.5px solid var(--card-border, #e5e7eb); background: transparent; color: var(--ink-soft);
+    font-size: .86rem; font-weight: 800; transition: all .18s; line-height: 1.5;
+}
+.rc-plan button small { display: block; font-weight: 500; font-size: .7rem; opacity: .72; margin-top: 2px; }
+.rc-plan button.on {
+    border-color: transparent; color: #fff;
+    background: linear-gradient(135deg, var(--brand), #6366f1);
+    box-shadow: 0 8px 20px -10px rgba(59,130,246,.75);
+}
+.rc-pay { display: none; }
+.rc-pay.show { display: block; }
+.rc-quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.rc-quick button {
+    flex: 1; min-width: 72px; padding: 8px 6px; border-radius: 999px; cursor: pointer; font-family: inherit;
+    border: 1px solid var(--card-border, #e5e7eb); background: transparent; color: var(--ink-soft); font-size: .78rem;
+}
+.rc-quick button:hover { border-color: var(--brand); color: var(--brand); }
+.rc-hint { font-size: .78rem; color: var(--ink-faint); line-height: 1.7; margin-top: 9px; }
+.rc-hint b { color: var(--brand); }
 .rc-err { min-height: 20px; font-size: .84rem; color: #ef4444; margin: 2px 2px 10px; line-height: 1.6; }
 .rc-btn {
     width: 100%; border: none; border-radius: 999px; padding: 13px 10px; cursor: pointer;
@@ -981,6 +1004,27 @@ html { -webkit-text-size-adjust: 100%; }
             <label>公司所有人</label>
             <div class="rc-owner" id="ownerName">加载中…</div>
         </div>
+        <div class="rc-field-wrap">
+            <label>注册方式</label>
+            <div class="rc-plan" id="rcPlan">
+                <button type="button" class="on" data-plan="free">🆓 免费注册<small>初始市值 20000 NB币</small></button>
+                <button type="button" data-plan="paid">💎 付费注册<small>花钱提高初始市值</small></button>
+            </div>
+            <div class="rc-pay" id="rcPay">
+                <div class="rc-input-row">
+                    <span class="rc-ic">💰</span>
+                    <input type="number" id="payAmount" class="rc-field" min="0" step="1000" placeholder="额外投入的 NB币(如 100000)">
+                </div>
+                <div class="rc-quick">
+                    <button type="button" data-add="10000">+1万</button>
+                    <button type="button" data-add="50000">+5万</button>
+                    <button type="button" data-add="100000">+10万</button>
+                    <button type="button" data-add="500000">+50万</button>
+                    <button type="button" data-add="0">清零</button>
+                </div>
+                <div class="rc-hint" id="rcPayHint"></div>
+            </div>
+        </div>
         <label class="rc-check">
             <input type="checkbox" id="needVerify">
             <span>去认证你的虚拟公司(审核通过后评论区内会显示已认证)</span>
@@ -1231,12 +1275,77 @@ html { -webkit-text-size-adjust: 100%; }
         } catch (e) { toLogin(); }
     }
 
+    // ===== 注册方式:免费 / 付费提升初始市值 =====
+    var currentPlan = 'free';
+    var myBalance = null;
+
+    function fmtMoney(n) { try { return Number(n).toLocaleString('zh-CN'); } catch (e) { return n; } }
+
+    function loadMyBalance() {
+        if (!currentUser) return;
+        supabaseClient.rpc('get_my_balance', {
+            p_user_id: currentUser.id, p_session: localStorage.getItem('nb_session')
+        }).then(function (res) {
+            var d = res && res.data;
+            if (d && typeof d === 'object' && d.ok === false) return;
+            myBalance = (d && typeof d === 'object') ? (d.balance != null ? d.balance : d.nb_balance) : d;
+            if (myBalance == null || isNaN(Number(myBalance))) myBalance = null;
+            updatePayHint();
+        }).catch(function () {});
+    }
+
+    function updatePayHint() {
+        var hint = document.getElementById('rcPayHint');
+        if (!hint) return;
+        var v = Math.floor(Number(document.getElementById('payAmount').value || 0));
+        if (v < 0 || isNaN(v)) v = 0;
+        var bal = (myBalance == null) ? '—' : fmtMoney(myBalance);
+        var lack = (myBalance != null && v > myBalance)
+            ? '<br><span style="color:#ef4444;">NB币不足(还差 ' + fmtMoney(v - myBalance) + ')</span>' : '';
+        hint.innerHTML = '你的 NB币余额:<b>' + bal + '</b><br>注册后公司市值:<b>' + fmtMoney(20000 + v) +
+            '</b> NB币(基础 20000' + (v > 0 ? ' + 你的 ' + fmtMoney(v) : '') + ')' + lack +
+            '<br><span style="opacity:.8;">按 1:1 兑换,单次最多 1 亿;付费部分会从 NB币余额中扣除。</span>';
+    }
+
+    (function bindPlan() {
+        var wrap = document.getElementById('rcPlan');
+        if (!wrap) return;
+        wrap.querySelectorAll('button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                wrap.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+                b.classList.add('on');
+                currentPlan = b.dataset.plan;
+                document.getElementById('rcPay').classList.toggle('show', currentPlan === 'paid');
+                updatePayHint();
+            });
+        });
+        document.querySelectorAll('.rc-quick button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var add = Number(b.dataset.add || 0);
+                var el = document.getElementById('payAmount');
+                var cur = Math.floor(Number(el.value || 0));
+                if (isNaN(cur) || cur < 0) cur = 0;
+                el.value = add === 0 ? '' : (cur + add);
+                updatePayHint();
+            });
+        });
+        var payEl = document.getElementById('payAmount');
+        if (payEl) payEl.addEventListener('input', updatePayHint);
+    })();
+
     function registerCompany() {
         if (!currentUser) return;
         var name = document.getElementById('companyName').value.trim();
         var needVerify = document.getElementById('needVerify').checked;
         var errorDiv = document.getElementById('errorMsg');
         var btn = document.getElementById('submitBtn');
+        var paid = 0;
+        if (currentPlan === 'paid') {
+            paid = Math.floor(Number(document.getElementById('payAmount').value || 0));
+            if (isNaN(paid) || paid < 0) paid = 0;
+            if (paid > 100000000) { errorDiv.innerText = '单次提升不能超过 1 亿 NB币'; return; }
+            if (myBalance != null && paid > myBalance) { errorDiv.innerText = 'NB币不足(需要 ' + fmtMoney(paid) + ',当前 ' + fmtMoney(myBalance) + ')'; return; }
+        }
         errorDiv.innerText = '';
         if (!name) { errorDiv.innerText = '请填写公司名称'; return; }
         if (name.length > 20) { errorDiv.innerText = '公司名称不能超过20字'; return; }
@@ -1245,16 +1354,44 @@ html { -webkit-text-size-adjust: 100%; }
             .then(function (res) {
                 if (res.error) { errorDiv.innerText = '注册失败:' + res.error.message; btn.disabled = false; btn.textContent = '提交注册'; return; }
                 if (!res.data.success) { errorDiv.innerText = res.data.message || '注册失败'; btn.disabled = false; btn.textContent = '提交注册'; return; }
-                showToast(res.data.need_verify
-                    ? '📨 公司注册申请已提交,请等待管理员审核;通过后即可开始股票交易'
-                    : '🎉 公司注册成功!初始市值 20000 NB币');
-                setTimeout(function () { window.location.href = 'stock-Beta.html'; }, 1600);
+                if (!paid) {
+                    showToast(res.data.need_verify
+                        ? '📨 公司注册申请已提交,请等待管理员审核;通过后即可开始股票交易'
+                        : '🎉 公司注册成功!初始市值 20000 NB币');
+                    setTimeout(function () { window.location.href = 'stock-Beta.html'; }, 1600);
+                    return;
+                }
+                // 付费:注册完立刻用 NB币提升市值
+                btn.textContent = '提升市值中…';
+                supabaseClient.from('user_companies').select('id').eq('user_id', currentUser.id).limit(1)
+                    .then(function (cr) {
+                        var cid = cr && cr.data && cr.data[0] && cr.data[0].id;
+                        if (!cid) { errorDiv.innerText = '公司已注册,但未找到公司信息,请到股票页面重试'; btn.disabled = false; btn.textContent = '提交注册'; return; }
+                        supabaseClient.rpc('upgrade_company_value', {
+                            p_user_id: currentUser.id, p_session: localStorage.getItem('nb_session'),
+                            p_company_id: cid, p_amount: paid
+                        }).then(function (ur) {
+                            var d = ur && ur.data;
+                            if (ur.error || !d || !d.ok) {
+                                errorDiv.innerText = '公司已注册(初始市值 20000),但提升市值失败:' + ((d && d.message) || (ur.error && ur.error.message) || '未知错误');
+                                btn.disabled = false; btn.textContent = '提交注册';
+                                return;
+                            }
+                            showToast('💎 公司注册成功!市值 ' + fmtMoney(d.market_value) + ' NB币(花费 ' + fmtMoney(paid) + ' NB币)');
+                            setTimeout(function () { window.location.href = 'stock-Beta.html'; }, 1800);
+                        }).catch(function (e) {
+                            errorDiv.innerText = '公司已注册,但提升市值失败:' + (e.message || e);
+                            btn.disabled = false; btn.textContent = '提交注册';
+                        });
+                    })
+                    .catch(function (e) { errorDiv.innerText = '公司已注册,但读取公司信息失败:' + (e.message || e); btn.disabled = false; btn.textContent = '提交注册'; });
             })
             .catch(function (e) { errorDiv.innerText = '注册失败:' + (e.message || e); btn.disabled = false; btn.textContent = '提交注册'; });
     }
     document.getElementById('submitBtn').addEventListener('click', registerCompany);
     document.getElementById('companyName').addEventListener('keydown', function (e) { if (e.key === 'Enter') registerCompany(); });
     loadCurrentUser();
+    setTimeout(loadMyBalance, 600);
 
 </script>
 <script>

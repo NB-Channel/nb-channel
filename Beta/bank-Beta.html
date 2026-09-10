@@ -1182,7 +1182,16 @@ html { -webkit-text-size-adjust: 100%; }
         if (!user) return Promise.reject(new Error('请先登录'));
         params = params || {};
         params.p_user_id = user.id;
+        var tok = localStorage.getItem('nb_session');
+        if (tok && params.p_session === undefined) params.p_session = tok;
         return supabaseClient.rpc(name, params).then(function (res) {
+            // 后端还没加令牌时,去掉 p_session 再试一次(向后兼容)
+            if (res.error && /PGRST202|Could not find the function/i.test(res.error.message || '')) {
+                var p2 = Object.assign({}, params); delete p2.p_session;
+                return supabaseClient.rpc(name, p2);
+            }
+            return res;
+        }).then(function (res) {
             if (res.error) throw res.error;
             if (!res.data || !res.data.success) throw new Error((res.data && res.data.message) || '操作失败');
             return res.data;

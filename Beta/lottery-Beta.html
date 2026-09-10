@@ -1429,7 +1429,7 @@ html { -webkit-text-size-adjust: 100%; }
         if (!user) { showToast('请先登录', 'bad'); return; }
         var btn = document.getElementById('checkinBtn');
         btn.disabled = true;
-        supabaseClient.rpc('do_check_in', { p_user_id: user.id })
+        supabaseClient.rpc('do_check_in', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') })
             .then(function (res) {
                 if (res.error) throw res.error;
                 if (!res.data || res.data.success === false) {
@@ -1569,7 +1569,7 @@ html { -webkit-text-size-adjust: 100%; }
         btn.disabled = true;
         resultEl.textContent = '🎡 转盘转动中...';
         resultEl.classList.remove('win');
-        supabaseClient.rpc('do_lottery', { p_user_id: user.id })
+        supabaseClient.rpc('do_lottery', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') })
             .then(function (res) {
                 if (res.error || !res.data || !res.data.success) {
                     throw new Error((res.error && res.error.message) || (res.data && res.data.message) || '抽奖失败');

@@ -1285,7 +1285,7 @@ html { -webkit-text-size-adjust: 100%; }
                 var act = btn.dataset.act;
                 var id = btn.dataset.id;
                 if (act === 'use') {
-                    supabaseClient.rpc('use_shop_item', { p_user_id: user.id, p_item_id: parseInt(id, 10) })
+                    supabaseClient.rpc('use_shop_item', { p_user_id: user.id, p_item_id: parseInt(id, 10) , p_session: localStorage.getItem('nb_session') })
                         .then(function (res) {
                             var fail = res.error || !res.data || !res.data.success;
                             var msg = (res.error && res.error.message) || (res.data && res.data.message) || '已使用';
@@ -1343,7 +1343,7 @@ html { -webkit-text-size-adjust: 100%; }
             m.el.querySelector('#pkSellNo').addEventListener('click', function () { m.close(); });
             m.el.querySelector('#pkSellYes').addEventListener('click', function () {
                 m.close();
-                supabaseClient.rpc('sell_shop_item', { p_user_id: user.id, p_item_key: itemKey, p_quantity: qty })
+                supabaseClient.rpc('sell_shop_item', { p_user_id: user.id, p_item_key: itemKey, p_quantity: qty , p_session: localStorage.getItem('nb_session') })
                     .then(function (res) {
                         var fail = res.error || !res.data || !res.data.success;
                         var msg = (res.error && res.error.message) || (res.data && res.data.message) || ('已出售 ' + qty + ' 件');
@@ -1409,7 +1409,7 @@ html { -webkit-text-size-adjust: 100%; }
             }
             if (!val) { showMessage('提示', '请先选择一个样式'); return; }
             m.close();
-            supabaseClient.rpc('set_item_settings', { p_user_id: user.id, p_item_id: itemId, p_settings: { value: val } })
+            supabaseClient.rpc('set_item_settings', { p_user_id: user.id, p_item_id: itemId, p_settings: { value: val } , p_session: localStorage.getItem('nb_session') })
                 .then(function (res) {
                     var fail = res.error || !res.data || !res.data.success;
                     var msg = (res.error && res.error.message) || (res.data && res.data.message) || '样式已保存';

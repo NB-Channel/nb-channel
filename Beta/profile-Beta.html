@@ -2201,7 +2201,7 @@ function uiHref(p) { return (p && p.indexOf('login.html') === 0) ? '/' + p : p; 
         btn.onclick = async () => {
             const bio = input.value.trim();
             status.innerText = '⏳ 保存中...';
-            const { data, error } = await supabaseClient.rpc('update_bio', { p_user_id: viewUid, p_bio: bio });
+            const { data, error } = await supabaseClient.rpc('update_bio', { p_user_id: viewUid, p_bio: bio , p_session: localStorage.getItem('nb_session') });
             if (error || !data || !data.success) {
                 status.innerText = '❌ 保存失败';
                 return;
