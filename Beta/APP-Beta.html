@@ -1001,5 +1001,43 @@ html { -webkit-text-size-adjust: 100%; }
     })();
 </script>
 
+
+<script>
+// ===== APK 下载按钮兼容处理 =====
+// 三种环境分别处理:
+//  ① 套壳 APP 内部:WebView 不处理文件下载,点了没反应 → 提示改用分享链接
+//  ② 微信内置浏览器:会拦截 APK 下载 → 引导"在浏览器打开"
+//  ③ 普通浏览器:新窗口下载,避免当前页被安装包数据流顶掉
+(function () {
+    var ua = navigator.userAgent || '';
+    var isApp = !!window.Capacitor || /Capacitor/i.test(ua) || (/Android/i.test(ua) && /; wv\)/i.test(ua));
+    var isWechat = /MicroMessenger/i.test(ua);
+    var links = document.querySelectorAll('a[href*="NBChannel.apk"], a[href*=".apk"]');
+    if (!links.length) return;
+
+    Array.prototype.forEach.call(links, function (a) {
+        if (isApp) {
+            a.textContent = '✅ 你正在使用 APP(已是最新版)';
+            a.setAttribute('href', 'javascript:void(0)');
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                alert('你正在使用 NB频道 APP,已经是最新版啦~\n\n' +
+                      '想让朋友也装上?把这个网址发给他们:\n' +
+                      location.origin + '/Beta/APP-Beta.html\n\n' +
+                      '他们用手机浏览器打开后点「下载 APK」即可安装。');
+            });
+        } else if (isWechat) {
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                alert('微信内无法直接下载安装包\n\n' +
+                      '请点右上角「···」→「在浏览器打开」,\n然后再点「下载 APK」就能装了。');
+            });
+        } else {
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener noreferrer');
+        }
+    });
+})();
+</script>
 </body>
 </html>
