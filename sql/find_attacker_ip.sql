@@ -52,6 +52,22 @@ LIMIT 30;
 -- 7) 当前已封名单
 SELECT * FROM public.banned_ips ORDER BY id DESC;
 
+-- 8) 核对:之前记录的疑似攻击者网段 2409:8a30:9c84:7241::/64 是否真出现在日志里
+SELECT 'registration_attempts' AS src, ip_address, created_at
+FROM public.registration_attempts
+WHERE ip_address LIKE '2409:8a30:9c84:7241:%'
+UNION ALL
+SELECT 'email_codes', ip_address, created_at
+FROM public.email_codes
+WHERE ip_address LIKE '2409:8a30:9c84:7241:%'
+UNION ALL
+SELECT 'api_logs', ip, ts
+FROM public.api_logs
+WHERE ip LIKE '2409:8a30:9c84:7241:%'
+ORDER BY created_at DESC
+LIMIT 50;
+-- 一条都没有 = 这个网段不是他,别封
+
 -- ============================================================
 -- 拿到 IP / 网段后,封禁(IPv6 建议封 /64 整段)
 -- ============================================================
