@@ -87,10 +87,14 @@ a { text-decoration: none; color: inherit; }
 }
 .nav-menu a:hover { color: var(--ink); }
 .nav-menu a.active { color: var(--brand); font-weight: 600; }
-.nav-menu a.active::after {
+.nav-menu a::after {
     content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px;
     height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);
 }
+.nav-menu a:hover::after { transform: scaleX(1); }
+.nav-menu a.active::after { transform: scaleX(1); }
 .nav-menu a.nav-api { color: var(--brand); font-weight: 600; font-size: .86rem; }
 .nav-right-group { display: flex; align-items: center; gap: 10px; }
 .nav-auth-group { display: flex; gap: 8px; align-items: center; }
