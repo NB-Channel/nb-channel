@@ -630,7 +630,7 @@ html { -webkit-text-size-adjust: 100%; }
             <article class="p-card reveal">
                 <div class="a-head">
                     <div class="a-ico">NB</div>
-                    <div class="a-name"><h3>NB频道 APP</h3><span class="plat">Android · 官方客户端</span></div>
+                    <div class="a-name"><h3>NB频道 APP</h3><span class="plat">Android · 官方客户端 · 最新版 <b id="apkVerTag" style="color:var(--brand);">查询中…</b></span></div>
                 </div>
                 <div class="p-body" style="padding-top:16px;">
                     <p class="p-sub">官网的安卓客户端 —— 装好后桌面有独立图标、全屏运行,没有浏览器地址栏。内容与网页版完全同步:网站更新后 APP 自动就是最新版,<b>不需要重新下载</b>。</p>
@@ -1171,6 +1171,23 @@ html { -webkit-text-size-adjust: 100%; }
     // 启动自动查一次,之后每 30 分钟
     setTimeout(function () { check(false); }, 2000);
     setInterval(function () { check(false); }, 30 * 60 * 1000);
+})();
+</script>
+
+<script>
+// 从 version.json 读取最新版本号,显示在 APP 卡片上
+(function () {
+    var el = document.getElementById('apkVerTag');
+    if (!el) return;
+    fetch('/download/version.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function (info) {
+            if (info && info.versionName) {
+                el.textContent = 'v' + info.versionName;
+                el.title = '更新时间 ' + (info.updatedAt || '') + (info.note ? ' · ' + info.note : '');
+            } else { el.textContent = ''; }
+        })
+        .catch(function () { el.textContent = ''; });
 })();
 </script>
 </body>
