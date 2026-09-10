@@ -205,7 +205,7 @@
             p_user_id: currentUser.id,
             p_company_name: companyName,
             p_need_verify: needVerify
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) {
             errorDiv.innerText = '注册失败：' + error.message;
             return;

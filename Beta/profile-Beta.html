@@ -2104,7 +2104,7 @@ function uiHref(p) { return (p && p.indexOf('login.html') === 0) ? '/' + p : p; 
                 user_id: currentUser.id,
                 old_password: oldPassword,
                 new_password: newPassword
-            });
+            , p_session: localStorage.getItem('nb_session')});
             if (error) throw error;
             if (!data.success) throw new Error(data.message);
             await showMessage('成功', '密码修改成功，请重新登录');

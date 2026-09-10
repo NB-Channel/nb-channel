@@ -1126,10 +1126,8 @@
 
     // ==================== 登录和标签页切换 ====================
     async function checkPassword(pwd) {
-        // 先校验密码（复用原 RPC），通过后由服务端签发会话 token
-        const { data, error } = await supabaseClient.rpc('check_admin_password_plain', { input_pwd: pwd });
-        if (error) throw new Error(error.message);
-        if (!data) return false;
+        // 密码校验 + 会话签发 + 失败限频,全部交给服务端
+        // (不再单独调 check_admin_password_plain,否则可绕过限频无限次暴力破解密码)
         const ip = await getClientIP();
         const sessionRes = await supabaseClient.rpc('admin_create_session', {
             p_pwd: pwd,

@@ -2255,7 +2255,7 @@ textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
             user_id: currentUser.id,
             old_password: oldPassword,
             new_password: newPassword
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) throw error;
         if (!data.success) throw new Error(data.message);
         return data;

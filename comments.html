@@ -635,7 +635,7 @@
             user_id: currentUser.id,
             old_password: oldPassword,
             new_password: newPassword
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) throw new Error(error.message);
         if (!data.success) throw new Error(data.message);
         return data;

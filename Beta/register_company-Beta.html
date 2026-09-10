@@ -1061,7 +1061,7 @@ html.dark .rc-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
         if (!name) { errorDiv.innerText = '请填写公司名称'; return; }
         if (name.length > 20) { errorDiv.innerText = '公司名称不能超过20字'; return; }
         btn.disabled = true; btn.textContent = '提交中…';
-        supabaseClient.rpc('register_company', { p_user_id: currentUser.id, p_company_name: name, p_need_verify: needVerify })
+        supabaseClient.rpc('register_company', { p_user_id: currentUser.id, p_company_name: name, p_need_verify: needVerify , p_session: localStorage.getItem('nb_session')})
             .then(function (res) {
                 if (res.error) { errorDiv.innerText = '注册失败:' + res.error.message; btn.disabled = false; btn.textContent = '提交注册'; return; }
                 if (!res.data.success) { errorDiv.innerText = res.data.message || '注册失败'; btn.disabled = false; btn.textContent = '提交注册'; return; }

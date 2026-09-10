@@ -645,7 +645,7 @@
             p_user_id: currentUserId,
             p_company_name: companyName,
             p_need_verify: false
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) {
             await showMessage('注册失败', error.message);
             return false;
@@ -672,7 +672,7 @@
             p_user_id: currentUserId,
             p_company_id: cid,
             p_amount: parseInt(amount) || 0
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) {
             if (!isSilent) await showMessage('错误', error.message);
             return false;
@@ -880,7 +880,7 @@
             applyBtn.addEventListener('click', async () => {
                 const { data, error } = await supabaseClient.rpc('apply_company_verification', {
                     p_user_id: currentUserId
-                });
+                , p_session: localStorage.getItem('nb_session')});
                 if (error) {
                     await showMessage('错误', error.message);
                 } else if (!data.success) {
@@ -1225,7 +1225,7 @@
             p_user_id: user.id,
             p_company_id: cid,
             p_reason: reason
-        });
+        , p_session: localStorage.getItem('nb_session')});
         if (error) {
             await showMessage('错误', error.message);
         } else if (!data.success) {
