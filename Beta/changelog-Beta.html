@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <!-- 不发送 referer -->
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="NB频道更新日志——从 V0.1 到 V0.8.4，官网记录每一版的变化。">
@@ -471,6 +471,52 @@ html.dark .nav-more-panel a:hover { background: rgba(59,130,246,.2); color: #fff
 @media (max-width: 420px) {
     .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 9px; font-size: .82rem; }
     .nav-logo .logo-img { height: 28px; }
+}
+
+/* ===== 移动端 / APP 适配增强 ===== */
+/* 1) 安全区:APP 全屏运行时,刘海屏/底部横条不再压住内容 */
+body {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+}
+.nav { padding-top: env(safe-area-inset-top, 0); }
+.footer { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.backtop { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.drawer { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.nav-more-panel { max-height: 70vh; overflow-y: auto; }
+.d-modal, .modal-content, .cam-modal > div, .custom-modal > div {
+    max-height: 86vh; overflow-y: auto;
+}
+
+/* 2) 触摸体验 */
+a, button, [onclick], .sort-btn, .d-item {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+html { -webkit-text-size-adjust: 100%; }
+
+/* 3) 手机上输入框字号统一 16px:
+      小于 16px 时 iOS/部分安卓 WebView 聚焦会自动放大整页(最常见的不适配感来源) */
+@media (max-width: 900px) {
+    input:not([type=checkbox]):not([type=radio]), textarea, select {
+        font-size: 16px !important;
+    }
+    /* 关键操作按钮的最小可点区域(不影响小图标按钮) */
+    button:not(.d-close):not(.nav-burger):not(.theme-btn):not(.backtop):not(.react-btn):not(.reply-btn):not(.edit-btn):not(.delete-btn):not(.report-btn):not(.sort-btn),
+    .btn, .hero-btn, .vhero-actions a {
+        min-height: 38px;
+    }
+    /* 表格:已有横向滚动容器的保持,没有的自动兜底 */
+    .table-wrap, .scroll-x, .stock-table-wrap { -webkit-overflow-scrolling: touch; }
+    /* 长文本防溢出 */
+    .comment-content, .bn-reason, .d-item, .pd-tip { word-break: break-word; overflow-wrap: anywhere; }
+}
+
+/* 4) APP(独立窗口)下:去掉选中高亮与长按菜单的干扰,正文更接近原生 */
+@media (display-mode: standalone) {
+    a, button { -webkit-user-select: none; user-select: none; }
+    .comment-content { -webkit-user-select: text; user-select: text; }
+    .backtop { display: none; }   /* APP 里用系统返回键更自然 */
 }
 </style>
 </head>
