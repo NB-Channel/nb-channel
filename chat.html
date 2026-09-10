@@ -1372,7 +1372,7 @@
             try {
                 const resp = await fetch(API_BASE + '/upload-image', {
                     method: 'POST',
-                    headers: { 'X-User-Id': currentUser.id },
+                    headers: { 'X-User-Id': currentUser.id , 'X-Session': localStorage.getItem('nb_session') || ''},
                     body: fd
                 });
                 const result = await resp.json();
@@ -1583,7 +1583,7 @@
         try {
             const resp = await fetch(API_BASE + '/upload-video', {
                 method: 'POST',
-                headers: { 'X-User-Id': currentUser.id },
+                headers: { 'X-User-Id': currentUser.id , 'X-Session': localStorage.getItem('nb_session') || ''},
                 body: fd
             });
             const result = await resp.json();

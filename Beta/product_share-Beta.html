@@ -911,7 +911,7 @@ html += `
         try {
             const response = await fetch(`${API_BASE}/delete-product`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-User-Id': user.id },
+                headers: { 'Content-Type': 'application/json', 'X-User-Id': user.id , 'X-Session': localStorage.getItem('nb_session') || ''},
                 body: JSON.stringify({ product_id: productId })
             });
             const result = await response.json();
@@ -979,7 +979,7 @@ html += `
         try {
             const response = await fetch(`${API_BASE}/${isEdit ? 'edit-product' : 'upload'}`, {
                 method: 'POST',
-                headers: { 'X-User-Id': user.id },
+                headers: { 'X-User-Id': user.id , 'X-Session': localStorage.getItem('nb_session') || ''},
                 body: formData
             });
             const result = await response.json();
@@ -1057,7 +1057,7 @@ html += `
                 headers: {
                     'Content-Type': 'application/json',
                     'X-User-Id': user.id
-                },
+                , 'X-Session': localStorage.getItem('nb_session') || ''},
                 body: JSON.stringify({
                     product_id: productId,
                     pay_type: payType || 'nb',

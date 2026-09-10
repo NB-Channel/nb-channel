@@ -109,18 +109,38 @@ def after_request(resp):
 
 # ==================== 工具函数 ====================
 
+# 需要会话令牌的下游 RPC：后端代理调用时必须把前端令牌透传下去，
+# 否则这些 RPC 的令牌校验会失败（它们已不接受"只给 user_id"的调用）
+_SESSION_RPCS = {
+    'update_avatar_url', 'set_profile_banner',
+    'create_product', 'edit_product', 'delete_product',
+    'download_product', 'purchase_product',
+}
+
+
+def _session_token():
+    """前端登录后拿到的会话令牌（由 X-Session 头传入）。"""
+    return (request.headers.get('X-Session', '') or '').strip()
+
+
 def get_user_id():
-    """从请求头获取用户 ID 并校验其存在。返回 (user_id, error_msg)。"""
+    """校验 X-User-Id + X-Session 后才认人。返回 (user_id, error_msg)。
+
+    只信任 X-User-Id 等于谁都能冒充（那个头客户端随便填），
+    所以必须同时验证会话令牌确实属于该用户。
+    """
     uid = request.headers.get('X-User-Id', '').strip()
     if not uid:
         return None, '缺少 X-User-Id 请求头'
-    try:
-        rows = _exec_rows(supabase.table('profiles').select('id').eq('id', uid).limit(1))
-    except Exception as e:
-        return None, '后端数据库连接失败: %s' % e
-    if not rows:
-        return None, '用户不存在或登录已失效'
-    return rows[0]['id'], None
+    tok = _session_token()
+    if not tok:
+        return None, '缺少登录令牌,请重新登录后再试'
+    data, err = rpc('verify_session', {'p_user_id': uid, 'p_session': tok})
+    if err:
+        return None, '后端数据库连接失败: %s' % err
+    if data is not True:
+        return None, '登录已失效,请重新登录'
+    return uid, None
 
 
 def safe_filename(original_name):
@@ -134,8 +154,14 @@ def safe_filename(original_name):
 
 
 def rpc(name, params):
-    """调用 Supabase RPC，返回 (data, error)。"""
+    """调用 Supabase RPC，返回 (data, error)。
+
+    对于已加令牌校验的下游 RPC，自动把前端会话令牌带上。
+    """
     try:
+        if isinstance(params, dict) and name in _SESSION_RPCS:
+            params = dict(params)
+            params.setdefault('p_session', _session_token())
         res = supabase.rpc(name, params).execute()
         return res.data, None
     except Exception as e:
