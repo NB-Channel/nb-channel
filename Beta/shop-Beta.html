@@ -648,23 +648,109 @@ html.dark .sk-toast.err { background: #991b1b; }
 .sk-modal-btn.gray { background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); }
 .sk-box .sk-msg { margin: 6px 0 4px; font-size: .92rem; line-height: 1.9; color: var(--ink-soft); text-align: center; white-space: pre-wrap; }
 
+
+/* ===== 导航改版:核心功能入口 ===== */
+.nav-menu { gap: 3px; align-items: center; }
+.nav-menu a.nv {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 11px; border-radius: 10px;
+    font-size: .87rem; font-weight: 600; line-height: 1.1;
+    color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+    transition: background .18s ease, color .18s ease;
+}
+.nav-menu a.nv b { font-weight: 600; }
+.nav-menu a.nv:hover { background: rgba(59,130,246,.1); color: var(--brand); }
+.nav-menu a.nv.active { background: rgba(59,130,246,.14); color: var(--brand); }
+.nav-menu a.nv.active b { font-weight: 800; }
+html.dark .nav-menu a.nv:hover, html.dark .nav-menu a.nv.active { background: rgba(59,130,246,.2); color: #fff; }
+
+.nv-more { position: relative; }
+.nv-more-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 7px 11px; border-radius: 10px; border: none; cursor: pointer;
+    background: transparent; color: var(--ink-soft); font-family: inherit;
+    font-size: .87rem; font-weight: 600; line-height: 1.1;
+}
+.nv-more-btn:hover, .nv-more.open .nv-more-btn, .nv-more-btn.active { background: rgba(59,130,246,.1); color: var(--brand); }
+.nv-more-panel {
+    display: none; position: absolute; top: calc(100% + 9px); left: 50%; transform: translateX(-50%);
+    min-width: 190px; padding: 8px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 18px 44px -20px rgba(15,23,42,.4);
+    z-index: 300;
+}
+.nv-more.open .nv-more-panel { display: block; }
+.nv-more-panel a {
+    display: block; padding: 9px 12px; border-radius: 9px;
+    font-size: .86rem; color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+}
+.nv-more-panel a:hover, .nv-more-panel a.active { background: rgba(59,130,246,.1); color: var(--brand); }
+html.dark .nv-more-panel { background: #0f1a30; border-color: rgba(148,163,184,.22); }
+html.dark .nv-more-panel a { color: var(--ink-soft); }
+html.dark .nv-more-panel a:hover { background: rgba(59,130,246,.2); color: #fff; }
+
+/* 中屏:收起文字只留图标,避免拥挤 */
+@media (max-width: 1320px) {
+    .nav-menu a.nv b { display: none; }
+    .nav-menu a.nv { padding: 8px 10px; font-size: 1.02rem; }
+}
+@media (max-width: 1120px) and (min-width: 901px) {
+    .nav-clock .nc-row { display: none; }
+    .nav-menu a.nv { padding: 8px 8px; }
+}
+
+/* ===== 移动端抽屉:网格化 + 分组 ===== */
+.drawer { overflow-y: auto; overscroll-behavior: contain; }
+.drawer .d-sec {
+    margin: 15px 4px 9px; font-size: .72rem; font-weight: 800;
+    letter-spacing: .08em; opacity: .45;
+}
+.drawer .d-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.drawer a.d-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 12px 13px; border-radius: 12px;
+    font-size: .92rem; font-weight: 600;
+}
+.drawer a.d-item .d-ico { font-size: 1.05rem; line-height: 1; }
+.drawer a.d-item.d-wide { grid-column: 1 / -1; }
+@media (max-width: 360px) { .drawer .d-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
 <!-- 导航 -->
 <nav class="nav">
-    <a class="nav-logo" href="index-Beta.html"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span class="logo-text">NB频道</span></a>
+    <a class="nav-logo" href="index-Beta.html" title="NB频道首页"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"></a>
+
     <div class="nav-menu">
-        <a href="index-Beta.html">首页</a>
-        <a href="videos-Beta.html">视频</a>
-        <a href="about-Beta.html">关于</a>
-        <a href="changelog-Beta.html">更新日志</a>
-        <a href="product-Beta.html">我的产品</a>
-        <a href="APP-Beta.html">软件/APP</a>
-        <a href="index-Beta.html#friends">友商</a>
-        <a class="nav-api" href="/api-sdk/" target="_blank" rel="noopener noreferrer" title="NB频道 API 文档">API<i>↗</i></a>
+        <a class="nv" href="index-Beta.html">🏠 <b>首页</b></a>
+        <a class="nv" href="stock-Beta.html">📈 <b>股票</b></a>
+        <a class="nv" href="bank-Beta.html">🏦 <b>银行</b></a>
+        <a class="nv" href="shop-Beta.html">🛍️ <b>商店</b></a>
+        <a class="nv" href="backpack-Beta.html">🎒 <b>背包</b></a>
+        <a class="nv" href="titles-Beta.html">🏅 <b>称号</b></a>
+        <a class="nv" href="tools-Beta.html">🔬 <b>工具</b></a>
+        <a class="nv" href="product_share-Beta.html">📦 <b>作品</b></a>
+        <a class="nv" href="comments-Beta.html">💬 <b>评论</b></a>
+        <div class="nv-more">
+            <button class="nv-more-btn" type="button">更多 ▾</button>
+            <div class="nv-more-panel">
+                <a href="lottery-Beta.html">🎰 签到 · 转盘</a>
+                <a href="achievements-Beta.html">🏆 成就墙</a>
+                <a href="messages-Beta.html">✉️ 消息中心</a>
+                <a href="ban-Beta.html">🚫 小黑屋</a>
+                <a href="profile-Beta.html">👤 个人中心</a>
+                <a href="videos-Beta.html">🎬 视频</a>
+                <a href="product-Beta.html">🧪 我的产品</a>
+                <a href="APP-Beta.html">📱 软件 / APP</a>
+                <a href="about-Beta.html">ℹ️ 关于</a>
+                <a href="changelog-Beta.html">📋 更新日志</a>
+                <a href="index-Beta.html#friends">🤝 友商</a>
+                <a href="/api-sdk/" target="_blank" rel="noopener noreferrer">🔌 API 文档 ↗</a>
+            </div>
+        </div>
     </div>
+
     <div class="nav-right-group">
         <div class="nav-clock" id="navClock" title="北京时间（UTC+8）">
             <span class="nc-time" id="bjTime">--:--:--</span>
@@ -676,8 +762,35 @@ html.dark .sk-toast.err { background: #991b1b; }
             <a class="nav-auth primary" id="betaAuthBtn" href="#">登录 / 注册</a>
         </div>
     </div>
+
     <button class="nav-burger" id="navBurger" aria-label="打开菜单">☰</button>
 </nav>
+<script>
+// ===== 导航:当前页自动高亮 + 更多下拉 =====
+(function () {
+    var here = (location.pathname.split('/').pop() || 'index-Beta.html').toLowerCase();
+    var menu = document.querySelector('.nav-menu');
+    if (menu) {
+        var items = menu.querySelectorAll('a[href]');
+        for (var i = 0; i < items.length; i++) {
+            var h = (items[i].getAttribute('href') || '').split('#')[0].split('/').pop().toLowerCase();
+            if (h && h === here) items[i].classList.add('active');
+        }
+        var more = menu.querySelector('.nv-more');
+        if (more) {
+            if (more.querySelector('.nv-more-panel a.active')) {
+                more.querySelector('.nv-more-btn').classList.add('active');
+            }
+            more.querySelector('.nv-more-btn').addEventListener('click', function (e) {
+                e.stopPropagation();
+                more.classList.toggle('open');
+            });
+            document.addEventListener('click', function () { more.classList.remove('open'); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') more.classList.remove('open'); });
+        }
+    }
+})();
+</script>
 
 <!-- Hero -->
 <!-- Hero -->
@@ -769,14 +882,36 @@ html.dark .sk-toast.err { background: #991b1b; }
         <span class="d-brand"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span class="logo-text">NB频道</span></span>
         <button class="d-close" id="drawerClose" aria-label="关闭菜单">✕</button>
     </div>
-    <a class="d-item" href="index-Beta.html">首页</a>
-    <a class="d-item" href="videos-Beta.html">视频</a>
-    <a class="d-item" href="about-Beta.html">关于</a>
-    <a class="d-item" href="changelog-Beta.html">更新日志</a>
-    <a class="d-item" href="product-Beta.html">我的产品</a>
-    <a class="d-item" href="APP-Beta.html">软件/APP</a>
-    <a class="d-item" href="index-Beta.html#friends">友商</a>
-    <a class="d-item" href="/api-sdk/" target="_blank" rel="noopener noreferrer">API ↗</a>
+
+    <div class="d-sec">核心功能</div>
+    <div class="d-grid">
+        <a class="d-item" href="index-Beta.html"><span class="d-ico">🏠</span>首页</a>
+        <a class="d-item" href="stock-Beta.html"><span class="d-ico">📈</span>虚拟股票</a>
+        <a class="d-item" href="bank-Beta.html"><span class="d-ico">🏦</span>NB银行</a>
+        <a class="d-item" href="shop-Beta.html"><span class="d-ico">🛍️</span>NB商店</a>
+        <a class="d-item" href="backpack-Beta.html"><span class="d-ico">🎒</span>我的背包</a>
+        <a class="d-item" href="titles-Beta.html"><span class="d-ico">🏅</span>称号大全</a>
+        <a class="d-item" href="tools-Beta.html"><span class="d-ico">🔬</span>化学工具</a>
+        <a class="d-item" href="product_share-Beta.html"><span class="d-ico">📦</span>作品分享</a>
+        <a class="d-item" href="comments-Beta.html"><span class="d-ico">💬</span>评论区</a>
+        <a class="d-item" href="lottery-Beta.html"><span class="d-ico">🎰</span>签到·转盘</a>
+        <a class="d-item" href="achievements-Beta.html"><span class="d-ico">🏆</span>成就墙</a>
+        <a class="d-item" href="messages-Beta.html"><span class="d-ico">✉️</span>消息中心</a>
+        <a class="d-item" href="ban-Beta.html"><span class="d-ico">🚫</span>小黑屋</a>
+        <a class="d-item" href="profile-Beta.html"><span class="d-ico">👤</span>个人中心</a>
+    </div>
+
+    <div class="d-sec">更多</div>
+    <div class="d-grid">
+        <a class="d-item" href="videos-Beta.html"><span class="d-ico">🎬</span>视频</a>
+        <a class="d-item" href="about-Beta.html"><span class="d-ico">ℹ️</span>关于</a>
+        <a class="d-item" href="changelog-Beta.html"><span class="d-ico">📋</span>更新日志</a>
+        <a class="d-item" href="product-Beta.html"><span class="d-ico">🧪</span>我的产品</a>
+        <a class="d-item" href="APP-Beta.html"><span class="d-ico">📱</span>软件 / APP</a>
+        <a class="d-item" href="index-Beta.html#friends"><span class="d-ico">🤝</span>友商</a>
+        <a class="d-item d-wide" href="/api-sdk/" target="_blank" rel="noopener noreferrer"><span class="d-ico">🔌</span>API 文档 ↗</a>
+    </div>
+
     <div class="d-auth">
         <a class="ga" id="dProfileBtn" href="#">👤 个人中心</a>
         <a class="gab" id="dAuthBtn" href="#">登录 / 注册</a>
