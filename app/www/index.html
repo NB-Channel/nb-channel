@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NB频道</title>
+<style>
+    html, body { margin: 0; height: 100%; background: #0f172a; color: #e2e8f0;
+        font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        display: flex; align-items: center; justify-content: center; text-align: center; }
+    .box { padding: 24px; }
+    .logo { font-size: 2rem; font-weight: 800; letter-spacing: 2px;
+        background: linear-gradient(135deg, #3b82f6, #6366f1);
+        -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .tip { margin-top: 14px; font-size: .86rem; color: #94a3b8; line-height: 1.8; }
+    .btn { margin-top: 20px; display: inline-block; padding: 11px 26px; border-radius: 999px;
+        background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+        text-decoration: none; font-size: .92rem; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="box">
+    <div class="logo">NB频道</div>
+    <div class="tip">正在进入官网…<br>如果长时间没反应,点下面的按钮</div>
+    <a class="btn" href="https://github.nb-channel.top/Beta/index-Beta.html">手动进入</a>
+</div>
+<script>
+    // 兜底:Capacitor 的 server.url 配置正常时会直接加载线上站点,
+    // 这个页面只在配置未生效时短暂出现。
+    location.replace('https://github.nb-channel.top/Beta/index-Beta.html');
+</script>
+</body>
+</html>

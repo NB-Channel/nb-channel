@@ -1,0 +1,33 @@
+{
+  "appId": "top.nbchannel.app",
+  "appName": "NB频道",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://github.nb-channel.top/Beta/index-Beta.html",
+    "androidScheme": "https",
+    "cleartext": false,
+    "allowNavigation": [
+      "github.nb-channel.top",
+      "*.nb-channel.top",
+      "nbchannel.pythonanywhere.com",
+      "pbaafgjkwdbwcmsikcmg.supabase.co",
+      "space.bilibili.com",
+      "*.bilibili.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#0f172af0"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 900,
+      "backgroundColor": "#0f172a",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    }
+  }
+}
