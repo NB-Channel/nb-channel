@@ -768,7 +768,32 @@ html { -webkit-text-size-adjust: 100%; }
     .comment-content { -webkit-user-select: text; user-select: text; }
     .backtop { display: none; }   /* APP 里用系统返回键更自然 */
 }
+
+/* ===== 图表:移动端适配(不再被压成细条,容器不留空白) ===== */
+@media (max-width: 900px) {
+    .canvas-container { min-height: auto; padding: 12px 6px 6px 6px; border-radius: 18px; }
+    .canvas-container canvas#stockChart { height: 264px !important; max-height: 264px; }
+    .history-chart-container { padding: 12px 8px 8px; border-radius: 16px; }
+    .history-chart-container canvas#totalHistoryChart { height: 176px !important; max-height: 176px; }
+    .histogram-container { padding: 12px 8px 8px; border-radius: 16px; }
+    .histogram-container canvas#histogramChart { height: 196px !important; max-height: 196px; }
+    .mini-pie-container { padding: 12px 8px 8px; border-radius: 16px; }
+    .mini-pie-container canvas#miniPieChart { height: 180px !important; max-height: 180px; }
+    #kLineChart { height: 300px !important; }
+    .chart-wrapper { padding: 12px 0 20px 0; }
+    /* 标题区在手机上紧凑一些 */
+    .history-title, .histogram-title, .mini-pie-title { font-size: .86rem; padding: 0 4px 8px; }
+    #kLineTitle { font-size: .82rem; line-height: 1.6; }
+}
 </style>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/images/app-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NB频道">
+<meta name="application-name" content="NB频道">
 </head>
 <body>
 <nav class="nav">
@@ -1586,15 +1611,15 @@ html { -webkit-text-size-adjust: 100%; }
         const barColors = dataValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
         let chartConfig = null;
         if (type === 'bar') {
-            chartConfig = { type: 'bar', data: { labels, datasets: [{ label: '虚拟市值', data: dataValues, backgroundColor: barColors, borderColor: 'rgba(44,90,110,0.4)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.85 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } } }, scales: { y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '虚拟市值', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } }, x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '虚拟股票名称', color: colors.titleColor } } } } };
+            chartConfig = { type: 'bar', data: { labels, datasets: [{ label: '虚拟市值', data: dataValues, backgroundColor: barColors, borderColor: 'rgba(44,90,110,0.4)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.85 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } } }, scales: { y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '虚拟市值', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } }, x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '虚拟股票名称', color: colors.titleColor } } } } };
         } else if (type === 'line') {
-            chartConfig = { type: 'line', data: { labels, datasets: [{ label: '虚拟股票价值曲线', data: dataValues, borderColor: colors.borderColor, backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(59,130,246,0.1)' : 'rgba(44,90,110,0.08)', borderWidth: 3, pointRadius: 3.5, pointBackgroundColor: colors.pointBackground, pointBorderColor: '#ffffff', tension: 0.2, fill: true }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } } }, scales: { y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '虚拟市值', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } }, x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '虚拟股票名称', color: colors.titleColor } } } } };
+            chartConfig = { type: 'line', data: { labels, datasets: [{ label: '虚拟股票价值曲线', data: dataValues, borderColor: colors.borderColor, backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(59,130,246,0.1)' : 'rgba(44,90,110,0.08)', borderWidth: 3, pointRadius: 3.5, pointBackgroundColor: colors.pointBackground, pointBorderColor: '#ffffff', tension: 0.2, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatValue(ctx.raw)}` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: 'top', labels: { font: { size: 12 }, color: colors.legendColor } } }, scales: { y: { beginAtZero: true, grid: { color: colors.gridColor }, title: { display: true, text: '虚拟市值', color: colors.titleColor }, ticks: { color: colors.tickColor, callback: v => formatValue(v) } }, x: { ticks: { color: colors.tickColor, maxRotation: 45, minRotation: 35, autoSkip: false, font: { size: 9 } }, title: { display: true, text: '虚拟股票名称', color: colors.titleColor } } } } };
         } else if (type === 'pie') {
             const fullLabels = rawData.names;
             const fullValues = rawData.values;
             const fullColors = fullValues.map((_, idx) => `hsla(${(idx * 25) % 360}, 65%, 55%, 0.85)`);
             const isMobile = window.innerWidth <= 680;
-            chartConfig = { type: 'pie', data: { labels: fullLabels, datasets: [{ data: fullValues, backgroundColor: fullColors, borderColor: colors.borderColor, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / fullValues.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: isMobile ? 'bottom' : 'right', labels: { font: { size: isMobile ? 9 : 11 }, color: colors.legendColor, boxWidth: 10 } } } } };
+            chartConfig = { type: 'pie', data: { labels: fullLabels, datasets: [{ data: fullValues, backgroundColor: fullColors, borderColor: colors.borderColor, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / fullValues.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` }, backgroundColor: colors.tooltipBg, titleColor: colors.tooltipTitle }, legend: { position: isMobile ? 'bottom' : 'right', labels: { font: { size: isMobile ? 9 : 11 }, color: colors.legendColor, boxWidth: 10 } } } } };
         }
         if (chartConfig) {
             if (currentChart) currentChart.destroy();
@@ -1642,7 +1667,7 @@ html { -webkit-text-size-adjust: 100%; }
             histogramChart = new Chart(ctx, {
                 type: 'bar',
                 data: { labels, datasets: [{ label: '虚拟股票数量', data: counts, backgroundColor: 'rgba(0,161,214,0.6)', borderColor: '#00a1d6', borderWidth: 1 }] },
-                options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} 只` } }, legend: { position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: '虚拟股票数量' }, ticks: { stepSize: 1 } }, x: { title: { display: true, text: '虚拟市值区间' }, ticks: { maxRotation: 45, autoSkip: true } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} 只` } }, legend: { position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: '虚拟股票数量' }, ticks: { stepSize: 1 } }, x: { title: { display: true, text: '虚拟市值区间' }, ticks: { maxRotation: 45, autoSkip: true } } } }
             });
         }
     }
@@ -1685,7 +1710,7 @@ html { -webkit-text-size-adjust: 100%; }
             totalHistoryChart.update();
         } else {
             const ctx = document.getElementById('totalHistoryChart').getContext('2d');
-            totalHistoryChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: '总虚拟市值', data: totals, borderColor: '#00a1d6', backgroundColor: 'rgba(0,161,214,0.1)', fill: true, tension: 0.2 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: ctx => `总虚拟市值: ${formatValue(ctx.raw)}` } } } } });
+            totalHistoryChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: '总虚拟市值', data: totals, borderColor: '#00a1d6', backgroundColor: 'rgba(0,161,214,0.1)', fill: true, tension: 0.2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: ctx => `总虚拟市值: ${formatValue(ctx.raw)}` } } } } });
         }
     }
 
@@ -1712,7 +1737,7 @@ html { -webkit-text-size-adjust: 100%; }
             miniPieChart.data.datasets[0].backgroundColor = colors;
             miniPieChart.update({ duration: 300 });
         } else {
-            miniPieChart = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'right', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } } } } });
+            miniPieChart = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 10 } } }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatValue(ctx.raw)} (${((ctx.raw / data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } } } } });
         }
     }
 
@@ -2841,5 +2866,32 @@ html { -webkit-text-size-adjust: 100%; }
     })();
 </script>
 
+
+<script>
+// ===== 图表移动端增强 =====
+(function () {
+    if (typeof Chart === 'undefined') return;
+    var isMobile = window.innerWidth <= 900;
+    // 图上点数多时省性能:限制像素比
+    try { Chart.defaults.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2); } catch (e) {}
+    if (!isMobile) return;
+    // 手机上:手指按住滑动也能看数值(不必精确点到点上)
+    Chart.defaults.interaction = { mode: 'index', intersect: false };
+    // 字号按屏幕缩小,避免图例/坐标轴挤成一团
+    Chart.defaults.font.size = 10;
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.padding = 8;
+    Chart.defaults.layout = { padding: { top: 4, right: 6, bottom: 2, left: 2 } };
+    // 窗口旋转/尺寸变化时重排(手机横竖屏切换)
+    var t = null;
+    window.addEventListener('resize', function () {
+        clearTimeout(t);
+        t = setTimeout(function () {
+            [window.currentChart, window.totalHistoryChart, window.histogramChart, window.miniPieChart, window.kLineChartInstance]
+                .forEach(function (c) { try { if (c && c.resize) c.resize(); } catch (e) {} });
+        }, 220);
+    });
+})();
+</script>
 </body>
 </html>
