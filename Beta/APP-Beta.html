@@ -1046,5 +1046,79 @@ html { -webkit-text-size-adjust: 100%; }
     });
 })();
 </script>
+
+<script>
+// ===== APP 自更新 =====
+// APP 的 UA 里带了版本号(由构建时写入 appendUserAgent),这里解析出来,
+// 跟线上 version.json 比对;有新版就弹底部更新条。
+// 点"立即更新"→ 跳到 APK 链接 → 被 APP 原生侧的 DownloadListener 接管
+//   → 系统下载管理器下载(通知栏可见) → 下完自动弹系统安装界面。
+(function () {
+    var ua = navigator.userAgent || '';
+    var m = /NBChannelApp\/([0-9.]+)/i.exec(ua);
+    if (!m) return;                       // 不是 APP 环境,什么都不做
+    var localVer = m[1];
+
+    function cmp(a, b) {
+        var x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+        for (var i = 0; i < 3; i++) {
+            var p = x[i] || 0, q = y[i] || 0;
+            if (p !== q) return p - q;
+        }
+        return 0;
+    }
+
+    function showBar(info) {
+        if (document.getElementById('nbUpdateBar')) return;
+        var bar = document.createElement('div');
+        bar.id = 'nbUpdateBar';
+        bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;' +
+            'padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));' +
+            'background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;' +
+            'display:flex;align-items:center;gap:10px;font-size:.86rem;' +
+            'box-shadow:0 -8px 28px rgba(0,0,0,.3);';
+        bar.innerHTML =
+            '<div style="flex:1;line-height:1.6;min-width:0;">' +
+                '<b>发现新版本 v' + info.versionName + '</b><br>' +
+                '<span style="opacity:.9;font-size:.78rem;">当前 v' + localVer + ' · ' +
+                (info.note || '修复与优化') + '</span>' +
+            '</div>' +
+            '<button id="nbUpdGo" style="background:#fff;color:#3b82f6;border:none;border-radius:999px;' +
+                'padding:9px 18px;font-weight:800;font-family:inherit;font-size:.86rem;cursor:pointer;white-space:nowrap;">立即更新</button>' +
+            '<button id="nbUpdNo" style="background:transparent;border:none;color:#fff;opacity:.75;' +
+                'font-size:1.05rem;cursor:pointer;padding:4px 6px;">✕</button>';
+        document.body.appendChild(bar);
+        document.getElementById('nbUpdNo').onclick = function () { bar.remove(); };
+        document.getElementById('nbUpdGo').onclick = function () {
+            var btn = this;
+            btn.textContent = '下载中…';
+            btn.disabled = true;
+            btn.style.opacity = '.8';
+            // 跳转到 APK:由 APP 原生下载接管,下完自动弹安装
+            location.href = info.url || '/download/NBChannel.apk';
+            setTimeout(function () {
+                btn.textContent = '立即更新';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }, 10000);
+        };
+    }
+
+    function check() {
+        fetch('/download/version.json?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (info) {
+                if (!info || !info.versionName) return;
+                if (cmp(info.versionName, localVer) > 0) showBar(info);
+            })
+            .catch(function () {});
+    }
+
+    // 页面加载后 1.5 秒检查一次,之后每 30 分钟再查
+    if (document.readyState === 'complete') setTimeout(check, 1500);
+    else window.addEventListener('load', function () { setTimeout(check, 1500); });
+    setInterval(check, 30 * 60 * 1000);
+})();
+</script>
 </body>
 </html>

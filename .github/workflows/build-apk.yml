@@ -5,7 +5,8 @@ name: Build Android APK
 #   2) 推送时自动:改动 app/ 目录或本文件
 # 构建产物会:
 #   ① 发布到 Releases(带版本号存档)
-#   ② 自动提交到网站 download/ 目录 → 国内可直连下载
+#   ② 自动提交到网站 download/ → 国内可直连下载
+#   ③ 生成 download/version.json → APP 启动时用它检查更新
 on:
   workflow_dispatch:
   push:
@@ -19,6 +20,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      APP_VERSION_CODE: ${{ github.run_number }}
+      APP_VERSION_NAME: 1.0.${{ github.run_number }}
+      APP_RELEASE_NOTE: 支持 APP 内下载与自动更新
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,9 +46,26 @@ jobs:
         working-directory: app
         run: npm install --no-audit --no-fund
 
+      # UA 里带上版本号 → 网页端可据此判断"当前 APP 版本"并提示更新
+      - name: Tag UA with version
+        working-directory: app
+        run: |
+          node -e "
+            const fs=require('fs');
+            const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));
+            c.appendUserAgent='NBChannelApp/${{ env.APP_VERSION_NAME }}';
+            fs.writeFileSync('capacitor.config.json', JSON.stringify(c,null,2));
+            console.log('appendUserAgent =', c.appendUserAgent);
+          "
+
       - name: Add Android platform
         working-directory: app
         run: npx cap add android
+
+      # 注入自定义原生代码:下载接管 + 自动安装 + 版本号
+      - name: Inject native code
+        working-directory: app
+        run: node android-overrides/apply.mjs
 
       - name: Generate app icons & splash
         working-directory: app
@@ -63,7 +85,7 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p out download
-          cp app/android/app/build/outputs/apk/debug/app-debug.apk "out/NB频道-v1.0.${{ github.run_number }}.apk"
+          cp app/android/app/build/outputs/apk/debug/app-debug.apk "out/NB频道-v${APP_VERSION_NAME}.apk"
           cp app/android/app/build/outputs/apk/debug/app-debug.apk "download/NBChannel.apk"
           ls -lh out/ download/
 
@@ -76,28 +98,29 @@ jobs:
       - name: Publish to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: app-v1.0.${{ github.run_number }}
-          name: NB频道 APP v1.0.${{ github.run_number }}
+          tag_name: app-v${{ env.APP_VERSION_NAME }}
+          name: NB频道 APP v${{ env.APP_VERSION_NAME }}
           body: |
-            ## NB频道 安卓客户端
+            ## NB频道 安卓客户端 v${{ env.APP_VERSION_NAME }}
 
-            **安装方法**:下载 `NB频道-v1.0.${{ github.run_number }}.apk` → 手机上点开安装 →
+            **安装方法**:下载 `NB频道-v${{ env.APP_VERSION_NAME }}.apk` → 手机上点开安装 →
             提示"未知来源"时允许一次即可。
 
-            - 本 APP 是官网的客户端外壳,内容与 https://github.nb-channel.top/Beta/index-Beta.html 完全一致
-            - **网站更新后 APP 自动同步,无需重新下载**
-            - 国内直连下载(同一版本的稳定链接):https://github.nb-channel.top/download/NBChannel.apk
+            - 内容与 https://github.nb-channel.top/Beta/index-Beta.html 完全一致
+            - **网站更新后 APP 自动同步**,只有外壳变化才需要更新 APP
+            - 国内直连下载:https://github.nb-channel.top/download/NBChannel.apk
+            - 已安装旧版的用户:APP 会自己提示更新,点一下就能装
             - iPhone 用户:用 Safari 打开官网 → 分享 → 添加到主屏幕,效果相同
           files: out/*.apk
           draft: false
           prerelease: false
 
-      # 把 APK 提交进仓库 → GitHub Pages 直接对外提供下载(国内可直连)
+      # 把 APK 与 version.json 提交进仓库 → 网站直接对外提供(国内可直连)
       - name: Publish APK to website
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          file_pattern: 'download/NBChannel.apk'
-          commit_message: "自动发布 APK v1.0.${{ github.run_number }} [skip ci]"
+          file_pattern: 'download/NBChannel.apk download/version.json'
+          commit_message: "自动发布 APP v${{ env.APP_VERSION_NAME }} [skip ci]"
           commit_user_name: github-actions[bot]
           commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
           commit_options: '--no-verify'
