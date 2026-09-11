@@ -22,7 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_VERSION_CODE: ${{ github.run_number }}
-      APP_RELEASE_NOTE: 修复返回手势(右滑/返回键逐层后退) + APP 内下载与自动更新
+      # 兜底简介:正常情况下 apply.mjs 会自动从 Beta/changelog-Beta.html 里
+      # 提取当前版本的简介(标题 · 第一个要点),这里只在提取失败时使用。
+      APP_RELEASE_NOTE: 修复与优化,详见更新日志
     steps:
       - name: Checkout
         uses: actions/checkout@v4
