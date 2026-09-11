@@ -375,16 +375,8 @@ public class MainActivity extends BridgeActivity {
     // ==================== 4) 消息通知 ====================
     private void setupNotifications() {
         try {
-            if (Build.VERSION.SDK_INT >= 26) {
-                NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                if (nm != null) {
-                    NotificationChannel ch = new NotificationChannel(
-                            "nbchannel", "NB频道消息", NotificationManager.IMPORTANCE_DEFAULT);
-                    ch.setDescription("评论回复、@提及等提醒");
-                    nm.createNotificationChannel(ch);
-                }
-            }
-        } catch (Exception ignored) {
+            NotifyHelper.createChannels(this);
+        } catch (Throwable ignored) {
         }
         try {
             if (Build.VERSION.SDK_INT >= 33) {
@@ -392,7 +384,19 @@ public class MainActivity extends BridgeActivity {
             }
         } catch (Exception ignored) {
         }
+        // 兜底:系统周期任务,最短 15 分钟一次
         scheduleNotifyJob();
+        // 准实时:前台服务每 30 秒查一次(通知栏会有常驻通知,带「停止」按钮)
+        startRealtimeNotify();
+    }
+
+    private void startRealtimeNotify() {
+        try {
+            Intent intent = new Intent(this, NotifyForegroundService.class);
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent);
+            else startService(intent);
+        } catch (Throwable ignored) {
+        }
     }
 
     private void scheduleNotifyJob() {

@@ -16,13 +16,19 @@ let m = fs.readFileSync(manifestPath, 'utf8');
 let changed = 0;
 
 // ① Android 13+ 发通知需要这个权限(运行时还会再申请一次)
-const PERM = 'android.permission.POST_NOTIFICATIONS';
-if (!m.includes(PERM)) {
-  m = m.replace(/<application/, `<uses-permission android:name="${PERM}" />\n    <application`);
-  changed++;
+const PERMS = [
+  'android.permission.POST_NOTIFICATIONS',
+  'android.permission.FOREGROUND_SERVICE',
+  'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
+];
+for (const p of PERMS) {
+  if (!m.includes(p)) {
+    m = m.replace(/<application/, `<uses-permission android:name="${p}" />\n    <application`);
+    changed++;
+  }
 }
 
-// ② 注册后台消息检查任务(JobScheduler 用)
+// ② 兜底任务(JobScheduler,最短 15 分钟)
 if (!m.includes('NotifyJobService')) {
   m = m.replace(/<\/application>/,
     '        <service android:name=".NotifyJobService"\n' +
@@ -32,9 +38,22 @@ if (!m.includes('NotifyJobService')) {
   changed++;
 }
 
+// ③ 实时提醒前台服务(每 30 秒查一次;Android 14+ 必须声明类型)
+if (!m.includes('NotifyForegroundService')) {
+  m = m.replace(/<\/application>/,
+    '        <service android:name=".NotifyForegroundService"\n' +
+    '            android:exported="false"\n' +
+    '            android:foregroundServiceType="specialUse">\n' +
+    '            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"\n' +
+    '                android:value="保持消息提醒的定时检查" />\n' +
+    '        </service>\n' +
+    '    </application>');
+  changed++;
+}
+
 if (changed) {
   fs.writeFileSync(manifestPath, m, 'utf8');
-  console.log(`✅ AndroidManifest 注入 ${changed} 项(通知权限 + 后台任务 Service)`);
+  console.log(`✅ AndroidManifest 注入 ${changed} 项(通知权限 + 兜底任务 + 实时提醒服务)`);
 } else {
   console.log('ℹ️ AndroidManifest 已是最新,跳过');
 }

@@ -15,18 +15,19 @@ const versionName = process.env.APP_VERSION_NAME || '1.0.0';
 
 function log(msg) { console.log('  ' + msg); }
 
-// ---------- ① 覆盖 MainActivity + 后台通知任务 ----------
-const overrideFiles = ['MainActivity.java', 'NotifyJobService.java'];
-for (const f of overrideFiles) {
-  const src = path.join(process.cwd(), 'android-overrides', f);
-  if (!fs.existsSync(src)) {
-    console.error('❌ 找不到 android-overrides/' + f);
-    process.exit(1);
-  }
-  fs.mkdirSync(pkgPath, { recursive: true });
-  fs.copyFileSync(src, path.join(pkgPath, f));
+// ---------- ① 注入所有自定义原生代码 ----------
+// 直接扫描目录下所有 .java,以后加文件不用再改这里
+const overridesDir = path.join(process.cwd(), 'android-overrides');
+const overrideFiles = fs.readdirSync(overridesDir).filter(f => f.endsWith('.java'));
+if (!overrideFiles.includes('MainActivity.java')) {
+  console.error('❌ android-overrides 里找不到 MainActivity.java');
+  process.exit(1);
 }
-log(`✅ 原生代码已注入(${overrideFiles.join(' + ')}) → ${path.relative(process.cwd(), pkgPath)}`);
+fs.mkdirSync(pkgPath, { recursive: true });
+for (const f of overrideFiles) {
+  fs.copyFileSync(path.join(overridesDir, f), path.join(pkgPath, f));
+}
+log(`✅ 原生代码已注入 ${overrideFiles.length} 个文件(${overrideFiles.join(', ')}) → ${path.relative(process.cwd(), pkgPath)}`);
 
 // ---------- ② 补权限 ----------
 let manifest = fs.readFileSync(manifestPath, 'utf8');
