@@ -1396,7 +1396,7 @@ html { -webkit-text-size-adjust: 100%; }
     function loadCheckin() {
         var user = getUser();
         if (!user) return;
-        supabaseClient.rpc('get_checkin_status', { p_user_id: user.id })
+        supabaseClient.rpc('get_checkin_status', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') })
             .then(function (res) {
                 var st = res.data || {};
                 var btn = document.getElementById('checkinBtn');

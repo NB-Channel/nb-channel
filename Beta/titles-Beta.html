@@ -1015,8 +1015,8 @@ html { -webkit-text-size-adjust: 100%; }
         }
         note.textContent = '当前账号: ' + user.username;
         body.innerHTML = '<div class="tt-state"><div class="st-ico">🏅</div><h3>称号加载中<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span></h3><p>正在同步解锁进度与星级</p></div>';
-        supabaseClient.rpc('sync_my_titles', { p_user_id: user.id })
-            .then(function () { return supabaseClient.rpc('get_my_titles', { p_user_id: user.id }); })
+        supabaseClient.rpc('sync_my_titles', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') })
+            .then(function () { return supabaseClient.rpc('get_my_titles', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') }); })
             .then(function (res) {
                 if (res.error) throw res.error;
                 var list = res.data || [];

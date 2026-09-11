@@ -97,7 +97,7 @@ def _cors_headers():
     return {
         'Access-Control-Allow-Origin': allow if allow else '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, X-User-Id',
+        'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Session',
         'Access-Control-Max-Age': '86400',
     }
 

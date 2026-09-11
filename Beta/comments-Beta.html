@@ -1363,29 +1363,47 @@ html { -webkit-text-size-adjust: 100%; }
     function renderContentWithMentions(text) {
         if (!text) return '';
         let escaped = escapeHtml(text);
-        // http(s) 链接 → 蓝色可点击（必须先于 [img] 替换，避免误伤图片 URL）
+        // 用户可能直接粘贴控制字符,先剥掉,避免伪造占位符
+        escaped = escaped.replace(/[\u0000\u0001]/g, '');
+
+        // 所有会生成 HTML 的替换都先存成占位符,最后统一还原。
+        // 必须这样做:@提及高亮是纯文本替换,如果直接跑在已生成的 HTML 上,
+        // 会把 <a href="https://mj.mj@a"> 属性里的 @a 也换成 <span>,撑坏标签导致整块渲染崩掉。
+        const stash = [];
+        const hold = (html) => '\u0000' + (stash.push(html) - 1) + '\u0001';
+
         // ===== 精简 Markdown:粗体 / 斜体 / 行内代码 / 文字链接 =====
         // 注意:必须先 escapeHtml 再解析,避免 XSS
         escaped = escaped.replace(/\[([^\]\n]{1,40})\]\((https?:\/\/[^\s)]{1,300})\)/g,
-            '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+            (m, label, url) => hold('<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'));
         escaped = escaped.replace(/\*\*([^*\n]{1,120})\*\*/g, '<b>$1</b>');
         escaped = escaped.replace(/(^|[^*])\*([^*\n]{1,120})\*(?!\*)/g, '$1<i>$2</i>');
         escaped = escaped.replace(/`([^`\n]{1,120})`/g, '<code>$1</code>');
-        escaped = linkify(escaped);
-        // [img]key[/img] → 图片（公开桶 URL 由前端拼接，点击放大）
+
+        // ===== 裸链接 → 蓝色可点击(走占位符,避免被 @提及规则误伤) =====
+        escaped = escaped.replace(/(https?:\/\/[^\s<>"']+)/g, (url) =>
+            hold('<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:#00a1d6; text-decoration:underline;">' + url + '</a>'));
+
+        // ===== [img]key[/img] / [video]key[/video] =====
         escaped = escaped.replace(/\[img\]([a-zA-Z0-9_.\-]+)\[\/img\]/g, (m, key) =>
-            `<img src="${IMG_BASE}${key}" alt="图片" onclick="window.open('${IMG_BASE}${key}','_blank')" style="max-width:260px; max-height:260px; border-radius:10px; margin:6px 0; display:block; cursor:zoom-in;">`);
-        // [video]key[/video] → 视频播放器
+            hold(`<img src="${IMG_BASE}${key}" alt="图片" onclick="window.open('${IMG_BASE}${key}','_blank')" style="max-width:260px; max-height:260px; border-radius:10px; margin:6px 0; display:block; cursor:zoom-in;">`));
         escaped = escaped.replace(/\[video\]([a-zA-Z0-9_.\-]+)\[\/video\]/g, (m, key) =>
-            `<video src="${IMG_BASE}${key}" controls preload="metadata" style="max-width:260px; max-height:300px; border-radius:10px; margin:6px 0; display:block; background:#000;"></video>`);
-        // 按真实用户名列表匹配高亮：名字长的优先，避免 @AWM 抢走 @AWM（新号）的前缀
-        if (!cachedUsernames || cachedUsernames.length === 0) return escaped;
-        const names = cachedUsernames.slice().sort((a, b) => b.length - a.length);
-        const pattern = names
-            .map(n => '@' + escapeHtml(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-            .join('|');
-        if (!pattern) return escaped;
-        return escaped.replace(new RegExp(pattern, 'g'), m => `<span style="color:#00a1d6; font-weight:500;">${m}</span>`);
+            hold(`<video src="${IMG_BASE}${key}" controls preload="metadata" style="max-width:260px; max-height:300px; border-radius:10px; margin:6px 0; display:block; background:#000;"></video>`));
+
+        // ===== @提及高亮:此时串里只剩纯文本 + 占位符,不会误伤标签属性 =====
+        // 按真实用户名列表匹配:名字长的优先,避免 @AWM 抢走 @AWM(新号) 的前缀
+        if (cachedUsernames && cachedUsernames.length) {
+            const names = cachedUsernames.slice().sort((a, b) => b.length - a.length);
+            const pattern = names
+                .map(n => '@' + escapeHtml(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+                .join('|');
+            if (pattern) {
+                escaped = escaped.replace(new RegExp(pattern, 'g'), m => `<span style="color:#00a1d6; font-weight:500;">${m}</span>`);
+            }
+        }
+
+        // ===== 还原占位符 =====
+        return escaped.replace(/\u0000(\d+)\u0001/g, (m, i) => stash[Number(i)] || '');
     }
 
     // 获取认证用户列表

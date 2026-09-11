@@ -1245,7 +1245,7 @@ html { -webkit-text-size-adjust: 100%; }
         }
         note.textContent = '当前账号: ' + user.username;
         body.innerHTML = '<div class="lr-state"><div class="lr-st-ico">🎰</div><h3>记录加载中<span class="lr-dot">.</span><span class="lr-dot">.</span><span class="lr-dot">.</span></h3><p>正在翻账本</p></div>';
-        supabaseClient.rpc('get_my_lottery_records', { p_user_id: user.id })
+        supabaseClient.rpc('get_my_lottery_records', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') })
             .then(function (res) {
                 if (res.error) throw res.error;
                 var records = res.data || [];

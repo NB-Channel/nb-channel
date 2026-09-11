@@ -1200,7 +1200,7 @@ html { -webkit-text-size-adjust: 100%; }
         }
         note.textContent = '当前账号: ' + user.username;
         body.innerHTML = '<div class="pk-state"><div class="pk-st-ico">🎒</div><h3>背包整理中<span class="pk-dot">.</span><span class="pk-dot">.</span><span class="pk-dot">.</span></h3><p>正在盘点你的道具</p></div>';
-        supabaseClient.rpc('get_my_items', { p_user_id: user.id }).then(function (res) {
+        supabaseClient.rpc('get_my_items', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') }).then(function (res) {
             if (res.error || !res.data || !res.data.success) throw new Error((res.error && res.error.message) || (res.data && res.data.message) || '加载失败');
             var items = res.data.items || [];
             if (!items.length) {
@@ -1311,7 +1311,7 @@ html { -webkit-text-size-adjust: 100%; }
 
     // ===== 出售弹窗(仅统计"待使用"数量;正在使用的不回收) =====
     function openSellModal(itemKey, itemName, user) {
-        supabaseClient.rpc('get_my_items', { p_user_id: user.id }).then(function (res) {
+        supabaseClient.rpc('get_my_items', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') }).then(function (res) {
             if (res.error || !res.data || !res.data.success) return;
             var sellable = (res.data.items || []).filter(function (i) { return i.item_key === itemKey && i.active && !i.expires_at; });
             var count = sellable.length;

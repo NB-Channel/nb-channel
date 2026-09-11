@@ -1238,7 +1238,7 @@ html { -webkit-text-size-adjust: 100%; }
         body.innerHTML = '<div class="bk-state"><div class="bk-st-ico">🏦</div><h3>银行数据加载中<span class="bk-dot">.</span><span class="bk-dot">.</span><span class="bk-dot">.</span></h3><p>正在同步存款与贷款信息</p></div>';
         callRpc('get_bank_account', {})
             .then(function (acc) {
-                return supabaseClient.rpc('get_bank_logs', { p_user_id: user.id, p_limit: 30 })
+                return supabaseClient.rpc('get_bank_logs', { p_user_id: user.id, p_limit: 30 , p_session: localStorage.getItem('nb_session') })
                     .then(function (logsRes) { return { acc: acc, logs: (logsRes.data || []) }; });
             })
             .then(function (S) { body.innerHTML = renderBank(S.acc, S.logs); loadBalance(); })

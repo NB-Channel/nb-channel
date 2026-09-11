@@ -1255,7 +1255,7 @@ html { -webkit-text-size-adjust: 100%; }
         note.textContent = '当前账号: ' + user.username;
         body.innerHTML = '<div class="ac-state"><div class="ac-st-ico">🏆</div><h3>成就加载中<span class="ac-dot">.</span><span class="ac-dot">.</span><span class="ac-dot">.</span></h3><p>正在检测新的解锁</p></div>';
         // 先自动检测新达成的成就(幂等)
-        supabaseClient.rpc('check_achievements', { p_user_id: user.id })
+        supabaseClient.rpc('check_achievements', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') })
             .then(function (checkRes) {
                 var check = checkRes.data;
                 if (checkRes.error) throw checkRes.error;
@@ -1263,7 +1263,7 @@ html { -webkit-text-size-adjust: 100%; }
                     var lines = (check.new || []).map(function (a) { return esc(a.icon) + ' ' + esc(a.name) + ' +' + (a.reward || 0) + ' NB'; }).join('<br>');
                     showToast('🎉 解锁成就!<br>' + lines + '<br><span style="font-size:.85rem;opacity:.85;">共获得 ' + (check.reward_total || 0) + ' NB币</span>');
                 }
-                return supabaseClient.rpc('get_my_achievements', { p_user_id: user.id });
+                return supabaseClient.rpc('get_my_achievements', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') });
             })
             .then(function (res) {
                 if (res.error) throw res.error;
