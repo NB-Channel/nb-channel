@@ -1,8 +1,8 @@
 {
-  "version": 16,
+  "version": 17,
   "versionName": "1.0.4",
   "url": "https://github.nb-channel.top/download/NBChannel.apk",
-  "apkSize": "约 5MB",
-  "note": "修复返回手势(右滑/返回键逐层后退) + APP 内下载与自动更新",
+  "apkSize": "约 3.6MB",
+  "note": "消息提醒改为接近实时 · 从最长 15 分钟缩短到约 30 秒",
   "updatedAt": "2026-09-11"
 }
