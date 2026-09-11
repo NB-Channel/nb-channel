@@ -3154,5 +3154,100 @@ html { -webkit-text-size-adjust: 100%; }
     setInterval(function () { check(false); }, 30 * 60 * 1000);
 })();
 </script>
+<script>
+    // ===== 鼠标/触摸特效:跟随光晕 + 点击波纹与彩色粒子(鼠标 + 触屏都启用) =====
+    (function () {
+        var mqFine = window.matchMedia ? window.matchMedia('(pointer: fine)') : null;
+        var isFine = !!(mqFine && mqFine.matches);
+        var canTouch = ('ontouchstart' in window) ||
+            !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+        var glow = document.createElement('div');
+        glow.className = 'ui-fx-glow';
+        document.body.appendChild(glow);
+        var gx = -999, gy = -999, tx = -999, ty = -999;
+        var colors = ['#3b82f6', '#8b5cf6', '#6366f1', '#06b6d4', '#f59e0b'];
+        var lastTouch = 0, glowTimer = null;
+
+        // 光晕跟手:有精确指针(鼠标)就跟鼠标,否则跟手指
+        if (isFine) {
+            document.addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; });
+            document.addEventListener('mouseenter', function () { glow.style.opacity = '1'; });
+            document.addEventListener('mouseleave', function () { glow.style.opacity = '0'; });
+        }
+        if (canTouch) {
+            document.addEventListener('touchstart', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                if (gx < -100) { gx = tx; gy = ty; }   // 首次别从屏幕角落滑过来
+                glow.style.opacity = '1';
+                if (glowTimer) { clearTimeout(glowTimer); glowTimer = null; }
+                lastTouch = Date.now();
+                burst(t.clientX, t.clientY, 6, 0.75);
+            }, { passive: true });
+            document.addEventListener('touchmove', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                glow.style.opacity = '1';
+            }, { passive: true });
+            document.addEventListener('touchend', function () {
+                if (glowTimer) clearTimeout(glowTimer);
+                glowTimer = setTimeout(function () { glow.style.opacity = '0'; }, 380);
+            }, { passive: true });
+            document.addEventListener('touchcancel', function () { glow.style.opacity = '0'; }, { passive: true });
+        }
+
+        var lx = -1e9, ly = -1e9;
+        (function loop() {
+            var k = isFine ? 0.14 : 0.32;   // 手指跟得紧一些
+            gx += (tx - gx) * k;
+            gy += (ty - gy) * k;
+            // 静止时跳过写入:避免每帧重复改 style 白白触发样式计算
+            if (Math.abs(gx - lx) > 0.2 || Math.abs(gy - ly) > 0.2) {
+                glow.style.left = gx + 'px';
+                glow.style.top = gy + 'px';
+                lx = gx; ly = gy;
+            }
+            requestAnimationFrame(loop);
+        })();
+
+        // ===== 点击波纹 + 彩色粒子 =====
+        function burst(x, y, count, scale) {
+            var ring = document.createElement('div');
+            ring.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:12px; height:12px; border:2px solid rgba(59,130,246,.75); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%);';
+            document.body.appendChild(ring);
+            setTimeout(function () { if (ring.parentNode) ring.remove(); }, 900);
+            try {
+                ring.animate([
+                    { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9 },
+                    { transform: 'translate(-50%,-50%) scale(' + (5.5 * scale) + ')', opacity: 0 }
+                ], { duration: 600, easing: 'ease-out', fill: 'forwards' });
+            } catch (err) { ring.remove(); }
+            for (var i = 0; i < count; i++) {
+                var p = document.createElement('div');
+                var size = 4 + Math.random() * 6;
+                var ang = Math.random() * Math.PI * 2;
+                var dist = (28 + Math.random() * 52) * scale;
+                p.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:' + size + 'px; height:' + size + 'px; border-radius:50%; background:' + colors[i % colors.length] + '; pointer-events:none; z-index:9999;';
+                document.body.appendChild(p);
+                var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+                var dur = 500 + Math.random() * 250;
+                setTimeout(function (el) {
+                    return function () { if (el.parentNode) el.remove(); };
+                }(p), dur + 250);
+                try {
+                    p.animate([
+                        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+                        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(0.1)', opacity: 0 }
+                    ], { duration: dur, easing: 'cubic-bezier(0.15,0.8,0.25,1)', fill: 'forwards' });
+                } catch (err) { p.remove(); }
+            }
+        }
+        // 鼠标点击
+        document.addEventListener('click', function (e) {
+            if (Date.now() - lastTouch < 800) return;   // 触摸后浏览器会补发 click,去重
+            burst(e.clientX, e.clientY, 8, 1);
+        });
+    })();
+</script>
 </body>
 </html>

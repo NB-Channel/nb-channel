@@ -947,6 +947,25 @@ html { -webkit-text-size-adjust: 100%; }
 .fb-tag.fixed { background: rgba(16,185,129,.14); color: #059669; }
 .fb-tag.ignored { background: rgba(148,163,184,.18); color: #64748b; }
 .fb-note { font-size: .78rem; color: var(--ink-faint); line-height: 1.8; margin-top: 14px; }
+/* ===== 填写引导 ===== */
+.fb-guide { margin-bottom: 18px; border-radius: 14px; border: 1px solid rgba(59,130,246,.25); background: rgba(59,130,246,.045); overflow: hidden; }
+.fb-guide-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 16px; cursor: pointer; font-size: .85rem; font-weight: 800; color: var(--brand);
+    user-select: none; -webkit-user-select: none;
+}
+.fb-guide-head:hover { background: rgba(59,130,246,.06); }
+.fb-guide-ar { font-size: .68rem; transition: transform .25s ease; }
+.fb-guide.open .fb-guide-ar { transform: rotate(180deg); }
+.fb-guide-body { display: none; padding: 2px 16px 14px; font-size: .8rem; line-height: 1.9; color: var(--ink-soft); }
+.fb-guide.open .fb-guide-body { display: block; }
+.fb-guide-body b { display: block; margin: 11px 0 3px; color: var(--ink); font-size: .82rem; }
+.fb-guide-body b:first-child { margin-top: 0; }
+.fb-guide-body ol { margin: 0; padding-left: 19px; }
+.fb-guide-body li { margin-bottom: 2px; }
+.fb-guide-body em { font-style: normal; color: var(--brand); font-weight: 700; }
+.fb-tip { font-size: .75rem; color: var(--ink-faint); line-height: 1.75; margin-top: 8px; padding-left: 2px; }
+.fb-tip b { color: var(--ink-soft); font-weight: 700; }
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -1054,6 +1073,57 @@ html { -webkit-text-size-adjust: 100%; }
             <button type="button" data-kind="suggestion">💡 建议反馈<small>功能建议 / 体验改进</small></button>
         </div>
 
+        <!-- 填写引导:漏洞 -->
+        <div class="fb-guide open" id="fbGuideVuln">
+            <div class="fb-guide-head" data-guide="fbGuideVuln">📋 漏洞怎么写才更容易被修掉?<span class="fb-guide-ar">▼</span></div>
+            <div class="fb-guide-body">
+                <b>① 漏洞简介:写清三件事</b>
+                <ol>
+                    <li><em>能干什么</em>——能改别人的数据?能用别人的钱买股票?能看到不该看的东西?能刷 NB币/道具?</li>
+                    <li><em>影响范围</em>——只影响你自己的账号,还是能影响别人、甚至全站所有人?</li>
+                    <li><em>有没有已经造成损失</em>——有没有被刷走/改掉数据;以及这事你有没有告诉过别人(<em>请先别说出去</em>,修好后再公开)</li>
+                </ol>
+                <b>② 复现方式:越具体越好(最有用的一段)</b>
+                <ol>
+                    <li>从哪个页面/入口开始(例:评论区 → 发评论、股票页 → 买入)</li>
+                    <li>一步一步的操作步骤,<em>1、2、3 分开写</em>,别写成一大段</li>
+                    <li><em>你期望发生什么 vs 实际发生了什么</em>(这条最关键)</li>
+                    <li>用的什么设备/浏览器(Chrome / Edge / 手机 / APP)、大概什么时间——方便我们翻日志</li>
+                    <li><em>必现还是偶发</em>(每次都能重现,还是偶尔出现)</li>
+                    <li>如果要填特殊内容才能触发,把那段内容原样贴出来</li>
+                </ol>
+                <b>③ 附件:放这些最有用</b>
+                <ol>
+                    <li>报错截图;浏览器按 <em>F12 → Console</em> 的红色报错截图</li>
+                    <li><em>F12 → Network</em> 里那条请求:网址、参数、返回内容</li>
+                    <li>相关页面链接、复现用的账号名(⚠️ 千万别贴密码)</li>
+                </ol>
+                <b>④ 联系方式:填了有好处</b>
+                <ol><li>留邮箱我们修复后能通知你,细节不清楚时也能追问;想署名的话说一声,修好会写进更新日志致谢</li></ol>
+            </div>
+        </div>
+
+        <!-- 填写引导:建议 -->
+        <div class="fb-guide open" id="fbGuideSug" style="display:none;">
+            <div class="fb-guide-head" data-guide="fbGuideSug">📋 建议怎么写才更容易被采纳?<span class="fb-guide-ar">▼</span></div>
+            <div class="fb-guide-body">
+                <b>① 建议内容:四句话说清</b>
+                <ol>
+                    <li><em>你想要什么</em>——一句话说清(例:希望背包能按类型筛选)</li>
+                    <li><em>用在什么场景</em>——你现在遇到什么麻烦、为什么需要它</li>
+                    <li><em>期望的效果</em>——希望它长什么样、点一下会发生什么</li>
+                    <li><em>有没有参考</em>——别的网站/APP 是怎么做的,有截图更好</li>
+                </ol>
+                <b>② 如果是改数值(上限、价格、概率等)</b>
+                <ol>
+                    <li>给出你建议的具体数值,以及<em>为什么是这个数</em>(例:单次支持上限 10 万太高,建议 2 万,因为…)</li>
+                    <li>说明现在的数值给你带来了什么困扰</li>
+                </ol>
+                <b>③ 不用写太长的部分</b>
+                <ol><li>标题写一句话就够,细节放在内容里;写得清楚比写得多更有用</li></ol>
+            </div>
+        </div>
+
         <div class="rc-field-wrap">
             <label for="fbTitle">标题 <span class="fb-req">*</span></label>
             <div class="rc-input-row">
@@ -1093,10 +1163,12 @@ html { -webkit-text-size-adjust: 100%; }
             <div class="rc-field-wrap">
                 <label for="fbSummary">漏洞简介 <span class="fb-req">*</span></label>
                 <textarea id="fbSummary" class="rc-area" rows="4" maxlength="2000" placeholder="这个漏洞是什么?影响哪些功能或数据?(≤2000字)"></textarea>
+                <div class="fb-tip">💡 建议写:<b>能干什么</b>(改别人数据/用别人的钱/看隐私/刷币)· <b>影响范围</b>(只影响自己还是全站)· <b>有没有已造成损失</b></div>
             </div>
             <div class="rc-field-wrap">
                 <label for="fbRepro">复现方式 <span class="fb-req">*</span></label>
-                <textarea id="fbRepro" class="rc-area" rows="6" maxlength="5000" placeholder="一步一步写清楚怎么复现,例如:&#10;1. 打开 xx 页面&#10;2. 点击 xx&#10;3. 出现 xx(这里本该是 xx)&#10;(≤5000字)"></textarea>
+                <textarea id="fbRepro" class="rc-area" rows="7" maxlength="5000" placeholder="一步一步写清楚怎么复现,例如:&#10;1. 打开 xx 页面&#10;2. 点击 xx&#10;3. 出现 xx(这里本该是 xx)&#10;(≤5000字)"></textarea>
+                <div class="fb-tip">💡 建议写:<b>从哪进入 → 步骤 1/2/3 → 期望 vs 实际 → 设备浏览器 + 大概时间 → 必现还是偶发</b>。这条最有用,写细一点能省我们很多功夫</div>
             </div>
         </div>
 
@@ -1104,6 +1176,7 @@ html { -webkit-text-size-adjust: 100%; }
             <div class="rc-field-wrap">
                 <label for="fbContent">建议内容 <span class="fb-req">*</span></label>
                 <textarea id="fbContent" class="rc-area" rows="7" maxlength="5000" placeholder="你想要什么功能、或者哪里用着别扭?说清使用场景和期望效果会更有帮助(≤5000字)"></textarea>
+                <div class="fb-tip">💡 建议写:<b>想要什么 · 用在什么场景 · 期望的效果 · 有没有参考例子</b>;如果是改数值(上限/价格),给出你建议的具体数字和理由</div>
             </div>
         </div>
 
@@ -1116,6 +1189,7 @@ html { -webkit-text-size-adjust: 100%; }
             </div>
             <input type="file" id="fbImgInput" accept="image/*" multiple style="display:none;">
             <div class="fb-thumbs" id="fbThumbs"></div>
+            <div class="fb-tip">💡 图片最有用的是:<b>报错截图</b> · <b>F12 → Console 的红色报错</b> · <b>F12 → Network 里那条请求的网址/参数/返回</b>。⚠️ 别放密码或身份证件</div>
         </div>
 
         <div class="rc-field-wrap">
@@ -1124,6 +1198,7 @@ html { -webkit-text-size-adjust: 100%; }
                 <span class="rc-ic">✉️</span>
                 <input type="email" id="fbEmail" class="rc-field" placeholder="邮箱,方便我们回复你" maxlength="120">
             </div>
+            <div class="fb-tip">💡 填了修复/采纳后能通知你,细节不清楚时也方便追问;想署名致谢的话在内容里说一声</div>
         </div>
 
         <div id="errorMsg" class="rc-err"></div>
@@ -1398,6 +1473,14 @@ html { -webkit-text-size-adjust: 100%; }
         el('fbMine').style.display = 'none';
     }
 
+    // ---------- 填写引导:点击标题折叠/展开 ----------
+    document.querySelectorAll('.fb-guide-head').forEach(function (head) {
+        head.addEventListener('click', function () {
+            var box = document.getElementById(head.dataset.guide);
+            if (box) box.classList.toggle('open');
+        });
+    });
+
     // ---------- 类型切换 ----------
     (function bindKind() {
         var wrap = el('fbKind');
@@ -1409,6 +1492,8 @@ html { -webkit-text-size-adjust: 100%; }
                 var isVuln = fbKind === 'vuln';
                 el('fbVulnFields').style.display = isVuln ? '' : 'none';
                 el('fbSugFields').style.display = isVuln ? 'none' : '';
+                el('fbGuideVuln').style.display = isVuln ? '' : 'none';
+                el('fbGuideSug').style.display = isVuln ? 'none' : '';
                 el('fbFormTitle').textContent = isVuln ? '漏洞反馈' : '建议反馈';
                 el('fbFormSub').innerHTML = isVuln
                     ? '带 <span class="fb-req">*</span> 的是必填项;漏洞请尽量写清复现步骤'
@@ -1605,20 +1690,53 @@ html { -webkit-text-size-adjust: 100%; }
     loadCurrentUser();
 </script>
 <script>
-    // ===== 鼠标特效:跟随光晕 + 点击波纹与彩色粒子(仅鼠标设备) =====
+    // ===== 鼠标/触摸特效:跟随光晕 + 点击波纹与彩色粒子(鼠标 + 触屏都启用) =====
     (function () {
-        if (!(window.matchMedia && window.matchMedia('(pointer: fine)').matches)) return;
+        var mqFine = window.matchMedia ? window.matchMedia('(pointer: fine)') : null;
+        var isFine = !!(mqFine && mqFine.matches);
+        var canTouch = ('ontouchstart' in window) ||
+            !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
         var glow = document.createElement('div');
         glow.className = 'ui-fx-glow';
         document.body.appendChild(glow);
         var gx = -999, gy = -999, tx = -999, ty = -999;
-        document.addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; });
-        document.addEventListener('mouseenter', function () { glow.style.opacity = '1'; });
-        document.addEventListener('mouseleave', function () { glow.style.opacity = '0'; });
+        var colors = ['#3b82f6', '#8b5cf6', '#6366f1', '#06b6d4', '#f59e0b'];
+        var lastTouch = 0, glowTimer = null;
+
+        // 光晕跟手:有精确指针(鼠标)就跟鼠标,否则跟手指
+        if (isFine) {
+            document.addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; });
+            document.addEventListener('mouseenter', function () { glow.style.opacity = '1'; });
+            document.addEventListener('mouseleave', function () { glow.style.opacity = '0'; });
+        }
+        if (canTouch) {
+            document.addEventListener('touchstart', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                if (gx < -100) { gx = tx; gy = ty; }   // 首次别从屏幕角落滑过来
+                glow.style.opacity = '1';
+                if (glowTimer) { clearTimeout(glowTimer); glowTimer = null; }
+                lastTouch = Date.now();
+                burst(t.clientX, t.clientY, 6, 0.75);
+            }, { passive: true });
+            document.addEventListener('touchmove', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                glow.style.opacity = '1';
+            }, { passive: true });
+            document.addEventListener('touchend', function () {
+                if (glowTimer) clearTimeout(glowTimer);
+                glowTimer = setTimeout(function () { glow.style.opacity = '0'; }, 380);
+            }, { passive: true });
+            document.addEventListener('touchcancel', function () { glow.style.opacity = '0'; }, { passive: true });
+        }
+
         var lx = -1e9, ly = -1e9;
         (function loop() {
-            gx += (tx - gx) * 0.14;
-            gy += (ty - gy) * 0.14;
+            var k = isFine ? 0.14 : 0.32;   // 手指跟得紧一些
+            gx += (tx - gx) * k;
+            gy += (ty - gy) * k;
+            // 静止时跳过写入:避免每帧重复改 style 白白触发样式计算
             if (Math.abs(gx - lx) > 0.2 || Math.abs(gy - ly) > 0.2) {
                 glow.style.left = gx + 'px';
                 glow.style.top = gy + 'px';
@@ -1626,24 +1744,25 @@ html { -webkit-text-size-adjust: 100%; }
             }
             requestAnimationFrame(loop);
         })();
-        var colors = ['#3b82f6', '#8b5cf6', '#6366f1', '#06b6d4', '#f59e0b'];
-        document.addEventListener('click', function (e) {
+
+        // ===== 点击波纹 + 彩色粒子 =====
+        function burst(x, y, count, scale) {
             var ring = document.createElement('div');
-            ring.style.cssText = 'position:fixed; left:' + e.clientX + 'px; top:' + e.clientY + 'px; width:12px; height:12px; border:2px solid rgba(59,130,246,.75); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%);';
+            ring.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:12px; height:12px; border:2px solid rgba(59,130,246,.75); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%);';
             document.body.appendChild(ring);
             setTimeout(function () { if (ring.parentNode) ring.remove(); }, 900);
             try {
                 ring.animate([
                     { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9 },
-                    { transform: 'translate(-50%,-50%) scale(5.5)', opacity: 0 }
+                    { transform: 'translate(-50%,-50%) scale(' + (5.5 * scale) + ')', opacity: 0 }
                 ], { duration: 600, easing: 'ease-out', fill: 'forwards' });
             } catch (err) { ring.remove(); }
-            for (var i = 0; i < 8; i++) {
+            for (var i = 0; i < count; i++) {
                 var p = document.createElement('div');
                 var size = 4 + Math.random() * 6;
                 var ang = Math.random() * Math.PI * 2;
-                var dist = 28 + Math.random() * 52;
-                p.style.cssText = 'position:fixed; left:' + e.clientX + 'px; top:' + e.clientY + 'px; width:' + size + 'px; height:' + size + 'px; border-radius:50%; background:' + colors[i % colors.length] + '; pointer-events:none; z-index:9999;';
+                var dist = (28 + Math.random() * 52) * scale;
+                p.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:' + size + 'px; height:' + size + 'px; border-radius:50%; background:' + colors[i % colors.length] + '; pointer-events:none; z-index:9999;';
                 document.body.appendChild(p);
                 var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
                 var dur = 500 + Math.random() * 250;
@@ -1657,6 +1776,11 @@ html { -webkit-text-size-adjust: 100%; }
                     ], { duration: dur, easing: 'cubic-bezier(0.15,0.8,0.25,1)', fill: 'forwards' });
                 } catch (err) { p.remove(); }
             }
+        }
+        // 鼠标点击
+        document.addEventListener('click', function (e) {
+            if (Date.now() - lastTouch < 800) return;   // 触摸后浏览器会补发 click,去重
+            burst(e.clientX, e.clientY, 8, 1);
         });
     })();
 </script>

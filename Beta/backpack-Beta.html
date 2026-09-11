@@ -808,6 +808,34 @@ html { -webkit-text-size-adjust: 100%; }
 }
 .md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
 .md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
+
+/* ===== RGB 自定义调色 ===== */
+.pk-rgb { margin: 16px 0 4px; padding: 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); }
+.pk-rgb-head { display: flex; align-items: center; justify-content: space-between; font-size: .82rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 12px; }
+.pk-rgb-hex { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .82rem; color: var(--brand); font-weight: 800; letter-spacing: .5px; }
+.pk-rgb-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pk-rgb-row > label { width: 16px; font-size: .8rem; font-weight: 800; color: var(--ink-faint); text-align: center; }
+.pk-rgb-row input[type="range"] {
+    flex: 1; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px;
+    background: linear-gradient(90deg, #000, #fff); outline: none; cursor: pointer;
+}
+.pk-rgb-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--brand); box-shadow: 0 2px 6px rgba(0,0,0,.25); cursor: pointer;
+}
+.pk-rgb-row input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); cursor: pointer;
+}
+.pk-rgb-row.r input[type="range"] { background: linear-gradient(90deg, #000, #f00); }
+.pk-rgb-row.g input[type="range"] { background: linear-gradient(90deg, #000, #0f0); }
+.pk-rgb-row.b input[type="range"] { background: linear-gradient(90deg, #000, #00f); }
+.pk-rgb-num {
+    width: 58px; padding: 6px 8px; border-radius: 9px; text-align: center; font-family: inherit;
+    font-size: .82rem; font-weight: 700; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+}
+.pk-rgb-preview { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: .78rem; color: var(--ink-faint); }
+.pk-rgb-preview i { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); display: inline-block; }
+.pk-rgb-tip { font-size: .74rem; color: var(--ink-faint); line-height: 1.7; margin-top: 10px; }
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -1205,6 +1233,14 @@ html { -webkit-text-size-adjust: 100%; }
         supabaseClient.rpc('get_my_items', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') }).then(function (res) {
             if (res.error || !res.data || !res.data.success) throw new Error((res.error && res.error.message) || (res.data && res.data.message) || '加载失败');
             var items = res.data.items || [];
+            // 记录当前生效的样式,打开改色弹窗时用来回显
+            window.__pkCurrent = {};
+            items.forEach(function (it) {
+                if (['comment_color', 'nickname_color', 'chat_bubble', 'particle_fx'].indexOf(it.item_key) === -1) return;
+                if (!it.active) return;
+                var v = it.settings && (it.settings.value || it.settings.color);
+                if (v && !window.__pkCurrent[it.item_key]) window.__pkCurrent[it.item_key] = v;
+            });
             if (!items.length) {
                 body.innerHTML = '<div class="pk-state"><div class="pk-st-ico">📭</div><h3>背包空空如也</h3>' +
                     '<p>去商店挑几件喜欢的道具吧</p>' +
@@ -1362,12 +1398,12 @@ html { -webkit-text-size-adjust: 100%; }
         }).catch(function (e) { showToast('❌ ' + (e.message || e), true); });
     }
 
-    // ===== 改色弹窗 =====
+    // ===== 改色弹窗(支持 RGB 自定义) =====
     var COLOR_PRESETS = {
-        comment_color: { label: '评论文字颜色', options: ['#e74c3c', '#ff9800', '#f5a623', '#4caf50', '#00a1d6', '#7c4dff', '#ff6b9d', '#795548'], free: true },
-        nickname_color: { label: '昵称颜色', options: ['#e74c3c', '#f5a623', 'rainbow'], free: false },
-        chat_bubble: { label: '气泡颜色', options: ['#00a1d6', '#ff6b9d', '#4caf50', 'rainbow'], free: false },
-        particle_fx: { label: '粒子特效', options: ['fire', 'lightning', 'bubble', 'star'], free: false }
+        comment_color: { label: '评论文字颜色', color: true,  options: ['#e74c3c', '#ff9800', '#f5a623', '#4caf50', '#00a1d6', '#7c4dff', '#ff6b9d', '#795548'] },
+        nickname_color: { label: '昵称颜色', color: true,  options: ['#e74c3c', '#f5a623', '#00a1d6', '#7c4dff', 'rainbow'] },
+        chat_bubble: { label: '气泡颜色', color: true,  options: ['#00a1d6', '#ff6b9d', '#4caf50', '#7c4dff', 'rainbow'] },
+        particle_fx: { label: '粒子特效', color: false, options: ['fire', 'lightning', 'bubble', 'star'] }
     };
     var COLOR_LABELS = {
         '#e74c3c': '❤️ 红', '#ff9800': '🧡 橙', '#f5a623': '💛 金', '#4caf50': '💚 绿',
@@ -1375,45 +1411,140 @@ html { -webkit-text-size-adjust: 100%; }
         rainbow: '🌈 彩虹', fire: '🔥 火焰', lightning: '⚡ 闪电', bubble: '🫧 气泡', star: '✨ 星光',
         default: '🌙 默认', aurora: '🌌 极光', night: '🌃 夜晚', cherry: '🌸 樱花'
     };
+    var SPECIAL_VALS = ['rainbow', 'fire', 'lightning', 'bubble', 'star', 'aurora', 'night', 'cherry', 'default'];
+    function isSpecialVal(c) { return SPECIAL_VALS.indexOf(c) !== -1; }
+    function hexToRgb(hex) {
+        var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex || ''));
+        if (!m) return null;
+        return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+    }
+    function rgbToHex(r, g, b) {
+        var h = function (n) { var v = Math.max(0, Math.min(255, parseInt(n, 10) || 0)).toString(16); return v.length < 2 ? '0' + v : v; };
+        return '#' + h(r) + h(g) + h(b);
+    }
+
     function openColorModal(itemKey, itemId, user) {
         var cfg = COLOR_PRESETS[itemKey];
         if (!cfg) return;
-        var isSpecial = function (c) { return c === 'rainbow' || c === 'fire' || c === 'lightning' || c === 'bubble' || c === 'star' || c === 'aurora' || c === 'night' || c === 'cherry'; };
-        var opts = '';
-        if (cfg.free) {
-            opts = '<div class="pk-color-options">' +
-                cfg.options.map(function (c) { return '<div class="pk-color-opt" data-val="' + c + '" style="background:' + c + ';"></div>'; }).join('') +
-                '<input type="color" class="pk-free-color" id="pkFreeColor" value="#00a1d6">' +
-                '</div>';
-        } else {
-            opts = '<div class="pk-color-options">' +
-                cfg.options.map(function (c) {
-                    var bg = isSpecial(c) ? 'linear-gradient(135deg,#ff6b9d,#7c4dff)' : c;
-                    return '<div class="pk-color-opt wide" data-val="' + c + '" style="background:' + bg + ';">' + (COLOR_LABELS[c] || '') + '</div>';
-                }).join('') +
+        var cur = (window.__pkCurrent && window.__pkCurrent[itemKey]) || null;  // 已保存的值,用于回显
+
+        // 预设/特殊样式按钮
+        var opts = cfg.options.map(function (c) {
+            var bg = isSpecialVal(c) ? 'linear-gradient(135deg,#ff6b9d,#7c4dff)' : c;
+            var lbl = COLOR_LABELS[c] || '';
+            return isSpecialVal(c)
+                ? '<div class="pk-color-opt wide" data-val="' + c + '" style="background:' + bg + ';">' + lbl + '</div>'
+                : '<div class="pk-color-opt" data-val="' + c + '" style="background:' + bg + '" title="' + c + '"></div>';
+        }).join('');
+
+        var rgbPanel = '';
+        if (cfg.color) {
+            var init = (cur && !isSpecialVal(cur) && hexToRgb(cur)) ? hexToRgb(cur) : { r: 59, g: 130, b: 246 };
+            rgbPanel =
+                '<div class="pk-rgb">' +
+                  '<div class="pk-rgb-head"><span>🎚️ 自定义 RGB</span><span class="pk-rgb-hex" id="pkRgbHex">' + rgbToHex(init.r, init.g, init.b) + '</span></div>' +
+                  '<div class="pk-rgb-row r"><label>R</label><input type="range" id="pkR" min="0" max="255" value="' + init.r + '"><input type="number" class="pk-rgb-num" id="pkRn" min="0" max="255" value="' + init.r + '"></div>' +
+                  '<div class="pk-rgb-row g"><label>G</label><input type="range" id="pkG" min="0" max="255" value="' + init.g + '"><input type="number" class="pk-rgb-num" id="pkGn" min="0" max="255" value="' + init.g + '"></div>' +
+                  '<div class="pk-rgb-row b"><label>B</label><input type="range" id="pkB" min="0" max="255" value="' + init.b + '"><input type="number" class="pk-rgb-num" id="pkBn" min="0" max="255" value="' + init.b + '"></div>' +
+                  '<div class="pk-rgb-preview"><i id="pkRgbSwatch" style="background:' + rgbToHex(init.r, init.g, init.b) + ';"></i><span>左侧为预览,拖动滑块或直接输入 0~255</span></div>' +
+                  '<div class="pk-rgb-tip">想要什么颜色都行,调好后点「确定」保存;上面的色块是常用色快捷填充。</div>' +
                 '</div>';
         }
-        var selected = null;
-        var m = pkModal('<h3>🎨 ' + cfg.label + '</h3>' + opts +
+
+        var m = pkModal('<h3>🎨 ' + cfg.label + '</h3>' +
+            '<div class="pk-color-options">' + opts + '</div>' + rgbPanel +
             '<div class="pk-btns">' +
             '<button type="button" class="pk-mbtn gray" id="pkColorNo">取消</button>' +
             '<button type="button" class="pk-mbtn primary" id="pkColorYes">确定</button>' +
             '</div>');
+
+        var selected = null;
+
+        function readRgb() {
+            return {
+                r: parseInt(m.el.querySelector('#pkRn').value, 10) || 0,
+                g: parseInt(m.el.querySelector('#pkGn').value, 10) || 0,
+                b: parseInt(m.el.querySelector('#pkBn').value, 10) || 0
+            };
+        }
+        function syncFromSliders() {
+            if (!cfg.color) return;
+            var v = readRgb();
+            var hex = rgbToHex(v.r, v.g, v.b);
+            m.el.querySelector('#pkR').value = v.r; m.el.querySelector('#pkRn').value = v.r;
+            m.el.querySelector('#pkG').value = v.g; m.el.querySelector('#pkGn').value = v.g;
+            m.el.querySelector('#pkB').value = v.b; m.el.querySelector('#pkBn').value = v.b;
+            m.el.querySelector('#pkRgbHex').textContent = hex;
+            m.el.querySelector('#pkRgbSwatch').style.background = hex;
+        }
+        function clearPreset() {
+            m.el.querySelectorAll('.pk-color-opt').forEach(function (o) { o.classList.remove('selected'); });
+            selected = null;
+        }
+        function applyColor(hex) {
+            if (!cfg.color) return;
+            var v = hexToRgb(hex);
+            if (!v) return;
+            m.el.querySelector('#pkRn').value = v.r;
+            m.el.querySelector('#pkGn').value = v.g;
+            m.el.querySelector('#pkBn').value = v.b;
+            syncFromSliders();
+        }
+
+        // 预设 / 特殊样式
         m.el.querySelectorAll('.pk-color-opt').forEach(function (opt) {
             opt.addEventListener('click', function () {
                 m.el.querySelectorAll('.pk-color-opt').forEach(function (o) { o.classList.remove('selected'); });
                 opt.classList.add('selected');
-                selected = opt.dataset.val;
+                var val = opt.dataset.val;
+                if (isSpecialVal(val)) {
+                    selected = val;
+                } else {
+                    selected = null;
+                    applyColor(val);   // 把预设色灌进 RGB 滑块,还能继续微调
+                }
             });
         });
+
+        // RGB 三联
+        if (cfg.color) {
+            [['#pkR', '#pkRn'], ['#pkG', '#pkGn'], ['#pkB', '#pkBn']].forEach(function (pair) {
+                var slider = m.el.querySelector(pair[0]), num = m.el.querySelector(pair[1]);
+                slider.addEventListener('input', function () { num.value = slider.value; clearPreset(); syncFromSliders(); });
+                num.addEventListener('input', function () {
+                    var v = parseInt(num.value, 10);
+                    if (isNaN(v)) return;
+                    v = Math.max(0, Math.min(255, v));
+                    slider.value = v;
+                    clearPreset(); syncFromSliders();
+                });
+                num.addEventListener('blur', function () {
+                    var v = Math.max(0, Math.min(255, parseInt(num.value, 10) || 0));
+                    num.value = v; syncFromSliders();
+                });
+            });
+            // 回显当前已保存的颜色
+            if (cur && !isSpecialVal(cur)) applyColor(cur);
+            else syncFromSliders();
+        }
+        // 回显当前特殊样式
+        if (cur && isSpecialVal(cur)) {
+            var curOpt = m.el.querySelector('.pk-color-opt[data-val="' + cur + '"]');
+            if (curOpt) { curOpt.classList.add('selected'); selected = cur; }
+        }
+
         m.el.querySelector('#pkColorNo').addEventListener('click', function () { m.close(); });
         m.el.querySelector('#pkColorYes').addEventListener('click', function () {
             var val = selected;
-            if (cfg.free) {
-                var fi = m.el.querySelector('#pkFreeColor');
-                if (fi && fi.value) val = fi.value;
+            if (!val) {
+                if (cfg.color) {
+                    var v = readRgb();
+                    val = rgbToHex(v.r, v.g, v.b);
+                } else {
+                    showMessage('提示', '请先选择一个样式');
+                    return;
+                }
             }
-            if (!val) { showMessage('提示', '请先选择一个样式'); return; }
             m.close();
             supabaseClient.rpc('set_item_settings', { p_user_id: user.id, p_item_id: itemId, p_settings: { value: val } , p_session: localStorage.getItem('nb_session') })
                 .then(function (res) {
@@ -1437,20 +1568,53 @@ html { -webkit-text-size-adjust: 100%; }
     loadBackpack();
 </script>
 <script>
-    // ===== 鼠标特效:跟随光晕 + 点击波纹与彩色粒子(仅鼠标设备) =====
+    // ===== 鼠标/触摸特效:跟随光晕 + 点击波纹与彩色粒子(鼠标 + 触屏都启用) =====
     (function () {
-        if (!(window.matchMedia && window.matchMedia('(pointer: fine)').matches)) return;
+        var mqFine = window.matchMedia ? window.matchMedia('(pointer: fine)') : null;
+        var isFine = !!(mqFine && mqFine.matches);
+        var canTouch = ('ontouchstart' in window) ||
+            !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
         var glow = document.createElement('div');
         glow.className = 'ui-fx-glow';
         document.body.appendChild(glow);
         var gx = -999, gy = -999, tx = -999, ty = -999;
-        document.addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; });
-        document.addEventListener('mouseenter', function () { glow.style.opacity = '1'; });
-        document.addEventListener('mouseleave', function () { glow.style.opacity = '0'; });
+        var colors = ['#3b82f6', '#8b5cf6', '#6366f1', '#06b6d4', '#f59e0b'];
+        var lastTouch = 0, glowTimer = null;
+
+        // 光晕跟手:有精确指针(鼠标)就跟鼠标,否则跟手指
+        if (isFine) {
+            document.addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; });
+            document.addEventListener('mouseenter', function () { glow.style.opacity = '1'; });
+            document.addEventListener('mouseleave', function () { glow.style.opacity = '0'; });
+        }
+        if (canTouch) {
+            document.addEventListener('touchstart', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                if (gx < -100) { gx = tx; gy = ty; }   // 首次别从屏幕角落滑过来
+                glow.style.opacity = '1';
+                if (glowTimer) { clearTimeout(glowTimer); glowTimer = null; }
+                lastTouch = Date.now();
+                burst(t.clientX, t.clientY, 6, 0.75);
+            }, { passive: true });
+            document.addEventListener('touchmove', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                glow.style.opacity = '1';
+            }, { passive: true });
+            document.addEventListener('touchend', function () {
+                if (glowTimer) clearTimeout(glowTimer);
+                glowTimer = setTimeout(function () { glow.style.opacity = '0'; }, 380);
+            }, { passive: true });
+            document.addEventListener('touchcancel', function () { glow.style.opacity = '0'; }, { passive: true });
+        }
+
         var lx = -1e9, ly = -1e9;
         (function loop() {
-            gx += (tx - gx) * 0.14;
-            gy += (ty - gy) * 0.14;
+            var k = isFine ? 0.14 : 0.32;   // 手指跟得紧一些
+            gx += (tx - gx) * k;
+            gy += (ty - gy) * k;
+            // 静止时跳过写入:避免每帧重复改 style 白白触发样式计算
             if (Math.abs(gx - lx) > 0.2 || Math.abs(gy - ly) > 0.2) {
                 glow.style.left = gx + 'px';
                 glow.style.top = gy + 'px';
@@ -1458,24 +1622,25 @@ html { -webkit-text-size-adjust: 100%; }
             }
             requestAnimationFrame(loop);
         })();
-        var colors = ['#3b82f6', '#8b5cf6', '#6366f1', '#06b6d4', '#f59e0b'];
-        document.addEventListener('click', function (e) {
+
+        // ===== 点击波纹 + 彩色粒子 =====
+        function burst(x, y, count, scale) {
             var ring = document.createElement('div');
-            ring.style.cssText = 'position:fixed; left:' + e.clientX + 'px; top:' + e.clientY + 'px; width:12px; height:12px; border:2px solid rgba(59,130,246,.75); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%);';
+            ring.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:12px; height:12px; border:2px solid rgba(59,130,246,.75); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%);';
             document.body.appendChild(ring);
             setTimeout(function () { if (ring.parentNode) ring.remove(); }, 900);
             try {
                 ring.animate([
                     { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9 },
-                    { transform: 'translate(-50%,-50%) scale(5.5)', opacity: 0 }
+                    { transform: 'translate(-50%,-50%) scale(' + (5.5 * scale) + ')', opacity: 0 }
                 ], { duration: 600, easing: 'ease-out', fill: 'forwards' });
             } catch (err) { ring.remove(); }
-            for (var i = 0; i < 8; i++) {
+            for (var i = 0; i < count; i++) {
                 var p = document.createElement('div');
                 var size = 4 + Math.random() * 6;
                 var ang = Math.random() * Math.PI * 2;
-                var dist = 28 + Math.random() * 52;
-                p.style.cssText = 'position:fixed; left:' + e.clientX + 'px; top:' + e.clientY + 'px; width:' + size + 'px; height:' + size + 'px; border-radius:50%; background:' + colors[i % colors.length] + '; pointer-events:none; z-index:9999;';
+                var dist = (28 + Math.random() * 52) * scale;
+                p.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:' + size + 'px; height:' + size + 'px; border-radius:50%; background:' + colors[i % colors.length] + '; pointer-events:none; z-index:9999;';
                 document.body.appendChild(p);
                 var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
                 var dur = 500 + Math.random() * 250;
@@ -1489,6 +1654,11 @@ html { -webkit-text-size-adjust: 100%; }
                     ], { duration: dur, easing: 'cubic-bezier(0.15,0.8,0.25,1)', fill: 'forwards' });
                 } catch (err) { p.remove(); }
             }
+        }
+        // 鼠标点击
+        document.addEventListener('click', function (e) {
+            if (Date.now() - lastTouch < 800) return;   // 触摸后浏览器会补发 click,去重
+            burst(e.clientX, e.clientY, 8, 1);
         });
     })();
 </script>
