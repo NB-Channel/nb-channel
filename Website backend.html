@@ -504,15 +504,18 @@
 
     async function loadDashboard() {
         try {
-            const { count: bannedCount } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('is_banned', true);
-            const { count: commentReports } = await supabaseClient.from('reports').select('*', { count: 'exact', head: true }).eq('target_type', 'comment');
-            const { count: companyReports } = await supabaseClient.from('reports').select('*', { count: 'exact', head: true }).eq('target_type', 'company');
-            const { count: pendingVerification } = await supabaseClient.from('user_companies').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending');
+            // 走服务端 RPC:profiles 表 RLS 收紧后,anon key 直接查会 401
+            const { data, error } = await supabaseClient.rpc('admin_dashboard_stats', { p_token: getToken() });
+            const s = (data && data.success) ? data : {};
+            if (error || !data || !data.success) {
+                if (!handleAdminError(error || (data && data.message))) console.error(error || (data && data.message));
+            }
             document.getElementById('dashboard').innerHTML = `
-                <div class="card"><h3>被封禁用户数</h3><div class="number">${bannedCount || 0}</div></div>
-                <div class="card"><h3>评论举报数</h3><div class="number">${commentReports || 0}</div></div>
-                <div class="card"><h3>公司举报数</h3><div class="number">${companyReports || 0}</div></div>
-                <div class="card"><h3>待认证公司</h3><div class="number">${pendingVerification || 0}</div></div>
+                <div class="card"><h3>被封禁用户数</h3><div class="number">${s.banned || 0}</div></div>
+                <div class="card"><h3>评论举报数</h3><div class="number">${s.comment_reports || 0}</div></div>
+                <div class="card"><h3>公司举报数</h3><div class="number">${s.company_reports || 0}</div></div>
+                <div class="card"><h3>待认证公司</h3><div class="number">${s.pending_verification || 0}</div></div>
+                <div class="card" style="cursor:pointer;" onclick="switchTab('feedback')"><h3>待处理反馈</h3><div class="number" style="color:#e74c3c;">${s.feedback_pending || 0}</div></div>
             `;
         } catch (err) { console.error(err); }
     }
@@ -1159,9 +1162,18 @@
         const container = document.getElementById('bannedUsersList');
         container.innerHTML = '加载中...';
         try {
-            const { data, error } = await supabaseClient.from('profiles').select('id, username, is_banned').eq('is_banned', true);
-            if (error) throw error;
-            if (!data || data.length === 0) {
+            // 走服务端 RPC:profiles 表 RLS 收紧后,anon key 直接查会 401
+            const { data: res, error } = await supabaseClient.rpc('admin_list_banned_users', { p_token: getToken() });
+            if (error || !res || !res.success) {
+                if (!handleAdminError(error || (res && res.message))) {
+                    container.innerHTML = '<div>加载封禁用户失败: ' + escapeHtml((error && error.message) || (res && res.message) || '未知错误') + '</div>';
+                } else {
+                    container.innerHTML = '<div>请重新登录</div>';
+                }
+                return;
+            }
+            const data = res.list || [];
+            if (!data.length) {
                 container.innerHTML = '<div>暂无封禁用户</div>';
                 return;
             }

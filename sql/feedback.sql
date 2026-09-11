@@ -275,11 +275,13 @@ BEGIN
              CASE f.status WHEN 'pending' THEN 0 WHEN 'processing' THEN 1 ELSE 2 END,
              f.created_at DESC), '[]'::jsonb)
       INTO v_list
-      FROM public.feedback f
-     WHERE (v_st IS NULL OR f.status = v_st)
-       AND (v_kd IS NULL OR f.kind = v_kd)
-     ORDER BY f.created_at DESC
-     LIMIT v_limit OFFSET v_offset;
+      FROM (
+        SELECT * FROM public.feedback f2
+         WHERE (v_st IS NULL OR f2.status = v_st)
+           AND (v_kd IS NULL OR f2.kind = v_kd)
+         ORDER BY f2.created_at DESC
+         LIMIT v_limit OFFSET v_offset
+      ) f;
 
     RETURN jsonb_build_object('success', true, 'total', v_total, 'counts', v_counts, 'list', v_list);
 EXCEPTION WHEN OTHERS THEN
@@ -326,17 +328,74 @@ EXCEPTION WHEN OTHERS THEN
 END
 $fn$;
 
--- ---------- 6) 授权 ----------
+-- ---------- 6) 管理端:后台首页统计 + 封禁用户列表 ----------
+-- 后台原来直接用 anon key 查 profiles 表,RLS 收紧后会 401,所以走 SECURITY DEFINER 函数
+CREATE OR REPLACE FUNCTION public.admin_dashboard_stats(p_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+DECLARE
+    v jsonb;
+BEGIN
+    IF NOT public._admin_token_valid(p_token) THEN
+        RETURN jsonb_build_object('success', false, 'message', '管理员会话无效或已过期,请重新登录');
+    END IF;
+    SELECT jsonb_build_object(
+        'success', true,
+        'banned',              (SELECT count(*) FROM public.profiles WHERE is_banned IS TRUE),
+        'comment_reports',     (SELECT count(*) FROM public.reports WHERE target_type = 'comment'),
+        'company_reports',     (SELECT count(*) FROM public.reports WHERE target_type = 'company'),
+        'pending_verification',(SELECT count(*) FROM public.user_companies WHERE verification_status = 'pending'),
+        'feedback_pending',    (SELECT count(*) FROM public.feedback WHERE status = 'pending')
+    ) INTO v;
+    RETURN v;
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'message', SQLERRM);
+END
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.admin_list_banned_users(p_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+DECLARE
+    v_list jsonb;
+BEGIN
+    IF NOT public._admin_token_valid(p_token) THEN
+        RETURN jsonb_build_object('success', false, 'list', '[]'::jsonb, 'message', '管理员会话无效或已过期,请重新登录');
+    END IF;
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+               'id',       p.id,
+               'username', p.username,
+               'is_banned', p.is_banned
+           ) ORDER BY p.username), '[]'::jsonb)
+      INTO v_list
+      FROM public.profiles p
+     WHERE p.is_banned IS TRUE;
+    RETURN jsonb_build_object('success', true, 'list', coalesce(v_list, '[]'::jsonb));
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'list', '[]'::jsonb, 'message', SQLERRM);
+END
+$fn$;
+
+-- ---------- 7) 授权 ----------
 GRANT EXECUTE ON FUNCTION public.submit_feedback(text, text, text, boolean, text, text, text, text, text, jsonb, text, uuid, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.get_my_feedback(uuid, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.admin_list_feedback(text, text, text, integer, integer) TO anon;
 GRANT EXECUTE ON FUNCTION public.admin_update_feedback(text, bigint, text, text) TO anon;
+GRANT EXECUTE ON FUNCTION public.admin_dashboard_stats(text) TO anon;
+GRANT EXECUTE ON FUNCTION public.admin_list_banned_users(text) TO anon;
 
--- ---------- 7) 验收 ----------
+-- ---------- 8) 验收 ----------
 SELECT p.proname AS 函数, pg_get_function_arguments(p.oid) AS 参数
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
  WHERE n.nspname = 'public'
-   AND p.proname IN ('submit_feedback', 'get_my_feedback', 'admin_list_feedback', 'admin_update_feedback')
+   AND p.proname IN ('submit_feedback', 'get_my_feedback', 'admin_list_feedback',
+                     'admin_update_feedback', 'admin_dashboard_stats', 'admin_list_banned_users')
  ORDER BY 1;
 
 -- ============================================================
