@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="登录 NB频道账号,或注册新账号——注册后即可评论、佩戴称号、开公司、玩游戏。">
+<meta name="description" content="NB频道漏洞与建议反馈——发现安全漏洞或有好点子都可以在这里提交,支持匿名、支持图片附件,漏洞会尽快核实修复。">
 <meta name="theme-color" content="#0f172a">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
-<title>登录 / 注册 - NB频道官网</title>
+<title>漏洞/建议反馈 - NB频道官网</title>
 <script>
     (function () {
         try {
@@ -672,59 +672,87 @@ html.dark .bk-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2
 html.dark .bk-toast.err { background: #991b1b; }
 
 
-/* ==================== 登录 / 注册 页面样式 ==================== */
-.lg-main { display: flex; justify-content: center; padding: 40px 18px 80px; }
-.lg-card {
-    width: min(430px, 100%); background: var(--card);
+/* ==================== 注册虚拟公司 页面样式 ==================== */
+.rc-main { display: flex; justify-content: center; padding: 40px 18px 80px; }
+.rc-card {
+    width: min(460px, 100%); background: var(--card);
     border: 1px solid var(--line); border-radius: 26px; box-shadow: var(--shadow-2);
-    padding: 32px 34px; align-self: flex-start;
+    padding: 30px 34px; align-self: flex-start;
 }
-.lg-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
-.lg-logo span { font-size: 1.25rem; font-weight: 900; letter-spacing: 1px; color: var(--ink); }
-.lg-title { text-align: center; color: var(--ink-soft); font-size: .95rem; letter-spacing: 2px; margin-bottom: 16px; }
-.lg-seg { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 5px; margin-bottom: 22px; }
-.lg-opt {
-    flex: 1; border: none; background: transparent; color: var(--ink-soft);
-    border-radius: 999px; padding: 10px 8px; cursor: pointer;
-    font-size: .95rem; font-weight: 700; letter-spacing: 1px; font-family: inherit;
-    transition: all .22s ease;
+.rc-head { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.rc-ico {
+    width: 54px; height: 54px; border-radius: 16px; font-size: 1.7rem; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(140deg, rgba(59,130,246,.14), rgba(139,92,246,.14));
 }
-.lg-opt.on {
-    background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff;
-    box-shadow: 0 8px 18px -8px rgba(59,130,246,.6);
-}
-.lg-field-wrap { position: relative; margin-bottom: 14px; }
-.lg-ic { position: absolute; left: 17px; top: 50%; transform: translateY(-50%); font-size: .95rem; opacity: .85; pointer-events: none; }
-.lg-field {
-    width: 100%; padding: 13px 16px 13px 44px; border-radius: 999px;
+.rc-title { font-size: 1.25rem; font-weight: 900; letter-spacing: .5px; color: var(--ink); }
+.rc-sub { font-size: .8rem; color: var(--ink-faint); margin-top: 3px; }
+.rc-field-wrap { margin-bottom: 18px; }
+.rc-field-wrap label { display: block; font-size: .85rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; letter-spacing: 1px; }
+.rc-input-row { position: relative; }
+.rc-ic { position: absolute; left: 17px; top: 50%; transform: translateY(-50%); opacity: .8; pointer-events: none; }
+.rc-field, .rc-owner {
+    width: 100%; padding: 13px 16px; border-radius: 999px;
     border: 1px solid var(--line); background: var(--bg); color: var(--ink);
     font-size: .98rem; font-family: inherit; outline: none; box-sizing: border-box;
     transition: border-color .2s ease, box-shadow .2s ease;
 }
-.lg-field:focus { border-color: rgba(59,130,246,.55); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
-.lg-err { min-height: 20px; font-size: .82rem; color: #ef4444; margin: 2px 4px 8px; text-align: center; line-height: 1.6; }
-.lg-btn {
+.rc-field { padding-left: 44px; }
+.rc-field:focus { border-color: rgba(59,130,246,.55); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+.rc-owner {
+    display: flex; align-items: center; gap: 8px; cursor: not-allowed;
+    background: var(--bg); color: var(--ink-soft); font-weight: 700;
+}
+.rc-check {
+    display: flex; align-items: flex-start; gap: 10px; margin: 8px 0 16px;
+    font-size: .86rem; color: var(--ink-soft); line-height: 1.7; cursor: pointer;
+}
+.rc-check input { width: 18px; height: 18px; margin-top: 3px; flex-shrink: 0; accent-color: var(--brand); cursor: pointer; }
+/* 注册方式选择 */
+.rc-plan { display: flex; gap: 10px; margin-bottom: 14px; }
+.rc-plan button {
+    flex: 1; padding: 12px 10px; border-radius: 14px; cursor: pointer; font-family: inherit;
+    border: 1.5px solid var(--card-border, #e5e7eb); background: transparent; color: var(--ink-soft);
+    font-size: .86rem; font-weight: 800; transition: all .18s; line-height: 1.5;
+}
+.rc-plan button small { display: block; font-weight: 500; font-size: .7rem; opacity: .72; margin-top: 2px; }
+.rc-plan button.on {
+    border-color: transparent; color: #fff;
+    background: linear-gradient(135deg, var(--brand), #6366f1);
+    box-shadow: 0 8px 20px -10px rgba(59,130,246,.75);
+}
+.rc-pay { display: none; }
+.rc-pay.show { display: block; }
+.rc-quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.rc-quick button {
+    flex: 1; min-width: 72px; padding: 8px 6px; border-radius: 999px; cursor: pointer; font-family: inherit;
+    border: 1px solid var(--card-border, #e5e7eb); background: transparent; color: var(--ink-soft); font-size: .78rem;
+}
+.rc-quick button:hover { border-color: var(--brand); color: var(--brand); }
+.rc-hint { font-size: .78rem; color: var(--ink-faint); line-height: 1.7; margin-top: 9px; }
+.rc-hint b { color: var(--brand); }
+.rc-err { min-height: 20px; font-size: .84rem; color: #ef4444; margin: 2px 2px 10px; line-height: 1.6; }
+.rc-btn {
     width: 100%; border: none; border-radius: 999px; padding: 13px 10px; cursor: pointer;
     background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff;
     font-size: 1.02rem; font-weight: 800; letter-spacing: 4px; font-family: inherit;
     box-shadow: 0 10px 24px -10px rgba(59,130,246,.6); transition: all .22s ease;
 }
-.lg-btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
-.lg-btn:disabled { opacity: .6; cursor: wait; }
-.lg-back { text-align: center; margin-top: 18px; }
-.lg-back a { color: var(--ink-faint); text-decoration: none; font-size: .86rem; }
-.lg-back a:hover { color: var(--brand); }
-.lg-hint {
-    font-size: .85rem; color: var(--ink-soft); line-height: 1.8;
-    background: rgba(59,130,246,.07); border: 1px dashed rgba(59,130,246,.3);
-    border-radius: 12px; padding: 9px 14px; margin: 4px 0 12px;
+.rc-btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.rc-btn:disabled { opacity: .6; cursor: wait; }
+.rc-back { text-align: center; margin-top: 18px; }
+.rc-back a { color: var(--ink-faint); text-decoration: none; font-size: .86rem; }
+.rc-back a:hover { color: var(--brand); }
+.rc-toast {
+    position: fixed; top: 84px; left: 50%; transform: translateX(-50%) translateY(-8px);
+    background: #0f172a; color: #fff; border-radius: 999px;
+    padding: 12px 26px; font-size: .92rem; font-weight: 600;
+    box-shadow: 0 12px 30px rgba(0,0,0,.28); z-index: 9998;
+    opacity: 0; pointer-events: none; transition: all .3s ease;
+    max-width: 92vw; text-align: center; letter-spacing: .3px; line-height: 1.7;
 }
-.lg-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 4px; }
-.lg-btn.mini {
-    width: auto; padding: 11px 22px; font-size: .9rem; letter-spacing: 1px;
-    background: linear-gradient(135deg, #0ea5e9, #6366f1);
-}
-.lg-btn.mini:disabled { opacity: .6; cursor: wait; }
+.rc-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+html.dark .rc-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2); }
 
 
 
@@ -869,6 +897,56 @@ html { -webkit-text-size-adjust: 100%; }
 }
 .md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
 .md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
+
+/* ===== 漏洞/建议反馈页 ===== */
+.fb-kind { display: flex; gap: 10px; margin-bottom: 20px; }
+.fb-kind button {
+    flex: 1; padding: 13px 10px; border-radius: 14px; cursor: pointer; font-family: inherit;
+    border: 1.5px solid var(--card-border, #e5e7eb); background: transparent; color: var(--ink-soft);
+    font-size: .9rem; font-weight: 800; transition: all .18s; line-height: 1.5;
+}
+.fb-kind button small { display: block; font-weight: 500; font-size: .7rem; opacity: .75; margin-top: 2px; }
+.fb-kind button.on {
+    border-color: transparent; color: #fff;
+    background: linear-gradient(135deg, var(--brand), #6366f1);
+    box-shadow: 0 8px 20px -10px rgba(59,130,246,.75);
+}
+.fb-req { color: #ef4444; font-weight: 800; }
+.rc-select, .rc-area {
+    width: 100%; box-sizing: border-box; padding: 12px 15px; border-radius: 12px;
+    border: 1.5px solid var(--card-border, #e5e7eb); background: var(--bg-color, #f7f8fa);
+    color: var(--ink); font-family: inherit; font-size: .9rem; line-height: 1.75;
+}
+.rc-area { resize: vertical; min-height: 70px; }
+.rc-select { cursor: pointer; }
+.rc-select:focus, .rc-area:focus { border-color: rgba(59,130,246,.55); box-shadow: 0 0 0 3px rgba(59,130,246,.12); outline: none; }
+.fb-upload { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.fb-upload button {
+    padding: 8px 16px; border-radius: 999px; border: 1px solid var(--card-border, #e5e7eb);
+    background: transparent; color: var(--ink-soft); font-family: inherit; font-size: .82rem; cursor: pointer;
+}
+.fb-upload button:hover { border-color: var(--brand); color: var(--brand); }
+.fb-upload button:disabled { opacity: .5; cursor: not-allowed; }
+#fbUploadHint { font-size: .78rem; color: var(--ink-faint); }
+.fb-thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fb-thumb { position: relative; width: 78px; height: 78px; border-radius: 10px; overflow: hidden; border: 1px solid var(--card-border, #e5e7eb); }
+.fb-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fb-thumb button {
+    position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; line-height: 1; cursor: pointer;
+}
+.fb-mine-item { padding: 12px 0; border-bottom: 1px dashed var(--card-border, #e5e7eb); }
+.fb-mine-item:last-child { border-bottom: none; }
+.fb-mine-title { font-weight: 700; font-size: .9rem; color: var(--ink); line-height: 1.6; }
+.fb-mine-meta { font-size: .76rem; color: var(--ink-faint); margin-top: 5px; line-height: 1.6; }
+.fb-tag { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .72rem; font-weight: 700; margin-right: 6px; }
+.fb-tag.vuln { background: rgba(239,68,68,.12); color: #ef4444; }
+.fb-tag.sug { background: rgba(59,130,246,.12); color: var(--brand); }
+.fb-tag.pending { background: rgba(245,158,11,.14); color: #d97706; }
+.fb-tag.processing { background: rgba(59,130,246,.14); color: #2563eb; }
+.fb-tag.fixed { background: rgba(16,185,129,.14); color: #059669; }
+.fb-tag.ignored { background: rgba(148,163,184,.18); color: #64748b; }
+.fb-note { font-size: .78rem; color: var(--ink-faint); line-height: 1.8; margin-top: 14px; }
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -938,20 +1016,20 @@ html { -webkit-text-size-adjust: 100%; }
 <header class="vhero">
     <div class="vhero-inner">
         <div class="hero-copy">
-            <span class="hero-eyebrow">ACCOUNT · 账号中心</span>
-            <h1>登录<span class="light">/ 注册</span></h1>
-            <p class="vhero-sub">登录后可评论、佩戴称号、经营公司、炒股存钱——登录后自动回到刚才的页面;注册每天每 IP 限 3 个账号</p>
+            <span class="hero-eyebrow">FEEDBACK · 反馈中心</span>
+            <h1>漏洞与<span class="light">建议反馈</span></h1>
+            <p class="vhero-sub">发现安全漏洞?有想加的功能?都可以在这里告诉我们——漏洞会尽快核实修复,建议会认真评估,支持匿名提交与图片附件</p>
             <div class="vhero-actions">
-                <a class="hero-link" href="#lgCard">开始登录 ↓</a>
-                <a class="hero-link" href="index-Beta.html">先逛逛 ↗</a>
+                <a class="hero-link" href="#fbMain">我要反馈 ↓</a>
+                <a class="hero-link" href="changelog-Beta.html">更新日志 ↗</a>
             </div>
         </div>
         <div class="pd-stats">
-            <div class="pd-row"><span class="k">账号用途</span><b>全站通用</b></div>
-            <div class="pd-row"><span class="k">注册限制</span><b>每 IP 每日 3 次</b></div>
-            <div class="pd-row"><span class="k">用户名规则</span><b>中文 · 字母 · 数字</b></div>
-            <div class="pd-row"><span class="k">登录安全</span><b>封禁账号拒绝登录</b></div>
-            <div class="pd-tip">?register=1 直达注册表单</div>
+            <div class="pd-row"><span class="k">反馈类型</span><b>漏洞 · 建议</b></div>
+            <div class="pd-row"><span class="k">必填项</span><b>标 * 的字段</b></div>
+            <div class="pd-row"><span class="k">匿名提交</span><b>支持</b></div>
+            <div class="pd-row"><span class="k">附件</span><b>文字 / 图片(≤5张)</b></div>
+            <div class="pd-tip">漏洞请写清复现步骤,方便我们快速定位</div>
         </div>
     </div>
     <div class="vhero-fade"></div>
@@ -961,88 +1039,114 @@ html { -webkit-text-size-adjust: 100%; }
     <div class="ba-title">公告</div>
     <div class="ba-track-wrap"><div class="ba-track" id="baTrack"></div></div>
 </div>
-<main class="lg-main" id="lgCard">
-    <div class="lg-card">
-        <div class="lg-logo">
-            <img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span>NB频道</span>
-        </div>
-        <div class="lg-title" id="lgTitle">登录账号</div>
-        <div class="lg-seg" role="tablist">
-            <button type="button" class="lg-opt on" id="loginTab">🔑 登录</button>
-            <button type="button" class="lg-opt" id="registerTab">✨ 注册</button>
-        </div>
-
-        <!-- 登录表单(两步:账号密码 -> 邮箱验证码) -->
-        <form id="loginForm" autocomplete="off">
-            <div class="lg-field-wrap">
-                <span class="lg-ic">👤</span>
-                <input type="text" id="loginUsername" class="lg-field" placeholder="用户名" maxlength="20" autocomplete="username">
+<main class="rc-main" id="fbMain">
+    <div class="rc-card" id="rcCard">
+        <div class="rc-head">
+            <div class="rc-ico">🐞</div>
+            <div>
+                <div class="rc-title" id="fbFormTitle">漏洞反馈</div>
+                <div class="rc-sub" id="fbFormSub">带 <span class="fb-req">*</span> 的是必填项;漏洞请尽量写清复现步骤</div>
             </div>
-            <div class="lg-field-wrap" id="pwdWrap">
-                <span class="lg-ic">🔒</span>
-                <input type="password" id="loginPassword" class="lg-field" placeholder="密码" maxlength="40" autocomplete="current-password">
-            </div>
-            <div class="lg-hint" id="loginHint" style="display:none;"></div>
-            <div class="lg-field-wrap" id="codeWrap" style="display:none;">
-                <span class="lg-ic">📧</span>
-                <input type="text" id="loginCode" class="lg-field" placeholder="6位邮箱验证码" maxlength="6" inputmode="numeric">
-            </div>
-            <div id="loginError" class="lg-err"></div>
-            <button type="button" class="lg-btn" id="doLogin">登录</button>
-            <div class="lg-back" id="loginBack2" style="display:none;"><a href="javascript:void(0)" id="backToPwd">← 重新输入账号密码</a></div>
-        </form>
-
-        <!-- 绑定邮箱面板(老账号首次登录) -->
-        <div id="bindPanel" style="display:none;">
-            <div class="lg-hint">该账号还未绑定邮箱,请先绑定:绑定后每次登录需邮箱验证码</div>
-            <div class="lg-field-wrap">
-                <span class="lg-ic">📧</span>
-                <input type="text" id="bindEmail" class="lg-field" placeholder="你的邮箱(用于登录验证)" maxlength="80">
-            </div>
-            <button type="button" class="lg-btn mini" id="bindSend">发送绑定验证码</button>
-            <div class="lg-hint" id="bindHint" style="display:none;"></div>
-            <div class="lg-field-wrap" id="bindCodeWrap" style="display:none;">
-                <span class="lg-ic">🔢</span>
-                <input type="text" id="bindCode" class="lg-field" placeholder="6位验证码" maxlength="6" inputmode="numeric">
-            </div>
-            <div id="bindError" class="lg-err"></div>
-            <button type="button" class="lg-btn" id="doBind" style="display:none;">完成绑定</button>
-            <div class="lg-back"><a href="javascript:void(0)" id="backFromBind">← 返回登录</a></div>
         </div>
 
-        <!-- 注册表单(邮箱 -> 验证码 -> 用户名密码) -->
-        <form id="registerForm" style="display:none;" autocomplete="off">
-            <div class="lg-field-wrap">
-                <span class="lg-ic">📧</span>
-                <input type="text" id="regEmail" class="lg-field" placeholder="你的邮箱(用于登录验证)" maxlength="80" autocomplete="email">
-            </div>
-            <div class="lg-row">
-                <button type="button" class="lg-btn mini" id="regSend">发送验证码</button>
-                <span class="lg-hint" id="regSendHint" style="display:none;"></span>
-            </div>
-            <div class="lg-field-wrap" id="regCodeWrap" style="display:none;">
-                <span class="lg-ic">🔢</span>
-                <input type="text" id="regCode" class="lg-field" placeholder="6位邮箱验证码" maxlength="6" inputmode="numeric">
-            </div>
-            <div class="lg-field-wrap">
-                <span class="lg-ic">👤</span>
-                <input type="text" id="regUsername" class="lg-field" placeholder="用户名(1-20字,中文/字母/数字)" maxlength="20">
-            </div>
-            <div class="lg-field-wrap">
-                <span class="lg-ic">🔒</span>
-                <input type="password" id="regPassword" class="lg-field" placeholder="密码(至少4位)" maxlength="40" autocomplete="new-password">
-            </div>
-            <div class="lg-field-wrap">
-                <span class="lg-ic">🔒</span>
-                <input type="password" id="regPassword2" class="lg-field" placeholder="确认密码" maxlength="40" autocomplete="new-password">
-            </div>
-            <div id="regError" class="lg-err"></div>
-            <button type="button" class="lg-btn" id="doRegister">注册并登录</button>
-        </form>
+        <div class="fb-kind" id="fbKind">
+            <button type="button" class="on" data-kind="vuln">🐞 漏洞反馈<small>安全漏洞 / 越权 / 刷币等</small></button>
+            <button type="button" data-kind="suggestion">💡 建议反馈<small>功能建议 / 体验改进</small></button>
+        </div>
 
-        <div class="lg-back"><a href="javascript:history.back()">← 返回上一页</a></div>
+        <div class="rc-field-wrap">
+            <label for="fbTitle">标题 <span class="fb-req">*</span></label>
+            <div class="rc-input-row">
+                <span class="rc-ic">📝</span>
+                <input type="text" id="fbTitle" class="rc-field" placeholder="一句话说明(≤100字)" maxlength="100">
+            </div>
+        </div>
+
+        <div class="rc-field-wrap">
+            <label for="fbName">反馈人 <span class="fb-req">*</span></label>
+            <div class="rc-input-row">
+                <span class="rc-ic">👤</span>
+                <input type="text" id="fbName" class="rc-field" placeholder="你的昵称" maxlength="30">
+            </div>
+            <label class="rc-check" style="margin-top:10px;">
+                <input type="checkbox" id="fbAnon">
+                <span>匿名提交(对外只显示「匿名」;登录状态下仍会记录账号,仅用于防刷)</span>
+            </label>
+        </div>
+
+        <div id="fbVulnFields">
+            <div class="rc-field-wrap">
+                <label for="fbVulnType">漏洞类型 <span class="fb-req">*</span></label>
+                <select id="fbVulnType" class="rc-select">
+                    <option value="">请选择漏洞类型</option>
+                    <option>越权访问 / 身份冒用</option>
+                    <option>SQL 注入</option>
+                    <option>XSS 跨站脚本</option>
+                    <option>CSRF 跨站请求伪造</option>
+                    <option>敏感信息泄露</option>
+                    <option>逻辑漏洞 / 刷币刷道具</option>
+                    <option>文件上传漏洞</option>
+                    <option>验证码 / 限频绕过</option>
+                    <option>其他</option>
+                </select>
+            </div>
+            <div class="rc-field-wrap">
+                <label for="fbSummary">漏洞简介 <span class="fb-req">*</span></label>
+                <textarea id="fbSummary" class="rc-area" rows="4" maxlength="2000" placeholder="这个漏洞是什么?影响哪些功能或数据?(≤2000字)"></textarea>
+            </div>
+            <div class="rc-field-wrap">
+                <label for="fbRepro">复现方式 <span class="fb-req">*</span></label>
+                <textarea id="fbRepro" class="rc-area" rows="6" maxlength="5000" placeholder="一步一步写清楚怎么复现,例如:&#10;1. 打开 xx 页面&#10;2. 点击 xx&#10;3. 出现 xx(这里本该是 xx)&#10;(≤5000字)"></textarea>
+            </div>
+        </div>
+
+        <div id="fbSugFields" style="display:none;">
+            <div class="rc-field-wrap">
+                <label for="fbContent">建议内容 <span class="fb-req">*</span></label>
+                <textarea id="fbContent" class="rc-area" rows="7" maxlength="5000" placeholder="你想要什么功能、或者哪里用着别扭?说清使用场景和期望效果会更有帮助(≤5000字)"></textarea>
+            </div>
+        </div>
+
+        <div class="rc-field-wrap">
+            <label>附件（选填）</label>
+            <textarea id="fbAttachText" class="rc-area" rows="3" maxlength="5000" placeholder="文字附件:报错信息、请求参数、代码片段、日志等(≤5000字)"></textarea>
+            <div class="fb-upload">
+                <button type="button" id="fbPickImg">📎 添加图片</button>
+                <span id="fbUploadHint">最多 5 张,单张 ≤5MB,支持 JPG/PNG/GIF/WebP</span>
+            </div>
+            <input type="file" id="fbImgInput" accept="image/*" multiple style="display:none;">
+            <div class="fb-thumbs" id="fbThumbs"></div>
+        </div>
+
+        <div class="rc-field-wrap">
+            <label for="fbEmail">联系方式（选填）</label>
+            <div class="rc-input-row">
+                <span class="rc-ic">✉️</span>
+                <input type="email" id="fbEmail" class="rc-field" placeholder="邮箱,方便我们回复你" maxlength="120">
+            </div>
+        </div>
+
+        <div id="errorMsg" class="rc-err"></div>
+        <button type="button" class="rc-btn" id="fbSubmit">提交反馈</button>
+        <div class="fb-note">
+            · 漏洞请勿公开传播细节,我们核实修复后会记录在<a href="changelog-Beta.html">更新日志</a>里<br>
+            · 请勿提交与本站无关的内容或恶意刷量,恶意提交会被限制使用<br>
+            · 紧急问题也可以发邮件到 nbchannel@163.com
+        </div>
+    </div>
+
+    <div class="rc-card" id="fbMine" style="display:none; margin-top:20px; width:100%;">
+        <div class="rc-head">
+            <div class="rc-ico">📋</div>
+            <div>
+                <div class="rc-title">我的反馈记录</div>
+                <div class="rc-sub">这里能看到你提交过的反馈和处理状态</div>
+            </div>
+        </div>
+        <div id="fbMineList"></div>
     </div>
 </main>
+<div class="rc-toast" id="rcToast"></div>
 <footer class="footer">
     <div class="footer-grid">
         <div>
@@ -1131,11 +1235,11 @@ html { -webkit-text-size-adjust: 100%; }
         if (storedU && storedU.id) {
             if (abEl) {
                 abEl.textContent = '登出账号';
-                abEl.onclick = function () { localStorage.removeItem('nb_user'); location.reload(); };
+                abEl.onclick = function () { localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session'); location.reload(); };
             }
             if (pbEl) {
                 pbEl.textContent = '👤 ' + (storedU.username || storedU.name || '个人中心');
-                pbEl.href = '/profile.html';
+                pbEl.href = 'profile-Beta.html';
             }
         } else {
             var loginHref = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
@@ -1243,7 +1347,7 @@ html { -webkit-text-size-adjust: 100%; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
-    // ===== 登录/注册(邮箱验证码;发信走腾讯云 SCF,前端直连) =====
+    // ===== 漏洞 / 建议反馈 =====
     var supabaseClient = null;
     try {
         supabaseClient = supabase.createClient(
@@ -1251,265 +1355,254 @@ html { -webkit-text-size-adjust: 100%; }
             'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
         );
     } catch (e) { supabaseClient = null; }
-    var SCF_MAIL_URL = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
+    var currentUser = null;
+    var toastTimer = null;
+    var fbKind = 'vuln';
+    var uploadedImgs = [];   // [{key, url}]
 
-    function safeRedirect(raw) {
-        if (!raw) return null;
-        if (raw.indexOf('\\') !== -1 || /[\r\n]/.test(raw)) return null;
-        try {
-            var u = new URL(raw, window.location.href);
-            if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
-            if (u.origin !== window.location.origin) return null;
-            return u.pathname + u.search + u.hash;
-        } catch (e) { return null; }
+    function showToast(text) {
+        var t = document.getElementById('rcToast');
+        if (!t) { alert(text); return; }
+        t.textContent = text;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { t.classList.remove('show'); }, 4200);
     }
-    var redirectUrl = safeRedirect(new URLSearchParams(window.location.search).get('redirect'));
-    var bindUser = null;   // 绑定中的 {username,password}
-    var loginStep = 'pwd';
-    var sendTimer = null;
+    function el(id) { return document.getElementById(id); }
+    function sessionTok() { try { return localStorage.getItem('nb_session') || ''; } catch (e) { return ''; } }
+    function err(msg) { el('errorMsg').innerText = msg || ''; }
 
-    function setMode(reg) {
-        document.getElementById('loginTab').classList.toggle('on', !reg);
-        document.getElementById('registerTab').classList.toggle('on', reg);
-        document.getElementById('loginForm').style.display = reg ? 'none' : 'block';
-        document.getElementById('registerForm').style.display = reg ? 'block' : 'none';
-        document.getElementById('bindPanel').style.display = 'none';
-        document.getElementById('lgTitle').textContent = reg ? '注册新账号' : '登录账号';
-    }
-    document.getElementById('loginTab').addEventListener('click', function () { setMode(false); });
-    document.getElementById('registerTab').addEventListener('click', function () { setMode(true); });
-    var qp = new URLSearchParams(window.location.search);
-    if (qp.get('register') === '1') setMode(true);
-
-    function errBox(id, msg) { document.getElementById(id).innerText = msg || ''; }
-
-    function sendCodeApi(payload) {
-        return fetch(SCF_MAIL_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(function (r) {
-            return r.json().catch(function () { return { ok: false, message: '响应解析失败(' + r.status + ')' }; });
-        }).catch(function (e) { return { ok: false, message: '网络错误:' + (e && e.message) || e }; });
-    }
-
-    // ===== 登录 =====
-    function doLogin() {
-        var username = document.getElementById('loginUsername').value.trim();
-        var password = document.getElementById('loginPassword').value;
-        var errorDiv = document.getElementById('loginError');
-        var btn = document.getElementById('doLogin');
-        errorDiv.innerText = '';
-        if (loginStep === 'pwd') {
-            if (!username || !password) { errorDiv.innerText = '请输入用户名和密码'; return; }
-            btn.disabled = true; btn.textContent = '发送中…';
-            sendCodeApi({ kind: 'login', username: username, password: password }).then(function (r) {
-                btn.disabled = false;
-                if (r && r.need_bind) {
-                    bindUser = { username: username, password: password };
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('bindPanel').style.display = 'block';
-                    errBox('bindError', '');
-                    return;
-                }
-                if (!r || !r.ok) { errorDiv.innerText = (r && r.message) || '发送失败'; btn.textContent = '登录'; return; }
-                loginStep = 'code';
-                document.getElementById('loginHint').style.display = 'block';
-                document.getElementById('loginHint').textContent = '验证码已发送至 ' + (r.masked || '你的邮箱') + ',10 分钟内有效';
-                document.getElementById('codeWrap').style.display = 'block';
-                document.getElementById('loginCode').focus();
-                document.getElementById('loginBack2').style.display = 'block';
-                btn.textContent = '✅ 验证并登录';
-            });
-            return;
-        }
-        // 输码完成登录
-        var code = document.getElementById('loginCode').value.trim();
-        if (!/^\d{6}$/.test(code)) { errorDiv.innerText = '请输入 6 位数字验证码'; return; }
-        btn.disabled = true; btn.textContent = '验证中…';
-        supabaseClient.rpc('login_finish', { p_username: username, p_code: code })
+    // ---------- 登录态 ----------
+    function loadCurrentUser() {
+        var stored = null;
+        try { stored = JSON.parse(localStorage.getItem('nb_user') || 'null'); } catch (e) {}
+        if (!stored || !stored.id) { onGuest(); return; }
+        supabaseClient.from('profiles').select('id, username').eq('id', stored.id).maybeSingle()
             .then(function (res) {
-                btn.disabled = false;
-                if (res.error || !res.data || !res.data.ok) {
-                    errorDiv.innerText = (res.error && res.error.message) || (res.data && res.data.message) || '验证失败';
-                    btn.textContent = '✅ 验证并登录';
-                    return;
-                }
-                try { localStorage.setItem('nb_session', res.data.token); } catch (e) {}
-                var prof = null;
-                return supabaseClient.from('profiles').select('id, username, is_banned, banned_reason').eq('id', res.data.id).single()
-                    .then(function (p) { prof = p.data; })
-                    .catch(function () { prof = null; })
-                    .then(function () {
-                        if (prof && prof.is_banned) { errorDiv.innerText = '账号已被封禁,请联系管理员'; btn.textContent = '✅ 验证并登录'; return; }
-                        onLoginSuccess({ id: res.data.id, username: username });
-                    });
+                if (res.error || !res.data) { onGuest(); return; }
+                currentUser = res.data;
+                el('fbName').value = currentUser.username;
+                el('fbName').readOnly = true;
+                el('fbName').style.opacity = '.8';
+                el('fbName').title = '已自动填入你的用户名';
+                el('fbUploadHint').innerText = '最多 5 张,单张 ≤5MB,支持 JPG/PNG/GIF/WebP';
+                loadMyFeedback();
             })
-            .catch(function (e) { btn.disabled = false; errorDiv.innerText = e.message || '登录失败'; btn.textContent = '✅ 验证并登录'; });
+            .catch(function () { onGuest(); });
     }
-    function backToPwd() {
-        loginStep = 'pwd';
-        errBox('loginError', '');
-        document.getElementById('loginHint').style.display = 'none';
-        document.getElementById('codeWrap').style.display = 'none';
-        document.getElementById('loginBack2').style.display = 'none';
-        var btn = document.getElementById('doLogin');
-        btn.textContent = '登录';
+    function onGuest() {
+        currentUser = null;
+        el('fbName').readOnly = false;
+        el('fbName').placeholder = '你的昵称(未登录需填写)';
+        el('fbUploadHint').innerText = '登录后可上传图片附件';
+        el('fbMine').style.display = 'none';
     }
-    document.getElementById('backToPwd').addEventListener('click', backToPwd);
 
-    // ===== 老账号绑定邮箱 =====
-    function doBindSend() {
-        if (!bindUser) return;
-        var email = document.getElementById('bindEmail').value.trim();
-        errBox('bindError', '');
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errBox('bindError', '邮箱格式不正确'); return; }
-        var btn = document.getElementById('bindSend');
-        btn.disabled = true; btn.textContent = '发送中…';
-        sendCodeApi({ kind: 'bind', email: email, username: bindUser.username, password: bindUser.password }).then(function (r) {
-            btn.disabled = false; btn.textContent = '重新发送';
-            if (!r || !r.ok) { errBox('bindError', (r && r.message) || '发送失败'); return; }
-            document.getElementById('bindHint').style.display = 'block';
-            document.getElementById('bindHint').textContent = '验证码已发送至 ' + (r.masked || email);
-            document.getElementById('bindCodeWrap').style.display = 'block';
-            document.getElementById('doBind').style.display = 'block';
-            document.getElementById('bindCode').focus();
+    // ---------- 类型切换 ----------
+    (function bindKind() {
+        var wrap = el('fbKind');
+        wrap.querySelectorAll('button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                wrap.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+                b.classList.add('on');
+                fbKind = b.dataset.kind;
+                var isVuln = fbKind === 'vuln';
+                el('fbVulnFields').style.display = isVuln ? '' : 'none';
+                el('fbSugFields').style.display = isVuln ? 'none' : '';
+                el('fbFormTitle').textContent = isVuln ? '漏洞反馈' : '建议反馈';
+                el('fbFormSub').innerHTML = isVuln
+                    ? '带 <span class="fb-req">*</span> 的是必填项;漏洞请尽量写清复现步骤'
+                    : '带 <span class="fb-req">*</span> 的是必填项;说清使用场景会更有帮助';
+                el('fbSubmit').textContent = isVuln ? '提交漏洞' : '提交建议';
+                err('');
+            });
+        });
+    })();
+
+    // ---------- 图片附件 ----------
+    function renderThumbs() {
+        var box = el('fbThumbs');
+        box.innerHTML = '';
+        uploadedImgs.forEach(function (img, i) {
+            var d = document.createElement('div');
+            d.className = 'fb-thumb';
+            d.innerHTML = '<img src="' + img.url + '" alt="附件">' +
+                '<button type="button" title="移除">✕</button>';
+            d.querySelector('button').addEventListener('click', function () {
+                uploadedImgs.splice(i, 1); renderThumbs();
+            });
+            box.appendChild(d);
         });
     }
-    function doBind() {
-        if (!bindUser) return;
-        var email = document.getElementById('bindEmail').value.trim();
-        var code = document.getElementById('bindCode').value.trim();
-        var btn = document.getElementById('doBind');
-        errBox('bindError', '');
-        if (!/^\d{6}$/.test(code)) { errBox('bindError', '请输入 6 位数字验证码'); return; }
-        btn.disabled = true; btn.textContent = '绑定中…';
-        supabaseClient.rpc('bind_email_finish', {
-            p_username: bindUser.username, p_password: bindUser.password,
-            p_new_email: email, p_code: code
-        }).then(function (res) {
+
+    el('fbPickImg').addEventListener('click', function () {
+        if (!currentUser) { showToast('请先登录再上传图片(文字附件不用登录)'); return; }
+        if (uploadedImgs.length >= 5) { showToast('最多 5 张图片'); return; }
+        el('fbImgInput').click();
+    });
+
+    el('fbImgInput').addEventListener('change', async function () {
+        var files = Array.prototype.slice.call(this.files || []);
+        this.value = '';
+        if (!files.length) return;
+        if (!currentUser) { showToast('请先登录再上传图片'); return; }
+        var hint = el('fbUploadHint');
+        for (var i = 0; i < files.length; i++) {
+            if (uploadedImgs.length >= 5) { showToast('最多 5 张图片,多余的已忽略'); break; }
+            var f = files[i];
+            if (f.size > 5 * 1024 * 1024) { showToast('「' + f.name + '」超过 5MB,已跳过'); continue; }
+            hint.innerText = '上传中(' + (i + 1) + '/' + files.length + ')…';
+            try {
+                var form = new FormData();
+                form.append('file', f);
+                var resp = await fetch('https://nbchannel.pythonanywhere.com/upload-image', {
+                    method: 'POST',
+                    headers: { 'X-User-Id': currentUser.id, 'X-Session': sessionTok() },
+                    body: form
+                });
+                var result = await resp.json().catch(function () { return {}; });
+                if (!resp.ok || !result.success) {
+                    showToast('「' + f.name + '」上传失败:' + (result.message || resp.status));
+                    continue;
+                }
+                uploadedImgs.push({ key: result.key, url: result.url });
+                renderThumbs();
+            } catch (e) {
+                showToast('「' + f.name + '」上传失败:' + (e.message || e));
+            }
+        }
+        hint.innerText = '最多 5 张,单张 ≤5MB,支持 JPG/PNG/GIF/WebP';
+    });
+
+    // ---------- 提交 ----------
+    var submitting = false;
+    el('fbSubmit').addEventListener('click', async function () {
+        if (submitting) return;
+        var btn = el('fbSubmit');
+        var isVuln = fbKind === 'vuln';
+        var title = el('fbTitle').value.trim();
+        var name = el('fbName').value.trim();
+        var anon = el('fbAnon').checked;
+        var vType = el('fbVulnType').value;
+        var summary = el('fbSummary').value.trim();
+        var repro = el('fbRepro').value.trim();
+        var content = el('fbContent').value.trim();
+        var attachText = el('fbAttachText').value.trim();
+        var email = el('fbEmail').value.trim();
+
+        err('');
+        if (title.length < 2) { err('请填写标题(至少 2 个字)'); el('fbTitle').focus(); return; }
+        if (!anon && !name) { err('请填写反馈人,或勾选「匿名提交」'); el('fbName').focus(); return; }
+        if (isVuln) {
+            if (!vType) { err('请选择漏洞类型'); el('fbVulnType').focus(); return; }
+            if (!summary) { err('请填写漏洞简介'); el('fbSummary').focus(); return; }
+            if (!repro) { err('请填写复现方式'); el('fbRepro').focus(); return; }
+        } else {
+            if (!content) { err('请填写建议内容'); el('fbContent').focus(); return; }
+        }
+        if (email && email.indexOf('@') < 0) { err('联系邮箱格式不正确'); el('fbEmail').focus(); return; }
+
+        submitting = true;
+        btn.disabled = true;
+        btn.textContent = '提交中…';
+        try {
+            var args = {
+                p_kind: fbKind,
+                p_title: title,
+                p_reporter_name: name,
+                p_is_anonymous: anon,
+                p_contact_email: email || null,
+                p_attach_text: attachText || null,
+                p_attach_images: uploadedImgs.map(function (x) { return x.key; })
+            };
+            if (isVuln) {
+                args.p_vuln_type = vType;
+                args.p_summary = summary;
+                args.p_repro = repro;
+                args.p_content = null;
+            } else {
+                args.p_content = content;
+                args.p_vuln_type = null;
+                args.p_summary = null;
+                args.p_repro = null;
+            }
+            if (currentUser) {
+                args.p_user_id = currentUser.id;
+                args.p_session = sessionTok();
+            }
+            var r = await supabaseClient.rpc('submit_feedback', args);
+            if (r.error) throw new Error(r.error.message);
+            var d = r.data;
+            if (!d || !d.ok) { err((d && d.message) || '提交失败,请稍后再试'); return; }
+
+            showToast('✅ ' + d.message);
+            // 清空表单
+            el('fbTitle').value = '';
+            el('fbVulnType').value = '';
+            el('fbSummary').value = '';
+            el('fbRepro').value = '';
+            el('fbContent').value = '';
+            el('fbAttachText').value = '';
+            el('fbEmail').value = '';
+            el('fbAnon').checked = false;
+            uploadedImgs = []; renderThumbs();
+            if (currentUser) loadMyFeedback();
+        } catch (e) {
+            err('提交失败:' + (e.message || e));
+        } finally {
+            submitting = false;
             btn.disabled = false;
-            if (res.error || !res.data || !res.data.ok) {
-                errBox('bindError', (res.error && res.error.message) || (res.data && res.data.message) || '绑定失败');
-                btn.textContent = '完成绑定';
-                return;
-            }
-            // 绑定成功 -> 回到登录表单并自动发登录验证码
-            document.getElementById('bindPanel').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'block';
-            backToPwd();
-            errBox('loginError', '');
-            var btnLogin = document.getElementById('doLogin');
-            btnLogin.disabled = true; btnLogin.textContent = '发送中…';
-            sendCodeApi({ kind: 'login', username: bindUser.username, password: bindUser.password }).then(function (r2) {
-                btnLogin.disabled = false;
-                if (!r2 || !r2.ok) { errBox('loginError', '绑定成功,但登录码发送失败:' + ((r2 && r2.message) || '')); btnLogin.textContent = '登录'; return; }
-                loginStep = 'code';
-                document.getElementById('loginHint').style.display = 'block';
-                document.getElementById('loginHint').textContent = '绑定成功!登录验证码已发送至 ' + (r2.masked || '你的邮箱');
-                document.getElementById('codeWrap').style.display = 'block';
-                document.getElementById('loginBack2').style.display = 'block';
-                document.getElementById('loginCode').focus();
-                btnLogin.textContent = '✅ 验证并登录';
-            });
-        }).catch(function (e) { btn.disabled = false; errBox('bindError', e.message || '绑定失败'); btn.textContent = '完成绑定'; });
-    }
-    document.getElementById('bindSend').addEventListener('click', doBindSend);
-    document.getElementById('doBind').addEventListener('click', doBind);
-    document.getElementById('backFromBind').addEventListener('click', function () {
-        bindUser = null;
-        document.getElementById('bindPanel').style.display = 'none';
-        document.getElementById('loginForm').style.display = 'block';
-        backToPwd();
+            btn.textContent = isVuln ? '提交漏洞' : '提交建议';
+        }
     });
 
-    // ===== 注册(邮箱 -> 验证码) =====
-    function doRegSend() {
-        var email = document.getElementById('regEmail').value.trim();
-        errBox('regError', '');
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errBox('regError', '邮箱格式不正确'); return; }
-        var btn = document.getElementById('regSend');
-        btn.disabled = true; btn.textContent = '发送中…';
-        sendCodeApi({ kind: 'register', email: email }).then(function (r) {
-            if (!r || !r.ok) {
-                btn.disabled = false; btn.textContent = '发送验证码';
-                errBox('regError', (r && r.message) || '发送失败');
+    // ---------- 我的反馈记录 ----------
+    var STATUS_TEXT = { pending: '待处理', processing: '处理中', fixed: '已修复', ignored: '不处理' };
+    async function loadMyFeedback() {
+        if (!currentUser) return;
+        try {
+            var r = await supabaseClient.rpc('get_my_feedback', {
+                p_user_id: currentUser.id, p_session: sessionTok()
+            });
+            var arr = (r && r.data) || [];
+            if (!Array.isArray(arr)) arr = [];
+            var box = el('fbMine');
+            var list = el('fbMineList');
+            if (!arr.length) {
+                list.innerHTML = '<div class="fb-mine-meta">还没有提交过反馈</div>';
+                box.style.display = '';
                 return;
             }
-            document.getElementById('regCodeWrap').style.display = 'block';
-            document.getElementById('regSendHint').style.display = 'block';
-            document.getElementById('regSendHint').textContent = '验证码已发送至 ' + (r.masked || email);
-            var left = 60;
-            btn.textContent = '重新发送(' + left + 's)';
-            clearInterval(sendTimer);
-            sendTimer = setInterval(function () {
-                left--;
-                if (left <= 0) { clearInterval(sendTimer); btn.disabled = false; btn.textContent = '重新发送'; }
-                else btn.textContent = '重新发送(' + left + 's)';
-            }, 1000);
-            document.getElementById('regCode').focus();
+            list.innerHTML = arr.map(function (x) {
+                var kindTag = x.kind === 'vuln'
+                    ? '<span class="fb-tag vuln">漏洞</span>'
+                    : '<span class="fb-tag sug">建议</span>';
+                var st = x.status || 'pending';
+                var stTag = '<span class="fb-tag ' + st + '">' + (STATUS_TEXT[st] || st) + '</span>';
+                var when = (x.created_at || '').replace('T', ' ').slice(0, 16);
+                var note = x.admin_note ? '<div class="fb-mine-meta">官方回复:' + esc(x.admin_note) + '</div>' : '';
+                return '<div class="fb-mine-item">' +
+                    '<div class="fb-mine-title">' + kindTag + stTag + esc(x.title) + '</div>' +
+                    '<div class="fb-mine-meta">#' + x.id + ' · ' + when + (x.vuln_type ? ' · ' + esc(x.vuln_type) : '') + '</div>' +
+                    note + '</div>';
+            }).join('');
+            box.style.display = '';
+        } catch (e) { /* 读不到就不显示 */ }
+    }
+    function esc(t) {
+        return String(t == null ? '' : t).replace(/[&<>"']/g, function (m) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
         });
     }
-    function doRegister() {
-        var btn = document.getElementById('doRegister');
-        var rawName = document.getElementById('regUsername').value.trim();
-        var username = rawName.replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '').trim();
-        var password = document.getElementById('regPassword').value;
-        var password2 = document.getElementById('regPassword2').value;
-        var email = document.getElementById('regEmail').value.trim();
-        var code = document.getElementById('regCode').value.trim();
-        var errorDiv = document.getElementById('regError');
-        errorDiv.innerText = '';
-        if (!/^[\u4e00-\u9fa5a-zA-Z0-9]+$/.test(username)) { errorDiv.innerText = '用户名只能包含中文、字母和数字'; return; }
-        if (password !== password2) { errorDiv.innerText = '两次输入的密码不一致'; return; }
-        if (password.length < 4) { errorDiv.innerText = '密码长度至少4位'; return; }
-        if (!email || !/^\d{6}$/.test(code)) { errorDiv.innerText = '请先获取邮箱验证码并填写 6 位数字'; return; }
-        btn.disabled = true; btn.textContent = '注册中…';
-        supabaseClient.rpc('register_finish', {
-            p_username: username, p_password: password, p_email: email, p_code: code
-        }).then(function (res) {
-            if (res.error || !res.data || !res.data.ok) {
-                errorDiv.innerText = (res.error && res.error.message) || (res.data && res.data.message) || '注册失败';
-                btn.disabled = false; btn.textContent = '注册并登录';
-                return;
-            }
-            // 注册成功,自动登录(签发会话令牌)
-            return supabaseClient.rpc('login_user2', { input_username: username, input_password: password }).then(function (lg) {
-                if (!lg.data || !lg.data.ok) { errorDiv.innerText = '注册成功但自动登录失败,请手动登录'; btn.disabled = false; btn.textContent = '注册并登录'; return; }
-                try { localStorage.setItem('nb_session', lg.data.token); } catch (e) {}
-                onLoginSuccess({ id: lg.data.id, username: username });
-            });
-        }).catch(function (e) { errorDiv.innerText = e.message || '注册失败'; btn.disabled = false; btn.textContent = '注册并登录'; });
-    }
 
-    // ===== 完成登录后跳转 =====
-    function onLoginSuccess(user) {
-        try { localStorage.setItem('nb_user', JSON.stringify({ id: user.id, username: user.username })); } catch (e) {}
-        if (redirectUrl) { window.location.href = redirectUrl; }
-        else { window.location.href = 'index-Beta.html'; }
-    }
-
-    document.getElementById('doLogin').addEventListener('click', doLogin);
-    document.getElementById('doRegister').addEventListener('click', doRegister);
-    document.getElementById('regSend').addEventListener('click', doRegSend);
-    function keyGo(e, fn) { if (e.key === 'Enter') { e.preventDefault(); fn(); } }
-    document.getElementById('loginUsername').addEventListener('keydown', function (e) { keyGo(e, doLogin); });
-    document.getElementById('loginPassword').addEventListener('keydown', function (e) { keyGo(e, doLogin); });
-    document.getElementById('loginCode').addEventListener('keydown', function (e) { keyGo(e, doLogin); });
-    document.getElementById('bindCode').addEventListener('keydown', function (e) { keyGo(e, doBind); });
-    document.getElementById('regEmail').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doRegSend(); } });
-    document.getElementById('regUsername').addEventListener('keydown', function (e) { keyGo(e, doRegister); });
-    document.getElementById('regPassword').addEventListener('keydown', function (e) { keyGo(e, doRegister); });
-    document.getElementById('regPassword2').addEventListener('keydown', function (e) { keyGo(e, doRegister); });
-    document.getElementById('regCode').addEventListener('keydown', function (e) { keyGo(e, doRegister); });
-
-    // 登录页自身导航:把"登录/注册/个人中心"入口改为回首页,避免自我跳转
-    var navRewrite = { betaAuthBtn: '🏠 回首页', betaProfileBtn: '🏠 回首页', dAuthBtn: '🏠 回首页', dProfileBtn: '🏠 回首页' };
-    Object.keys(navRewrite).forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) { el.textContent = navRewrite[id]; el.href = 'index-Beta.html'; el.onclick = null; }
+    // ---------- 匿名勾选时的名字联动 ----------
+    el('fbAnon').addEventListener('change', function () {
+        var on = this.checked;
+        el('fbName').style.opacity = on ? '.45' : (currentUser ? '.8' : '1');
+        el('fbName').placeholder = on ? '匿名提交(不用填)' : (currentUser ? '' : '你的昵称(未登录需填写)');
     });
 
+    loadCurrentUser();
 </script>
 <script>
     // ===== 鼠标特效:跟随光晕 + 点击波纹与彩色粒子(仅鼠标设备) =====
@@ -1615,6 +1708,73 @@ html { -webkit-text-size-adjust: 100%; }
         .catch(function () {});
     })();
 </script>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
+
+<script>
+    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
+    (function () {
+        function applyBal() {
+            var u = null, t = null;
+            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
+            if (!u || !u.id || !t) return;
+            var el = document.getElementById('balanceDisplay') ||
+                     document.getElementById('balanceSpan') ||
+                     document.getElementById('tradeBalance');
+            if (!el) return;
+            var sb = null;
+            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
+            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
+            if (!sb) return;
+            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
+                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
+            }).catch(function () {});
+        }
+        var tries = 0;
+        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
+    })();
+</script>
+
 
 <script>
 // ===== APP 自更新(仅 APP 内生效) =====
