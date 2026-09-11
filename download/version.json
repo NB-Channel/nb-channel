@@ -1,8 +1,8 @@
 {
-  "version": 9,
-  "versionName": "1.0.1",
+  "version": 10,
+  "versionName": "1.0.2",
   "url": "https://github.nb-channel.top/download/NBChannel.apk",
   "apkSize": "约 5MB",
-  "note": "支持 APP 内下载与自动更新",
-  "updatedAt": "2026-09-10"
+  "note": "修复返回手势(右滑/返回键逐层后退) + APP 内下载与自动更新",
+  "updatedAt": "2026-09-11"
 }
