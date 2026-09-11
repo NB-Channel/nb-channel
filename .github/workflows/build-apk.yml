@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_VERSION_CODE: ${{ github.run_number }}
-      APP_RELEASE_NOTE: 支持 APP 内下载与自动更新
+      APP_RELEASE_NOTE: 修复返回手势(右滑/返回键逐层后退) + APP 内下载与自动更新
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -16,10 +16,11 @@ import com.getcapacitor.BridgeActivity;
 /**
  * NB频道 APP 主 Activity
  *
- * 做了两件官方模板没有的事:
+ * 做了三件官方模板没有的事:
  *  1) 拦截网页里的下载请求(APK 等),交给系统下载管理器,下完自动弹出安装界面
  *     —— WebView 本身没有下载管理器,不处理的话点击 APK 链接会"毫无反应"
  *  2) 下载完成后用 FileProvider URI 调系统安装器(Android 7+ 要求 content:// 而非 file://)
+ *  3) 返回手势/返回键优先在网页历史里后退 —— 否则右滑会被系统直接当成"退出应用"
  *
  * 注意:本 APP 用 server.url 加载线上网站,Capacitor 的 JS 桥接不会注入远程页面,
  *      所以这些能力必须放在原生侧实现,前端无需也无法调用。
@@ -120,6 +121,27 @@ public class MainActivity extends BridgeActivity {
             name = name + ".apk";
         }
         return name;
+    }
+
+    /**
+     * 返回手势 / 返回键:优先在网页历史里后退,退无可退才退出 APP。
+     *
+     * 不处理的话,系统的返回手势(右滑/侧滑)会被直接当成"结束当前 Activity",
+     * 于是不管在网站第几层页面,一右滑就整个 APP 退出了 —— 网页历史形同虚设。
+     * 这里接管后:右滑 = 回上一页;只有在首页(没有上一页)时才交给系统退出。
+     */
+    @Override
+    public void onBackPressed() {
+        WebView webView = null;
+        try {
+            if (getBridge() != null) webView = getBridge().getWebView();
+        } catch (Exception ignored) {
+        }
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+            return;
+        }
+        super.onBackPressed();
     }
 
     @Override
