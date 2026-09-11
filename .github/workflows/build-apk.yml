@@ -98,8 +98,9 @@ jobs:
             echo "首次构建:生成固定签名密钥(签名标识 nb-channelAPP)"
             mkdir -p app/keystore
             # 主别名:下面的 Configure signing alias 步骤会指定用它签名
+            # (PKCS12 格式会把别名存成小写,所以这里也写小写,避免大小写不一致)
             keytool -genkeypair -v -keystore "$KEYSTORE" \
-              -alias nb-channelAPP -keyalg RSA -keysize 2048 -validity 10950 \
+              -alias nb-channelapp -keyalg RSA -keysize 2048 -validity 10950 \
               -storepass android -keypass android \
               -dname "CN=nb-channelAPP,O=NBChannel,C=CN"
             # 备用别名:Gradle 默认找的是 androiddebugkey,万一签名配置没生效也能构建成功

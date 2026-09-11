@@ -1,14 +1,18 @@
 // ===== NB频道:固定签名(签名标识 nb-channelAPP) =====
 // 本文件由 .github/workflows/build-apk.yml 追加到 android/app/build.gradle 末尾。
-// 原因:Gradle 的 debug 签名默认写死了 keyAlias "androiddebugkey",
-//       这里显式改成 nb-channelAPP,证书所有者也是 nb-channelAPP。
+// 原因:Gradle 的 debug 签名默认写死了 keyAlias "androiddebugkey",这里显式改掉。
+//
+// ⚠️ 别名必须写小写:JDK 生成的是 PKCS12 格式 keystore,PKCS12 规定别名
+//    大小写不敏感,keytool 存进去时统一转成小写(实际存的是 nb-channelapp)。
+//    证书里的所有者仍然是 CN=nb-channelAPP(手机安装界面显示的就是它)。
+//
 // keystore 由 CI 放在 ~/.android/debug.keystore(仓库里保存的 app/keystore/debug.keystore)。
 android {
     signingConfigs {
         debug {
             storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
             storePassword "android"
-            keyAlias "nb-channelAPP"
+            keyAlias "nb-channelapp"
             keyPassword "android"
         }
     }
