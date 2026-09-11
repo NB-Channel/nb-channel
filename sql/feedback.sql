@@ -214,14 +214,129 @@ EXCEPTION WHEN OTHERS THEN
 END
 $fn$;
 
--- ---------- 4) 授权 ----------
+-- ---------- 4) 管理端:反馈列表 ----------
+CREATE OR REPLACE FUNCTION public.admin_list_feedback(
+    p_token  text,
+    p_status text DEFAULT NULL,
+    p_kind   text DEFAULT NULL,
+    p_limit  integer DEFAULT 50,
+    p_offset integer DEFAULT 0)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+DECLARE
+    v_limit  int := least(greatest(coalesce(p_limit, 50), 1), 200);
+    v_offset int := greatest(coalesce(p_offset, 0), 0);
+    v_st     text := nullif(trim(coalesce(p_status, '')), '');
+    v_kd     text := nullif(trim(coalesce(p_kind, '')), '');
+    v_total  int;
+    v_counts jsonb;
+    v_list   jsonb;
+BEGIN
+    IF NOT public._admin_token_valid(p_token) THEN
+        RETURN jsonb_build_object('success', false, 'message', '管理员会话无效或已过期,请重新登录');
+    END IF;
+
+    SELECT count(*) INTO v_total
+      FROM public.feedback f
+     WHERE (v_st IS NULL OR f.status = v_st)
+       AND (v_kd IS NULL OR f.kind = v_kd);
+
+    SELECT jsonb_build_object(
+            'pending',    count(*) FILTER (WHERE status = 'pending'),
+            'processing', count(*) FILTER (WHERE status = 'processing'),
+            'fixed',      count(*) FILTER (WHERE status = 'fixed'),
+            'ignored',    count(*) FILTER (WHERE status = 'ignored'),
+            'all',        count(*))
+      INTO v_counts
+      FROM public.feedback;
+
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+               'id',            f.id,
+               'kind',          f.kind,
+               'title',         f.title,
+               'reporter_id',   f.reporter_id,
+               'reporter_name', f.reporter_name,
+               'is_anonymous',  f.is_anonymous,
+               'vuln_type',     f.vuln_type,
+               'summary',       f.summary,
+               'repro',         f.repro,
+               'content',       f.content,
+               'attach_text',   f.attach_text,
+               'attach_images', f.attach_images,
+               'contact_email', f.contact_email,
+               'status',        f.status,
+               'admin_note',    f.admin_note,
+               'created_at',    f.created_at,
+               'handled_at',    f.handled_at
+           ) ORDER BY
+             CASE f.status WHEN 'pending' THEN 0 WHEN 'processing' THEN 1 ELSE 2 END,
+             f.created_at DESC), '[]'::jsonb)
+      INTO v_list
+      FROM public.feedback f
+     WHERE (v_st IS NULL OR f.status = v_st)
+       AND (v_kd IS NULL OR f.kind = v_kd)
+     ORDER BY f.created_at DESC
+     LIMIT v_limit OFFSET v_offset;
+
+    RETURN jsonb_build_object('success', true, 'total', v_total, 'counts', v_counts, 'list', v_list);
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'message', SQLERRM);
+END
+$fn$;
+
+-- ---------- 5) 管理端:更新状态 / 写官方回复 ----------
+CREATE OR REPLACE FUNCTION public.admin_update_feedback(
+    p_token      text,
+    p_id         bigint,
+    p_status     text,
+    p_admin_note text DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+DECLARE
+    v_st   text := lower(trim(coalesce(p_status, '')));
+    v_note text := nullif(trim(coalesce(p_admin_note, '')), '');
+    v_id   bigint;
+BEGIN
+    IF NOT public._admin_token_valid(p_token) THEN
+        RETURN jsonb_build_object('success', false, 'message', '管理员会话无效或已过期,请重新登录');
+    END IF;
+    IF v_st NOT IN ('pending', 'processing', 'fixed', 'ignored') THEN
+        RETURN jsonb_build_object('success', false, 'message', '状态取值不合法');
+    END IF;
+
+    UPDATE public.feedback
+       SET status     = v_st,
+           admin_note = coalesce(v_note, admin_note),
+           handled_at = CASE WHEN v_st = 'pending' THEN NULL ELSE now() END
+     WHERE id = p_id
+     RETURNING id INTO v_id;
+
+    IF v_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'message', '反馈不存在');
+    END IF;
+    RETURN jsonb_build_object('success', true, 'message', '已更新');
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'message', SQLERRM);
+END
+$fn$;
+
+-- ---------- 6) 授权 ----------
 GRANT EXECUTE ON FUNCTION public.submit_feedback(text, text, text, boolean, text, text, text, text, text, jsonb, text, uuid, text) TO anon;
 GRANT EXECUTE ON FUNCTION public.get_my_feedback(uuid, text) TO anon;
+GRANT EXECUTE ON FUNCTION public.admin_list_feedback(text, text, text, integer, integer) TO anon;
+GRANT EXECUTE ON FUNCTION public.admin_update_feedback(text, bigint, text, text) TO anon;
 
--- ---------- 5) 验收 ----------
+-- ---------- 7) 验收 ----------
 SELECT p.proname AS 函数, pg_get_function_arguments(p.oid) AS 参数
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
- WHERE n.nspname = 'public' AND p.proname IN ('submit_feedback', 'get_my_feedback')
+ WHERE n.nspname = 'public'
+   AND p.proname IN ('submit_feedback', 'get_my_feedback', 'admin_list_feedback', 'admin_update_feedback')
  ORDER BY 1;
 
 -- ============================================================

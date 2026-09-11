@@ -243,6 +243,47 @@
             .report-card { padding: 12px; }
             .report-meta { flex-direction: column; gap: 6px; }
         }
+        /* ===== 漏洞/建议反馈 ===== */
+        .fb-stat {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
+            padding: 12px 16px; cursor: pointer; transition: all .15s;
+        }
+        .fb-stat:hover { border-color: #00a1d6; transform: translateY(-1px); }
+        .fb-stat.on { border-color: #00a1d6; box-shadow: 0 0 0 3px rgba(0,161,214,.14); background: #f0f9ff; }
+        .fb-stat-n { font-size: 1.5rem; font-weight: 700; color: #00a1d6; }
+        .fb-stat-l { font-size: .8rem; color: #6c757d; }
+        .fb-card { border-left: 4px solid #00a1d6; }
+        .fb-card.is-vuln { border-left-color: #e74c3c; }
+        .fb-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 999px;
+            font-size: .74rem; font-weight: 700; margin-right: 6px; vertical-align: 1px;
+        }
+        .fb-badge.vuln { background: rgba(231,76,60,.12); color: #e74c3c; }
+        .fb-badge.sug { background: rgba(0,161,214,.12); color: #00a1d6; }
+        .fb-badge.pending { background: rgba(245,158,11,.15); color: #d97706; }
+        .fb-badge.processing { background: rgba(59,130,246,.15); color: #2563eb; }
+        .fb-badge.fixed { background: rgba(16,185,129,.15); color: #059669; }
+        .fb-badge.ignored { background: rgba(148,163,184,.2); color: #64748b; }
+        .fb-sec { margin: 10px 0; font-size: .9rem; line-height: 1.85; color: #333; }
+        .fb-sec > b { display: block; color: #111; font-size: .88rem; margin-bottom: 2px; }
+        .fb-sec pre {
+            margin: 4px 0 0; padding: 10px 12px; background: #f6f8fa; border: 1px solid #e2e8f0;
+            border-radius: 9px; font-size: .84rem; line-height: 1.7; white-space: pre-wrap;
+            word-break: break-word; font-family: ui-monospace, Menlo, Consolas, monospace; max-height: 320px; overflow: auto;
+        }
+        .fb-imgs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+        .fb-imgs img {
+            width: 110px; height: 110px; object-fit: cover; border-radius: 9px;
+            border: 1px solid #e2e8f0; cursor: zoom-in;
+        }
+        .fb-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+        .fb-card-actions button {
+            border: none; border-radius: 30px; padding: 7px 18px; cursor: pointer; font-size: .86rem;
+        }
+        .fb-note-input {
+            flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #ddd;
+            border-radius: 30px; font-size: .86rem; font-family: inherit;
+        }
     </style>
 </head>
 <body>
@@ -260,6 +301,7 @@
         <button id="tabVerification" class="tab-btn">🏢 公司认证审核</button>
         <button id="tabProduct" class="tab-btn">🚩 作品举报</button>
         <button id="tabAnnounce" class="tab-btn">📢 公告管理</button>
+        <button id="tabFeedback" class="tab-btn">📮 漏洞/建议反馈</button>
         <button id="tabApi" class="tab-btn">📊 API 日志</button>
     </div>
 
@@ -304,6 +346,37 @@
     </div>
 
     <div id="productReportsContainer" style="display: none;">加载中...</div>
+
+    <!-- ==================== 漏洞/建议反馈 ==================== -->
+    <div id="feedbackPanel" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px;">
+            <div class="fb-stat" data-st="pending"><div class="fb-stat-n" id="fbSPending">-</div><div class="fb-stat-l">待处理</div></div>
+            <div class="fb-stat" data-st="processing"><div class="fb-stat-n" id="fbSProcessing">-</div><div class="fb-stat-l">处理中</div></div>
+            <div class="fb-stat" data-st="fixed"><div class="fb-stat-n" id="fbSFixed">-</div><div class="fb-stat-l">已修复/已采纳</div></div>
+            <div class="fb-stat" data-st="ignored"><div class="fb-stat-n" id="fbSIgnored">-</div><div class="fb-stat-l">不处理</div></div>
+            <div class="fb-stat" data-st=""><div class="fb-stat-n" id="fbSAll">-</div><div class="fb-stat-l">全部</div></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+            <label style="font-size:0.88rem;color:#6c757d;">类型：</label>
+            <select id="fbKindFilter" style="padding:7px 12px;border:1px solid #ddd;border-radius:30px;font-size:0.88rem;">
+                <option value="">全部</option>
+                <option value="vuln">🐞 漏洞</option>
+                <option value="suggestion">💡 建议</option>
+            </select>
+            <label style="font-size:0.88rem;color:#6c757d;">状态：</label>
+            <select id="fbStatusFilter" style="padding:7px 12px;border:1px solid #ddd;border-radius:30px;font-size:0.88rem;">
+                <option value="">全部</option>
+                <option value="pending">待处理</option>
+                <option value="processing">处理中</option>
+                <option value="fixed">已修复/已采纳</option>
+                <option value="ignored">不处理</option>
+            </select>
+            <button id="fbReloadBtn" style="background:#e9ecef;color:#333;border:none;border-radius:30px;padding:8px 22px;cursor:pointer;">🔄 刷新</button>
+            <span id="fbListInfo" style="font-size:0.84rem;color:#8a94a6;"></span>
+        </div>
+        <div id="feedbackList">加载中...</div>
+        <div id="fbPager" style="display:flex;gap:10px;justify-content:center;margin:18px 0;"></div>
+    </div>
 
     <div id="announcePanel" style="display:none;">
         <div style="background:#fff8e6;border:1px solid #ffd591;border-left:4px solid #ff9800;border-radius:12px;padding:10px 16px;font-size:0.9rem;margin-bottom:16px;">💡 公告显示在首页与全站页面顶部的滚动公告条。留空保存 = 清除公告。</div>
@@ -1163,12 +1236,147 @@
         };
     }
 
+    // ==================== 漏洞/建议反馈 ====================
+    let fbPage = 1;
+    const FB_PER_PAGE = 20;
+    const FB_STATUS_TEXT = { pending: '待处理', processing: '处理中', fixed: '已修复/已采纳', ignored: '不处理' };
+    const FB_IMG_BASE = SUPABASE_URL + '/storage/v1/object/public/images/';
+
+    async function loadFeedback(page) {
+        fbPage = page || 1;
+        const box = document.getElementById('feedbackList');
+        const kindEl = document.getElementById('fbKindFilter');
+        const statusEl = document.getElementById('fbStatusFilter');
+        box.innerHTML = '<div style="padding:20px;color:#8a94a6;">加载中...</div>';
+        const { data, error } = await supabaseClient.rpc('admin_list_feedback', {
+            p_token: getToken(),
+            p_status: statusEl.value || null,
+            p_kind: kindEl.value || null,
+            p_limit: FB_PER_PAGE,
+            p_offset: (fbPage - 1) * FB_PER_PAGE
+        });
+        if (error || !data || !data.success) {
+            const msg = (error && error.message) || (data && data.message) || '未知错误';
+            if (!handleAdminError(error || (data && data.message))) {
+                box.innerHTML = '<div style="padding:20px;color:#e74c3c;">加载失败：' + escapeHtml(msg) + '</div>';
+            }
+            return;
+        }
+        const c = data.counts || {};
+        document.getElementById('fbSPending').textContent = c.pending || 0;
+        document.getElementById('fbSProcessing').textContent = c.processing || 0;
+        document.getElementById('fbSFixed').textContent = c.fixed || 0;
+        document.getElementById('fbSIgnored').textContent = c.ignored || 0;
+        document.getElementById('fbSAll').textContent = c.all || 0;
+        document.querySelectorAll('.fb-stat').forEach(function (el) {
+            el.classList.toggle('on', (el.dataset.st || '') === (statusEl.value || ''));
+        });
+        renderFeedbackList(data.list || [], data.total || 0);
+    }
+
+    function renderFeedbackList(list, total) {
+        const box = document.getElementById('feedbackList');
+        const pager = document.getElementById('fbPager');
+        const info = document.getElementById('fbListInfo');
+        info.textContent = '共 ' + total + ' 条，第 ' + fbPage + ' / ' + Math.max(1, Math.ceil(total / FB_PER_PAGE)) + ' 页';
+        if (!list.length) {
+            box.innerHTML = '<div style="padding:24px;color:#8a94a6;text-align:center;">这里还没有反馈</div>';
+            pager.innerHTML = '';
+            return;
+        }
+        let html = '';
+        for (const f of list) {
+            const isVuln = f.kind === 'vuln';
+            const st = f.status || 'pending';
+            const imgs = Array.isArray(f.attach_images) ? f.attach_images : [];
+            const imgHtml = imgs.length
+                ? '<div class="fb-sec"><b>图片附件（点击放大）</b><div class="fb-imgs">' +
+                  imgs.map(function (k) {
+                      const url = FB_IMG_BASE + String(k).replace(/[^a-zA-Z0-9_.\-]/g, '');
+                      return '<img src="' + url + '" alt="附件" onclick="window.open(\'' + url + '\',\'_blank\')">';
+                  }).join('') + '</div></div>'
+                : '';
+            const reporter = (f.is_anonymous ? '匿名' : (f.reporter_name || '未知'))
+                + (f.reporter_id ? ' <span style="color:#8a94a6;font-size:.82rem;">(' + escapeHtml(String(f.reporter_id)) + ')</span>' : ' <span style="color:#8a94a6;font-size:.82rem;">(未登录用户)</span>');
+            html += `
+                <div class="report-card fb-card ${isVuln ? 'is-vuln' : ''}" data-fb-id="${f.id}">
+                    <div class="card-header">
+                        <strong>
+                            <span class="fb-badge ${isVuln ? 'vuln' : 'sug'}">${isVuln ? '🐞 漏洞' : '💡 建议'}</span>
+                            <span class="fb-badge ${st}">${FB_STATUS_TEXT[st] || st}</span>
+                            #${f.id} ${escapeHtml(f.title || '')}
+                        </strong>
+                        <div class="report-time">📅 ${formatDate(f.created_at)}${f.handled_at ? ' · 处理于 ' + formatDate(f.handled_at) : ''}</div>
+                    </div>
+                    <div class="company-info">
+                        <strong>反馈人：</strong>${reporter}<br>
+                        <strong>联系方式：</strong>${f.contact_email ? '<a href="mailto:' + escapeHtml(f.contact_email) + '">' + escapeHtml(f.contact_email) + '</a>' : '<span style="color:#8a94a6;">未填写</span>'}
+                    </div>
+                    ${isVuln && f.vuln_type ? '<div class="fb-sec"><b>漏洞类型</b>' + escapeHtml(f.vuln_type) + '</div>' : ''}
+                    ${isVuln && f.summary ? '<div class="fb-sec"><b>漏洞简介</b><pre>' + escapeHtml(f.summary) + '</pre></div>' : ''}
+                    ${isVuln && f.repro ? '<div class="fb-sec"><b>复现方式</b><pre>' + escapeHtml(f.repro) + '</pre></div>' : ''}
+                    ${!isVuln && f.content ? '<div class="fb-sec"><b>建议内容</b><pre>' + escapeHtml(f.content) + '</pre></div>' : ''}
+                    ${f.attach_text ? '<div class="fb-sec"><b>文字附件</b><pre>' + escapeHtml(f.attach_text) + '</pre></div>' : ''}
+                    ${imgHtml}
+                    ${f.admin_note ? '<div class="fb-sec"><b>当前官方回复</b>' + escapeHtml(f.admin_note) + '</div>' : ''}
+                    <div class="fb-card-actions">
+                        <input class="fb-note-input" placeholder="官方回复(可选,用户在自己的反馈记录里能看到)" value="${escapeHtml(f.admin_note || '').replace(/"/g, '&quot;')}">
+                        <button class="fb-fixed" style="background:#10b981;color:#fff;">✅ 已修复/已采纳</button>
+                        <button class="fb-processing" style="background:#3b82f6;color:#fff;">🔧 处理中</button>
+                        <button class="fb-ignored" style="background:#e9ecef;color:#333;">🙈 不处理</button>
+                        <button class="fb-pending" style="background:#e9ecef;color:#333;">↩️ 恢复待处理</button>
+                    </div>
+                </div>
+            `;
+        }
+        box.innerHTML = html;
+        box.querySelectorAll('.fb-card').forEach(function (card) {
+            const id = parseInt(card.dataset.fbId, 10);
+            const noteEl = card.querySelector('.fb-note-input');
+            const act = function (status) {
+                return async function () {
+                    const { data, error } = await supabaseClient.rpc('admin_update_feedback', {
+                        p_token: getToken(),
+                        p_id: id,
+                        p_status: status,
+                        p_admin_note: noteEl.value.trim() || null
+                    });
+                    if (error || !data || !data.success) {
+                        if (!handleAdminError(error || (data && data.message))) {
+                            alert('更新失败：' + ((error && error.message) || (data && data.message) || '未知错误'));
+                        }
+                        return;
+                    }
+                    loadFeedback(fbPage);
+                };
+            };
+            card.querySelector('.fb-fixed').onclick = act('fixed');
+            card.querySelector('.fb-processing').onclick = act('processing');
+            card.querySelector('.fb-ignored').onclick = act('ignored');
+            card.querySelector('.fb-pending').onclick = act('pending');
+        });
+
+        const pages = Math.max(1, Math.ceil(total / FB_PER_PAGE));
+        pager.innerHTML = '';
+        if (pages > 1) {
+            const mk = function (label, page, disabled) {
+                const b = document.createElement('button');
+                b.textContent = label;
+                b.style.cssText = 'border:none;border-radius:30px;padding:7px 18px;cursor:pointer;background:' + (disabled ? '#f1f3f5' : '#e9ecef') + ';color:' + (disabled ? '#adb5bd' : '#333') + ';';
+                if (!disabled) b.onclick = () => loadFeedback(page);
+                return b;
+            };
+            pager.appendChild(mk('← 上一页', fbPage - 1, fbPage <= 1));
+            pager.appendChild(mk('下一页 →', fbPage + 1, fbPage >= pages));
+        }
+    }
+
     function switchTab(tab) {
         currentTab = tab;
         const panels = ['commentFilters','batchActions','reportsContainer','pagination','companyReportsContainer','verificationContainer','companyBatch','verifyBatch','productReportsContainer'];
-        const tabs = ['tabComments','tabCompanies','tabVerification','tabAnnounce','tabApi'];
+        const tabs = ['tabComments','tabCompanies','tabVerification','tabAnnounce','tabApi','tabFeedback'];
         function hideAll() { panels.forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
-        function hidePanels() { ['announcePanel','apiPanel'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
+        function hidePanels() { ['announcePanel','apiPanel','feedbackPanel'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
         tabs.forEach(function (id) { const el = document.getElementById(id); if (el) el.classList.remove('active'); });
         const tabEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
         if (tabEl) tabEl.classList.add('active');
@@ -1191,6 +1399,9 @@
         } else if (tab === 'announce') {
             document.getElementById('announcePanel').style.display = 'block';
             if (typeof window.__annLoad === 'function') window.__annLoad();
+        } else if (tab === 'feedback') {
+            document.getElementById('feedbackPanel').style.display = 'block';
+            loadFeedback(1);
         } else if (tab === 'api') {
             document.getElementById('apiPanel').style.display = 'block';
             if (typeof window.__apiLoadAll === 'function') window.__apiLoadAll();
@@ -1223,7 +1434,18 @@
         document.getElementById('tabVerification').onclick = () => switchTab('verification');
         document.getElementById('tabProduct').onclick = () => switchTab('product');
         document.getElementById('tabAnnounce').onclick = () => switchTab('announce');
+        document.getElementById('tabFeedback').onclick = () => switchTab('feedback');
         document.getElementById('tabApi').onclick = () => switchTab('api');
+        document.getElementById('fbReloadBtn').onclick = () => loadFeedback(fbPage);
+        document.getElementById('fbKindFilter').onchange = () => loadFeedback(1);
+        document.getElementById('fbStatusFilter').onchange = () => loadFeedback(1);
+        document.querySelectorAll('.fb-stat').forEach(function (el) {
+            el.onclick = function () {
+                document.getElementById('fbStatusFilter').value = el.dataset.st || '';
+                document.getElementById('fbKindFilter').value = '';
+                loadFeedback(1);
+            };
+        });
         const st = document.getElementById('sessionState');
         if (st) st.textContent = '已登录(30 分钟有效)';
         const lo = document.getElementById('logoutBtn');

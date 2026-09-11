@@ -812,7 +812,14 @@ html { -webkit-text-size-adjust: 100%; }
 /* ===== RGB 自定义调色 ===== */
 .pk-rgb { margin: 16px 0 4px; padding: 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); }
 .pk-rgb-head { display: flex; align-items: center; justify-content: space-between; font-size: .82rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 12px; }
-.pk-rgb-hex { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .82rem; color: var(--brand); font-weight: 800; letter-spacing: .5px; }
+.pk-rgb-hex {
+    width: 96px; padding: 5px 9px; border-radius: 9px; text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .82rem;
+    font-weight: 800; letter-spacing: .5px; color: var(--brand);
+    border: 1px solid var(--line); background: var(--card);
+}
+.pk-rgb-hex:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(59,130,246,.14); outline: none; }
+.pk-rgb-hex::placeholder { color: var(--ink-faint); font-weight: 600; }
 .pk-rgb-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .pk-rgb-row > label { width: 16px; font-size: .8rem; font-weight: 800; color: var(--ink-faint); text-align: center; }
 .pk-rgb-row input[type="range"] {
@@ -1442,12 +1449,12 @@ html { -webkit-text-size-adjust: 100%; }
             var init = (cur && !isSpecialVal(cur) && hexToRgb(cur)) ? hexToRgb(cur) : { r: 59, g: 130, b: 246 };
             rgbPanel =
                 '<div class="pk-rgb">' +
-                  '<div class="pk-rgb-head"><span>🎚️ 自定义 RGB</span><span class="pk-rgb-hex" id="pkRgbHex">' + rgbToHex(init.r, init.g, init.b) + '</span></div>' +
+                  '<div class="pk-rgb-head"><span>🎚️ 自定义 RGB</span><input type="text" class="pk-rgb-hex" id="pkRgbHex" maxlength="7" spellcheck="false" autocomplete="off" placeholder="#3b82f6"></div>' +
                   '<div class="pk-rgb-row r"><label>R</label><input type="range" id="pkR" min="0" max="255" value="' + init.r + '"><input type="number" class="pk-rgb-num" id="pkRn" min="0" max="255" value="' + init.r + '"></div>' +
                   '<div class="pk-rgb-row g"><label>G</label><input type="range" id="pkG" min="0" max="255" value="' + init.g + '"><input type="number" class="pk-rgb-num" id="pkGn" min="0" max="255" value="' + init.g + '"></div>' +
                   '<div class="pk-rgb-row b"><label>B</label><input type="range" id="pkB" min="0" max="255" value="' + init.b + '"><input type="number" class="pk-rgb-num" id="pkBn" min="0" max="255" value="' + init.b + '"></div>' +
-                  '<div class="pk-rgb-preview"><i id="pkRgbSwatch" style="background:' + rgbToHex(init.r, init.g, init.b) + ';"></i><span>左侧为预览,拖动滑块或直接输入 0~255</span></div>' +
-                  '<div class="pk-rgb-tip">想要什么颜色都行,调好后点「确定」保存;上面的色块是常用色快捷填充。</div>' +
+                  '<div class="pk-rgb-preview"><i id="pkRgbSwatch" style="background:' + rgbToHex(init.r, init.g, init.b) + ';"></i><span>拖滑块,或直接在上面填 16 进制(如 #ff0080)</span></div>' +
+                  '<div class="pk-rgb-tip">16 进制支持 3 位缩写(#f0a = #ff00aa);调好后点「确定」保存,上面的色块是常用色快捷填充。</div>' +
                 '</div>';
         }
 
@@ -1474,22 +1481,30 @@ html { -webkit-text-size-adjust: 100%; }
             m.el.querySelector('#pkR').value = v.r; m.el.querySelector('#pkRn').value = v.r;
             m.el.querySelector('#pkG').value = v.g; m.el.querySelector('#pkGn').value = v.g;
             m.el.querySelector('#pkB').value = v.b; m.el.querySelector('#pkBn').value = v.b;
-            m.el.querySelector('#pkRgbHex').textContent = hex;
+            m.el.querySelector('#pkRgbHex').value = hex;
             m.el.querySelector('#pkRgbSwatch').style.background = hex;
+        }
+        // 直接输 16 进制(支持 #f00 / f00 / #ff0000 / ff0000)
+        function applyHexInput(raw, strict) {
+            var t = String(raw || '').trim().replace(/^#/, '');
+            if (/^[0-9a-fA-F]{3}$/.test(t)) {
+                t = t[0] + t[0] + t[1] + t[1] + t[2] + t[2];
+            }
+            if (!/^[0-9a-fA-F]{6}$/.test(t)) return false;
+            var v = hexToRgb(t);
+            if (!v) return false;
+            m.el.querySelector('#pkRn').value = v.r;
+            m.el.querySelector('#pkGn').value = v.g;
+            m.el.querySelector('#pkBn').value = v.b;
+            if (strict) clearPreset();
+            syncFromSliders();
+            return true;
         }
         function clearPreset() {
             m.el.querySelectorAll('.pk-color-opt').forEach(function (o) { o.classList.remove('selected'); });
             selected = null;
         }
-        function applyColor(hex) {
-            if (!cfg.color) return;
-            var v = hexToRgb(hex);
-            if (!v) return;
-            m.el.querySelector('#pkRn').value = v.r;
-            m.el.querySelector('#pkGn').value = v.g;
-            m.el.querySelector('#pkBn').value = v.b;
-            syncFromSliders();
-        }
+        function applyColor(hex) { applyHexInput(hex, false); }
 
         // 预设 / 特殊样式
         m.el.querySelectorAll('.pk-color-opt').forEach(function (opt) {
@@ -1522,6 +1537,16 @@ html { -webkit-text-size-adjust: 100%; }
                     var v = Math.max(0, Math.min(255, parseInt(num.value, 10) || 0));
                     num.value = v; syncFromSliders();
                 });
+            });
+            // 直接输 16 进制
+            var hexInput = m.el.querySelector('#pkRgbHex');
+            hexInput.addEventListener('input', function () { applyHexInput(hexInput.value, true); });
+            hexInput.addEventListener('blur', function () {
+                var v = readRgb();
+                hexInput.value = rgbToHex(v.r, v.g, v.b);   // 没输完/非法就还原成当前颜色
+            });
+            hexInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); applyHexInput(hexInput.value, true); hexInput.blur(); }
             });
             // 回显当前已保存的颜色
             if (cur && !isSpecialVal(cur)) applyColor(cur);
