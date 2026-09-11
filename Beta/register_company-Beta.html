@@ -1310,7 +1310,7 @@ html { -webkit-text-size-adjust: 100%; }
             ? '<br><span style="color:#ef4444;">NB币不足(还差 ' + fmtMoney(v - myBalance) + ')</span>' : '';
         hint.innerHTML = '你的 NB币余额:<b>' + bal + '</b><br>注册后公司市值:<b>' + fmtMoney(20000 + v) +
             '</b> NB币(基础 20000' + (v > 0 ? ' + 你的 ' + fmtMoney(v) : '') + ')' + lack +
-            '<br><span style="opacity:.8;">按 1:1 兑换,单次最多 1 亿;付费部分会从 NB币余额中扣除。</span>';
+            '<br><span style="opacity:.8;">按 1:1 兑换,单次最多 1000 万;付费部分会从 NB币余额中扣除。</span>';
     }
 
     (function bindPlan() {
@@ -1349,7 +1349,7 @@ html { -webkit-text-size-adjust: 100%; }
         if (currentPlan === 'paid') {
             paid = Math.floor(Number(document.getElementById('payAmount').value || 0));
             if (isNaN(paid) || paid < 0) paid = 0;
-            if (paid > 100000000) { errorDiv.innerText = '单次提升不能超过 1 亿 NB币'; return; }
+            if (paid > 10000000) { errorDiv.innerText = '单次提升不能超过 1000 万 NB币'; return; }
             if (myBalance != null && paid > myBalance) { errorDiv.innerText = 'NB币不足(需要 ' + fmtMoney(paid) + ',当前 ' + fmtMoney(myBalance) + ')'; return; }
         }
         errorDiv.innerText = '';

@@ -1345,14 +1345,14 @@ html { -webkit-text-size-adjust: 100%; }
         if (!myCompany) { await showMessage('提示', '您还没有虚拟公司'); return; }
         const val = await showPrompt(
             '💎 提升公司市值',
-            `公司:${myCompany.company_name}\n当前市值:${formatValue(myCompany.market_value)} NB币\n\n花 NB币给公司市值加值(1:1),单次最多 1 亿。`,
+            `公司:${myCompany.company_name}\n当前市值:${formatValue(myCompany.market_value)} NB币\n\n花 NB币给公司市值加值(1:1),单次最多 1000 万。`,
             '要投入的 NB币金额',
             ''
         );
         if (val === null) return;
         const amount = Math.floor(Number(val));
         if (!amount || amount <= 0) { await showMessage('提示', '请输入有效的投入金额'); return; }
-        if (amount > 100000000) { await showMessage('提示', '单次提升不能超过 1 亿 NB币'); return; }
+        if (amount > 10000000) { await showMessage('提示', '单次提升不能超过 1000 万 NB币'); return; }
 
         const ok = await showConfirm('确认投入', `确定花费 ${formatValue(amount)} NB币把「${myCompany.company_name}」市值提升到 ${formatValue(Number(myCompany.market_value || 0) + amount)} NB币吗?`);
         if (!ok) return;
