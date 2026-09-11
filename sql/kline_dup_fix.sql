@@ -110,8 +110,11 @@ GRANT EXECUTE ON FUNCTION public.sample_market_snapshot() TO anon;
 -- ---------- 4) 验收 ----------
 -- 4.1 重名公司现在应该拿到各自的数据(两家最新值应不同)
 SELECT u.id AS 公司ID, u.company_name AS 公司名, u.market_value AS 当前市值,
-       (public.get_company_kline(u.id) LIMIT 1) AS 最新K线点
+       k.t AS 最新K线时间, k.v AS 最新K线值
   FROM public.user_companies u
+  LEFT JOIN LATERAL (
+      SELECT * FROM public.get_company_kline(u.id) LIMIT 1
+  ) k ON TRUE
  WHERE u.company_name IN (
      SELECT company_name FROM public.user_companies GROUP BY company_name HAVING count(*) > 1)
  ORDER BY u.company_name, u.id;
