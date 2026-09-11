@@ -116,32 +116,41 @@ jobs:
           echo "✅ 签名密钥就绪(别名 nb-channelapp / 所有者 CN=nb-channelAPP)"
 
       # Gradle 默认的 debug 签名写死了 keyAlias "androiddebugkey",
-      # 这里显式改成 nb-channelAPP(必须在 cap sync 之后执行,否则会被覆盖)
-      - name: Configure signing alias
+      # 这里显式改成 nb-channelapp,并给 release 也配上同一把密钥
+      # (必须放在 cap sync 之后,否则会被 sync 覆盖)
+      - name: Configure signing & release build
         run: |
           GRADLE=app/android/app/build.gradle
           if grep -q "NB频道:固定签名" "$GRADLE"; then
             echo "签名配置已存在,跳过"
           else
             cat app/android-overrides/signing.gradle >> "$GRADLE"
-            echo "✅ 已指定签名别名 nb-channelAPP"
+            echo "✅ 已写入签名与 release 构建配置"
           fi
-          tail -14 "$GRADLE"
+
+      # 通知权限 + 后台任务 Service 必须等 cap sync 之后再注入,否则会被覆盖
+      - name: Inject notification service
+        working-directory: app
+        run: node android-overrides/manifest.mjs
 
       # 这里不再提交密钥进仓库:密钥优先来自 GitHub Secrets,
-      # 过渡期用仓库里已有的文件,两者都没有才临时生成(日志会警告,需要你手动配 Secret)。
+      # 过渡期用仓库里已有的文件,两者都没有才临时生成(日志会警告)。
 
-      - name: Build debug APK
+      # 用 release 构建:debug 包带 debuggable=true,别人插上电脑就能导出
+      # APP 私有数据(含网页登录令牌),正式包必须是 release。
+      - name: Build release APK
         working-directory: app/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Collect APK
         run: |
           mkdir -p out download
-          cp app/android/app/build/outputs/apk/debug/app-debug.apk "out/NB频道-v${APP_VERSION_NAME}.apk"
-          cp app/android/app/build/outputs/apk/debug/app-debug.apk "download/NBChannel.apk"
+          APK=app/android/app/build/outputs/apk/release/app-release.apk
+          ls -lh "$APK"
+          cp "$APK" "out/NB频道-v${APP_VERSION_NAME}.apk"
+          cp "$APK" "download/NBChannel.apk"
           echo "---- 本次 APK 的签名指纹(以后每次都应相同) ----"
           keytool -printcert -jarfile download/NBChannel.apk | head -6 || true
           # 兜底:确保 version.json 一定存在,否则"发布到网站"那步会因找不到文件整体失败

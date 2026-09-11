@@ -15,15 +15,18 @@ const versionName = process.env.APP_VERSION_NAME || '1.0.0';
 
 function log(msg) { console.log('  ' + msg); }
 
-// ---------- ① 覆盖 MainActivity ----------
-const overrides = path.join(process.cwd(), 'android-overrides', 'MainActivity.java');
-if (!fs.existsSync(overrides)) {
-  console.error('❌ 找不到 android-overrides/MainActivity.java');
-  process.exit(1);
+// ---------- ① 覆盖 MainActivity + 后台通知任务 ----------
+const overrideFiles = ['MainActivity.java', 'NotifyJobService.java'];
+for (const f of overrideFiles) {
+  const src = path.join(process.cwd(), 'android-overrides', f);
+  if (!fs.existsSync(src)) {
+    console.error('❌ 找不到 android-overrides/' + f);
+    process.exit(1);
+  }
+  fs.mkdirSync(pkgPath, { recursive: true });
+  fs.copyFileSync(src, path.join(pkgPath, f));
 }
-fs.mkdirSync(pkgPath, { recursive: true });
-fs.copyFileSync(overrides, path.join(pkgPath, 'MainActivity.java'));
-log(`✅ MainActivity 已替换(下载接管 + 自动安装) → ${path.relative(process.cwd(), pkgPath)}`);
+log(`✅ 原生代码已注入(${overrideFiles.join(' + ')}) → ${path.relative(process.cwd(), pkgPath)}`);
 
 // ---------- ② 补权限 ----------
 let manifest = fs.readFileSync(manifestPath, 'utf8');

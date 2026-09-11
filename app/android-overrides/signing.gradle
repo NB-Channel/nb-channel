@@ -1,12 +1,16 @@
-// ===== NB频道:固定签名(签名标识 nb-channelAPP) =====
+// ===== NB频道:固定签名 + release 构建配置 =====
 // 本文件由 .github/workflows/build-apk.yml 追加到 android/app/build.gradle 末尾。
-// 原因:Gradle 的 debug 签名默认写死了 keyAlias "androiddebugkey",这里显式改掉。
 //
-// ⚠️ 别名必须写小写:JDK 生成的是 PKCS12 格式 keystore,PKCS12 规定别名
-//    大小写不敏感,keytool 存进去时统一转成小写(实际存的是 nb-channelapp)。
-//    证书里的所有者仍然是 CN=nb-channelAPP(手机安装界面显示的就是它)。
+// ① 固定签名:Gradle 的 debug 签名默认写死了 keyAlias "androiddebugkey",这里显式改掉。
+//    ⚠️ 别名必须写小写:JDK 生成的是 PKCS12 格式 keystore,PKCS12 规定别名大小写
+//       不敏感,keytool 存进去时统一转成小写(实际存的是 nb-channelapp)。
+//       证书里的所有者仍然是 CN=nb-channelAPP(手机安装界面显示的就是它)。
 //
-// keystore 由 CI 放在 ~/.android/debug.keystore(仓库里保存的 app/keystore/debug.keystore)。
+// ② release 构建:debug 包带 debuggable=true,任何人插上电脑就能把 APP 的私有数据
+//    (含网页 localStorage 里的登录令牌)导出来,所以正式包一律用 release 签名。
+//    release 与 debug 用同一把密钥 → 已装用户可以直接覆盖升级,不用卸载。
+//
+// keystore 由 CI 放在 ~/.android/debug.keystore(优先来自 GitHub Secrets)。
 android {
     signingConfigs {
         debug {
@@ -14,6 +18,22 @@ android {
             storePassword "android"
             keyAlias "nb-channelapp"
             keyPassword "android"
+        }
+        release {
+            storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storePassword "android"
+            keyAlias "nb-channelapp"
+            keyPassword "android"
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            // 暂不开混淆:套壳 APP 的本地代码很少,省下的体积有限,
+            // 但 R8 误删 Capacitor 反射调用会导致崩溃,先稳住
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
