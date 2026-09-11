@@ -86,7 +86,7 @@ jobs:
         working-directory: app
         run: npx cap sync android
 
-      # ---- 固定签名 ----
+      # ---- 固定签名(签名标识 nb-channelAPP) ----
       # GitHub Actions 每次都是全新的 runner,gradle 找不到 debug.keystore 就会
       # 现场生成一个新的 → 每次构建签名都不一样 → 用户升级时系统提示
       # 「更新包与已安装应用签名不一致」而拒绝安装。
@@ -95,16 +95,35 @@ jobs:
         run: |
           KEYSTORE=app/keystore/debug.keystore
           if [ ! -f "$KEYSTORE" ]; then
-            echo "首次构建:生成固定签名密钥"
+            echo "首次构建:生成固定签名密钥(签名标识 nb-channelAPP)"
             mkdir -p app/keystore
+            # 主别名:下面的 Configure signing alias 步骤会指定用它签名
+            keytool -genkeypair -v -keystore "$KEYSTORE" \
+              -alias nb-channelAPP -keyalg RSA -keysize 2048 -validity 10950 \
+              -storepass android -keypass android \
+              -dname "CN=nb-channelAPP,O=NBChannel,C=CN"
+            # 备用别名:Gradle 默认找的是 androiddebugkey,万一签名配置没生效也能构建成功
             keytool -genkeypair -v -keystore "$KEYSTORE" \
               -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10950 \
               -storepass android -keypass android \
-              -dname "CN=NBChannel Debug,O=NBChannel,C=CN"
+              -dname "CN=nb-channelAPP,O=NBChannel,C=CN"
           fi
           mkdir -p ~/.android
           cp "$KEYSTORE" ~/.android/debug.keystore
           echo "✅ 已使用固定签名密钥,以后所有版本签名一致,可覆盖升级"
+
+      # Gradle 默认的 debug 签名写死了 keyAlias "androiddebugkey",
+      # 这里显式改成 nb-channelAPP(必须在 cap sync 之后执行,否则会被覆盖)
+      - name: Configure signing alias
+        run: |
+          GRADLE=app/android/app/build.gradle
+          if grep -q "NB频道:固定签名" "$GRADLE"; then
+            echo "签名配置已存在,跳过"
+          else
+            cat app/android-overrides/signing.gradle >> "$GRADLE"
+            echo "✅ 已指定签名别名 nb-channelAPP"
+          fi
+          tail -14 "$GRADLE"
 
       - name: Commit fixed keystore
         uses: stefanzweifel/git-auto-commit-action@v5
