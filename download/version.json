@@ -1,6 +1,6 @@
 {
-  "version": 14,
-  "versionName": "1.0.2",
+  "version": 15,
+  "versionName": "1.0.3",
   "url": "https://github.nb-channel.top/download/NBChannel.apk",
   "apkSize": "约 5MB",
   "note": "修复返回手势(右滑/返回键逐层后退) + APP 内下载与自动更新",
