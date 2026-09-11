@@ -87,31 +87,33 @@ jobs:
         run: npx cap sync android
 
       # ---- 固定签名(签名标识 nb-channelAPP) ----
-      # GitHub Actions 每次都是全新的 runner,gradle 找不到 debug.keystore 就会
-      # 现场生成一个新的 → 每次构建签名都不一样 → 用户升级时系统提示
-      # 「更新包与已安装应用签名不一致」而拒绝安装。
-      # 这里改用仓库里保存的固定密钥:第一次构建时生成并提交,之后一直复用。
+      # 为什么必须固定:GitHub Actions 每次都是全新的 runner,gradle 找不到
+      # debug.keystore 就现场生成一个新的 → 每次签名都不同 → 用户升级时报
+      # 「更新包与已安装应用签名不一致」而装不上。
+      #
+      # 密钥放哪:优先读 GitHub Secrets 里的 ANDROID_KEYSTORE_BASE64(推荐,
+      # 仓库里看不到私钥);过渡期回退到仓库里的 app/keystore/debug.keystore;
+      # 两者都没有才临时生成(签名会变,已装用户需卸载重装)。
       - name: Use fixed signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           KEYSTORE=app/keystore/debug.keystore
-          if [ ! -f "$KEYSTORE" ]; then
-            echo "首次构建:生成固定签名密钥(签名标识 nb-channelAPP)"
-            mkdir -p app/keystore
-            # 主别名:下面的 Configure signing alias 步骤会指定用它签名
-            # (PKCS12 格式会把别名存成小写,所以这里也写小写,避免大小写不一致)
+          mkdir -p app/keystore ~/.android
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "✅ 签名密钥来自 GitHub Secret(仓库里没有私钥)"
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$KEYSTORE"
+          elif [ -f "$KEYSTORE" ]; then
+            echo "⚠️ 签名密钥来自仓库文件,建议迁移到 GitHub Secrets 后删除该文件"
+          else
+            echo "⚠️ 未找到签名密钥,临时生成一个(签名会变,已装用户需卸载重装)"
             keytool -genkeypair -v -keystore "$KEYSTORE" \
               -alias nb-channelapp -keyalg RSA -keysize 2048 -validity 10950 \
               -storepass android -keypass android \
               -dname "CN=nb-channelAPP,O=NBChannel,C=CN"
-            # 备用别名:Gradle 默认找的是 androiddebugkey,万一签名配置没生效也能构建成功
-            keytool -genkeypair -v -keystore "$KEYSTORE" \
-              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10950 \
-              -storepass android -keypass android \
-              -dname "CN=nb-channelAPP,O=NBChannel,C=CN"
           fi
-          mkdir -p ~/.android
           cp "$KEYSTORE" ~/.android/debug.keystore
-          echo "✅ 已使用固定签名密钥,以后所有版本签名一致,可覆盖升级"
+          echo "✅ 签名密钥就绪(别名 nb-channelapp / 所有者 CN=nb-channelAPP)"
 
       # Gradle 默认的 debug 签名写死了 keyAlias "androiddebugkey",
       # 这里显式改成 nb-channelAPP(必须在 cap sync 之后执行,否则会被覆盖)
@@ -126,11 +128,8 @@ jobs:
           fi
           tail -14 "$GRADLE"
 
-      - name: Commit fixed keystore
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "添加固定签名密钥(修复升级时提示签名不一致)"
-          file_pattern: 'app/keystore/debug.keystore'
+      # 这里不再提交密钥进仓库:密钥优先来自 GitHub Secrets,
+      # 过渡期用仓库里已有的文件,两者都没有才临时生成(日志会警告,需要你手动配 Secret)。
 
       - name: Build debug APK
         working-directory: app/android

@@ -16,3 +16,8 @@ desktop.ini
 
 # 生成器临时脚本（本地用）
 gen_new.ps1
+
+# 签名密钥不入库（改用 GitHub Secrets: ANDROID_KEYSTORE_BASE64）
+app/keystore/
+*.keystore
+*.jks
