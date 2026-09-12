@@ -14,7 +14,7 @@ window.VIDEOS = /*<VIDEOS>*/[
         "bvid": "BV1zJ376kENb",
         "title": "《 炸 弹 》",
         "cover": "https://i0.hdslb.com/bfs/archive/9ad74a4776aac3a7c1461c9fd806d081ab725c6c.jpg",
-        "play": "5.8万",
+        "play": "5.9万",
         "duration": "1:41",
         "pubdate": 1785038050,
         "category_key": "产品",
@@ -29,16 +29,6 @@ window.VIDEOS = /*<VIDEOS>*/[
         "pubdate": 1783837597,
         "category_key": "产品",
         "category_name": "《产品》"
-    },
-    {
-        "bvid": "BV1v8AfzmE9o",
-        "title": "《 官 网 0 . 2 . 5 》",
-        "cover": "https://i1.hdslb.com/bfs/archive/ed50fccde58ca8466a6dbaef022424c94222a84d.jpg",
-        "play": "7313",
-        "duration": "4:32",
-        "pubdate": 1772545041,
-        "category_key": "官网",
-        "category_name": "《官网》"
     },
     {
         "bvid": "BV1ekfBB5EcZ",
@@ -71,16 +61,6 @@ window.VIDEOS = /*<VIDEOS>*/[
         "category_name": "《逝验室·化学》"
     },
     {
-        "bvid": "BV1WXZUBsEqi",
-        "title": "《 官 网 0 . 2 1 》",
-        "cover": "https://i1.hdslb.com/bfs/archive/8d071e1ca4ca804694fe7879660c438a509a44d5.jpg",
-        "play": "4428",
-        "duration": "1:28",
-        "pubdate": 1771387286,
-        "category_key": "官网",
-        "category_name": "《官网》"
-    },
-    {
         "bvid": "BV1D5zXBcECp",
         "title": "《 3 0 0 V 电 池 》",
         "cover": "https://i0.hdslb.com/bfs/archive/2e0b55ba1f902deed1b1706f2ef7cd00490d6354.jpg",
@@ -94,7 +74,7 @@ window.VIDEOS = /*<VIDEOS>*/[
         "bvid": "BV1zZzKBLEFg",
         "title": "《 彩 虹 》",
         "cover": "https://i1.hdslb.com/bfs/archive/d81a1342db34510185542ad3a3ed74f8734fe186.jpg",
-        "play": "2.3万",
+        "play": "2.4万",
         "duration": "3:17",
         "pubdate": 1769174366,
         "category_key": "化学",
@@ -104,7 +84,7 @@ window.VIDEOS = /*<VIDEOS>*/[
         "bvid": "BV1z8WfzgEr2",
         "title": "《 救 人 5 . 0 》",
         "cover": "https://i0.hdslb.com/bfs/archive/376b34e5ec23597e6649d7ac4e22314d75322f5b.jpg",
-        "play": "8449",
+        "play": "8450",
         "duration": "3:49",
         "pubdate": 1760833254,
         "category_key": "救人",
