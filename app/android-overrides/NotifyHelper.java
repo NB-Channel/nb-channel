@@ -125,7 +125,11 @@ public class NotifyHelper {
             createChannels(ctx);
 
             Intent intent = new Intent(ctx, MainActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            // 带上标记:APP 被拉起后直接跳消息中心,而不是停在首页
+            intent.putExtra("nb_goto", "messages");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
             if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
             PendingIntent pi = PendingIntent.getActivity(ctx, 0, intent, flags);

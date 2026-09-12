@@ -1726,5 +1726,76 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
     setInterval(function () { check(false); }, 30 * 60 * 1000);
 })();
 </script>
+
+<script>
+/* ===== Android 上让 B站链接优先打开 B站 APP ===== */
+(function () {
+    try {
+        if (!/Android/i.test(navigator.userAgent)) return;   // 只在安卓上改,桌面/iPhone 保持原样
+        function toIntent(href) {
+            var m = href.match(/space\.bilibili\.com\/(\d+)/);
+            if (!m) return null;
+            // intent:// 是安卓专属协议:能打开 APP 就打开,打不开就回退到 browser_fallback_url
+            return 'intent://space/' + m[1] + '#Intent;scheme=bilibili;package=tv.danmaku.bili' +
+                   ';S.browser_fallback_url=' + encodeURIComponent(href) + ';end';
+        }
+        function patch() {
+            var links = document.querySelectorAll('a[href*="space.bilibili.com"]');
+            for (var i = 0; i < links.length; i++) {
+                var a = links[i];
+                if (a.dataset.nbIntent) continue;
+                var it = toIntent(a.getAttribute('href') || a.href);
+                if (it) { a.setAttribute('href', it); a.dataset.nbIntent = '1'; }
+            }
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', patch);
+        else patch();
+        setTimeout(patch, 1500);
+    } catch (e) {}
+})();
+
+/* ===== 双击视频铺满屏幕 ===== */
+(function () {
+    try {
+        var style = document.createElement('style');
+        style.textContent =
+            'video.nb-fs{position:fixed!important;left:0!important;top:0!important;' +
+            'width:100vw!important;height:100vh!important;max-width:100vw!important;' +
+            'max-height:100vh!important;margin:0!important;border-radius:0!important;' +
+            'z-index:99999!important;background:#000!important;object-fit:contain!important;}' +
+            'body.nb-fs-lock{overflow:hidden!important;}';
+        document.head.appendChild(style);
+
+        var current = null;
+        function exit() {
+            if (!current) return;
+            current.classList.remove('nb-fs');
+            document.body.classList.remove('nb-fs-lock');
+            current = null;
+        }
+        function enter(v) {
+            exit();
+            v.classList.add('nb-fs');
+            document.body.classList.add('nb-fs-lock');
+            current = v;
+            try { v.play(); } catch (e) {}
+        }
+        // 双击:进/出全屏
+        document.addEventListener('dblclick', function (e) {
+            var v = e.target && e.target.closest ? e.target.closest('video') : null;
+            if (!v) return;
+            e.preventDefault();
+            if (current === v) exit(); else enter(v);
+        }, true);
+        // 全屏状态下点空白处/按 Esc 退出
+        document.addEventListener('click', function (e) {
+            if (current && !(e.target.closest && e.target.closest('video'))) exit();
+        }, true);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') exit(); });
+        // 页面切换/尺寸变化时兜底
+        window.addEventListener('resize', function () { if (current) exit(); });
+    } catch (e) {}
+})();
+</script>
 </body>
 </html>

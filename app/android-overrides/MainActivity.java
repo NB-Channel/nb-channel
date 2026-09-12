@@ -1,5 +1,6 @@
 package top.nbchannel.app;
 
+import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,6 +9,7 @@ import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -19,6 +21,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -61,6 +65,10 @@ public class MainActivity extends BridgeActivity {
     private int waitedSeconds = 0;
     private long lastBackTime = 0L;
     private View errorView = null;
+    private boolean gotoMessagesOnReady = false;   // 从通知点进来时,加载完直接去消息中心
+
+    private static final String MESSAGES_URL =
+            "https://github.nb-channel.top/Beta/messages-Beta.html";
 
     // 关闭网页里的弹窗/抽屉;返回 true 表示"这次返回已经被消费掉了"
     private static final String CLOSE_OVERLAY_JS =
@@ -79,7 +87,9 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        handleGotoIntent(getIntent());
         setupDownload();
+        setupLongPressImage();
         setupNotifications();
         startWatchdog();
     }
@@ -165,6 +175,152 @@ public class MainActivity extends BridgeActivity {
         return name;
     }
 
+    // ==================== 1.5) 长按图片:保存到相册 ====================
+    private void setupLongPressImage() {
+        try {
+            WebView webView = getBridge().getWebView();
+            if (webView == null) return;
+            webView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    try {
+                        WebView.HitTestResult result = webView.getHitTestResult();
+                        if (result == null) return false;
+                        int type = result.getType();
+                        // 只有真的长按在图片上才接管,其它情况返回 false 保留文本选择等默认行为
+                        if (type == WebView.HitTestResult.IMAGE_TYPE
+                                || type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
+                            String url = result.getExtra();
+                            if (url != null && url.length() > 0) {
+                                showImageMenu(url);
+                                return true;
+                            }
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                    return false;
+                }
+            });
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void showImageMenu(final String url) {
+        try {
+            new AlertDialog.Builder(this)
+                .setTitle("图片")
+                .setItems(new String[]{"保存到相册", "复制图片链接"},
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            if (which == 0) saveImageToGallery(url);
+                            else copyToClipboard(url);
+                        }
+                    })
+                .setNegativeButton("取消", null)
+                .show();
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void saveImageToGallery(String url) {
+        try {
+            String ext = ".png";
+            String lower = url.toLowerCase();
+            if (lower.contains(".jpg") || lower.contains(".jpeg")) ext = ".jpg";
+            else if (lower.contains(".gif")) ext = ".gif";
+            else if (lower.contains(".webp")) ext = ".webp";
+            String name = "NBChannel_" + System.currentTimeMillis() + ext;
+
+            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
+            req.setTitle(name);
+            req.setDescription("NB频道 · 保存图片");
+            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            req.setDestinationInExternalPublicDir(Environment.DIRECTORY_PICTURES, "NB频道/" + name);
+            downloadManager.enqueue(req);
+            Toast.makeText(this, "正在保存到相册(图片/相册 里的 NB频道 文件夹)", Toast.LENGTH_LONG).show();
+        } catch (Throwable t) {
+            Toast.makeText(this, "保存失败,可尝试长按后选「复制图片链接」", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void copyToClipboard(String text) {
+        try {
+            android.content.ClipboardManager cm =
+                    (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("NB频道图片链接", text));
+                Toast.makeText(this, "链接已复制", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    // ==================== 1.6) 从通知进来时直接跳消息中心 ====================
+    private void handleGotoIntent(Intent intent) {
+        try {
+            if (intent != null && "messages".equals(intent.getStringExtra("nb_goto"))) {
+                gotoMessagesOnReady = true;
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleGotoIntent(intent);
+        if (pageReady) openMessages();   // APP 已经开着,直接切过去
+    }
+
+    private void openMessages() {
+        gotoMessagesOnReady = false;
+        try {
+            WebView wv = getBridge().getWebView();
+            if (wv != null) wv.loadUrl(MESSAGES_URL);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    // ==================== 1.7) 引导加入电池优化白名单 ====================
+    // 国产 ROM 的后台清理会杀掉实时提醒服务,加入白名单能显著改善
+    private void askBatteryOptimization() {
+        try {
+            if (Build.VERSION.SDK_INT < 23) return;
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm == null) return;
+            if (pm.isIgnoringBatteryOptimizations(getPackageName())) return;  // 已在白名单
+
+            SharedPreferences sp = getSharedPreferences("nb", Context.MODE_PRIVATE);
+            if (sp.getBoolean("asked_battery_opt", false)) return;            // 只问一次
+            sp.edit().putBoolean("asked_battery_opt", true).apply();
+
+            new AlertDialog.Builder(this)
+                .setTitle("让消息提醒更可靠")
+                .setMessage("部分手机的省电策略会清掉后台,导致新消息提醒收不到。\n\n"
+                          + "建议把「NB频道」加入电池优化白名单 —— 点「去设置」后在系统弹窗里选「允许」即可。")
+                .setPositiveButton("去设置", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) {
+                        try {
+                            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                            i.setData(Uri.parse("package:" + getPackageName()));
+                            startActivity(i);
+                        } catch (Throwable t) {
+                            try {
+                                startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                            } catch (Throwable ignored) {
+                            }
+                        }
+                    }
+                })
+                .setNegativeButton("以后再说", null)
+                .show();
+        } catch (Throwable ignored) {
+        }
+    }
+
     // ==================== 2) 加载看门狗(开屏保持 + 失败页) ====================
     private void startWatchdog() {
         pageReady = false;
@@ -204,6 +360,22 @@ public class MainActivity extends BridgeActivity {
         hideErrorView();
         hideSplash();
         syncLoginState();
+        if (gotoMessagesOnReady) {
+            // 从通知点进来的:等页面稳定一下再切到消息中心
+            ui.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    openMessages();
+                }
+            }, 400);
+        }
+        // 首次启动时引导加入电池优化白名单(延迟几秒,别打断开屏体验)
+        ui.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                askBatteryOptimization();
+            }
+        }, 4000);
     }
 
     private void hideSplash() {

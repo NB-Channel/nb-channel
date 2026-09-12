@@ -15,11 +15,12 @@ if (!fs.existsSync(manifestPath)) {
 let m = fs.readFileSync(manifestPath, 'utf8');
 let changed = 0;
 
-// ① Android 13+ 发通知需要这个权限(运行时还会再申请一次)
+// ① 权限:通知、前台服务、电池优化白名单
 const PERMS = [
   'android.permission.POST_NOTIFICATIONS',
   'android.permission.FOREGROUND_SERVICE',
   'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
+  'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',   // 引导加入省电白名单,让提醒不被清掉
 ];
 for (const p of PERMS) {
   if (!m.includes(p)) {
