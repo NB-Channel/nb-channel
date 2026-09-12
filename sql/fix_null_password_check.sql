@@ -30,6 +30,7 @@ BEGIN
         SELECT p.oid, p.proname
           FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'public'
+           AND p.prokind = 'f'   -- 只看普通函数:聚合/窗口/存储过程不能传给 pg_get_functiondef
            AND pg_get_functiondef(p.oid) LIKE '%stored_hash%'
     LOOP
         v_def := pg_get_functiondef(r.oid);
@@ -72,7 +73,9 @@ SELECT p.proname AS 函数,
        (pg_get_functiondef(p.oid) LIKE '%stored_hash IS NULL%') AS 已判空,
        (pg_get_functiondef(p.oid) ~ '!\=\s*stored_hash\s+THEN')  AS 还残留旧写法
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
- WHERE n.nspname = 'public' AND pg_get_functiondef(p.oid) LIKE '%stored_hash%'
+ WHERE n.nspname = 'public'
+   AND p.prokind = 'f'
+   AND pg_get_functiondef(p.oid) LIKE '%stored_hash%'
  ORDER BY 1;
 
 -- 顺便看看有没有账号根本没有密码哈希(这些账号就是上面的隐患来源)
