@@ -1,8 +1,8 @@
 {
-  "version": 17,
-  "versionName": "1.0.4",
+  "version": 18,
+  "versionName": "1.0.5",
   "url": "https://github.nb-channel.top/download/NBChannel.apk",
   "apkSize": "约 3.6MB",
-  "note": "消息提醒改为接近实时 · 从最长 15 分钟缩短到约 30 秒",
-  "updatedAt": "2026-09-11"
+  "note": "体验优化:省电引导 / 通知直达 / 长按存图 · 消息提醒更可靠",
+  "updatedAt": "2026-09-12"
 }
