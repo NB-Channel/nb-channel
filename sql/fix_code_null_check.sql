@@ -52,7 +52,9 @@ BEGIN
     RETURN jsonb_build_object('ok', true);
 END
 $fn$;
-REVOKE ALL ON FUNCTION public._verify_email_code(text, text, text) FROM PUBLIC;
+-- 注意:必须显式写 anon / authenticated —— Supabase 给这两个角色是单独授权的,
+-- 只 REVOKE FROM PUBLIC 等于没锁(这正是 create_user_session 出漏洞的原因)
+REVOKE ALL ON FUNCTION public._verify_email_code(text, text, text) FROM PUBLIC, anon, authenticated;
 
 -- ---------- 2) 存储函数:拒绝空 hash ----------
 CREATE OR REPLACE FUNCTION public.store_email_code(
