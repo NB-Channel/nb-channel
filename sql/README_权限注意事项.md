@@ -100,6 +100,20 @@ SELECT p.proname, count(*) AS 版本数,
 
 同名多版本 = 大概率有旧版后门，逐个确认。
 
+## 📌 易错点：改函数前必须先核对表结构
+
+重写已有函数时**不要凭印象写列名**。2026-09-12 踩过一次：
+重写 `store_email_code` 时把 `ip_address` 写成了 `ip`，
+结果发验证码直接报 `column "ip" does not exist` —— **登录和注册全部收不到验证码**。
+
+```sql
+-- 改任何函数前先核对列名
+SELECT column_name, data_type
+  FROM information_schema.columns
+ WHERE table_schema = 'public' AND table_name = '要改的表名'
+ ORDER BY ordinal_position;
+```
+
 ## 📌 另一个易错点：NULL 比较短路
 
 ```sql

@@ -96,14 +96,15 @@ BEGIN
 
     IF p_ip IS NOT NULL AND p_ip <> '' AND p_ip <> 'unknown' THEN
         SELECT count(*) INTO v_ip_cnt FROM public.email_codes
-         WHERE ip = p_ip AND created_at > now() - interval '1 hour';
+         WHERE ip_address = p_ip AND created_at > now() - interval '1 hour';
         IF v_ip_cnt >= 10 THEN
             RETURN jsonb_build_object('ok', false, 'message', '请求过于频繁,请稍后再试');
         END IF;
     END IF;
 
-    INSERT INTO public.email_codes (email, purpose, code_hash, ip, expires_at)
-    VALUES (lower(p_email), p_purpose, p_code_hash, p_ip, now() + interval '10 minutes')
+    -- ⚠️ 列名是 ip_address(不是 ip);expires_at 有默认值(now() + 10 分钟),不必显式写
+    INSERT INTO public.email_codes (email, purpose, code_hash, ip_address)
+    VALUES (lower(p_email), p_purpose, p_code_hash, p_ip)
     RETURNING id INTO v_id;
 
     RETURN jsonb_build_object('ok', true, 'id', v_id);
