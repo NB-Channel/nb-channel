@@ -115,10 +115,15 @@ SELECT public._ip_banned(ARRAY['203.0.113.9'])                        AS IP_精�
        public._ip_banned(ARRAY['36.4.58.101'])                        AS IP_小NB2的应true,
        public._ip_banned(ARRAY['2409:8a30:9c84:4e21:1111:2222:3333:4444']) AS IP_他老网段应true,
        public._ip_banned(ARRAY['8.8.8.8'])                            AS IP_正常应false,
-       public._ip_banned(ARRAY[]::text[])                             AS IP_空数组应false(不能误伤),
-       public._ip_banned(NULL)                                        AS IP_拿不到IP应false(不能误伤);
+       public._ip_banned(ARRAY[]::text[])                             AS "IP_空数组应false(不能误伤)",
+       public._ip_banned(NULL)                                        AS "IP_拿不到IP应false(不能误伤)";
 
+-- ⚠️ 上面那条 SELECT 万一报错(比如别名里有括号),这句就轮不到执行,
+--    203.0.113.9 会一直留在黑名单里。所以单独再删一次,保证干净。
 DELETE FROM public.banned_ips WHERE ip = '203.0.113.9';
+
+-- 确认自检数据已清干净(这条应返回 0 行)
+SELECT ip AS 残留的自检数据 FROM public.banned_ips WHERE ip = '203.0.113.9';
 
 -- 2.3 关键安全检查:拿不到 IP 时绝不能挡住正常用户
 --     _client_ips() 在没有请求头时(比如从 SQL Editor 直接调用)应返回空数组,
