@@ -114,6 +114,27 @@ SELECT column_name, data_type
  ORDER BY ordinal_position;
 ```
 
+## 📌 易错点：重写函数前，先把同名函数的**所有版本**找出来
+
+2026-09-12 踩的坑：重写 `do_check_in` 时只看了 `checkin_tz_fix.sql` 里的版本，
+没注意 `profile_enhance.sql` 里还有一个**更完整**的版本 —— 后者会写 `check_in_records`
+（签到历史，热力图和补签天数计算都依赖它），前者漏了那句。
+
+结果：我基于"漏掉的那句"重写，签到历史继续不增长，补签算出来的连续天数越来越短
+（实际案例：连续签到 69 天的用户，补签一次变成 29 天）。
+
+```sql
+-- 改任何函数前先列出所有同名版本，对比函数体长度
+SELECT pg_get_function_identity_arguments(p.oid) AS 参数,
+       length(pg_get_functiondef(p.oid)) AS 函数体长度,
+       pg_get_functiondef(p.oid) AS 定义
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+ WHERE n.nspname = 'public' AND p.proname = '要改的函数名';
+```
+
+**函数体最长的那个通常是最新的**（后续修复是累加的）。照着某个文件里的版本直接重写，
+很容易把后面的修复覆盖掉。
+
 ## 📌 另一个易错点：NULL 比较短路
 
 ```sql
