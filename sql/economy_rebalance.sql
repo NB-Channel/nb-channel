@@ -19,17 +19,25 @@
 -- ============================================================
 -- ① 波动函数:恢复均值回归
 -- ============================================================
+-- ⚠️ 关键:回归力度必须「按真实经过的时间」缩放,不能按「调用轮数」。
+--   踩过的坑:一开始按「15 分钟采样一次 ≈ 48 轮/天」定了 k = 0.00047,
+--   但实际驱动波动的 pg_cron 任务 market-10s-tick(见 market_10s.sql)是
+--   每分钟 6 轮、每轮间隔 10 秒 → 每天 4320 轮,是假设值的 90 倍。
+--   照那样上线,(1-0.002088)^4320 ≈ exp(-9) ≈ 0.0001,
+--   偏离 85 倍的 Utw 会在一天内从 16.66 亿跌到 2 万,直接崩盘。
+--   现在改成:每轮回归量 = -K_DAY × (本次距上次波动的秒数 / 86400) × ln(市值/均值)
+--   —— 调度是 10 秒一轮还是 15 分钟一轮,一天的总回归幅度完全一样,不再耦合调度频率。
+--
 -- 参数说明:
 --   随机部分仍是对称的 ±1%(原来 ±2%,收紧一半,减少无意义的剧烈波动)
---   回归部分 = -k × ln(市值 / 市场平均市值)
+--   回归部分 = -K_DAY × (dt/86400) × ln(市值 / 市场平均市值)
 --     · 市值 = 平均值 → ln(1)=0 → 不拉
 --     · 市值 = 2 倍平均 → 负向拉动,慢慢回落
 --     · 市值 = 0.5 倍平均 → 正向拉动,慢慢抬升
---   k 取值依据:波动由「采样流程每 15 分钟触发一次」驱动(交易时段 12 小时 ≈ 48 轮/天,
---   且 sampling 前会检查距上次波动是否已过 10 分钟,所以不会重复波动)。
---   取 k = 0.00047 时:偏离 2 倍平均的公司一天约回落 1.6%,
---   偏离 85 倍(Utw 现状)一天约回落 10% —— 一周左右回到合理区间,不会崩盘式下跌。
---   想更快/更慢就调这个 k(每翻一倍,回归速度翻倍)。
+--   K_DAY = 0.0474(按「交易时段」折算,即一天实际只波动 12 小时):
+--     · 偏离 2 倍平均的公司   → 一天约回落 1.6%
+--     · 偏离 85 倍(Utw 现状) → 一天约回落 10%,一周左右腰斩,平稳归位
+--   想更快/更慢就调 K_DAY(每翻一倍,回归速度翻倍)。
 CREATE OR REPLACE FUNCTION public.random_fluctuate_market_values()
 RETURNS void
 LANGUAGE plpgsql
@@ -45,7 +53,8 @@ DECLARE
     v_avg          NUMERIC;
     v_ratio        NUMERIC;
     v_pull         FLOAT;
-    v_k            CONSTANT FLOAT := 0.00047;   -- 回归强度,可调
+    v_dt           FLOAT;                        -- 本次距上次波动经过的秒数
+    v_k_day        CONSTANT FLOAT := 0.0474;     -- 每日回归强度,可调
 BEGIN
     -- 交易时段(北京时间 8:00 ~ 20:00),收盘后冻结
     IF (now() AT TIME ZONE 'Asia/Shanghai')::time < time '08:00'
@@ -58,6 +67,14 @@ BEGIN
     IF v_last IS NOT NULL AND v_last > now() - interval '8 seconds' THEN
         RETURN;
     END IF;
+
+    -- 距上次波动经过了多少秒 —— 回归力度按它缩放(见文件头说明)。
+    -- 上限 15 分钟:调度停摆很久后重启时,不让单轮一次性拉太狠。
+    v_dt := LEAST(
+                GREATEST(
+                    EXTRACT(EPOCH FROM (now() - coalesce(v_last, now() - interval '10 seconds')))::float,
+                    0),
+                900);
 
     -- 均值回归的锚点:全市场平均市值
     SELECT avg(market_value) INTO v_avg FROM public.user_companies;
@@ -84,8 +101,9 @@ BEGIN
         IF company.market_value > 0 THEN
             v_ratio := company.market_value::numeric / v_avg;
             IF v_ratio > 0 THEN
-                v_pull := -v_k * ln(v_ratio);          -- 高于均值 → 负;低于均值 → 正
-                -- 单轮最多贡献 ±0.5%,防止极端偏离时一步跳太狠
+                -- 高于均值 → 负;低于均值 → 正。乘 (v_dt/86400) 按真实时间缩放
+                v_pull := -v_k_day * (v_dt / 86400.0) * ln(v_ratio);
+                -- 单轮最多贡献 ±0.5%,安全护栏(按时间缩放后正常远小于它)
                 v_pull := GREATEST(-0.005, LEAST(0.005, v_pull));
                 change_percent := change_percent + v_pull;
             END IF;
@@ -397,11 +415,27 @@ GRANT EXECUTE ON FUNCTION public.run_auto_support() TO anon;
 -- ============================================================
 -- 验收
 -- ============================================================
--- 1) 波动函数里应该有均值回归
+-- 1) 波动函数里应该有均值回归,且必须是「按时间缩放」的新版
+--    重点看 按时间缩放 这一列:false = 装的是旧版(力度绑死轮数,会崩盘),必须重跑本文件
 SELECT '波动函数' AS 项目,
-       (pg_get_functiondef(p.oid) LIKE '%v_pull%') AS 已含均值回归
+       (pg_get_functiondef(p.oid) LIKE '%v_pull%')   AS 已含均值回归,
+       (pg_get_functiondef(p.oid) LIKE '%v_k_day%')  AS 按时间缩放
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
  WHERE n.nspname = 'public' AND p.proname = 'random_fluctuate_market_values';
+
+-- 1b) 预演:按当前市值算,各家「一天」的预期回归幅度
+--     (交易时段 12 小时 = 一天的总缩放系数 0.5;随机部分是零均值,这里只看回归)
+--     大公司那一列应该是负的、且 5000 万以上的大概 -10% 上下;
+--     小公司那一列是正的(往均值抬)。数量级对了才算装对。
+SELECT c.company_name AS 公司,
+       c.market_value  AS 当前市值,
+       round(c.market_value / a.avg_mv, 1) AS 相对均值倍数,
+       round((exp(-0.0474 * ln(c.market_value / a.avg_mv) * 0.5) - 1) * 100, 2) AS 预期日涨跌百分比
+  FROM public.user_companies c
+  CROSS JOIN (SELECT avg(market_value) AS avg_mv FROM public.user_companies) a
+ WHERE c.market_value > 0 AND a.avg_mv > 0
+ ORDER BY c.market_value DESC
+ LIMIT 10;
 
 -- 2) 公司税分段是否正确(照抄参数核对)
 SELECT '公司税' AS 项目,
