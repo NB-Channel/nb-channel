@@ -30,15 +30,22 @@
 --   —— 调度是 10 秒一轮还是 15 分钟一轮,一天的总回归幅度完全一样,不再耦合调度频率。
 --
 -- 参数说明:
---   随机部分仍是对称的 ±1%(原来 ±2%,收紧一半,减少无意义的剧烈波动)
+--   随机部分:原来的 (random()-0.5)*0.04 = 每次调用 ±2% —— 也是「绑死轮数」的,
+--     而 market_tick_loop 每 10 秒调一次 → 每天 4320 轮 → 日标准差 76%,
+--     1σ 的交易日涨跌 2.1 倍。这正是市场在 4 亿 ↔ 22 亿 之间乱摆的原因。
+--     现在改成按 σ_DAY 目标 + sqrt(时间) 缩放(随机游走方差与时间成正比):
+--       本轮标准差 = σ_DAY × sqrt(dt / 43200)     (43200 秒 = 交易时段 12 小时)
+--     这样 10 秒一轮和 15 分钟一轮,一天下来总波动率都是 σ_DAY。
 --   回归部分 = -K_DAY × (dt/86400) × ln(市值 / 市场平均市值)
 --     · 市值 = 平均值 → ln(1)=0 → 不拉
 --     · 市值 = 2 倍平均 → 负向拉动,慢慢回落
 --     · 市值 = 0.5 倍平均 → 正向拉动,慢慢抬升
---   K_DAY = 0.0474(按「交易时段」折算,即一天实际只波动 12 小时):
+--   K_DAY = 0.0474、σ_DAY = 0.06:
 --     · 偏离 2 倍平均的公司   → 一天约回落 1.6%
 --     · 偏离 85 倍(Utw 现状) → 一天约回落 10%,一周左右腰斩,平稳归位
---   想更快/更慢就调 K_DAY(每翻一倍,回归速度翻倍)。
+--     · 回归力 10%/天 对上 噪声 6%/天 → 稳定态下各公司市值落在均值 ±30% 以内,
+--       不会再有"一家独大 / 一堆趴在地板价"的分布。
+--   想更快/更慢就调 K_DAY;想更刺激/更平静就调 σ_DAY。
 CREATE OR REPLACE FUNCTION public.random_fluctuate_market_values()
 RETURNS void
 LANGUAGE plpgsql
@@ -55,7 +62,10 @@ DECLARE
     v_ratio        NUMERIC;
     v_pull         FLOAT;
     v_dt           FLOAT;                        -- 本次距上次波动经过的秒数
+    v_sigma        FLOAT;                        -- 本轮随机波动的标准差
     v_k_day        CONSTANT FLOAT := 0.0474;     -- 每日回归强度,可调
+    v_sigma_day    CONSTANT FLOAT := 0.06;       -- 每日波动率(标准差),可调
+    v_session_secs CONSTANT FLOAT := 43200;      -- 交易时段一天 12 小时
 BEGIN
     -- 交易时段(北京时间 8:00 ~ 20:00),收盘后冻结
     IF (now() AT TIME ZONE 'Asia/Shanghai')::time < time '08:00'
@@ -95,8 +105,10 @@ BEGIN
             END IF;
         END IF;
 
-        -- 随机部分:±1%(对称)
-        change_percent := (random() - 0.5) * 0.02;
+        -- 随机部分:目标日波动率 σ_DAY,按 sqrt(时间) 缩放
+        -- (均匀分布 [-a, a] 的标准差 = a/√3,所以 a = σ·√3)
+        v_sigma := v_sigma_day * sqrt(v_dt / v_session_secs);
+        change_percent := (random() - 0.5) * 2 * v_sigma * sqrt(3);
 
         -- 均值回归:偏离平均市值越多,拉的力越大
         IF company.market_value > 0 THEN
@@ -427,22 +439,25 @@ GRANT EXECUTE ON FUNCTION public.run_auto_support() TO anon;
 -- ============================================================
 -- 验收
 -- ============================================================
--- 1) 波动函数里应该有均值回归,且必须是「按时间缩放」的新版
---    重点看 按时间缩放 这一列:false = 装的是旧版(力度绑死轮数,会崩盘),必须重跑本文件
+-- 1) 波动函数:必须是「按时间缩放」的新版(随机部分和回归部分都要)
+--    重点看后两列:任何一个 false 都说明装的是旧版(绑死轮数),必须重跑本文件
 SELECT '波动函数' AS 项目,
-       (pg_get_functiondef(p.oid) LIKE '%v_pull%')   AS 已含均值回归,
-       (pg_get_functiondef(p.oid) LIKE '%v_k_day%')  AS 按时间缩放
+       (pg_get_functiondef(p.oid) LIKE '%v_pull%')      AS 已含均值回归,
+       (pg_get_functiondef(p.oid) LIKE '%v_k_day%')     AS 回归按时间缩放,
+       (pg_get_functiondef(p.oid) LIKE '%v_sigma_day%') AS 随机按时间缩放
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
  WHERE n.nspname = 'public' AND p.proname = 'random_fluctuate_market_values';
 
 -- 1b) 预演:按当前市值算,各家「一天」的预期回归幅度
---     (交易时段 12 小时 = 一天的总缩放系数 0.5;随机部分是零均值,这里只看回归)
---     大公司那一列应该是负的、且 5000 万以上的大概 -10% 上下;
+--     (交易时段 12 小时 = 一天的总缩放系数 0.5;随机部分是零均值,这里只看回归漂移)
+--     大公司那一列应该是负的、5000 万以上的大概 -10% 上下;
 --     小公司那一列是正的(往均值抬)。数量级对了才算装对。
+--     随机的日波动率是固定的 6%(σ_DAY),所以实际每天还会在漂移上叠 ±6% 的噪声。
 SELECT c.company_name AS 公司,
        c.market_value  AS 当前市值,
        round(c.market_value / a.avg_mv, 1) AS 相对均值倍数,
-       round((exp(-0.0474 * ln(c.market_value / a.avg_mv) * 0.5) - 1) * 100, 2) AS 预期日涨跌百分比
+       round((exp(-0.0474 * ln(c.market_value / a.avg_mv) * 0.5) - 1) * 100, 2) AS 预期日涨跌百分比,
+       '±6%'::text AS 随机日波动
   FROM public.user_companies c
   CROSS JOIN (SELECT avg(market_value) AS avg_mv FROM public.user_companies) a
  WHERE c.market_value > 0 AND a.avg_mv > 0
