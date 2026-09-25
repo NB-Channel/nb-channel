@@ -233,7 +233,8 @@ def _fetch_bili_fans():
 
 @app.route('/api/bili-fans')
 def api_bili_fans():
-    """公开只读:当前 B站粉丝数。首页每 60s 轮询,无需刷新即可看到数字变化。"""
+    """公开只读:当前 B站粉丝数。首页每 30s 轮询,无需刷新即可看到数字变化。
+    限流见 limit_public_endpoints(每 IP 每分钟 120 次)。"""
     data, err = _fetch_bili_fans()
     if data:
         return jsonify({'success': True, **data})
@@ -894,9 +895,9 @@ def count_api_requests():
         return
     # ---- IP 黑名单(全站封禁;缓存 60s;查询失败放行,不影响 API) ----
     try:
-        ip = (request.headers.get('X-Forwarded-For', '') or request.remote_addr or '')
-        if ',' in ip:
-            ip = ip.split(',')[0].strip()
+        # 用真实客户端 IP(CF-Connecting-IP);原先取 XFF 第一段是客户端可伪造的,
+        # 意味着封了的人伪造一个头就能绕过黑名单
+        ip = _client_ip()
         now = datetime.datetime.now().timestamp()
         if now - _api_ban_cache['ts'] > 60:
             try:
@@ -921,6 +922,34 @@ def count_api_requests():
 
 # IP 黑名单缓存(与 _api_stats 同级定义)
 _api_ban_cache = {'ts': 0.0, 'ips': set(), 'nets': None}
+
+
+# ---------- 公开端点限流(2026-09-25 新增) ----------
+# /api/bili-fans 不能加 API Key —— 官网首页要调它;加 Key 就得把 Key 写进
+# 公开的 HTML,等于没加。所以这几个公开端点单独做「每 IP 限流」。
+#
+# 为什么必须限:PythonAnywhere 免费版每个请求约有 1.1 秒的 worker 开销
+# (实测:连最简的 /health 也要 1.33s,而建连只要 0.24s)。也就是说
+# 一个 setInterval(fetch, 1000) 就能把 worker 占满,拖垮整个后端。
+#
+# 阈值取 120/分(2 次/秒):官网首页 30 秒轮询 = 2 次/分,余量极大;
+# 校园/公司共用出口的多人也不会撞到(要 60 人同时每秒轮询才够)。
+# 注意:应用层限流挡不住「多 IP 分布式」刷 —— 那种要靠 Cloudflare
+# 边缘缓存(见 README 的「接口防护」一节),让请求根本到不了源站。
+_PUBLIC_RATE_PATHS = ('/api/bili-fans', '/api/docs', '/health')
+_PUBLIC_RATE_LIMIT = 120
+
+
+@app.before_request
+def limit_public_endpoints():
+    """给不加 Key 的公开端点做每 IP 限流(注册在黑名单检查之后)。"""
+    if request.path not in _PUBLIC_RATE_PATHS:
+        return
+    limited, _remaining = _rate_limited('pub:' + _client_ip(),
+                                        limit=_PUBLIC_RATE_LIMIT, window=60)
+    if limited:
+        return _err('RATE_LIMITED', '请求过于频繁，请稍后再试', 429)
+
 
 
 def _ip_banned(ip):
@@ -950,6 +979,29 @@ def _ip_banned(ip):
         if addr.version == net.version and addr in net:
             return True
     return False
+
+def _client_ip():
+    """取真实客户端 IP(限流与黑名单都用它)。
+
+    ⚠️ 不能用 X-Forwarded-For 的第一段 —— 那是【客户端可伪造】的:
+      攻击者每次请求换一个假的 XFF,就能绕过一切「按 IP 限流」,
+      也能绕过 IP 黑名单(封了照样进)。
+    优先级:
+      1. CF-Connecting-IP  —— Cloudflare 会覆盖此头,客户端改不了,最可信
+      2. X-Forwarded-For 的最后一段 —— 代理链末尾是最近一跳代理附加的,
+         而客户端伪造的值只会出现在前面几段
+      3. remote_addr —— 直连时的对端地址(有 Cloudflare 时它是 CF 的 IP)
+    """
+    v = (request.headers.get('CF-Connecting-IP') or '').strip()
+    if v:
+        return v
+    xff = request.headers.get('X-Forwarded-For') or ''
+    if xff:
+        parts = [p.strip() for p in xff.split(',') if p.strip()]
+        if parts:
+            return parts[-1]
+    return request.remote_addr or 'unknown'
+
 
 def _rate_limited(ip, limit=60, window=60):
     """返回 (是否受限, 剩余次数)。"""
@@ -1003,7 +1055,7 @@ def _guard():
     err = _check_api_key()
     if err:
         return _err('UNAUTHORIZED', err, 401)
-    limited, remaining = _rate_limited(request.remote_addr or 'unknown')
+    limited, remaining = _rate_limited('key:' + _client_ip())
     if limited:
         _api_stats['rate_limited'] += 1
         return _err('RATE_LIMITED', '请求过于频繁，请稍后再试', 429)
@@ -1022,9 +1074,9 @@ def after_request_api(resp):
     try:
         path = request.path or ''
         if path.startswith('/api/') and path != '/api/stats':
-            ip = (request.headers.get('X-Forwarded-For', '') or request.remote_addr or '')
-            if ',' in ip:
-                ip = ip.split(',')[0].strip()
+            # 用真实客户端 IP —— 原先取 XFF 第一段是客户端可伪造的,
+            # 会让 api_logs 里的 IP 统计不可信(后台据此判断来源会误判)
+            ip = _client_ip()
             with _api_log_lock:
                 _api_log_queue.append({
                     'endpoint': path[:200],
@@ -1644,9 +1696,9 @@ def api_send_code():
     email = str(body.get('email') or '').strip().lower()
     username = str(body.get('username') or '').strip()
     password = str(body.get('password') or '')
-    ip = (request.headers.get('X-Forwarded-For', '') or request.remote_addr or 'unknown')
-    if ',' in ip:
-        ip = ip.split(',')[0].strip()
+    ip = _client_ip()
+    # ⚠️ 必须用真实 IP:这个值会传给 store_email_code 做「每 IP 每天 20 封」的限频,
+    #    用可伪造的 XFF 第一段 = 伪造头就能绕过发信上限,把 163 配额刷光
 
     if kind not in ('register', 'login', 'bind'):
         return jsonify({'ok': False, 'message': '未知类型'})
