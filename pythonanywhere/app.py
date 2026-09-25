@@ -234,13 +234,26 @@ def _fetch_bili_fans():
 @app.route('/api/bili-fans')
 def api_bili_fans():
     """公开只读:当前 B站粉丝数。首页每 30s 轮询,无需刷新即可看到数字变化。
-    限流见 limit_public_endpoints(每 IP 每分钟 120 次)。"""
+    限流见 limit_public_endpoints(每 IP 每分钟 120 次)。
+
+    2026-09-25:显式声明可缓存 30 秒。
+    原因:本端点不加 Key(首页要调),又没有 Cache-Control 头时 Cloudflare
+    是否缓存属未定义行为 —— 被刷时每个请求都会打回源站,而 PythonAnywhere
+    免费版每请求约 1.1 秒 worker 开销,一个 setInterval(fetch,1000) 就能
+    把 worker 占满。这里声明 max-age/s-maxage=30 后,配合 Cloudflare 的
+    Cache Rule(Eligible for cache),边缘就能直接应答,源站每 30 秒才见一次。
+    数据本身 30 秒才更新一次,所以内容完全不变。
+    """
     data, err = _fetch_bili_fans()
-    if data:
-        return jsonify({'success': True, **data})
-    if _bili_fans_cache['data']:
-        # 上游暂时失败:降级返回最近一次成功值(标记 stale,首页仍可用)
-        return jsonify({'success': True, 'stale': True, **_bili_fans_cache['data']})
+    # 上游失败但有历史值时也返回缓存,同样按 30s 缓存(避免故障期间被刷穿)
+    if data or _bili_fans_cache['data']:
+        stale = not data
+        body = dict(data or _bili_fans_cache['data'])
+        if stale:
+            body['stale'] = True
+        resp = jsonify({'success': True, **body})
+        resp.headers['Cache-Control'] = 'public, max-age=30, s-maxage=30'
+        return resp
     return _err('UPSTREAM_ERROR', 'B站接口暂时不可用: %s' % err, 502)
 
 
