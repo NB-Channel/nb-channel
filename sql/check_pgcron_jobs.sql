@@ -21,8 +21,11 @@ SELECT jobid, status, return_message, start_time
  ORDER BY start_time DESC
  LIMIT 20;
 
--- 4) 上一次市值波动是什么时候(如果这个时间很旧,说明波动早就停了)
+-- 4) 上一次市值波动 / 采样 / 收税 是什么时候
+--    注意 last_sample 只有 market_tick_loop 成功跑过才会有 —— 没有它基本可以断定
+--    pg_cron 自循环没在跑(Actions 的兜底采样不写这个键)。
+--    ⚠️ 本文件已被 check_market_scheduler.sql 取代,那个更全,建议直接跑那个。
 SELECT key AS 项目, value AS 值
   FROM public.market_meta
- WHERE key IN ('last_fluctuate', 'last_tax_date')
+ WHERE key IN ('last_fluctuate', 'last_sample', 'last_tax_date')
  ORDER BY key;
