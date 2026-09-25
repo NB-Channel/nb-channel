@@ -10,6 +10,7 @@
 -- 本文件实施四项调控(参数按你给的数值):
 --   ① 波动函数恢复均值回归(偏离市场均值越多,被拉回的力越大)
 --   ② 公司税:按市值分段每日征收,从市值里扣除(不流入任何人,直接销毁)
+--             征收时点为「当天休市后」(北京时间 20:00 之后),不在开盘前扣
 --   ③ 签到奖励封顶(原来连续天数无上限)
 --   ④ 自动支持每用户每天最多投 50 万
 --
@@ -142,6 +143,8 @@ $$;
 --   2000 万 ~ 5000 万 每日 1%
 --   > 5000 万        每日 2%
 -- 扣的是公司市值(等于缩水),钱不进入任何账户 —— 净效果是回收市场上的虚高市值。
+-- 征收时点:每天休市后(北京时间 20:00 之后),由 sample_market_snapshot 触发,
+--           当天涨跌走完再结算,不在开盘前扣。
 CREATE OR REPLACE FUNCTION public.collect_company_tax()
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -195,7 +198,7 @@ $fn$;
 -- ③ 把「每日收税」挂到采样流程里
 -- ============================================================
 -- sample_market_snapshot 每 15 分钟被定时任务调一次,
--- 这里判断"今天还没收过税"就收一次,避免新增定时任务。
+-- 这里判断"今天还没收过税"并且"已过休市时间"就收一次,避免新增定时任务。
 -- ⚠️ 保留了之前加的 ids 数组(修复重名公司 K 线用的)
 CREATE OR REPLACE FUNCTION public.sample_market_snapshot()
 RETURNS jsonb
@@ -214,9 +217,18 @@ DECLARE
     v_last_fluct timestamptz;
     r RECORD;
 BEGIN
-    -- 每天第一次采样时收公司税
+    -- 读上次收税日期(北京时间日期文本)
     SELECT value INTO v_last_tax FROM public.market_meta WHERE key = 'last_tax_date';
-    IF v_last_tax IS DISTINCT FROM v_today THEN
+
+    -- 每天「收盘后」收一次公司税(北京时间 20:00 休市)。
+    -- 原来是当天第一次采样就收 —— 那是凌晨刚过 0 点,等于开盘前先把昨天涨上来的
+    -- 市值扣掉,当天的涨跌跟这笔税无关,看着很突兀。
+    -- 现在挂到 20:00 之后:当天涨跌全部走完、K线收盘价定型了再结算。
+    -- 采样是全天跑的(休市时段 60 分钟一次),所以实际扣税时间在 20:00~21:00 之间。
+    -- v_last_tax 按「北京时间日期」记账,所以一天只会收一次;
+    -- 万一调度在 20:00~24:00 挂掉没采到样,这一天就跳过(不会第二天补扣两次)。
+    IF (now() AT TIME ZONE 'Asia/Shanghai')::time >= time '20:00'
+       AND v_last_tax IS DISTINCT FROM v_today THEN
         PERFORM public.collect_company_tax();
     END IF;
 
@@ -470,5 +482,18 @@ SELECT count(*) AS 公司数,
        count(*) FILTER (WHERE market_value >= 300000) AS 需缴税家数
   FROM public.user_companies;
 
--- 6) 手动试跑一次公司税(可选,想立刻看到效果就跑;平时由定时任务自动收)
+-- 6) 手动试跑一次公司税(可选,想立刻看到效果就跑;平时由定时任务在休市后自动收)
+-- ⚠️ 注意两点:
+--    ① 它会写入 last_tax_date = 今天,也就是"今天已经收过了" —— 跑完当天 20:00 不会再自动收。
+--    ② 它绕过了「休市后才收」的时间判断(函数本身不判断时间,时间判断在采样流程里)。
+--       所以想立刻看效果就跑;不想影响当天自动征收就别跑。
 -- SELECT public.collect_company_tax();
+
+-- 7) 确认「休市后收税」这段逻辑装进去了(应该返回 true)
+SELECT '收税时点' AS 项目,
+       (pg_get_functiondef(p.oid) LIKE '%time ''20:00''%' AND pg_get_functiondef(p.oid) LIKE '%last_tax_date%') AS 已改为休市后征收
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+ WHERE n.nspname = 'public' AND p.proname = 'sample_market_snapshot';
+
+-- 8) 看上次收税日期(休市后跑过一天,这里应显示昨天或今天的日期)
+SELECT value AS 上次收税日期 FROM public.market_meta WHERE key = 'last_tax_date';
