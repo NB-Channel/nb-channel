@@ -866,6 +866,16 @@ def github_webhook():
 
 API_KEY = os.environ.get('API_KEY', '')
 
+# 兜底:环境变量读不到时,尝试从同目录的 secrets_local.py 读取
+# (PythonAnywhere 部分套餐没有 Environment variables 面板;
+#  该文件已在 .gitignore 里,只存在于服务器,不会进公开仓库)
+if not API_KEY:
+    try:
+        from secrets_local import API_KEY as _K  # noqa: E402
+        API_KEY = _K or ''
+    except Exception:
+        pass
+
 _market_cache = {'ts': 0, 'data': None}
 _rate_buckets = {}  # ip -> [请求时间戳]
 

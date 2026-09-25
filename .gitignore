@@ -13,6 +13,9 @@ desktop.ini
 *.env
 *.pem
 *.key
+# 服务器本地密钥文件(app.py 会读取其中的 API_KEY；只存在于 PythonAnywhere 上)
+secrets_local.py
+pythonanywhere/secrets_local.py
 
 # 生成器临时脚本（本地用）
 gen_new.ps1
