@@ -1102,6 +1102,23 @@ html { -webkit-text-size-adjust: 100%; }
         </ul>
     </div>
 
+    <!-- 重大案例:小NB2(与上一条同一人,换号复犯) -->
+    <div class="bn-case">
+        <div class="bn-case-head">
+            <span class="bn-case-ico">🚫</span>
+            <div>
+                <div class="bn-case-name">小NB2</div>
+                <div class="bn-case-date">公示日期 2026-09-25</div>
+            </div>
+            <span class="bn-case-tag">已永久封禁</span>
+        </div>
+        <ul class="bn-case-list">
+            <li><b>违规行为</b>注册后数分钟内即在评论区刷屏辱骂,与已封禁的「小NB官号」为同一人,系换号复犯</li>
+            <li><b>处理结果</b>账号已永久封禁,全部违规评论清除,其使用的网络来源与一次性临时邮箱域名均已列入黑名单</li>
+            <li><b>补充说明</b>本站注册需邮箱验证,用临时邮箱规避验证同样会被识别并拦截;换号复犯一律从重处理</li>
+        </ul>
+    </div>
+
     <!-- 当前封禁名单(实时读取) -->
     <div class="bn-sec-title">当前封禁名单 <span id="bnCount"></span></div>
     <div id="bnBody">
@@ -1353,7 +1370,7 @@ function avatarHtml(u) {
     return '<span class="bn-ava bn-ava-txt">' + esc(c) + '</span>';
 }
 // 已在"重大案例"里单独公示的账号,名单里不再重复
-var EXCLUDE_NAMES = ['小NB官号'];
+var EXCLUDE_NAMES = ['小NB官号', '小NB2'];
 function renderEmpty() {
     document.getElementById('bnCount').innerText = '';
     document.getElementById('bnBody').innerHTML =
