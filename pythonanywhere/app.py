@@ -1324,14 +1324,26 @@ th{background:#e9eef4}
 </head>
 <body>
 <h1>📈 NB频道 虚拟股票市值 API</h1>
-<p>公开只读接口，数据与网站前端实时一致。Base URL：<code>https://nbchannel.pythonanywhere.com</code> 或 <code>https://api.nb-channel.top</code></p>
+<p>只读接口，数据与网站前端实时一致。Base URL：<code>https://nbchannel.pythonanywhere.com</code> 或 <code>https://api.nb-channel.top</code></p>
+
+<div style="background:#fff8e1;border:1px solid #ffe08a;border-radius:10px;padding:14px 16px;margin:16px 0">
+<b>⚠️ 2026-09-25 起，主要接口需要 API Key</b><br>
+<code>/api/market</code>（含子路径与导出）、<code>/api/comments</code>、<code>/api/stats</code>
+需要带 <code>X-API-Key</code> 请求头，否则返回 <code>401 UNAUTHORIZED</code>。<br>
+<b>申请：</b>邮件 <a href="mailto:nbchannel@163.com">nbchannel@163.com</a>
+或站内评论区 @NB频道官方，说明用途与大致调用频率。<br>
+<b>用法：</b>
+<pre>curl -H "X-API-Key: 你申请到的Key" "https://api.nb-channel.top/api/market"</pre>
+请用请求头而不是 <code>?key=</code> 参数（URL 会进日志与 referrer），也不要把 Key 提交到公开仓库。<br>
+<code>/api/bili-fans</code> 与 <code>/api/docs</code> 仍然完全公开，不需要 Key。
+</div>
 
 <h2>统一响应结构</h2>
 <p>成功：<code>{"success": true, "code": "OK", ...数据字段}</code>；失败：<code>{"success": false, "code": "错误码", "message": "说明"}</code></p>
 <table>
 <tr><th>错误码</th><th>HTTP</th><th>含义</th></tr>
 <tr><td><code>OK</code></td><td>200</td><td>成功</td></tr>
-<tr><td><code>UNAUTHORIZED</code></td><td>401</td><td>API Key 缺失或错误（仅配置了 API_KEY 时出现）</td></tr>
+<tr><td><code>UNAUTHORIZED</code></td><td>401</td><td>API Key 缺失或错误（请带 <code>X-API-Key</code> 请求头）</td></tr>
 <tr><td><code>RATE_LIMITED</code></td><td>429</td><td>请求过于频繁（每 IP 每分钟 60 次）</td></tr>
 <tr><td><code>NOT_FOUND</code></td><td>404</td><td>公司不存在</td></tr>
 <tr><td><code>INVALID_PARAM</code></td><td>400</td><td>参数不合法</td></tr>
@@ -1343,37 +1355,37 @@ th{background:#e9eef4}
 <div class="ep">
 <span class="badge">GET</span><code>/api/market</code> — 全市场快照
 <p>参数：<code>name</code>（可选，按公司名模糊查询，最多50家）</p>
-<pre>curl "https://api.nb-channel.top/api/market"
-curl "https://api.nb-channel.top/api/market?name=NB"</pre>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market"
+curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market?name=NB"</pre>
 </div>
 
 <div class="ep">
 <span class="badge">GET</span><code>/api/market/&lt;company_id&gt;</code> — 单家公司市值
-<pre>curl "https://api.nb-channel.top/api/market/1"</pre>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market/1"</pre>
 </div>
 
 <div class="ep">
 <span class="badge">GET</span><code>/api/market/&lt;company_id&gt;/history</code> — 历史K线（市值走势点）
 <p>参数：<code>days</code>（可选，默认 7，范围 1~30）</p>
-<pre>curl "https://api.nb-channel.top/api/market/1/history?days=7"</pre>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market/1/history?days=7"</pre>
 </div>
 
 <div class="ep">
 <span class="badge">GET</span><code>/api/market/export?format=csv</code> — 全市场快照导出（CSV 文件下载）
-<pre>curl "https://api.nb-channel.top/api/market/export?format=csv" -o market.csv</pre>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market/export?format=csv" -o market.csv</pre>
 </div>
 
 <div class="ep">
 <span class="badge">GET</span><code>/api/comments</code> — 最新评论（只读）
 <p>参数：<code>page</code>（默认 1）、<code>limit</code>（默认 20，最大 50）、<code>page_path</code>（可选，按页面筛选，如 comments-beta.html）</p>
 <p>响应含 <code>total</code>（总评论数）与 <code>page_count</code>（总页数，按当前 limit 计算）</p>
-<pre>curl "https://api.nb-channel.top/api/comments?page=1&limit=20"
-curl "https://api.nb-channel.top/api/comments?page_path=comments-beta.html"</pre>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/comments?page=1&limit=20"
+curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/comments?page_path=comments-beta.html"</pre>
 </div>
 
 <div class="ep">
 <span class="badge">GET</span><code>/api/stats</code> — API 用量统计（当日请求数/端点分布/限流次数）
-<pre>curl "https://api.nb-channel.top/api/stats"</pre>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/stats"</pre>
 </div>
 
 <div class="ep">

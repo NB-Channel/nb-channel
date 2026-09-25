@@ -91,41 +91,56 @@ pre .s { color: #a5d6a5; }
     </div>
 
     <h1>开发者接口 <em>API SDK</em></h1>
-    <p class="lead">NB频道的公开只读数据接口：虚拟股票市值、评论、站点统计、实时粉丝数。适合友商、插件、脚本与一切想与 NB 频道互通的小伙伴。<b>无需鉴权</b>，随取随用。</p>
+    <p class="lead">NB频道的公开只读数据接口：虚拟股票市值、评论、站点统计、实时粉丝数。适合友商、插件、脚本与一切想与 NB 频道互通的小伙伴。</p>
 
     <span class="pill">Base URL: api.nb-channel.top</span>
 
-    <h2><span class="no">1</span>端点一览</h2>
+    <h2><span class="no">1</span>关于 API Key</h2>
     <div class="card">
-        <table>
-            <tr><th>端点</th><th>说明</th></tr>
-            <tr><td><code class="m">GET /api/market</code></td><td class="desc">全市场快照：公司列表 + 总市值 + 公司数<small>?name=关键词 可选，按公司名模糊查询（最多 50 家）</small></td></tr>
-            <tr><td><code class="m">GET /api/market/&lt;公司ID&gt;</code></td><td class="desc">单家公司市值</td></tr>
-            <tr><td><code class="m">GET /api/market/&lt;ID&gt;/history?days=7</code></td><td class="desc">历史市值走势点（days 1~30）</td></tr>
-            <tr><td><code class="m">GET /api/market/export?format=csv</code></td><td class="desc">全市场 CSV 导出</td></tr>
-            <tr><td><code class="m">GET /api/comments</code></td><td class="desc">最新评论（只读）<small>?page=1&limit=20&page_path=comments-beta.html</small></td></tr>
-            <tr><td><code class="m">GET /api/stats</code></td><td class="desc">接口用量统计（开发用）</td></tr>
-            <tr><td><code class="m">GET /api/bili-fans</code></td><td class="desc">B站实时粉丝数（官网首页数据条同源，约 30 秒缓存）</td></tr>
-        </table>
+        <p><b>2026-09-25 起，主要接口需要 API Key。</b>起因是有人把接口地址写进自己网站的脚本里、每秒轮询一次，持续消耗本站服务器与数据库额度，所以给接口加上了鉴权。</p>
+        <p><b>怎么申请：</b>发邮件到 <a href="mailto:nbchannel@163.com">nbchannel@163.com</a>，或在站内评论区 @NB频道官方，说明<b>用途</b>和<b>大概的调用频率</b>即可。友商、正常做插件或数据展示的一律给。</p>
+        <p><b>怎么用：</b>请求时带上 <code>X-API-Key</code> 请求头（推荐），或加 <code>?key=</code> 参数。</p>
+        <pre>curl -H "<span class="k">X-API-Key: 你申请到的Key</span>" "<span class="s">https://api.nb-channel.top/api/market</span>"</pre>
+        <p class="note">不要用 <code>?key=</code> 把 Key 拼在网址里 —— URL 会进日志和 referrer，容易泄露。用请求头更安全。也请不要把 Key 提交到公开的代码仓库。</p>
     </div>
 
-    <h2><span class="no">2</span>快速上手</h2>
+    <h2><span class="no">2</span>端点一览</h2>
     <div class="card">
-        <pre><span class="c"># 命令行直接试</span>
-curl "<span class="s">https://api.nb-channel.top/api/market</span>"          <span class="c"># 全市场</span>
-curl "<span class="s">https://api.nb-channel.top/api/market?name=NB</span>"   <span class="c"># 找 NB 相关的公司</span>
-curl "<span class="s">https://api.nb-channel.top/api/market/1/history?days=7</span>"</pre>
-        <pre><span class="k">const</span> m = <span class="k">await</span> NBMarket.market();
+        <table>
+            <tr><th>端点</th><th>鉴权</th><th>说明</th></tr>
+            <tr><td><code class="m">GET /api/market</code></td><td>需 Key</td><td class="desc">全市场快照：公司列表 + 总市值 + 公司数<small>?name=关键词 可选，按公司名模糊查询（最多 50 家）</small></td></tr>
+            <tr><td><code class="m">GET /api/market/&lt;公司ID&gt;</code></td><td>需 Key</td><td class="desc">单家公司市值</td></tr>
+            <tr><td><code class="m">GET /api/market/&lt;ID&gt;/history?days=7</code></td><td>需 Key</td><td class="desc">历史市值走势点（days 1~30）</td></tr>
+            <tr><td><code class="m">GET /api/market/export?format=csv</code></td><td>需 Key</td><td class="desc">全市场 CSV 导出</td></tr>
+            <tr><td><code class="m">GET /api/comments</code></td><td>需 Key</td><td class="desc">最新评论（只读）<small>?page=1&limit=20&page_path=comments-beta.html</small></td></tr>
+            <tr><td><code class="m">GET /api/stats</code></td><td>需 Key</td><td class="desc">接口用量统计（开发用）</td></tr>
+            <tr><td><code class="m">GET /api/bili-fans</code></td><td><b>公开</b></td><td class="desc">B站实时粉丝数（官网首页数据条同源，约 30 秒缓存）</td></tr>
+            <tr><td><code class="m">GET /api/docs</code></td><td><b>公开</b></td><td class="desc">完整接口文档页</td></tr>
+        </table>
+        <p class="note">限流：每 IP 每分钟 60 次，超出返回 <code>429 RATE_LIMITED</code>。缺 Key 或 Key 错误返回 <code>401 UNAUTHORIZED</code>。</p>
+    </div>
+
+    <h2><span class="no">3</span>快速上手</h2>
+    <div class="card">
+        <pre><span class="c"># 命令行直接试（把 Key 换成你申请到的）</span>
+curl -H "<span class="k">X-API-Key: 你的Key</span>" "<span class="s">https://api.nb-channel.top/api/market</span>"          <span class="c"># 全市场</span>
+curl -H "<span class="k">X-API-Key: 你的Key</span>" "<span class="s">https://api.nb-channel.top/api/market?name=NB</span>"   <span class="c"># 找 NB 相关的公司</span>
+curl -H "<span class="k">X-API-Key: 你的Key</span>" "<span class="s">https://api.nb-channel.top/api/market/1/history?days=7</span>"
+
+<span class="c"># 公开接口，不需要 Key</span>
+curl "<span class="s">https://api.nb-channel.top/api/bili-fans</span>"</pre>
+        <pre><span class="k">NBMarket</span>.setApiKey(<span class="s">'你申请到的 Key'</span>);   <span class="c">// 先填 Key</span>
+<span class="k">const</span> m = <span class="k">await</span> NBMarket.market();
 console.log(<span class="s">'总市值'</span>, m.total_market_value, <span class="s">'公司数'</span>, m.count);</pre>
     </div>
 
-    <h2><span class="no">3</span>语言示例包</h2>
+    <h2><span class="no">4</span>语言示例包</h2>
     <div class="dl">
         <a href="js_example.js" download>⬇ JavaScript 示例（js_example.js）</a>
         <a href="python_example.py" download>⬇ Python 示例（python_example.py）</a>
         <a href="README.md" download>⬇ 使用说明（README.md）</a>
     </div>
-    <p class="note">浏览器直接用 <code>&lt;script src="js_example.js"&gt;&lt;/script&gt;</code> 即可获得全局 <code>window.NBMarket</code>；Node.js 与 Python 用法见各文件头部注释。</p>
+    <p class="note">浏览器直接用 <code>&lt;script src="js_example.js"&gt;&lt;/script&gt;</code> 即可获得全局 <code>window.NBMarket</code>，调 <code>setApiKey()</code> 填入 Key 后即可使用；Node.js 与 Python 用法见各文件头部注释（Python 用 <code>NBMarket(api_key="...")</code>）。</p>
 
     <div class="cta">
         <a class="btn" href="https://api.nb-channel.top/api/docs" target="_blank" rel="noopener noreferrer">查看完整接口文档 ↗</a>

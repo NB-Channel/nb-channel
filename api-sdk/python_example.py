@@ -3,6 +3,12 @@
 NB频道 市值 API - Python 示例
 依赖：requests（pip install requests）；不想装 requests 可用标准库 urllib 版本（见文件底部注释）
 用法：见 README.md
+
+⚠️ 需要 API Key（2026-09-25 起）
+   /api/market、/api/comments、/api/stats 需带 X-API-Key 请求头，否则返回 401。
+   向站长申请后这样用：
+       nb = NBMarket(api_key="你申请到的 Key")
+   /api/bili-fans 与 /api/docs 仍然完全公开，不需要 Key。
 """
 import requests
 
@@ -15,11 +21,15 @@ class NBMarket:
         self.api_key = api_key
         self.timeout = timeout
 
+    def _headers(self):
+        """需要 Key 的端点用这个；公开端点（bili_fans / docs）不必带。"""
+        return {"X-API-Key": self.api_key} if self.api_key else {}
+
     def _get(self, path, **params):
-        headers = {}
-        if self.api_key:
-            headers["X-API-Key"] = self.api_key
-        resp = requests.get(self.base_url + path, params=params, headers=headers, timeout=self.timeout)
+        resp = requests.get(self.base_url + path, params=params,
+                            headers=self._headers(), timeout=self.timeout)
+        if resp.status_code == 401:
+            raise RuntimeError("API Key 缺失或错误：请用 NBMarket(api_key='...') 传入申请到的 Key")
         resp.raise_for_status()
         return resp.json()
 
@@ -37,9 +47,20 @@ class NBMarket:
 
     def export_csv(self):
         """全市场 CSV 导出，返回 CSV 文本。"""
-        resp = requests.get(self.base_url + "/api/market/export", params={"format": "csv"}, timeout=self.timeout)
+        # 注意:这个端点也要 Key —— 之前漏了请求头,会直接被 401 挡掉
+        resp = requests.get(self.base_url + "/api/market/export",
+                            params={"format": "csv"},
+                            headers=self._headers(), timeout=self.timeout)
+        if resp.status_code == 401:
+            raise RuntimeError("API Key 缺失或错误：请用 NBMarket(api_key='...') 传入申请到的 Key")
         resp.raise_for_status()
         return resp.text
+
+    def bili_fans(self):
+        """B站实时粉丝数（公开端点，不需要 Key）。"""
+        resp = requests.get(self.base_url + "/api/bili-fans", timeout=self.timeout)
+        resp.raise_for_status()
+        return resp.json()
 
     def comments(self, page=1, limit=20, page_path=None):
         """最新评论（只读）。"""
