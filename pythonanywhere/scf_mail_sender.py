@@ -7,6 +7,18 @@
 #   EMAIL_AUTH = 163 SMTP 授权码
 #   SUPA_URL   = https://pbaafgjkwdbwcmsikcmg.supabase.co
 #   SUPA_KEY   = anon key(防轰炸靠 DB 限频 + 本函数内存限频)
+#
+# ============================================================
+# v2 (2026-09-25) 新增 Origin 白名单
+# ------------------------------------------------------------
+# 原因:函数 URL 是公开的,任何网站都能直接调用它来消耗 163 邮箱额度。
+#       已发现 utw.pages.dev 的 script.js 里带有 setInterval(...,1000)
+#       持续调用本函数的代码(其注释自述为"浪费NB频道邮箱额度")。
+# 规则:请求头 Origin 存在且不在白名单内 → 直接 403,不发信、不写库。
+#       浏览器不允许 JS 伪造 Origin,所以对方无法绕过。
+# 注意:这只挡浏览器。服务端代理调用不带 Origin,靠 DB 层的
+#       每 IP 20 封/天 + 全站 200 封/天(sql/URGENT4)兜底。
+# ============================================================
 import json
 import os
 import hashlib
@@ -18,6 +30,35 @@ import urllib.request
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
+
+# ---------- Origin 白名单 ----------
+# 只允许 NB频道 自己的域名调用本函数。
+ALLOWED_ORIGINS = {
+    'https://nb-channel.top',
+    'https://www.nb-channel.top',
+    'https://github.nb-channel.top',
+    'https://cloudflare.nb-channel.top',
+    'https://pythonanywhere.nb-channel.top',
+    'https://api.nb-channel.top',
+}
+# 完全没有 Origin 头的请求(服务端脚本、curl、探活)是否放行。
+# 保持 True:否则你自己的自动化脚本会挂。
+ALLOW_EMPTY_ORIGIN = True
+# Origin: null 是否放行。浏览器从硬盘直接打开 HTML(file://)时会发 null,
+# 但沙箱 iframe / data: 页面也会发 null,存在被绕过的可能,所以默认 False。
+# 若你需要在本地双击 HTML 文件调试,把它改成 True。
+ALLOW_NULL_ORIGIN = False
+
+# 被拦记录(仅用于日志观测,进程重启即清零)
+_blocked = {'n': 0}
+
+
+def _origin_allowed(origin):
+    if not origin:
+        return ALLOW_EMPTY_ORIGIN
+    if origin == 'null':
+        return ALLOW_NULL_ORIGIN
+    return origin in ALLOWED_ORIGINS
 
 # ---------- 内存限频(进程内;配合 Supabase store_email_code 的限频双保险) ----------
 _rt = {}
@@ -127,6 +168,18 @@ def masked_email(e):
 
 @app.route('/', methods=['POST'])
 def index():
+    # ---------- Origin 白名单校验(第一道,也是最有效的一道) ----------
+    origin = (request.headers.get('Origin') or '').strip()
+    if not _origin_allowed(origin):
+        ip0 = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip() or \
+              request.headers.get('X-Real-IP') or 'unknown'
+        _blocked['n'] += 1
+        # 打在 SCF 日志里,方便回看是谁在盗用
+        print('[BLOCKED-ORIGIN] origin=%r ip=%s ua=%r total_blocked=%d'
+              % (origin, ip0, (request.headers.get('User-Agent') or '')[:120], _blocked['n']),
+              flush=True)
+        return jsonify({'ok': False, 'message': '来源不被允许'}), 403
+
     data = request.get_json(silent=True) or {}
     kind = str(data.get('kind') or '').strip().lower()
     email = str(data.get('email') or '').strip().lower()
