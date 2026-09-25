@@ -32,25 +32,62 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 # ---------- Origin 白名单 ----------
-# 只允许 NB频道 自己的域名调用本函数。
-ALLOWED_ORIGINS = {
-    'https://nb-channel.top',
-    'https://www.nb-channel.top',
-    'https://github.nb-channel.top',
-    'https://cloudflare.nb-channel.top',
-    'https://pythonanywhere.nb-channel.top',
-    'https://api.nb-channel.top',
+# 只允许 NB频道 自己的地址调用本函数。
+#
+# ⚠️ 2026-09-25 修正(上一版把一个域名漏了,导致正常用户换设备登不上):
+#    本站实际有多个入口,而且部分入口会 302 跳到另一个域名:
+#      github.nb-channel.top          主站
+#      cloudflare.nb-channel.top      镜像
+#      nb-channel.top                 导航
+#      pythonanywhere.nb-channel.top  → 302 跳到 nbchannel.pythonanywhere.com
+#      api.nb-channel.top             → 302 跳到 nbchannel.pythonanywhere.com
+#      nb-channel.pages.dev           Cloudflare Pages 默认域名
+#    页面一旦跳到 nbchannel.pythonanywhere.com,后续请求的 Origin 就是它 ——
+#    上一版没收录这个域名,于是这些入口的用户全被拦。
+#
+# 改成「主机名精确匹配 + 域名后缀匹配」:以后新增子域(如 cdn.nb-channel.top)
+# 不用再改代码。
+ALLOWED_HOSTS = {
+    'nb-channel.top',
+    'www.nb-channel.top',
+    'github.nb-channel.top',
+    'cloudflare.nb-channel.top',
+    'pythonanywhere.nb-channel.top',
+    'api.nb-channel.top',
+    'nbchannel.pythonanywhere.com',   # PythonAnywhere 原始域名(镜像实际落点)
+    'nb-channel.pages.dev',           # Cloudflare Pages 默认域名
+    'nb-channel.github.io',           # GitHub Pages 原始域名
+    'localhost',                      # 本地开发
+    '127.0.0.1',
 }
+# 允许的域名后缀(必须带前导点 —— 这样 evil-nb-channel.top 之类不会被误放行)
+ALLOWED_HOST_SUFFIXES = ('.nb-channel.top', '.nb-channel.pages.dev')
+
 # 完全没有 Origin 头的请求(服务端脚本、curl、探活)是否放行。
 # 保持 True:否则你自己的自动化脚本会挂。
 ALLOW_EMPTY_ORIGIN = True
-# Origin: null 是否放行。浏览器从硬盘直接打开 HTML(file://)时会发 null,
-# 但沙箱 iframe / data: 页面也会发 null,存在被绕过的可能,所以默认 False。
-# 若你需要在本地双击 HTML 文件调试,把它改成 True。
-ALLOW_NULL_ORIGIN = False
+# Origin: null 是否放行。
+# 浏览器从硬盘直接打开 HTML(file://)、以及部分 APP WebView 会发 null。
+# 上一版设为 False,是怕沙箱 iframe/data: 页面借 null 绕过 —— 但实测代价太大
+# (正常用户被挡在登录外,而且报错信息看不懂)。现在改为 True:
+# 已知的攻击方用的是 https://utw.pages.dev 这种普通来源,照样被拦。
+ALLOW_NULL_ORIGIN = True
 
 # 被拦记录(仅用于日志观测,进程重启即清零)
 _blocked = {'n': 0}
+
+
+def _origin_host(origin):
+    """从 Origin 头里取出主机名:去掉协议、路径、端口,统一小写。"""
+    if not origin:
+        return ''
+    host = origin.split('://', 1)[-1]
+    host = host.split('/', 1)[0]
+    if host.startswith('['):                 # IPv6 字面量 [::1]:8080
+        host = host.split(']', 1)[0] + ']'
+    else:
+        host = host.split(':', 1)[0]
+    return host.strip().lower()
 
 
 def _origin_allowed(origin):
@@ -58,7 +95,12 @@ def _origin_allowed(origin):
         return ALLOW_EMPTY_ORIGIN
     if origin == 'null':
         return ALLOW_NULL_ORIGIN
-    return origin in ALLOWED_ORIGINS
+    host = _origin_host(origin)
+    if not host:
+        return False
+    if host in ALLOWED_HOSTS:
+        return True
+    return any(host.endswith(s) for s in ALLOWED_HOST_SUFFIXES)
 
 # ---------- 内存限频(进程内;配合 Supabase store_email_code 的限频双保险) ----------
 _rt = {}
@@ -170,11 +212,15 @@ def masked_email(e):
 def index():
     # ---------- Origin 白名单校验(第一道,也是最有效的一道) ----------
     origin = (request.headers.get('Origin') or '').strip()
-    if not _origin_allowed(origin):
-        ip0 = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip() or \
-              request.headers.get('X-Real-IP') or 'unknown'
+    ip0 = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip() or \
+          request.headers.get('X-Real-IP') or 'unknown'
+    ok_origin = _origin_allowed(origin)
+    # 每次请求都记一行 —— 这样万一白名单漏了域名,看日志就能立刻发现,
+    # 不用等用户反馈「来源不被允许」。本端点只在要验证码时被调用,量很小。
+    print('[ORIGIN] %s origin=%r host=%r ip=%s' % (
+        'ALLOW' if ok_origin else 'BLOCK', origin, _origin_host(origin), ip0), flush=True)
+    if not ok_origin:
         _blocked['n'] += 1
-        # 打在 SCF 日志里,方便回看是谁在盗用
         print('[BLOCKED-ORIGIN] origin=%r ip=%s ua=%r total_blocked=%d'
               % (origin, ip0, (request.headers.get('User-Agent') or '')[:120], _blocked['n']),
               flush=True)
