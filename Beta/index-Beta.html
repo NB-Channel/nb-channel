@@ -1047,7 +1047,8 @@ html { -webkit-text-size-adjust: 100%; }
         </div>
         <div class="hero-media">
             <div class="hero-video">
-                <video src="https://videos.tuchuangyun.top/autoupload/f/2ybw2nnc3ldHerixYxPOdCfNcKcqEnRmcljopnyJoMs/20260316/5rPu/LOGO%EF%BC%88%E6%9C%80%E7%BB%88%EF%BC%89.mp4" autoplay muted loop playsinline disablePictureInPicture></video>
+                <!-- LOGO 动画:自托管在仓库 videos/ 下,不再依赖外部图床 -->
+                <video autoplay muted loop playsinline disablePictureInPicture preload="auto" poster="../videos/nb-logo-poster.jpg"><source src="../videos/nb-logo.mp4" type="video/mp4"></video>
             </div>
         </div>
     </div>
@@ -2001,7 +2002,11 @@ html { -webkit-text-size-adjust: 100%; }
         function show() { vid.classList.add('ready'); }
         if (vid.readyState >= 2) { show(); return; }
         vid.addEventListener('loadeddata', show);
-        vid.addEventListener('error', function () { vid.classList.add('ready'); });
+        vid.addEventListener('error', show);
+        // 用 <source> 时,某个源加载失败会在 <source> 上派发 error,而不是 <video> ——
+        // 不挂这个监听,视频挂了要等 6 秒兜底才显形(显出来的是 poster 静态图)
+        var srcs = vid.querySelectorAll('source');
+        for (var i = 0; i < srcs.length; i++) { srcs[i].addEventListener('error', show); }
         setTimeout(show, 6000);   // 兜底:网络极慢/自动播放被拦时不至于一直透明
     })();
 
