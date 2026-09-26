@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -604,6 +604,13 @@
     }
 
     async function login(username, password) {
+        // 内联登录已停用:服务端不再允许「只凭密码换令牌」——
+        // 那会绕过邮箱验证码,任何人拿到密码就能直接登录。
+        // 统一跳转到登录页(与 Beta 版评论区的做法一致),走邮箱验证码流程。
+        location.href = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
+        throw new Error('正在跳转到登录页,请在那里完成登录…');
+    }
+    async function _unused_login_old(username, password) {
         const { data: _loginRes, error } = await supabaseClient.rpc('login_user2', {
             input_username: username,
             input_password: password

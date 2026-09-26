@@ -1483,12 +1483,13 @@ html { -webkit-text-size-adjust: 100%; }
                 btn.disabled = false; btn.textContent = '注册并登录';
                 return;
             }
-            // 注册成功,自动登录(签发会话令牌)
-            return supabaseClient.rpc('login_user2', { input_username: username, input_password: password }).then(function (lg) {
-                if (!lg.data || !lg.data.ok) { errorDiv.innerText = '注册成功但自动登录失败,请手动登录'; btn.disabled = false; btn.textContent = '注册并登录'; return; }
-                try { localStorage.setItem('nb_session', lg.data.token); } catch (e) {}
-                onLoginSuccess({ id: lg.data.id, username: username });
-            });
+            // 注册成功 → 用 register_finish 返回的令牌直接登录
+            // (原先这里再调一次 login_user2 拿令牌 —— 那个接口只要密码就签发令牌,
+            //  等于绕过了邮箱验证码,已被服务端收紧不再返回 token。注册流程本身
+            //  已经验过验证码,所以由 register_finish 签发是安全的。)
+            if (!res.data.token) { errorDiv.innerText = '注册成功但签发登录状态失败,请手动登录'; btn.disabled = false; btn.textContent = '注册并登录'; return; }
+            try { localStorage.setItem('nb_session', res.data.token); } catch (e) {}
+            onLoginSuccess({ id: res.data.id, username: username });
         }).catch(function (e) { errorDiv.innerText = e.message || '注册失败'; btn.disabled = false; btn.textContent = '注册并登录'; });
     }
 
