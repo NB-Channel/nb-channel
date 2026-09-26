@@ -1623,7 +1623,7 @@
         data.rows.forEach(function (r) { window.__bannedIpsMap[r.ip] = true; });
         box.style.display = 'block';
         list.innerHTML = data.rows.map(function (r) {
-            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #e2e8f0;font-size:0.86rem;"><span style="color:#6c757d;word-break:break-all;flex:1;"><b style="color:#333;">' + r.ip + '</b> <span data-geo="' + r.ip + '" style="color:#8a94a6;font-size:0.75rem;"></span> · ' + (r.reason || '') + ' · <span style="color:#8a94a6;">' + (r.created_at || '') + '</span></span><button class="unban-ip-btn" data-ip="' + r.ip + '" style="border:none;background:#6c757d;color:#fff;border-radius:20px;padding:2px 12px;font-size:0.75rem;cursor:pointer;">解封</button></div>';
+            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #e2e8f0;font-size:0.86rem;"><span style="color:#6c757d;word-break:break-all;flex:1;"><b style="color:#333;">' + r.ip + '</b> <span data-geo="' + r.ip + '" style="color:#8a94a6;font-size:0.75rem;"></span> · ' + (r.reason || '') + ' · <span style="color:#8a94a6;">' + formatDate(r.created_at) + '</span></span><button class="unban-ip-btn" data-ip="' + r.ip + '" style="border:none;background:#6c757d;color:#fff;border-radius:20px;padding:2px 12px;font-size:0.75rem;cursor:pointer;">解封</button></div>';
         }).join('');
         fillGeo(document.getElementById('topIps'));
         fillGeo(document.getElementById('bannedIpsList'));

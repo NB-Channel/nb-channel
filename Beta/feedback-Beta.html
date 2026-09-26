@@ -1687,7 +1687,7 @@ html { -webkit-text-size-adjust: 100%; }
                     : '<span class="fb-tag sug">建议</span>';
                 var st = x.status || 'pending';
                 var stTag = '<span class="fb-tag ' + st + '">' + (STATUS_TEXT[st] || st) + '</span>';
-                var when = (x.created_at || '').replace('T', ' ').slice(0, 16);
+                var when = fmtBj(x.created_at);
                 var note = x.admin_note ? '<div class="fb-mine-meta">官方回复:' + esc(x.admin_note) + '</div>' : '';
                 return '<div class="fb-mine-item">' +
                     '<div class="fb-mine-title">' + kindTag + stTag + esc(x.title) + '</div>' +
@@ -1701,6 +1701,27 @@ html { -webkit-text-size-adjust: 100%; }
         return String(t == null ? '' : t).replace(/[&<>"']/g, function (m) {
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
         });
+    }
+    // 把后端返回的 ISO 时间(UTC,如 2026-09-26T04:40:32.123+00:00)按【北京时间】显示。
+    // 之前的写法是 (x.created_at||'').replace('T',' ').slice(0,16) —— 直接切字符串,
+    // 切出来的是 UTC 时间,所以显示比实际慢 8 小时。必须解析成 Date 再按北京时区格式化。
+    function fmtBj(iso) {
+        if (!iso) return '';
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return String(iso).replace('T', ' ').slice(0, 16);  // 解析不了就原样
+        try {
+            return d.toLocaleString('zh-CN', {
+                timeZone: 'Asia/Shanghai',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', hour12: false
+            }).replace(/\//g, '-');
+        } catch (e) {
+            // 老浏览器不支持 timeZone 选项时,用固定的 +8 偏移兜底
+            var bj = new Date(d.getTime() + 8 * 3600 * 1000);
+            var p = function (n) { return (n < 10 ? '0' : '') + n; };
+            return bj.getUTCFullYear() + '-' + p(bj.getUTCMonth() + 1) + '-' + p(bj.getUTCDate())
+                 + ' ' + p(bj.getUTCHours()) + ':' + p(bj.getUTCMinutes());
+        }
     }
 
     // ---------- 匿名勾选时的名字联动 ----------

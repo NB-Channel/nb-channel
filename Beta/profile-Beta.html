@@ -1695,7 +1695,18 @@ function uiHref(p) { return (p && p.indexOf('login.html') === 0) ? '/' + p : p; 
 
         // 主页访问量（他人访问时 +1；同一天同一访客只计一次）
         if (!isOwner) {
-            const visitKey = 'nb_visit_' + viewUid + '_' + new Date().toISOString().slice(0, 10);
+            // 日期必须按【北京时间】取:原先用 new Date().toISOString().slice(0,10),
+            // 那是 UTC 日期 —— 分界点会落在北京早上 8 点(0~8 点之间会被算成"昨天",
+            // 导致同一天多记一次访问)。与 index.html 里统计访问量的写法保持一致。
+            let bjDay;
+            try {
+                bjDay = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+            } catch (e) {
+                const bj = new Date(Date.now() + 8 * 3600 * 1000);
+                const p2 = (n) => (n < 10 ? '0' : '') + n;
+                bjDay = bj.getUTCFullYear() + '-' + p2(bj.getUTCMonth() + 1) + '-' + p2(bj.getUTCDate());
+            }
+            const visitKey = 'nb_visit_' + viewUid + '_' + bjDay;
             if (!sessionStorage.getItem(visitKey)) {
                 supabaseClient.rpc('visit_profile', { p_user_id: viewUid , p_session: localStorage.getItem('nb_session')}).then(() => {
                     sessionStorage.setItem(visitKey, '1');
