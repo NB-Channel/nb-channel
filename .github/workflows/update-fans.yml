@@ -1,0 +1,41 @@
+name: Auto Update Fans
+
+# 把 B站 粉丝数写进 data/fans.json,首页从静态文件读 —— 这样刷粉丝数
+# 打到的是 GitHub Pages 的 CDN,不再消耗 PythonAnywhere 后端。
+#
+# 关于运行频率与 Actions 配额(私有仓库 2000 分钟/月):
+#   本任务刻意【不装依赖】—— update_fans.py 的取数走标准库直连,
+#   省掉 pip install,单次运行约 15~30 秒。
+#   每小时一次 ≈ 24 次/天 × 0.5 分 ≈ 12 分/天 ≈ 360 分/月,余量充足。
+#   想更快就把 cron 改成 '*/30 * * * *'(每 30 分钟),约 720 分/月。
+#   不要改成 '*/10' —— 那会到 2000 分/月以上,吃掉其他工作流的额度。
+
+on:
+  schedule:
+    - cron: '0 * * * *'        # 每小时整点
+  workflow_dispatch:           # 允许手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # 不装 bilibili-api-python:脚本会走标准库直连 B站 公开接口,
+      # 既省配额又少一个可能失效的依赖。
+      - name: Run update script
+        run: python update_fans.py
+
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add data/fans.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto update fans"
+          git push

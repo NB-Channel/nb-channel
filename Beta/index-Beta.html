@@ -1969,12 +1969,39 @@ html { -webkit-text-size-adjust: 100%; }
             var dur = Math.min(600 + Math.abs(n - cur) * 6, 2600);
             anim(fansEl, cur, n, dur, null);
         }
-        function pollFans() {
-            if (document.hidden) return;   // 标签页在后台时不打扰
-            fetch('https://nbchannel.pythonanywhere.com/api/bili-fans', { cache: 'no-store' })
+        // ===== 粉丝数:优先读静态文件,失败或过期才回退到接口 =====
+        // 为什么改:
+        //   原先直接请求 PythonAnywhere 的 /api/bili-fans —— 那个端点不能加 Key
+        //   (首页要调它,加 Key 就得把 Key 写进公开 HTML),所以谁都能刷,
+        //   而 PythonAnywhere 免费版每个请求约 1.1 秒 worker 开销,刷多了会拖垮后端。
+        //   现在改读 data/fans.json(由 .github/workflows/update-fans.yml 每小时
+        //   更新),请求打到 GitHub Pages 的 CDN,被刷不消耗任何后端资源。
+        //   接口保留为兜底:文件缺失、或文件超过 6 小时没更新时才回退。
+        var FANS_STATIC = '/data/fans.json';
+        var FANS_API = 'https://nbchannel.pythonanywhere.com/api/bili-fans';
+        var FANS_STALE_MS = 6 * 60 * 60 * 1000;   // 静态文件超过 6 小时视为过期
+
+        function fallbackFans() {
+            fetch(FANS_API, { cache: 'no-store' })
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (j) { if (j) applyFans(parseInt(j.follower, 10)); })
                 .catch(function () {});
+        }
+        function pollFans() {
+            if (document.hidden) return;   // 标签页在后台时不打扰
+            // 不加 cache-busting 参数:GitHub Pages 自带 max-age 缓存,
+            // 让浏览器/CDN 复用即可,轮询本身几乎不产生请求。
+            fetch(FANS_STATIC)
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (j) {
+                    var n = j && parseInt(j.follower, 10);
+                    if (!(n > 0)) { fallbackFans(); return; }
+                    // 文件太旧(定时任务可能挂了)→ 用接口拿实时值
+                    var t = j.updated_at_iso ? Date.parse(j.updated_at_iso) : 0;
+                    if (t && (Date.now() - t) > FANS_STALE_MS) { fallbackFans(); return; }
+                    applyFans(n);
+                })
+                .catch(function () { fallbackFans(); });
         }
         if ('IntersectionObserver' in window) {
             var statsBox = document.querySelector('.stats');
