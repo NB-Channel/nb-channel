@@ -1225,33 +1225,19 @@ html { -webkit-text-size-adjust: 100%; }
         clearTimeout(toastTimer);
         toastTimer = setTimeout(function () { t.classList.remove('show'); }, 4200);
     }
-    // 统一把 RPC 失败的原因说清楚
-    // —— 原来只显示 d.message || '生成失败',把 res.error / status / hint 全吞掉了,
-    //    排查时只能看到一句「生成失败」,什么线索都没有。
-    //    实测踩过的坑:PGRST202(参数对不上)时 data 是 null、message 为空,
-    //    结果只显示「生成失败」—— 而 PostgREST 其实在 hint 里
-    //    写清了它期望的函数签名。
-    function exFail(prefix, res) {
-        var d   = (res && res.data)  || {};
-        var err = (res && res.error) || null;
-        var msg  = d.message || (err && err.message) || '';
-        var code = (err && err.code) || '';
-        var hint = (err && err.hint) || '';
-        var st   = (res && res.status) ? ('HTTP ' + res.status) : '';
-
-        try {
-            console.log('[' + prefix + '] 原始返回 = ' + JSON.stringify(res));
-        } catch (e) {
-            console.log('[' + prefix + '] 原始返回(无法序列化) = ', res);
-        }
-
-        if (!msg && !code) {
-            msg = '返回内容为空' + (st ? '（' + st + '）' : '');
-        }
-        var out = prefix + '：' + esc(msg);
-        if (code) out += '（' + esc(code) + '）';
-        if (hint) out += '<br><span style="opacity:.75;font-size:.85em;">' + esc(hint) + '</span>';
-        showToast(out, false);
+    // 把 RPC 抛出来的异常拼成人能看懂的一句话
+    // ⚠️ callRpc() 的约定（别再踩）：
+    //      · 成功 → 直接 resolve 函数返回的 jsonb（不是 {data,error} 包！）
+    //      · 失败 → reject。可能是 PostgrestError（有 code/hint/details），
+    //               也可能是 new Error(message)
+    //    所以 .then 里拿到的 r 就是结果本身，写 r.data 永远是 undefined。
+    function exErrText(e) {
+        if (!e) return '未知错误';
+        var s = e.message || String(e);
+        if (e.code) s += '（' + e.code + '）';
+        if (e.details) s += ' — ' + e.details;
+        if (e.hint) s += ' — ' + e.hint;
+        return s;
     }
     function callRpc(name, params) {
         var user = getUser();
@@ -1490,6 +1476,7 @@ html { -webkit-text-size-adjust: 100%; }
 
     // ==================== 🔄 NB币 ⇄ U币 ====================
     // 汇率、手续费、额度全部在服务端(exchange_config 表),这里不参与任何计算。
+    // ⚠️ callRpc 成功时直接给函数结果本身（见上面 exErrText 的注释）
     function loadExchange() {
         if (!getUser()) return;
 
@@ -1497,9 +1484,8 @@ html { -webkit-text-size-adjust: 100%; }
         var box = document.getElementById('exList');
         if (box) {
             callRpc('get_my_exchange_codes', { p_limit: 20 })
-                .then(function (res) {
-                    var d = res.data || {};
-                    if (!d.success) { box.innerHTML = '<div class="bk-help">' + esc(d.message || '读取失败') + '</div>'; return; }
+                .then(function (d) {
+                    d = d || {};
                     var list = d.list || [];
                     if (!list.length) { box.innerHTML = '<div class="bk-help">还没有兑换记录</div>'; return; }
                     box.innerHTML = list.map(function (x) {
@@ -1524,7 +1510,7 @@ html { -webkit-text-size-adjust: 100%; }
                             '</span></div>';
                     }).join('');
                 }).catch(function (e) {
-                    box.innerHTML = '<div class="bk-help">读取失败:' + esc((e && e.message) || e) + '</div>';
+                    box.innerHTML = '<div class="bk-help">读取失败：' + esc(exErrText(e)) + '</div>';
                 });
         }
 
@@ -1532,9 +1518,8 @@ html { -webkit-text-size-adjust: 100%; }
         var ub = document.getElementById('ueList');
         if (ub) {
             callRpc('get_my_u_exchange', {})
-                .then(function (res) {
-                    var d = res.data || {};
-                    if (!d.success) { ub.innerHTML = '<div class="bk-help">' + esc(d.message || '读取失败') + '</div>'; return; }
+                .then(function (d) {
+                    d = d || {};
                     var list = d.list || [];
                     if (!list.length) { ub.innerHTML = '<div class="bk-help">还没有换过 U币</div>'; return; }
                     ub.innerHTML = list.map(function (x) {
@@ -1548,7 +1533,7 @@ html { -webkit-text-size-adjust: 100%; }
                             '</span><span class="bk-la"></span></div>';
                     }).join('');
                 }).catch(function (e) {
-                    ub.innerHTML = '<div class="bk-help">读取失败:' + esc((e && e.message) || e) + '</div>';
+                    ub.innerHTML = '<div class="bk-help">读取失败：' + esc(exErrText(e)) + '</div>';
                 });
         }
     }
@@ -1570,10 +1555,9 @@ html { -webkit-text-size-adjust: 100%; }
                      '没领成可以在列表里作废,NB币会退回。')) return;
 
         callRpc('create_exchange_code', { p_nb_amount: amt, p_utw_name: utw || null })
-            .then(function (res) {
-            var d = res.data || {};
-            if (!d.success) { exFail('生成兑换码失败', res); return; }
-            showToast('兑换码已生成', true);
+            .then(function (d) {
+            d = d || {};
+            showToast('✅ 兑换码已生成', true);
             var box = document.getElementById('exCreated');
             if (box) {
                 box.innerHTML = '✅ 已生成:' +
@@ -1591,10 +1575,7 @@ html { -webkit-text-size-adjust: 100%; }
             loadExchange();
             loadBalance();
             loadBank();
-        }).catch(function (e) {
-            console.error('[create_exchange_code] 抛异常 =', e);
-            showToast('生成兑换码异常：' + esc((e && e.message) || String(e)), false);
-        });
+        }).catch(function (e) { showToast('生成兑换码失败：' + esc(exErrText(e)), false); });
     }
 
     // ---- 作废兑换码(NB币退回) ----
@@ -1602,16 +1583,11 @@ html { -webkit-text-size-adjust: 100%; }
         if (!getUser()) return;
         if (!confirm('确认作废这个兑换码?\n\n' + code + '\n\n作废后 NB币 会退回你的余额。')) return;
         callRpc('cancel_exchange_code', { p_code: code })
-            .then(function (res) {
-                var d = res.data || {};
-                if (!d.success) { exFail('作废失败', res); return; }
-                showToast(d.message || '已作废', true);
+            .then(function (d) {
+                showToast('✅ ' + esc((d && d.message) || '已作废'), true);
                 loadExchange();
                 loadBalance();
-            }).catch(function (e) {
-                console.error('[cancel_exchange_code] 抛异常 =', e);
-                showToast('作废异常：' + esc((e && e.message) || String(e)), false);
-            });
+            }).catch(function (e) { showToast('作废失败：' + esc(exErrText(e)), false); });
     }
 
     // ---- U币 → NB币:提交,立即到账 ----
@@ -1633,19 +1609,14 @@ html { -webkit-text-size-adjust: 100%; }
         if (!confirm('确认兑换?\n\n' + inCode + ' U币 → ' + Math.floor(inCode * 1000) + ' NB币\n兑换码:' + code +
                      '\n\n点确定后 NB币 立即到账。')) return;
         callRpc('submit_u_exchange', { p_u_code: code, p_u_amount: amt })
-            .then(function (res) {
-            var d = res.data || {};
-            if (!d.success) { exFail('兑换失败', res); return; }
-            showToast(d.message || ('已到账 ' + Math.floor(inCode * 1000) + ' NB币'), true);
+            .then(function (d) {
+            showToast('✅ ' + esc((d && d.message) || ('已到账 ' + Math.floor(inCode * 1000) + ' NB币')), true);
             if (amtEl) amtEl.value = '';
             if (codeEl) codeEl.value = '';
             loadExchange();
             loadBalance();
             loadBank();
-        }).catch(function (e) {
-            console.error('[submit_u_exchange] 抛异常 =', e);
-            showToast('兑换异常：' + esc((e && e.message) || String(e)), false);
-        });
+        }).catch(function (e) { showToast('兑换失败：' + esc(exErrText(e)), false); });
     }
 
     // ===== 操作(与经典版 RPC 完全一致) =====
