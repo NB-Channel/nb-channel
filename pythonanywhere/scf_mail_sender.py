@@ -45,6 +45,7 @@ import time
 import smtplib
 import ssl
 import urllib.request
+import urllib.error          # supa_rpc 里要 catch urllib.error.HTTPError,显式导入更稳
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
