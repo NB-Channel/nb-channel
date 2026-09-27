@@ -24,3 +24,8 @@ gen_new.ps1
 app/keystore/
 *.keystore
 *.jks
+
+# Python 编译产物不该入库（之前 py_compile 误提交过两个 .pyc）
+__pycache__/
+*.pyc
+*.pyo
