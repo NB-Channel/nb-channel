@@ -302,6 +302,7 @@
         <button id="tabProduct" class="tab-btn">🚩 作品举报</button>
         <button id="tabAnnounce" class="tab-btn">📢 公告管理</button>
         <button id="tabFeedback" class="tab-btn">📮 漏洞/建议反馈</button>
+        <button id="tabExchange" class="tab-btn">💱 兑换记录</button>
         <button id="tabApi" class="tab-btn">📊 API 日志</button>
     </div>
 
@@ -378,6 +379,70 @@
         <div id="fbPager" style="display:flex;gap:10px;justify-content:center;margin:18px 0;"></div>
     </div>
 
+    <!-- ==================== 兑换记录（NB币 ⇄ U币） ==================== -->
+    <div id="exchangePanel" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:16px;">
+            <div class="fb-stat" data-ex="nb2u"><div class="fb-stat-n" id="exSNb2u">-</div><div class="fb-stat-l">NB币→U币</div></div>
+            <div class="fb-stat" data-ex="u2nb"><div class="fb-stat-n" id="exSU2nb">-</div><div class="fb-stat-l">U币→NB币</div></div>
+            <div class="fb-stat" data-ex="pending"><div class="fb-stat-n" id="exSPending">-</div><div class="fb-stat-l">待领取</div></div>
+            <div class="fb-stat" data-ex="used"><div class="fb-stat-n" id="exSUsed">-</div><div class="fb-stat-l">已领取</div></div>
+            <div class="fb-stat" data-ex="expired"><div class="fb-stat-n" id="exSExpired">-</div><div class="fb-stat-l">已过期</div></div>
+            <div class="fb-stat" data-ex=""><div class="fb-stat-n" id="exSAll">-</div><div class="fb-stat-l">全部</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;">
+            <div class="card" style="padding:12px 16px;">
+                <div style="font-size:0.78rem;color:#8a94a6;">NB币 出去（换U币）</div>
+                <div id="exOut" style="font-size:1.25rem;font-weight:800;color:#e8590c;">-</div>
+            </div>
+            <div class="card" style="padding:12px 16px;">
+                <div style="font-size:0.78rem;color:#8a94a6;">NB币 进来（换U币）</div>
+                <div id="exIn" style="font-size:1.25rem;font-weight:800;color:#2f9e44;">-</div>
+            </div>
+            <div class="card" style="padding:12px 16px;">
+                <div style="font-size:0.78rem;color:#8a94a6;">手续费收入</div>
+                <div id="exFee" style="font-size:1.25rem;font-weight:800;color:#1971c2;">-</div>
+            </div>
+            <div class="card" style="padding:12px 16px;">
+                <div style="font-size:0.78rem;color:#8a94a6;">U币 净流出</div>
+                <div id="exU" style="font-size:1.25rem;font-weight:800;">-</div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+            <label style="font-size:0.88rem;color:#6c757d;">方向：</label>
+            <select id="exKindFilter" style="padding:7px 12px;border:1px solid #ddd;border-radius:30px;font-size:0.88rem;">
+                <option value="">全部</option>
+                <option value="nb2u">NB币 → U币</option>
+                <option value="u2nb">U币 → NB币</option>
+            </select>
+            <label style="font-size:0.88rem;color:#6c757d;">状态：</label>
+            <select id="exStateFilter" style="padding:7px 12px;border:1px solid #ddd;border-radius:30px;font-size:0.88rem;">
+                <option value="">全部</option>
+                <option value="pending">待领取</option>
+                <option value="used">已领取</option>
+                <option value="cancelled">已作废</option>
+                <option value="expired">已过期</option>
+                <option value="credited">已到账(未对账)</option>
+                <option value="verified">已到账(已对账)</option>
+                <option value="reversed">已追回</option>
+            </select>
+            <label style="font-size:0.88rem;color:#6c757d;">时间：</label>
+            <select id="exDaysFilter" style="padding:7px 12px;border:1px solid #ddd;border-radius:30px;font-size:0.88rem;">
+                <option value="1">今天</option>
+                <option value="7" selected>最近 7 天</option>
+                <option value="30">最近 30 天</option>
+                <option value="365">最近一年</option>
+            </select>
+            <button id="exReloadBtn" style="background:#e9ecef;color:#333;border:none;border-radius:30px;padding:8px 22px;cursor:pointer;">🔄 刷新</button>
+            <input id="exSearch" placeholder="搜账号 / 兑换码" style="padding:7px 12px;border:1px solid #ddd;border-radius:30px;font-size:0.88rem;min-width:180px;">
+            <span id="exListInfo" style="font-size:0.84rem;color:#8a94a6;"></span>
+        </div>
+
+        <div id="exchangeList">加载中...</div>
+        <div id="exPager" style="display:flex;gap:10px;justify-content:center;margin:18px 0;"></div>
+    </div>
+
     <div id="announcePanel" style="display:none;">
         <div style="background:#fff8e6;border:1px solid #ffd591;border-left:4px solid #ff9800;border-radius:12px;padding:10px 16px;font-size:0.9rem;margin-bottom:16px;">💡 公告显示在首页与全站页面顶部的滚动公告条。留空保存 = 清除公告。</div>
         <div style="margin-bottom:16px;">
@@ -436,6 +501,18 @@
     <div class="modal-content">
         <h3>管理员登录</h3>
         <input type="password" id="adminPassword" placeholder="请输入管理密码">
+        <div style="display:flex;gap:8px;margin-top:10px;">
+            <input type="text" id="adminCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
+                   placeholder="邮箱收到的 6 位验证码" style="flex:1;margin:0;">
+            <button id="sendCode" type="button"
+                    style="white-space:nowrap;background:#00a1d6;color:#fff;border:none;border-radius:8px;padding:0 16px;cursor:pointer;font-size:0.86rem;">
+                发送验证码
+            </button>
+        </div>
+        <div style="font-size:0.78rem;color:#8a94a6;margin-top:6px;line-height:1.6;">
+            验证码会发到管理员邮箱（服务端写死，不经过这个页面）。<br>
+            先填密码 → 点「发送验证码」→ 收到后填进来 → 点「登录」。
+        </div>
         <div id="loginError" style="color:red; font-size:0.9rem;"></div>
         <button id="doLogin">登录</button>
     </div>
@@ -1210,13 +1287,30 @@
     }
 
     // ==================== 登录和标签页切换 ====================
-    async function checkPassword(pwd) {
-        // 密码校验 + 会话签发 + 失败限频,全部交给服务端
-        // (不再单独调 check_admin_password_plain,否则可绕过限频无限次暴力破解密码)
-        const ip = await getClientIP();
+    const SCF_MAIL_URL = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
+
+    // 第一步：把密码交给 SCF，由它验密码 + 把验证码发到【服务端写死的管理员邮箱】
+    async function requestAdminCode(pwd) {
+        const res = await fetch(SCF_MAIL_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind: 'admin', password: pwd })
+        });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.ok) {
+            throw new Error(data.message || ('发送失败 HTTP ' + res.status));
+        }
+        return data;
+    }
+
+    // 第二步：密码 + 验证码一起交给服务端签发会话
+    async function checkPassword(pwd, code) {
+        // 密码校验、邮箱验证码校验、失败限频、会话签发,全部在服务端
+        // ⚠️ 不再传 p_ip —— 服务端自己从请求头读真实 IP。
+        //    以前传的那个 IP 是前端调 api.ipify.org 拿的,攻击者随便填就能绕过限频。
         const sessionRes = await supabaseClient.rpc('admin_create_session', {
             p_pwd: pwd,
-            p_ip: ip
+            p_code: code
         });
         if (sessionRes.error) throw new Error(sessionRes.error.message);
         if (!sessionRes.data || !sessionRes.data.success) {
@@ -1230,19 +1324,61 @@
     function showLoginModal() {
         const modal = document.getElementById('loginModal');
         modal.style.display = 'flex';
-        document.getElementById('doLogin').onclick = async () => {
-            const pwd = document.getElementById('adminPassword').value;
-            const errorDiv = document.getElementById('loginError');
+        const errorDiv = document.getElementById('loginError');
+        const pwdEl = document.getElementById('adminPassword');
+        const codeEl = document.getElementById('adminCode');
+        const sendBtn = document.getElementById('sendCode');
+
+        // 发送验证码（60 秒冷却，服务端还会各自再限一次）
+        let cooling = false;
+        sendBtn.onclick = async () => {
+            if (cooling) return;
+            const pwd = pwdEl.value;
+            if (!pwd) { errorDiv.innerText = '请先填密码'; return; }
+            cooling = true;
+            let left = 60;
+            sendBtn.disabled = true;
+            sendBtn.textContent = left + 's';
+            const timer = setInterval(function () {
+                left--;
+                if (left <= 0) {
+                    clearInterval(timer); cooling = false;
+                    sendBtn.disabled = false; sendBtn.textContent = '发送验证码';
+                } else {
+                    sendBtn.textContent = left + 's';
+                }
+            }, 1000);
             try {
-                const ok = await checkPassword(pwd);
+                errorDiv.style.color = '#1a7f37';
+                errorDiv.innerText = '正在发送…';
+                const r = await requestAdminCode(pwd);
+                errorDiv.innerText = '✅ 验证码已发到 ' + (r.masked || '管理员邮箱');
+                codeEl.focus();
+            } catch (err) {
+                errorDiv.style.color = 'red';
+                errorDiv.innerText = '发送失败：' + err.message;
+                clearInterval(timer); cooling = false;
+                sendBtn.disabled = false; sendBtn.textContent = '发送验证码';
+            }
+        };
+
+        document.getElementById('doLogin').onclick = async () => {
+            const pwd = pwdEl.value;
+            const code = codeEl.value.trim();
+            if (!pwd) { errorDiv.style.color = 'red'; errorDiv.innerText = '请输入密码'; return; }
+            if (!/^\d{6}$/.test(code)) { errorDiv.style.color = 'red'; errorDiv.innerText = '请输入 6 位验证码'; return; }
+            try {
+                const ok = await checkPassword(pwd, code);
                 if (ok) {
                     isLoggedIn = true;
                     modal.style.display = 'none';
                     initAdminPage();
                 } else {
-                    errorDiv.innerText = '密码错误';
+                    errorDiv.style.color = 'red';
+                    errorDiv.innerText = '密码或验证码错误';
                 }
             } catch (err) {
+                errorDiv.style.color = 'red';
                 errorDiv.innerText = '验证失败: ' + err.message;
             }
         };
@@ -1280,10 +1416,208 @@
         document.getElementById('fbSFixed').textContent = c.fixed || 0;
         document.getElementById('fbSIgnored').textContent = c.ignored || 0;
         document.getElementById('fbSAll').textContent = c.all || 0;
-        document.querySelectorAll('.fb-stat').forEach(function (el) {
+        document.querySelectorAll('#feedbackPanel .fb-stat').forEach(function (el) {
             el.classList.toggle('on', (el.dataset.st || '') === (statusEl.value || ''));
         });
         renderFeedbackList(data.list || [], data.total || 0);
+    }
+
+    // ==================== 💱 兑换记录 ====================
+    const EX_PER_PAGE = 50;
+    let exPage = 1;
+    let exAllRows = [];
+    const EX_LABEL = {
+        nb2u:     ['NB币 → U币', '#e8590c'],
+        u2nb:     ['U币 → NB币', '#2f9e44'],
+        pending:  ['待领取',     '#e8590c'],
+        used:     ['已领取',     '#2f9e44'],
+        cancelled:['已作废',     '#868e96'],
+        expired:  ['已过期',     '#868e96'],
+        credited: ['已到账',     '#2f9e44'],
+        verified: ['已到账·已对账', '#0b7285'],
+        reversed: ['已追回',     '#c92a2a']
+    };
+
+    async function loadExchange(page) {
+        exPage = page || 1;
+        const box = document.getElementById('exchangeList');
+        const pager = document.getElementById('exPager');
+        if (box) box.innerHTML = '<div style="padding:20px;color:#8a94a6;">加载中...</div>';
+        if (pager) pager.innerHTML = '';
+
+        const { data, error } = await supabaseClient.rpc('admin_list_exchange', {
+            p_token:  getToken(),
+            p_kind:   document.getElementById('exKindFilter').value || null,
+            p_state:  document.getElementById('exStateFilter').value || null,
+            p_days:   parseInt(document.getElementById('exDaysFilter').value, 10) || 7,
+            p_limit:  EX_PER_PAGE,
+            p_offset: (exPage - 1) * EX_PER_PAGE
+        });
+        if (error || !data || !data.success) {
+            const msg = (error && error.message) || (data && data.message) || '未知错误';
+            if (!handleAdminError(error || (data && data.message))) {
+                box.innerHTML = '<div style="padding:20px;color:#e74c3c;">加载失败：' + escapeHtml(msg) + '</div>';
+            }
+            return;
+        }
+
+        const c = data.counts || {};
+        const s = data.sums || {};
+        const setN = function (id, v) { const e = document.getElementById(id); if (e) e.textContent = v; };
+        setN('exSNb2u',   c.nb2u || 0);
+        setN('exSU2nb',   c.u2nb || 0);
+        setN('exSPending', c.pending || 0);
+        setN('exSUsed',   c.used || 0);
+        setN('exSExpired', c.expired || 0);
+        setN('exSAll',    (c.nb2u || 0) + (c.u2nb || 0));
+        setN('exOut', fmtN(s.nb_out) + ' NB币');
+        setN('exIn',  fmtN(s.nb_in)  + ' NB币');
+        setN('exFee', fmtN(s.fee)    + ' NB币');
+        setN('exU',   fmtN(s.u_out) + ' / 收到 ' + fmtN(s.u_in));
+        document.querySelectorAll('#exchangePanel .fb-stat').forEach(function (el) {
+            el.classList.toggle('on', (el.dataset.ex || '') === (document.getElementById('exStateFilter').value || ''));
+        });
+
+        exAllRows = data.list || [];
+        renderExchangeList();
+    }
+
+    function fmtN(v) {
+        const n = Number(v) || 0;
+        return n.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+    }
+
+    function exFilteredRows() {
+        const q = (document.getElementById('exSearch').value || '').trim().toLowerCase();
+        if (!q) return exAllRows;
+        return exAllRows.filter(function (r) {
+            return String(r.username || '').toLowerCase().includes(q) ||
+                   String(r.code || '').toLowerCase().includes(q);
+        });
+    }
+
+    function renderExchangeList() {
+        const box = document.getElementById('exchangeList');
+        const pager = document.getElementById('exPager');
+        const info = document.getElementById('exListInfo');
+        const rows = exFilteredRows();
+        const total = exPage === 1 ? rows.length : exAllRows.length;
+        if (info) info.textContent = '本页 ' + rows.length + ' 条' +
+            (document.getElementById('exSearch').value ? '（已筛选）' : '') +
+            ' · 时间范围 ' + document.getElementById('exDaysFilter').value + ' 天';
+
+        if (!rows.length) {
+            box.innerHTML = '<div style="padding:24px;color:#8a94a6;text-align:center;">' +
+                (exAllRows.length ? '没有匹配的记录' : '这段时间没有兑换记录') + '</div>';
+            pager.innerHTML = '';
+            return;
+        }
+
+        box.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;">' +
+            '<thead><tr style="background:#f8f9fa;">' +
+            '<th style="padding:10px 8px;text-align:left;">时间</th>' +
+            '<th style="padding:10px 8px;text-align:left;">方向</th>' +
+            '<th style="padding:10px 8px;text-align:left;">账号</th>' +
+            '<th style="padding:10px 8px;text-align:left;">兑换码</th>' +
+            '<th style="padding:10px 8px;text-align:right;">NB币</th>' +
+            '<th style="padding:10px 8px;text-align:right;">U币</th>' +
+            '<th style="padding:10px 8px;text-align:right;">手续费</th>' +
+            '<th style="padding:10px 8px;text-align:left;">状态</th>' +
+            '<th style="padding:10px 8px;text-align:left;">备注</th>' +
+            '<th style="padding:10px 8px;text-align:center;">操作</th>' +
+            '</tr></thead><tbody>' +
+            rows.map(function (r) {
+                const dir = EX_LABEL[r.kind] || [r.kind, '#333'];
+                const st  = EX_LABEL[r.state] || [r.state, '#333'];
+                const nb  = Number(r.nb_amount) || 0;
+                const nbTxt = (nb < 0 ? '−' : '+') + fmtN(Math.abs(nb));
+                const nbColor = nb < 0 ? '#2f9e44' : '#e8590c';
+                const canReverse = (r.kind === 'u2nb' && r.state === 'credited');
+                const canCancel  = (r.kind === 'nb2u' && r.state === 'pending');
+                let ops = '—';
+                if (canReverse) {
+                    ops = '<button class="ex-rev" data-id="' + r.id + '" data-code="' + escapeHtml(r.code) +
+                          '" style="background:#e74c3c;color:#fff;border:none;border-radius:20px;padding:5px 14px;cursor:pointer;font-size:0.78rem;">↩️ 追回</button>';
+                } else if (canCancel) {
+                    ops = '<button class="ex-can" data-code="' + escapeHtml(r.code) +
+                          '" style="background:#868e96;color:#fff;border:none;border-radius:20px;padding:5px 14px;cursor:pointer;font-size:0.78rem;">作废退回</button>';
+                }
+                return '<tr style="border-bottom:1px solid #f0f1f3;">' +
+                    '<td style="padding:9px 8px;color:#8a94a6;white-space:nowrap;">' + escapeHtml(fmtExTime(r.created_at)) + '</td>' +
+                    '<td style="padding:9px 8px;white-space:nowrap;"><b style="color:' + dir[1] + ';">' + dir[0] + '</b></td>' +
+                    '<td style="padding:9px 8px;">' + escapeHtml(r.username || '(已注销)') + '</td>' +
+                    '<td style="padding:9px 8px;font-family:monospace;font-size:0.78rem;word-break:break-all;max-width:220px;">' + escapeHtml(r.code) + '</td>' +
+                    '<td style="padding:9px 8px;text-align:right;font-weight:700;color:' + nbColor + ';white-space:nowrap;">' + nbTxt + '</td>' +
+                    '<td style="padding:9px 8px;text-align:right;white-space:nowrap;">' + fmtN(r.u_amount) + '</td>' +
+                    '<td style="padding:9px 8px;text-align:right;color:#1971c2;">' + (Number(r.fee) ? fmtN(r.fee) : '—') + '</td>' +
+                    '<td style="padding:9px 8px;white-space:nowrap;"><b style="color:' + st[1] + ';">' + st[0] + '</b></td>' +
+                    '<td style="padding:9px 8px;color:#8a94a6;font-size:0.8rem;">' + escapeHtml(r.note || '') + '</td>' +
+                    '<td style="padding:9px 8px;text-align:center;">' + ops + '</td>' +
+                    '</tr>';
+            }).join('') + '</tbody></table></div>';
+
+        box.querySelectorAll('.ex-rev').forEach(function (b) {
+            b.onclick = function () { reverseExchange(parseInt(b.dataset.id, 10), b.dataset.code); };
+        });
+        box.querySelectorAll('.ex-can').forEach(function (b) {
+            b.onclick = function () { cancelExchangeCode(b.dataset.code); };
+        });
+
+        const pages = Math.max(1, Math.ceil(total / EX_PER_PAGE));
+        pager.innerHTML = '';
+        if (pages > 1) {
+            const mk = function (label, p, disabled) {
+                const btn = document.createElement('button');
+                btn.textContent = label;
+                btn.disabled = disabled;
+                btn.style.cssText = 'padding:6px 16px;border:1px solid #ddd;border-radius:20px;background:#fff;cursor:pointer;' +
+                                    (disabled ? 'opacity:.4;cursor:not-allowed;' : '');
+                btn.onclick = function () { loadExchange(p); };
+                return btn;
+            };
+            pager.appendChild(mk('上一页', exPage - 1, exPage <= 1));
+            const span = document.createElement('span');
+            span.style.cssText = 'padding:6px 10px;color:#8a94a6;font-size:0.85rem;';
+            span.textContent = exPage + ' / ' + pages;
+            pager.appendChild(span);
+            pager.appendChild(mk('下一页', exPage + 1, exPage >= pages));
+        }
+    }
+
+    function fmtExTime(ts) {
+        if (!ts) return '';
+        try {
+            return new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+        } catch (e) { return String(ts); }
+    }
+
+    async function reverseExchange(id, code) {
+        const note = prompt('追回这一笔？\n\n兑换码：' + code + '\n\n' +
+                            '确认后会把发出去的 NB币 从该用户余额里扣回（余额不足扣到 0）。\n' +
+                            '可以填个原因（留空也行）：', '假账,追回');
+        if (note === null) return;
+        const { data, error } = await supabaseClient.rpc('admin_reverse_u_exchange', {
+            p_id: id, p_token: getToken(), p_note: note || null
+        });
+        if (error || !data || !data.success) {
+            alert('追回失败：' + ((error && error.message) || (data && data.message) || '未知错误'));
+            return;
+        }
+        alert(data.message || '已追回');
+        loadExchange(exPage);
+    }
+
+    async function cancelExchangeCode(code) {
+        if (!confirm('作废这张兑换码？\n\n' + code + '\n\n作废后 NB币 会退回给用户。')) return;
+        const { data, error } = await supabaseClient.rpc('admin_cancel_exchange_code', {
+            p_token: getToken(), p_code: code, p_note: '管理员作废'
+        });
+        if (error || !data || !data.success) {
+            alert('作废失败：' + ((error && error.message) || (data && data.message) || '未知错误'));
+            return;
+        }
+        alert(data.message || '已作废');
+        loadExchange(exPage);
     }
 
     function renderFeedbackList(list, total) {
@@ -1386,9 +1720,9 @@
     function switchTab(tab) {
         currentTab = tab;
         const panels = ['commentFilters','batchActions','reportsContainer','pagination','companyReportsContainer','verificationContainer','companyBatch','verifyBatch','productReportsContainer'];
-        const tabs = ['tabComments','tabCompanies','tabVerification','tabAnnounce','tabApi','tabFeedback'];
+        const tabs = ['tabComments','tabCompanies','tabVerification','tabAnnounce','tabApi','tabFeedback','tabExchange'];
         function hideAll() { panels.forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
-        function hidePanels() { ['announcePanel','apiPanel','feedbackPanel'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
+        function hidePanels() { ['announcePanel','apiPanel','feedbackPanel','exchangePanel'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
         tabs.forEach(function (id) { const el = document.getElementById(id); if (el) el.classList.remove('active'); });
         const tabEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
         if (tabEl) tabEl.classList.add('active');
@@ -1417,6 +1751,9 @@
         } else if (tab === 'api') {
             document.getElementById('apiPanel').style.display = 'block';
             if (typeof window.__apiLoadAll === 'function') window.__apiLoadAll();
+        } else if (tab === 'exchange') {
+            document.getElementById('exchangePanel').style.display = 'block';
+            loadExchange(1);
         }
     }
 
@@ -1433,6 +1770,7 @@
         document.getElementById('refreshBtn').onclick = () => {
             if (currentTab === 'comments') loadCommentReports();
             else if (currentTab === 'companies') loadCompanyReports();
+            else if (currentTab === 'exchange') loadExchange(1);
             else loadVerificationRequests();
             loadDashboard();
             loadBannedUsers();
@@ -1447,15 +1785,36 @@
         document.getElementById('tabProduct').onclick = () => switchTab('product');
         document.getElementById('tabAnnounce').onclick = () => switchTab('announce');
         document.getElementById('tabFeedback').onclick = () => switchTab('feedback');
+        document.getElementById('tabExchange').onclick = () => switchTab('exchange');
         document.getElementById('tabApi').onclick = () => switchTab('api');
         document.getElementById('fbReloadBtn').onclick = () => loadFeedback(fbPage);
         document.getElementById('fbKindFilter').onchange = () => loadFeedback(1);
         document.getElementById('fbStatusFilter').onchange = () => loadFeedback(1);
-        document.querySelectorAll('.fb-stat').forEach(function (el) {
+        // 只绑反馈面板里的统计块（兑换面板也用了 .fb-stat 类，必须限定范围）
+        document.querySelectorAll('#feedbackPanel .fb-stat').forEach(function (el) {
             el.onclick = function () {
                 document.getElementById('fbStatusFilter').value = el.dataset.st || '';
                 document.getElementById('fbKindFilter').value = '';
                 loadFeedback(1);
+            };
+        });
+        // 兑换面板
+        const exReload = document.getElementById('exReloadBtn');
+        if (exReload) exReload.onclick = () => loadExchange(1);
+        ['exKindFilter', 'exStateFilter', 'exDaysFilter'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.onchange = () => loadExchange(1);
+        });
+        const exSearch = document.getElementById('exSearch');
+        if (exSearch) {
+            let exT = null;
+            exSearch.oninput = function () { clearTimeout(exT); exT = setTimeout(renderExchangeList, 180); };
+        }
+        document.querySelectorAll('#exchangePanel .fb-stat').forEach(function (el) {
+            el.onclick = function () {
+                document.getElementById('exStateFilter').value = el.dataset.ex || '';
+                document.getElementById('exKindFilter').value = '';
+                loadExchange(1);
             };
         });
         const st = document.getElementById('sessionState');

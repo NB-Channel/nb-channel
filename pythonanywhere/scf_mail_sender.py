@@ -233,11 +233,32 @@ def index():
     password = str(data.get('password') or '')
     ip = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip() or \
          request.headers.get('X-Real-IP') or 'unknown'
-    if kind not in ('register', 'login', 'bind'):
+    if kind not in ('register', 'login', 'bind', 'admin'):
         return jsonify({'ok': False, 'message': '未知类型'})
     code = str(random.randint(100000, 999999))
     to_addr = email
-    if kind == 'login':
+
+    # ---------- 管理员后台二次验证 ----------
+    # ⚠️ 三个要点,别改：
+    #   1) 收件人【写死在服务端】(admin_email_for_code),绝对不用请求里的 email
+    #      —— 否则这个接口就成了任人使用的匿名发信机
+    #   2) 先验密码（admin_request_code 自带真实 IP 限频),密码不对不发信
+    #   3) purpose 固定 'admin',和注册/登录的码互不通用
+    if kind == 'admin':
+        r = supa_rpc('admin_request_code', {'p_pwd': password})
+        if not r.get('ok'):
+            return jsonify({'ok': False, 'message': r.get('message', '校验失败')})
+        d = r.get('data') or {}
+        if not d.get('ok'):
+            return jsonify({'ok': False, 'message': d.get('message') or '密码错误'})
+        r2 = supa_rpc('admin_email_for_code', {})
+        to_addr = (r2.get('data') or '') if r2.get('ok') else ''
+        if isinstance(to_addr, list):
+            to_addr = to_addr[0] if to_addr else ''
+        to_addr = str(to_addr or '').strip().lower()
+        if '@' not in to_addr:
+            return jsonify({'ok': False, 'message': '管理员邮箱未配置'})
+    elif kind == 'login':
         r = supa_rpc('lookup_login_email', {'p_username': username, 'p_password': password})
         if not r.get('ok'):
             return jsonify({'ok': False, 'message': r.get('message', '校验失败')})
@@ -274,4 +295,5 @@ def index():
     err = send_mail(to_addr, code)
     if err:
         return jsonify({'ok': False, 'message': '邮件发送失败: ' + err})
+    # 管理员这一路返回固定文案 + 掩码邮箱,别把完整邮箱泄露给前端
     return jsonify({'ok': True, 'masked': masked_email(to_addr)})
