@@ -1438,16 +1438,16 @@ html { -webkit-text-size-adjust: 100%; }
 
         // ---- 方向一:NB币 → U币 ----
         h += '<div class="bk-sec"><div class="bk-sec-h">📤 NB币 → U币</div>' +
-            '<div class="bk-help"><b>把 NB币 换成对方的 U币</b><br>' +
+            '<div class="bk-help"><b>填你想拿到多少 U币</b>,系统自动算出要花多少 NB币。<br>' +
             '点生成后会<b>立即扣除 NB币</b>并给你一段兑换码,然后点按钮跳到对方网站,' +
             '<b>在那里登录你自己的 U 账号</b>领取。' +
             '没领成可以在下面作废,NB币 会退回。</div>' +
             '<div class="bk-inrow">' +
-            '<input type="number" id="exNbAmt" class="bk-field num" min="1000" max="100000" step="1000" placeholder="NB币数量(1000的倍数)" style="min-width:200px;">' +
+            '<input type="number" id="exWantU" class="bk-field num" min="1" max="100" step="1" placeholder="想兑换的 U币" style="min-width:170px;">' +
             '<input type="text" id="exUtwName" class="bk-field" maxlength="32" placeholder="限定的U账号名(可留空)" style="min-width:170px;">' +
             '<button class="bk-btn gold" type="button" onclick="doCreateExchange()">生成兑换码</button>' +
             '</div>' +
-            '<div class="bk-help">单笔 1,000 ~ 100,000 NB币 · 每人每天 500,000 NB币 · 手续费 1%<br>' +
+            '<div class="bk-help" id="exCostHint">单笔想换 1 ~ 100 U币 · 手续费 1% · 每人每天 500,000 NB币<br>' +
             '↑ 第二个框填上你在对方网站的账号名,这段兑换码就<b>只能发给那个账号</b>(推荐填)。留空则谁拿到码都能领。</div>' +
             '<div id="exCreated" class="bk-help"></div>' +
             '<div id="exList" class="bk-logs"><div class="bk-help">加载中…</div></div>' +
@@ -1455,15 +1455,15 @@ html { -webkit-text-size-adjust: 100%; }
 
         // ---- 方向二:U币 → NB币 ----
         h += '<div class="bk-sec"><div class="bk-sec-h">📥 U币 → NB币</div>' +
-            '<div class="bk-help"><b>把对方的 U币 换回 NB币</b><br>' +
-            '先去对方网站用 U币 换一张兑换码,再把码和 U币数量填在下面,<b>提交后立即到账</b>。<br>' +
+            '<div class="bk-help"><b>填你想拿到多少 NB币</b>,先去对方网站按对应的 U币 数量换一张兑换码,' +
+            '再把码和数量填在下面,<b>提交后立即到账</b>。<br>' +
             '<span style="opacity:.8;">金额以码里写的为准(码的第 2~7 位就是金额),你填的数字只用来核对 —— 填错了会被拒绝。</span></div>' +
             '<div class="bk-inrow">' +
-            '<input type="number" id="ueAmt" class="bk-field num" min="0.1" step="1" placeholder="U币数量" style="min-width:130px;">' +
+            '<input type="number" id="ueWantNb" class="bk-field num" min="100" step="10" placeholder="想兑换的 NB币" style="min-width:170px;">' +
             '<input type="text" id="ueCode" class="bk-field" maxlength="32" placeholder="兑换码 U002000A1B2C3D4" style="min-width:220px;">' +
             '<button class="bk-btn green" type="button" onclick="doSubmitUExchange()">立即兑换</button>' +
             '</div>' +
-            '<div class="bk-help">单笔 0.1 ~ 100 U币 · 每人每天 500,000 NB币</div>' +
+            '<div class="bk-help">想换的 NB币 = 需要的 U币 × 1000(填 20000 = 花 20 U币) · 每人每天 500,000 NB币</div>' +
             '<div id="ueList" class="bk-logs"><div class="bk-help">加载中…</div></div>' +
             '</div>';
 
@@ -1538,23 +1538,34 @@ html { -webkit-text-size-adjust: 100%; }
         }
     }
 
-    // ---- NB币 → U币:生成兑换码 ----
+    // ---- NB币 → U币:填想拿到的 U币,生成兑换码 ----
+    // 手续费是按 NB币 收 1% 的,所以「想拿 20 U币」要付 ceil(20*1000/0.99)=20203 NB币。
+    // 这个反算放在服务端做（汇率/手续费只在我们这边），前端只做粗略预估给用户看。
+    var EX_RATE = 1000;      // 只用于界面预估提示,真实值以服务端为准
+    var EX_FEE_PCT = 1;
+    function exNbCost(wantU) {
+        return Math.ceil(wantU * EX_RATE / (1 - EX_FEE_PCT / 100));
+    }
     function doCreateExchange() {
         if (!getUser()) { showToast('请先登录', false); return; }
-        var el = document.getElementById('exNbAmt');
-        var amt = parseInt((el && el.value) || '', 10);
-        if (!(amt >= 1000)) { showToast('至少 1000 NB币', false); return; }
-        if (amt > 100000) { showToast('单笔最多 100,000 NB币', false); return; }
-        if (amt % 1000 !== 0) { showToast('金额需为 1000 的整数倍(1 U币 = 1000 NB币)', false); return; }
+        var el = document.getElementById('exWantU');
+        var want = parseFloat((el && el.value) || '');
+        if (!(want >= 1)) { showToast('至少想换 1 U币', false); return; }
+        if (want > 100) { showToast('单笔最多想换 100 U币', false); return; }
+        if (Math.abs(want * 100 - Math.round(want * 100)) > 0.001) {
+            showToast('U币数量最多两位小数', false); return;
+        }
         var nameEl = document.getElementById('exUtwName');
         var utw = ((nameEl && nameEl.value) || '').trim();
+        var cost = exNbCost(want);
 
-        if (!confirm('确认用 ' + amt + ' NB币 换 ' + (amt / 1000) + ' U币?\n\n' +
-                     '点确定后会【立即扣除】' + amt + ' NB币并生成兑换码。\n' +
+        if (!confirm('想兑换 ' + want + ' U币\n\n' +
+                     '需要支付约 ' + cost + ' NB币（含 1% 手续费，实际以服务端结算为准）\n' +
+                     '点确定后会【立即扣除】并生成兑换码。\n' +
                      (utw ? '该码只能发给 U 账号「' + utw + '」。\n' : '（未限定账号，谁拿到码都能领）\n') +
                      '没领成可以在列表里作废,NB币会退回。')) return;
 
-        callRpc('create_exchange_code', { p_nb_amount: amt, p_utw_name: utw || null })
+        callRpc('create_exchange_code', { p_u_amount: want, p_utw_name: utw || null })
             .then(function (d) {
             d = d || {};
             showToast('✅ 兑换码已生成', true);
@@ -1562,8 +1573,9 @@ html { -webkit-text-size-adjust: 100%; }
             if (box) {
                 box.innerHTML = '✅ 已生成:' +
                     '<br><b style="font-family:monospace;font-size:0.9rem;word-break:break-all;">' + esc(d.code) + '</b>' +
-                    '<br>' + esc(d.nb_amount) + ' NB币 → <b>' + esc(d.u_amount) + ' U币</b>' +
-                    (d.fee > 0 ? '(手续费 ' + esc(d.fee) + ' NB币)' : '') +
+                    '<br>花了 <b>' + esc(d.nb_amount) + ' NB币</b>' +
+                    (d.fee > 0 ? '(含手续费 ' + esc(d.fee) + ')' : '') +
+                    ' → 可领 <b>' + esc(d.u_amount) + ' U币</b>' +
                     ' · 到期 ' + esc(d.expires_at) +
                     (d.utw_name ? ' · 限定账号 <b>' + esc(d.utw_name) + '</b>' : '') +
                     '<br><a class="bk-btn gold" style="text-decoration:none;display:inline-block;margin-top:8px;" ' +
@@ -1590,28 +1602,39 @@ html { -webkit-text-size-adjust: 100%; }
             }).catch(function (e) { showToast('作废失败：' + esc(exErrText(e)), false); });
     }
 
-    // ---- U币 → NB币:提交,立即到账 ----
+    // ---- U币 → NB币:填想拿到的 NB币,提交立即到账 ----
+    // 码里写的是 U币 数量;这里把「想拿的 NB币」换算成 U币 去核对。
     function doSubmitUExchange() {
         if (!getUser()) { showToast('请先登录', false); return; }
-        var amtEl = document.getElementById('ueAmt');
+        var nbEl = document.getElementById('ueWantNb');
         var codeEl = document.getElementById('ueCode');
-        var amt = parseFloat((amtEl && amtEl.value) || '');
+        var wantNb = parseFloat((nbEl && nbEl.value) || '');
         var code = ((codeEl && codeEl.value) || '').replace(/\s+/g, '').toUpperCase();
-        if (!(amt > 0)) { showToast('请填写 U币数量', false); return; }
+
+        if (!(wantNb >= 100)) { showToast('至少想换 100 NB币', false); return; }
+        if (Math.abs(wantNb - Math.round(wantNb)) > 0.001) { showToast('NB币要填整数', false); return; }
         if (!/^U[0-9]{6}[0-9A-F]{8}$/.test(code)) {
             showToast('兑换码格式不对,应该像 U002000A1B2C3D4', false); return;
         }
-        // 码里第 2~7 位写死了金额(单位 0.01 U币),先本地对一遍,省一次往返
-        var inCode = parseInt(code.substr(1, 6), 10) / 100;
-        if (Math.abs(inCode - amt) > 0.001) {
-            showToast('码里写的是 ' + inCode + ' U币,你填的是 ' + amt + ' U币', false); return;
+        // 码里第 2~7 位写死了金额(单位 0.01 U币)
+        var inCodeU = parseInt(code.substr(1, 6), 10) / 100;
+        // 想拿多少 NB币 → 需要多少 U币
+        var needU = wantNb / EX_RATE;
+        if (Math.abs(needU * 100 - Math.round(needU * 100)) > 0.001) {
+            showToast('NB币需为 10 的整数倍(U币 最小单位 0.01)', false); return;
         }
-        if (!confirm('确认兑换?\n\n' + inCode + ' U币 → ' + Math.floor(inCode * 1000) + ' NB币\n兑换码:' + code +
-                     '\n\n点确定后 NB币 立即到账。')) return;
-        callRpc('submit_u_exchange', { p_u_code: code, p_u_amount: amt })
+        if (Math.abs(inCodeU - needU) > 0.001) {
+            showToast('想换 ' + wantNb + ' NB币 需要 ' + needU + ' U币,但这张码里写的是 ' + inCodeU + ' U币', false);
+            return;
+        }
+        if (!confirm('想兑换 ' + wantNb + ' NB币\n\n' +
+                     '需要消耗 ' + needU + ' U币（请确认你已经在对方网站扣过）\n' +
+                     '兑换码:' + code + '\n\n点确定后 NB币 立即到账。')) return;
+
+        callRpc('submit_u_exchange', { p_u_code: code, p_u_amount: needU })
             .then(function (d) {
-            showToast('✅ ' + esc((d && d.message) || ('已到账 ' + Math.floor(inCode * 1000) + ' NB币')), true);
-            if (amtEl) amtEl.value = '';
+            showToast('✅ ' + esc((d && d.message) || ('已到账 ' + wantNb + ' NB币')), true);
+            if (nbEl) nbEl.value = '';
             if (codeEl) codeEl.value = '';
             loadExchange();
             loadBalance();
