@@ -597,6 +597,38 @@ html.dark .bk-table .td-down { color: #fb7185; }
 }
 html.dark .bk-alert { color: #fb7185; }
 
+/* ===== 两个业务的分页标签 ===== */
+.bk-tabs {
+    display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius-lg); padding: 8px; box-shadow: var(--shadow-1);
+}
+.bk-tab {
+    flex: 1; min-width: 150px; min-height: 52px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    border: none; border-radius: var(--radius-md, 12px); cursor: pointer;
+    background: transparent; color: var(--ink-soft);
+    font-family: inherit; font-size: .95rem; font-weight: 700; letter-spacing: .5px;
+    transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+.bk-tab .bk-tab-sub { font-size: .7rem; font-weight: 500; color: var(--ink-faint); letter-spacing: 0; }
+.bk-tab:hover { background: var(--bg); color: var(--ink); }
+.bk-tab.on {
+    background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+    box-shadow: 0 8px 20px -8px rgba(59,130,246,.6);
+}
+.bk-tab.on .bk-tab-sub { color: rgba(255,255,255,.85); }
+
+/* 每个业务自己的说明横幅 */
+.bk-hero {
+    border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 20px;
+    font-size: .88rem; line-height: 1.9; border: 1px solid var(--line);
+    background: var(--card); box-shadow: var(--shadow-1);
+}
+.bk-hero b { color: var(--ink); }
+.bk-hero-blue { background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(99,102,241,.06)); border-color: rgba(59,130,246,.25); }
+.bk-hero-gold { background: linear-gradient(135deg, rgba(245,158,11,.12), rgba(249,115,22,.06)); border-color: rgba(245,158,11,.28); }
+
 .bk-inrow { display: flex; gap: 10px; margin: 0 0 12px; flex-wrap: wrap; align-items: center; }
 .bk-field {
     padding: 10px 16px; border-radius: 999px;
@@ -1253,7 +1285,7 @@ html { -webkit-text-size-adjust: 100%; }
                 return supabaseClient.rpc('get_bank_logs', { p_user_id: user.id, p_limit: 30 , p_session: localStorage.getItem('nb_session') })
                     .then(function (logsRes) { return { acc: acc, logs: (logsRes.data || []) }; });
             })
-            .then(function (S) { body.innerHTML = renderBank(S.acc, S.logs); loadBalance(); })
+            .then(function (S) { body.innerHTML = renderBank(S.acc, S.logs); loadBalance(); switchBankTab(bkCurrentTab); })
             .catch(function (err) {
                 console.error(err);
                 body.innerHTML = '<div class="bk-state"><div class="bk-st-ico">😵</div><h3>加载失败</h3><p>' + esc((err && err.message) || err || '未知错误') + ',请稍后刷新重试</p></div>';
@@ -1269,7 +1301,13 @@ html { -webkit-text-size-adjust: 100%; }
             ? '<span class="bk-help bk-red" style="margin:0;">🔒 冻结 ' + fmtBig(acc.frozen_amount) + ' NB币 · 可自由取出 ' + fmtBig(acc.free_deposit) + ' NB币</span>'
             : '<span class="bk-help" style="margin:0;">今日存入上限 1000万/天</span>';
 
-        var h = '<div class="bk-ov">' +
+        // ============ 业务一：存取贷 ============
+        var h = '<div id="bkPanelSave">';
+
+        h += '<div class="bk-hero bk-hero-blue">🏦 <b>存取贷</b> —— 把 NB币 存进来吃利息、质押存款借币周转。' +
+             '活期随存随取,定期锁仓利率更高;到期自动结算,不用手动操作。</div>';
+
+        h += '<div class="bk-ov">' +
             ovCard('活期存款', fmtFull(acc.deposit), '日利率 0.1%', 'dep') +
             ovCard('定期 7 天', fmtFull(acc.fixed7), acc.fixed7_until ? fmtTime(acc.fixed7_until).slice(5, 16) + ' 到期' : '到期 2%', 'fx') +
             ovCard('定期 30 天', fmtFull(acc.fixed30), acc.fixed30_until ? fmtTime(acc.fixed30_until).slice(5, 16) + ' 到期' : '到期 10%', 'fx') +
@@ -1338,11 +1376,238 @@ html { -webkit-text-size-adjust: 100%; }
                 }).join('')
                 : '<div class="bk-help">暂无记录</div>') +
             '</div></div>';
+
+        h += '</div>';   // /#bkPanelSave
+
+        // ============ 业务二：NB币 ⇄ U币 ============
+        h += '<div id="bkPanelEx" style="display:none;">';
+        h += '<div class="bk-hero bk-hero-gold">🔄 <b>NB币 ⇄ U币</b> —— 和 <b>Utw 联合公司</b> 的虚拟货币互换。' +
+             '汇率 <b>1 U币 = 1000 NB币</b>,由我们服务端固定,对方改不了。<br>' +
+             '两个方向都<b>各自在自己的网站登录</b>,全程不需要把你的 NB频道 密码交给任何人。</div>';
+        h += renderExchangeSections();
+        h += '</div>';   // /#bkPanelEx
+
+        // ============ 两个业务的分页标签 ============
+        var tabs = '<div class="bk-tabs">' +
+            '<button id="bkTabSave" class="bk-tab on" type="button" onclick="switchBankTab(\'save\')">' +
+            '🏦 存取贷<span class="bk-tab-sub">存钱吃利息 · 质押借币</span></button>' +
+            '<button id="bkTabEx" class="bk-tab" type="button" onclick="switchBankTab(\'ex\')">' +
+            '🔄 NB币 ⇄ U币<span class="bk-tab-sub">和 Utw 互换货币</span></button>' +
+            '</div>';
+
+        return tabs + h;
+    }
+
+    // 切换业务面板
+    // ⚠️ 记住当前在哪个业务:loadBank() 会整段重渲染,不记住的话
+    //    在「NB币转U币」里点完按钮会被踢回「存取贷」。
+    var bkCurrentTab = 'save';
+    function switchBankTab(which) {
+        var save = document.getElementById('bkPanelSave');
+        var ex   = document.getElementById('bkPanelEx');
+        var tS   = document.getElementById('bkTabSave');
+        var tE   = document.getElementById('bkTabEx');
+        if (!save || !ex) return;
+        var isEx = (which === 'ex');
+        bkCurrentTab = isEx ? 'ex' : 'save';
+        save.style.display = isEx ? 'none' : '';
+        ex.style.display   = isEx ? '' : 'none';
+        if (tS) tS.classList.toggle('on', !isEx);
+        if (tE) tE.classList.toggle('on', isEx);
+        // 兑换面板只在切过去时才拉数据,省掉没必要的两次 RPC
+        if (isEx) loadExchange();
+    }
+
+    // ============ NB币 ⇄ U币 的区块 ============
+    function renderExchangeSections() {
+        var h = '';
+
+        // ---- 方向一:NB币 → U币 ----
+        h += '<div class="bk-sec"><div class="bk-sec-h">📤 NB币 → U币</div>' +
+            '<div class="bk-help"><b>把 NB币 换成对方的 U币</b><br>' +
+            '点生成后会<b>立即扣除 NB币</b>并给你一段兑换码,然后点按钮跳到对方网站,' +
+            '<b>在那里登录你自己的 U 账号</b>领取。' +
+            '没领成可以在下面作废,NB币 会退回。</div>' +
+            '<div class="bk-inrow">' +
+            '<input type="number" id="exNbAmt" class="bk-field num" min="1000" max="100000" step="1000" placeholder="NB币数量(1000的倍数)" style="min-width:200px;">' +
+            '<input type="text" id="exUtwName" class="bk-field" maxlength="32" placeholder="限定的U账号名(可留空)" style="min-width:170px;">' +
+            '<button class="bk-btn gold" type="button" onclick="doCreateExchange()">生成兑换码</button>' +
+            '</div>' +
+            '<div class="bk-help">单笔 1,000 ~ 100,000 NB币 · 每人每天 500,000 NB币 · 手续费 1%<br>' +
+            '↑ 第二个框填上你在对方网站的账号名,这段兑换码就<b>只能发给那个账号</b>(推荐填)。留空则谁拿到码都能领。</div>' +
+            '<div id="exCreated" class="bk-help"></div>' +
+            '<div id="exList" class="bk-logs"><div class="bk-help">加载中…</div></div>' +
+            '</div>';
+
+        // ---- 方向二:U币 → NB币 ----
+        h += '<div class="bk-sec"><div class="bk-sec-h">📥 U币 → NB币</div>' +
+            '<div class="bk-help"><b>把对方的 U币 换回 NB币</b><br>' +
+            '先去对方网站用 U币 换一张兑换码,再把码和 U币数量填在下面,<b>提交后立即到账</b>。<br>' +
+            '<span style="opacity:.8;">金额以码里写的为准(码的第 2~7 位就是金额),你填的数字只用来核对 —— 填错了会被拒绝。</span></div>' +
+            '<div class="bk-inrow">' +
+            '<input type="number" id="ueAmt" class="bk-field num" min="0.1" step="1" placeholder="U币数量" style="min-width:130px;">' +
+            '<input type="text" id="ueCode" class="bk-field" maxlength="32" placeholder="兑换码 U002000A1B2C3D4" style="min-width:220px;">' +
+            '<button class="bk-btn green" type="button" onclick="doSubmitUExchange()">立即兑换</button>' +
+            '</div>' +
+            '<div class="bk-help">单笔 0.1 ~ 100 U币 · 每人每天 500,000 NB币</div>' +
+            '<div id="ueList" class="bk-logs"><div class="bk-help">加载中…</div></div>' +
+            '</div>';
+
         return h;
     }
     function ovCard(label, val, tip, tone) {
         return '<div class="bk-ovc ' + tone + '"><div class="bk-num' + (val.length > 9 ? ' long' : '') + '">' + val + '</div>' +
             '<div class="bk-lbl">' + label + '</div><div class="bk-tip">' + tip + '</div></div>';
+    }
+
+    // ==================== 🔄 NB币 ⇄ U币 ====================
+    // 汇率、手续费、额度全部在服务端(exchange_config 表),这里不参与任何计算。
+    function loadExchange() {
+        if (!getUser()) return;
+
+        // 我的兑换码(NB币 → U币)
+        var box = document.getElementById('exList');
+        if (box) {
+            callRpc('get_my_exchange_codes', { p_limit: 20 })
+                .then(function (res) {
+                    var d = res.data || {};
+                    if (!d.success) { box.innerHTML = '<div class="bk-help">' + esc(d.message || '读取失败') + '</div>'; return; }
+                    var list = d.list || [];
+                    if (!list.length) { box.innerHTML = '<div class="bk-help">还没有兑换记录</div>'; return; }
+                    box.innerHTML = list.map(function (x) {
+                        var st, color;
+                        if (x.status === 'used')            { st = '已领取'; color = '#2f9e44'; }
+                        else if (x.status === 'cancelled')  { st = '已作废'; color = '#868e96'; }
+                        else if (x.expired)                 { st = '已过期'; color = '#868e96'; }
+                        else                                { st = '待领取'; color = '#e8590c'; }
+                        var live = (x.status === 'pending' && !x.expired);
+                        var jump = live
+                            ? '<a class="bk-btn gold" style="text-decoration:none;display:inline-block;margin-right:6px;" target="_blank" rel="noopener" ' +
+                              'href="https://utw.pages.dev/u-nb?code=' + encodeURIComponent(x.code) + '">去领取 ' + x.u_amount + ' U币</a>'
+                            : '';
+                        return '<div class="bk-log"><span class="bk-ld">' +
+                            '<b style="font-family:monospace;font-size:0.82rem;word-break:break-all;">' + esc(x.code) + '</b><br>' +
+                            esc(x.nb_amount) + ' NB币 → <b>' + esc(x.u_amount) + ' U币</b> · ' +
+                            '<b style="color:' + color + '">' + st + '</b>' +
+                            (x.utw_name ? ' · 限定账号 <b>' + esc(x.utw_name) + '</b>' : '') +
+                            ' · 生成 ' + esc(x.created_at) + (x.fee > 0 ? ' · 手续费 ' + esc(x.fee) : '') +
+                            '</span><span class="bk-la">' + jump +
+                            (live ? '<button class="bk-btn ghost" type="button" onclick="doCancelExchange(\'' + esc(x.code) + '\')">作废退回</button>' : '') +
+                            '</span></div>';
+                    }).join('');
+                }).catch(function (e) {
+                    box.innerHTML = '<div class="bk-help">读取失败:' + esc((e && e.message) || e) + '</div>';
+                });
+        }
+
+        // 我的 U币 → NB币 记录
+        var ub = document.getElementById('ueList');
+        if (ub) {
+            callRpc('get_my_u_exchange', {})
+                .then(function (res) {
+                    var d = res.data || {};
+                    if (!d.success) { ub.innerHTML = '<div class="bk-help">' + esc(d.message || '读取失败') + '</div>'; return; }
+                    var list = d.list || [];
+                    if (!list.length) { ub.innerHTML = '<div class="bk-help">还没有换过 U币</div>'; return; }
+                    ub.innerHTML = list.map(function (x) {
+                        var st = x.reversed ? '↩️ 已追回'
+                               : (x.verified ? '✅ 已到账·已核对' : '✅ 已到账');
+                        return '<div class="bk-log"><span class="bk-ld">' +
+                            '<b style="font-family:monospace;">' + esc(x.u_code) + '</b><br>' +
+                            esc(x.u_amount) + ' U币 → <b>' + esc(x.nb_amount) + ' NB币</b> · ' + st +
+                            ' · ' + esc(x.created_at) +
+                            (x.verify_note ? '<br>备注:' + esc(x.verify_note) : '') +
+                            '</span><span class="bk-la"></span></div>';
+                    }).join('');
+                }).catch(function (e) {
+                    ub.innerHTML = '<div class="bk-help">读取失败:' + esc((e && e.message) || e) + '</div>';
+                });
+        }
+    }
+
+    // ---- NB币 → U币:生成兑换码 ----
+    function doCreateExchange() {
+        if (!getUser()) { showToast('请先登录', false); return; }
+        var el = document.getElementById('exNbAmt');
+        var amt = parseInt((el && el.value) || '', 10);
+        if (!(amt >= 1000)) { showToast('至少 1000 NB币', false); return; }
+        if (amt > 100000) { showToast('单笔最多 100,000 NB币', false); return; }
+        if (amt % 1000 !== 0) { showToast('金额需为 1000 的整数倍(1 U币 = 1000 NB币)', false); return; }
+        var nameEl = document.getElementById('exUtwName');
+        var utw = ((nameEl && nameEl.value) || '').trim();
+
+        if (!confirm('确认用 ' + amt + ' NB币 换 ' + (amt / 1000) + ' U币?\n\n' +
+                     '点确定后会【立即扣除】' + amt + ' NB币并生成兑换码。\n' +
+                     (utw ? '该码只能发给 U 账号「' + utw + '」。\n' : '（未限定账号，谁拿到码都能领）\n') +
+                     '没领成可以在列表里作废,NB币会退回。')) return;
+
+        callRpc('create_exchange_code', { p_nb_amount: amt, p_utw_name: utw || null })
+            .then(function (res) {
+            var d = res.data || {};
+            if (!d.success) { showToast(d.message || '生成失败', false); return; }
+            showToast('兑换码已生成', true);
+            var box = document.getElementById('exCreated');
+            if (box) {
+                box.innerHTML = '✅ 已生成:' +
+                    '<br><b style="font-family:monospace;font-size:0.9rem;word-break:break-all;">' + esc(d.code) + '</b>' +
+                    '<br>' + esc(d.nb_amount) + ' NB币 → <b>' + esc(d.u_amount) + ' U币</b>' +
+                    (d.fee > 0 ? '(手续费 ' + esc(d.fee) + ' NB币)' : '') +
+                    ' · 到期 ' + esc(d.expires_at) +
+                    (d.utw_name ? ' · 限定账号 <b>' + esc(d.utw_name) + '</b>' : '') +
+                    '<br><a class="bk-btn gold" style="text-decoration:none;display:inline-block;margin-top:8px;" ' +
+                    'target="_blank" rel="noopener" href="' + esc(d.jump_url) + '">→ 去对方网站领取 ' + esc(d.u_amount) + ' U币</a>' +
+                    '<br><span style="opacity:.75;">在那边登录你自己的 U 账号领取,不用把 NB频道 密码给任何人。</span>';
+            }
+            if (el) el.value = '';
+            if (nameEl) nameEl.value = '';
+            loadExchange();
+            loadBalance();
+            loadBank();
+        }).catch(function (e) { showToast('生成失败:' + ((e && e.message) || e), false); });
+    }
+
+    // ---- 作废兑换码(NB币退回) ----
+    function doCancelExchange(code) {
+        if (!getUser()) return;
+        if (!confirm('确认作废这个兑换码?\n\n' + code + '\n\n作废后 NB币 会退回你的余额。')) return;
+        callRpc('cancel_exchange_code', { p_code: code })
+            .then(function (res) {
+                var d = res.data || {};
+                showToast(d.message || (d.success ? '已作废' : '作废失败'), !!d.success);
+                loadExchange();
+                loadBalance();
+            }).catch(function (e) { showToast('作废失败:' + ((e && e.message) || e), false); });
+    }
+
+    // ---- U币 → NB币:提交,立即到账 ----
+    function doSubmitUExchange() {
+        if (!getUser()) { showToast('请先登录', false); return; }
+        var amtEl = document.getElementById('ueAmt');
+        var codeEl = document.getElementById('ueCode');
+        var amt = parseFloat((amtEl && amtEl.value) || '');
+        var code = ((codeEl && codeEl.value) || '').replace(/\s+/g, '').toUpperCase();
+        if (!(amt > 0)) { showToast('请填写 U币数量', false); return; }
+        if (!/^U[0-9]{6}[0-9A-F]{8}$/.test(code)) {
+            showToast('兑换码格式不对,应该像 U002000A1B2C3D4', false); return;
+        }
+        // 码里第 2~7 位写死了金额(单位 0.01 U币),先本地对一遍,省一次往返
+        var inCode = parseInt(code.substr(1, 6), 10) / 100;
+        if (Math.abs(inCode - amt) > 0.001) {
+            showToast('码里写的是 ' + inCode + ' U币,你填的是 ' + amt + ' U币', false); return;
+        }
+        if (!confirm('确认兑换?\n\n' + inCode + ' U币 → ' + Math.floor(inCode * 1000) + ' NB币\n兑换码:' + code +
+                     '\n\n点确定后 NB币 立即到账。')) return;
+        callRpc('submit_u_exchange', { p_u_code: code, p_u_amount: amt })
+            .then(function (res) {
+            var d = res.data || {};
+            if (!d.success) { showToast(d.message || '兑换失败', false); return; }
+            showToast(d.message || ('已到账 ' + Math.floor(inCode * 1000) + ' NB币'), true);
+            if (amtEl) amtEl.value = '';
+            if (codeEl) codeEl.value = '';
+            loadExchange();
+            loadBalance();
+            loadBank();
+        }).catch(function (e) { showToast('兑换失败:' + ((e && e.message) || e), false); });
     }
 
     // ===== 操作(与经典版 RPC 完全一致) =====
