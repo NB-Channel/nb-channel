@@ -1443,12 +1443,12 @@ html { -webkit-text-size-adjust: 100%; }
             '<b>在那里登录你自己的 U 账号</b>领取。' +
             '没领成可以在下面作废,NB币 会退回。</div>' +
             '<div class="bk-inrow">' +
-            '<input type="number" id="exWantU" class="bk-field num" min="1" max="100" step="1" placeholder="想兑换的 U币" style="min-width:170px;">' +
+            '<input type="number" id="exWantU" class="bk-field num" min="1" max="100" step="1" placeholder="想兑换的 U币" style="min-width:170px;" oninput="updateExHint()">' +
             '<input type="text" id="exUtwName" class="bk-field" maxlength="32" placeholder="限定的U账号名(可留空)" style="min-width:170px;">' +
             '<button class="bk-btn gold" type="button" onclick="doCreateExchange()">生成兑换码</button>' +
             '</div>' +
-            '<div class="bk-help" id="exCostHint">单笔想换 1 ~ 100 U币 · 手续费 1% · 每人每天 500,000 NB币<br>' +
-            '↑ 第二个框填上你在对方网站的账号名,这段兑换码就<b>只能发给那个账号</b>(推荐填)。留空则谁拿到码都能领。</div>' +
+            '<div class="bk-help" id="exCostHint">单笔想换 1 ~ 100 U币 · 手续费 1%（从 NB币 里收）· 每人每天 500,000 NB币</div>' +
+            '<div class="bk-help">↑ 第二个框填上你在对方网站的账号名,这段兑换码就<b>只能发给那个账号</b>(推荐填)。留空则谁拿到码都能领。</div>' +
             '<div id="exCreated" class="bk-help"></div>' +
             '<div id="exList" class="bk-logs"><div class="bk-help">加载中…</div></div>' +
             '</div>';
@@ -1543,8 +1543,37 @@ html { -webkit-text-size-adjust: 100%; }
     // 这个反算放在服务端做（汇率/手续费只在我们这边），前端只做粗略预估给用户看。
     var EX_RATE = 1000;      // 只用于界面预估提示,真实值以服务端为准
     var EX_FEE_PCT = 1;
+
+    // 反算「想拿 N U币 要花多少 NB币」。必须和服务端算法一致：
+    // 手续费是 floor 的,所以直接 ceil(净额/(1-费率)) 会多要 1 个 NB币。
+    //   想拿 1 U币:净额 1000,ceil(1000/0.99)=1011 —— 但 1010 就够
+    //   （1010 - floor(1010×1%) = 1010 - 10 = 1000）
     function exNbCost(wantU) {
-        return Math.ceil(wantU * EX_RATE / (1 - EX_FEE_PCT / 100));
+        var needNet = Math.ceil(wantU * EX_RATE);
+        if (EX_FEE_PCT <= 0) return needNet;
+        var nb = Math.ceil(needNet / (1 - EX_FEE_PCT / 100));
+        while (nb > 1 && (nb - 1) - Math.floor((nb - 1) * EX_FEE_PCT / 100) >= needNet) nb--;
+        while (nb - Math.floor(nb * EX_FEE_PCT / 100) < needNet) nb++;
+        return nb;
+    }
+
+    // 用户一边输,一边告诉他「要花多少、其中手续费多少、到手多少」
+    // 之前只写一句「手续费 1%」,用户得自己心算,于是就会问「换 1 U币 为什么要付 1011」
+    function updateExHint() {
+        var el = document.getElementById('exCostHint');
+        if (!el) return;
+        var want = parseFloat((document.getElementById('exWantU') || {}).value || '');
+        if (!(want > 0)) {
+            el.innerHTML = '单笔想换 1 ~ 100 U币 · 手续费 1%（从 NB币 里收）· 每人每天 500,000 NB币';
+            return;
+        }
+        var cost = exNbCost(want);
+        var fee  = Math.floor(cost * EX_FEE_PCT / 100);
+        var net  = cost - fee;
+        var got  = Math.round(net / EX_RATE * 100) / 100;
+        el.innerHTML = '💰 想拿 <b>' + want + ' U币</b> → 支付 <b>' + cost + ' NB币</b>' +
+            '（其中本金 ' + net + ' + 手续费 ' + fee + '，汇率 1 U币 = ' + EX_RATE + ' NB币）' +
+            '<br><span style="opacity:.75;">实际以服务端结算为准，相差不会超过 1 NB币。</span>';
     }
     function doCreateExchange() {
         if (!getUser()) { showToast('请先登录', false); return; }
@@ -1560,7 +1589,8 @@ html { -webkit-text-size-adjust: 100%; }
         var cost = exNbCost(want);
 
         if (!confirm('想兑换 ' + want + ' U币\n\n' +
-                     '需要支付约 ' + cost + ' NB币（含 1% 手续费，实际以服务端结算为准）\n' +
+                     '需要支付 ' + cost + ' NB币（其中手续费 ' + Math.floor(cost * EX_FEE_PCT / 100) +
+                     ' ，本金 ' + (cost - Math.floor(cost * EX_FEE_PCT / 100)) + '）\n' +
                      '点确定后会【立即扣除】并生成兑换码。\n' +
                      (utw ? '该码只能发给 U 账号「' + utw + '」。\n' : '（未限定账号，谁拿到码都能领）\n') +
                      '没领成可以在列表里作废,NB币会退回。')) return;
