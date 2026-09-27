@@ -1447,6 +1447,9 @@
     const EX_PER_PAGE = 50;
     let exPage = 1;
     let exAllRows = [];
+    // ⭐ 服务端返回的真·总数。之前分页用的是 exAllRows.length（= 当前页条数），
+    //    于是 pages 永远算成 1，超过 50 条记录之后「下一页」就再也点不出来了。
+    let exTotal = 0;
     const EX_LABEL = {
         nb2u:     ['NB币 → U币', '#e8590c'],
         u2nb:     ['U币 → NB币', '#2f9e44'],
@@ -1500,6 +1503,7 @@
         });
 
         exAllRows = data.list || [];
+        exTotal = Number(data.total) || 0;
         renderExchangeList();
     }
 
@@ -1522,10 +1526,14 @@
         const pager = document.getElementById('exPager');
         const info = document.getElementById('exListInfo');
         const rows = exFilteredRows();
-        const total = exPage === 1 ? rows.length : exAllRows.length;
-        if (info) info.textContent = '本页 ' + rows.length + ' 条' +
-            (document.getElementById('exSearch').value ? '（已筛选）' : '') +
-            ' · 时间范围 ' + document.getElementById('exDaysFilter').value + ' 天';
+        const searching = !!document.getElementById('exSearch').value.trim();
+        // 用服务端的 total,不要用当前页条数 —— 否则永远只有 1 页
+        const total = exTotal;
+        if (info) {
+            info.textContent = '本页 ' + rows.length + ' 条 · 共 ' + total + ' 条' +
+                (searching ? '（搜索只筛当前页）' : '') +
+                ' · 时间范围 ' + document.getElementById('exDaysFilter').value + ' 天';
+        }
 
         if (!rows.length) {
             box.innerHTML = '<div style="padding:24px;color:#8a94a6;text-align:center;">' +
