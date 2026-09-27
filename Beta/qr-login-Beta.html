@@ -113,6 +113,15 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; 
 <body>
 <div class="wrap">
 
+    <!-- 微信/QQ 内置浏览器的坑：登录状态和手机浏览器不互通 -->
+    <div id="wxWarn" class="warn hide" style="margin-bottom:14px;">
+        ⚠️ <b>你是在微信 / QQ 里打开的这个页面。</b><br>
+        如果你刚才是用微信「扫一扫」扫的二维码，那么这里登录的是它们<b>内置的浏览器</b>，
+        和你手机上真正的浏览器不是一回事。<br>
+        想给电脑授权的话现在也能点确认；但如果你想顺便在手机浏览器上也登录好，
+        请点右上角「···」→<b>在浏览器打开</b>再来一次。
+    </div>
+
     <div class="brand"><span class="dot">NB</span><b>NB频道</b></div>
 
     <!-- ============ 加载中 ============ -->
@@ -233,6 +242,18 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; 
     var el = function (id) { return document.getElementById(id); };
     var code = (new URLSearchParams(location.search).get('c') || '')
                 .replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+
+    // 微信 / QQ / 支付宝内置浏览器检测。
+    // 这些内置浏览器的 localStorage 和系统浏览器不互通，不提示的话
+    // 用户会以为功能坏了（详见页面顶部那段说明）。
+    (function () {
+        var ua = '';
+        try { ua = navigator.userAgent || ''; } catch (e) {}
+        if (/MicroMessenger|QQ\/|QQBrowser|AlipayClient|Weibo|DingTalk/i.test(ua)) {
+            var w = el('wxWarn');
+            if (w) w.classList.remove('hide');
+        }
+    })();
 
     function show(id) {
         ['pLoading', 'pError', 'pNeedLogin', 'pConfirm', 'pDone'].forEach(function (p) {
