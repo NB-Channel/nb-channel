@@ -1278,17 +1278,50 @@
     const SCF_MAIL_URL = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
 
     // 第一步：把密码交给 SCF，由它验密码 + 把验证码发到【服务端写死的管理员邮箱】
+    //
+    // 为什么要重试：腾讯云 SCF 的网关(openresty)偶发会直接返回 433/404 这类
+    // 非常规状态码，请求根本没进到函数里。2026-09-27 实测遇到过：报
+    // 「发送失败 HTTP 433」，过一会儿再点就好了。这类失败是网关层的，
+    // 重试一次基本就过 —— 所以这里自动重试，别让用户对着一个状态码发呆。
+    //
+    // 但要区分两种失败，不能一律重试：
+    //   · 拿到了 JSON 且带 message（密码错误/太频繁/未授权）→ 业务失败，重试没意义
+    //   · 没拿到 JSON，或状态码非常规 → 网关抽风，重试
     async function requestAdminCode(pwd) {
-        const res = await fetch(SCF_MAIL_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ kind: 'admin', password: pwd })
-        });
-        const data = await res.json().catch(function () { return {}; });
-        if (!res.ok || !data.ok) {
-            throw new Error(data.message || ('发送失败 HTTP ' + res.status));
+        const MAX = 3;
+        let last = '未知错误';
+        for (let i = 1; i <= MAX; i++) {
+            try {
+                const res = await fetch(SCF_MAIL_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ kind: 'admin', password: pwd })
+                });
+                // ⚠️ 先读文本再自己解析：网关抽风时返回的不是 JSON，
+                //    直接 res.json() 会抛异常，把真正的状态码和正文都吃掉
+                const raw = await res.text();
+                let data = null;
+                try { data = JSON.parse(raw); } catch (e) { data = null; }
+
+                if (data && data.ok) return data;
+
+                // 业务层面的明确拒绝 —— 不重试
+                if (data && data.message) {
+                    const e = new Error(data.message);
+                    e.fatal = true;
+                    throw e;
+                }
+
+                // 网关层异常：记下原始信息，重试
+                last = '网关返回 HTTP ' + res.status +
+                       (raw ? '（' + raw.replace(/\s+/g, ' ').slice(0, 120) + '）' : '（空响应）');
+            } catch (err) {
+                if (err && err.fatal) throw err;
+                last = (err && err.message) || String(err);
+            }
+            if (i < MAX) await new Promise(function (r) { setTimeout(r, 700 * i); });
         }
-        return data;
+        throw new Error(last + ' —— 已自动重试 ' + MAX + ' 次，请稍后再试');
     }
 
     // 第二步：密码 + 验证码一起交给服务端签发会话
