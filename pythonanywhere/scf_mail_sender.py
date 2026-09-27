@@ -7,6 +7,11 @@
 #   EMAIL_AUTH = 163 SMTP 授权码
 #   SUPA_URL   = https://pbaafgjkwdbwcmsikcmg.supabase.co
 #   SUPA_KEY   = anon key(防轰炸靠 DB 限频 + 本函数内存限频)
+#   MAIL_SECRET = ⭐ 发码密钥,必须和数据库 admin_settings.mail_secret 一致
+#                 值从 Supabase 里查:
+#                   SELECT value FROM public.admin_settings WHERE key='mail_secret';
+#                 没配也能跑(数据库那边的开关 mail_secret_required 默认 '0'),
+#                 但配好并把开关打开之后,匿名就再也伪造不了验证码了。
 #
 # ============================================================
 # v2 (2026-09-25) 新增 Origin 白名单
@@ -18,6 +23,19 @@
 #       浏览器不允许 JS 伪造 Origin,所以对方无法绕过。
 # 注意:这只挡浏览器。服务端代理调用不带 Origin,靠 DB 层的
 #       每 IP 20 封/天 + 全站 200 封/天(sql/URGENT4)兜底。
+#
+# ============================================================
+# v3 (2026-09-27) 发码时带上 MAIL_SECRET
+# ------------------------------------------------------------
+# 原因:store_email_code 对 anon 开放,而它的 p_code_hash 由调用方提供、
+#       从不校验来源;登录第二步 login_finish 又不需要密码。于是任何人:
+#         store_email_code(受害者邮箱,'login',md5('111111'))
+#         login_finish(受害者用户名,'111111')
+#       就能拿到别人的会话令牌。实测该路径确实可用。
+#       同一路径也能绕过管理员的邮箱二次验证。
+# 做法:本函数在请求体里带上 MAIL_SECRET,数据库比对通过才写码。
+#       密钥只存在于这里的环境变量里,浏览器永远拿不到。
+#       详见 sql/fix_mail_code_injection.sql。
 # ============================================================
 import json
 import os
@@ -114,6 +132,11 @@ def _rt_check(key, limit, window):
         _rt_ts[key] = now
     _rt[key] = _rt.get(key, 0) + 1
     return _rt[key] <= limit
+
+
+# 发码密钥。数据库那边开关打开后，不带这个密钥的 store_email_code 调用一律被拒。
+# 密钥只在环境变量里，不写死在代码里（这个文件在公开仓库中）。
+MAIL_SECRET = os.environ.get('MAIL_SECRET', '').strip()
 
 
 def supa_rpc(fn, params):
@@ -285,7 +308,8 @@ def index():
     r = supa_rpc('store_email_code', {
         'p_email': to_addr, 'p_purpose': kind,
         'p_code_hash': hashlib.md5(code.encode('utf-8')).hexdigest(),
-        'p_ip': ip})
+        'p_ip': ip,
+        'p_secret': MAIL_SECRET})          # ⭐ 数据库凭这个确认调用方是本站发信器
     if not r.get('ok'):
         return jsonify({'ok': False, 'message': r.get('message', '发送失败')})
     d = r.get('data') or {}
