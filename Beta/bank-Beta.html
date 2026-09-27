@@ -1226,19 +1226,32 @@ html { -webkit-text-size-adjust: 100%; }
         toastTimer = setTimeout(function () { t.classList.remove('show'); }, 4200);
     }
     // 统一把 RPC 失败的原因说清楚
-    // —— 原来只显示 d.message || '生成失败',把 res.error 和原始返回都吞掉了,
+    // —— 原来只显示 d.message || '生成失败',把 res.error / status / hint 全吞掉了,
     //    排查时只能看到一句「生成失败」,什么线索都没有。
+    //    实测踩过的坑:PGRST202(参数对不上)时 data 是 null、message 为空,
+    //    结果只显示「生成失败」—— 而 PostgREST 其实在 hint 里
+    //    写清了它期望的函数签名。
     function exFail(prefix, res) {
-        var d = (res && res.data) || {};
+        var d   = (res && res.data)  || {};
         var err = (res && res.error) || null;
-        var msg = d.message || (err && err.message) || '没有任何返回内容';
+        var msg  = d.message || (err && err.message) || '';
         var code = (err && err.code) || '';
+        var hint = (err && err.hint) || '';
+        var st   = (res && res.status) ? ('HTTP ' + res.status) : '';
+
         try {
             console.log('[' + prefix + '] 原始返回 = ' + JSON.stringify(res));
         } catch (e) {
             console.log('[' + prefix + '] 原始返回(无法序列化) = ', res);
         }
-        showToast(prefix + '：' + esc(msg) + (code ? '（' + esc(code) + '）' : ''), false);
+
+        if (!msg && !code) {
+            msg = '返回内容为空' + (st ? '（' + st + '）' : '');
+        }
+        var out = prefix + '：' + esc(msg);
+        if (code) out += '（' + esc(code) + '）';
+        if (hint) out += '<br><span style="opacity:.75;font-size:.85em;">' + esc(hint) + '</span>';
+        showToast(out, false);
     }
     function callRpc(name, params) {
         var user = getUser();
