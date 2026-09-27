@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f172a">
+<title>登录其他设备 - NB频道</title>
+<script>
+    (function () {
+        try {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #f7f8fa; --ink: #1a1d23; --ink-soft: #5a6270; --ink-faint: #8b93a3;
+    --line: #e8eaee; --brand: #3b82f6; --brand-deep: #2563eb; --card: #ffffff;
+    --radius-lg: 20px; --radius-md: 14px;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+    --shadow-2: 0 2px 4px rgba(16,24,40,.05), 0 24px 48px -20px rgba(16,24,40,.18);
+}
+html.dark { color-scheme: dark;
+    --bg: #0a101f; --ink: #e5eaf3; --ink-soft: #9aa7bd; --ink-faint: #64748b;
+    --line: rgba(148,163,184,.16); --card: #101a2e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+}
+body {
+    background: var(--bg); color: var(--ink); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    -webkit-text-size-adjust: 100%; padding: 26px 16px 60px;
+}
+.wrap { width: 100%; max-width: 560px; margin: 0 auto; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.topbar a { color: var(--brand); text-decoration: none; font-size: .9rem; font-weight: 600; }
+.topbar .who { font-size: .84rem; color: var(--ink-soft); }
+.topbar .who b { color: var(--ink); }
+.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1); padding: 26px 22px;
+}
+h1 { font-size: 1.24rem; margin-bottom: 8px; }
+.lead { font-size: .89rem; color: var(--ink-soft); line-height: 1.9; margin-bottom: 20px; }
+.qrbox {
+    text-align: center; padding: 20px 0 8px;
+}
+#qrImg {
+    display: inline-block; padding: 14px; background: #fff;
+    border-radius: 16px; border: 1px solid var(--line);
+    min-width: 208px; min-height: 208px; line-height: 0;
+}
+.state { text-align: center; margin-top: 16px; font-size: .92rem; line-height: 1.9; }
+.state .big { font-size: 1.02rem; font-weight: 700; }
+.countdown { color: var(--ink-faint); font-size: .84rem; margin-top: 4px; }
+.ok    { color: #15803d; }
+html.dark .ok { color: #4ade80; }
+.err   { color: #b91c1c; }
+html.dark .err { color: #f87171; }
+.warn {
+    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.32);
+    color: #b45309; border-radius: var(--radius-md);
+    padding: 12px 15px; font-size: .86rem; line-height: 1.9; margin-top: 20px;
+}
+html.dark .warn { color: #fbbf24; }
+.claimed {
+    background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.32);
+    border-radius: var(--radius-md); padding: 13px 16px; margin-top: 8px;
+    font-size: .86rem; line-height: 1.95; text-align: left;
+}
+.claimed .row { display: flex; justify-content: space-between; gap: 12px; }
+.claimed .k { color: var(--ink-faint); flex: none; }
+.claimed .v { font-weight: 700; word-break: break-all; text-align: right; }
+button {
+    border: none; border-radius: 999px; padding: 12px 22px;
+    font-size: .95rem; font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: transform .15s ease;
+}
+button:active { transform: translateY(1px); }
+.btn-main { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+            box-shadow: 0 8px 20px -8px rgba(59,130,246,.6); }
+.btn-ghost { background: transparent; color: var(--ink-soft);
+             border: 1px solid var(--line); margin-left: 8px; }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+.center { text-align: center; margin-top: 18px; }
+.spin {
+    width: 22px; height: 22px; border-radius: 50%; margin: 18px auto 8px;
+    border: 3px solid var(--line); border-top-color: var(--brand);
+    animation: sp .8s linear infinite;
+}
+@keyframes sp { to { transform: rotate(360deg); } }
+.hide { display: none !important; }
+.steps { font-size: .85rem; color: var(--ink-soft); line-height: 2; margin-top: 18px; }
+.steps b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="topbar">
+        <a href="profile-Beta.html">← 返回个人主页</a>
+        <span class="who" id="whoBox">未登录</span>
+    </div>
+
+    <div class="card">
+        <h1>📱 登录其他设备</h1>
+        <p class="lead">
+            用手机扫下面这个二维码，<b>手机就不用再输一遍用户名和密码了</b>。<br>
+            电脑保持登录不动，只是把一次登录机会"借"给扫它的那台设备。
+        </p>
+
+        <!-- 没登录 -->
+        <div id="pNeedLogin" class="hide">
+            <div class="warn" style="margin-top:0;">
+                要先在这台电脑上登录，才能把登录机会借给别的设备。
+            </div>
+            <div class="center">
+                <button class="btn-main" onclick="location.href='login-Beta.html?redirect='+encodeURIComponent(location.href)">去登录</button>
+            </div>
+        </div>
+
+        <!-- 主区域 -->
+        <div id="pMain" class="hide">
+            <div class="qrbox">
+                <div id="qrImg"></div>
+            </div>
+            <div class="state" id="stateBox">
+                <div class="big" id="stateMain">等待扫码…</div>
+                <div class="countdown" id="stateSub"></div>
+            </div>
+
+            <div class="warn">
+                ⚠️ <b>这个二维码等于一次登录凭证，别截图、别发给任何人</b>（包括自称客服的）。<br>
+                谁扫到它、点了确认，谁就能登进你的账号。<br>
+                所以只有 90 秒有效，只能用一次。用完或者你离开这个页面就会立刻作废。
+            </div>
+
+            <div class="center">
+                <button class="btn-main" id="btnRefresh">🔄 换一张</button>
+                <button class="btn-ghost" id="btnCancel">作废</button>
+            </div>
+
+            <div class="steps">
+                <b>怎么用：</b><br>
+                1. 手机上打开相机，对着这个二维码<br>
+                2. 手机会打开一个页面，上面显示会登成哪个账号<br>
+                3. 在手机上点「确认登录这台设备」<br>
+                4. 手机上就登录好了，这边会显示"已被领走"
+            </div>
+        </div>
+
+        <!-- 加载中 -->
+        <div id="pLoading">
+            <div class="spin"></div>
+            <div class="state">正在生成二维码…</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== supabase-js + 二维码库 双源加载（和全站一致：jsDelivr → unpkg）=====
+    (function () {
+        var sb = ['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+                  'https://unpkg.com/@supabase/supabase-js@2'];
+        var qr = ['https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js',
+                  'https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'];
+        function load(list, flag, i) {
+            if (i >= list.length) { window[flag + 'Failed'] = true; return; }
+            var s = document.createElement('script');
+            s.src = list[i];
+            s.onload = function () { window[flag + 'Ready'] = true; };
+            s.onerror = function () { load(list, flag, i + 1); };
+            document.head.appendChild(s);
+        }
+        load(sb, '__sb', 0);
+        load(qr, '__qr', 0);
+    })();
+</script>
+
+<script>
+/* ============================================================
+   扫码登录 · 电脑端「登录其他设备」（方向 B：电脑授权设备）
+   ------------------------------------------------------------
+   和 qr-login-Beta.html 是相反的两个方向,别搞混:
+
+     qr-login-Beta.html   手机【已登录】→ 给电脑授权（电脑登录）
+     qr-grant-Beta.html   电脑【已登录】→ 给别的设备发登录（本页）
+
+   本页安全要点:
+     1. ⚠️ 二维码里的 code 本身就是登录凭证 —— 谁扫到谁就登进这个账号。
+        所以页面必须显著警告"别截图发人",有效期只给 90 秒,且一次性。
+     2. 必须已登录才能生成（服务端 qr_grant_create 里校验 _user_ok）。
+     3. 轮询只用 code + secret,而且 qr_grant_status 只返回状态,
+        【不发令牌】—— 令牌是给扫码那台设备的,不是给本页的。
+     4. 领走后显示对方的 IP 和浏览器,让号主能发现异常。
+   ============================================================ */
+(function () {
+    'use strict';
+
+    var SB_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    var SB_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+    var POLL_MS = 2000, TTL = 90;
+
+    var el = function (id) { return document.getElementById(id); };
+    var timer = null, code = null, secret = null, deadline = 0, busy = false;
+
+    function rpc(fn, body) {
+        return fetch(SB_URL + '/rest/v1/rpc/' + fn, {
+            method: 'POST',
+            headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY,
+                       'Content-Type': 'application/json' },
+            body: JSON.stringify(body || {})
+        }).then(function (r) {
+            if (!r.ok) throw new Error('接口请求失败 HTTP ' + r.status);
+            return r.json();
+        });
+    }
+    function wait(flag, cb) {           // flag: '__sb' 或 '__qr'
+        var n = 0;
+        (function loop() {
+            if (window[flag + 'Ready'] || window[flag + 'Failed'] || n++ > 60) { cb(); return; }
+            setTimeout(loop, 100);
+        })();
+    }
+    function me() {
+        var u = null, t = null;
+        try {
+            u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+            t = localStorage.getItem('nb_session');
+        } catch (e) {}
+        return (u && u.id && t) ? { id: u.id, username: u.username, token: t } : null;
+    }
+
+    function stop(cancel) {
+        if (timer) { clearInterval(timer); timer = null; }
+        if (cancel && code && secret) {
+            try { rpc('qr_login_cancel', { p_code: code, p_secret: secret }); } catch (e) {}
+        }
+        code = null; secret = null; busy = false;
+    }
+
+    function setState(main, sub, cls) {
+        el('stateMain').textContent = main;
+        el('stateMain').className = 'big ' + (cls || '');
+        el('stateSub').textContent = sub || '';
+    }
+
+    function render(url) {
+        var box = el('qrImg');
+        box.innerHTML = '';
+        try {
+            new QRCode(box, { text: url, width: 180, height: 180,
+                              colorDark: '#111827', colorLight: '#ffffff',
+                              correctLevel: QRCode.CorrectLevel.M });
+        } catch (e) { box.textContent = '二维码生成失败'; }
+    }
+
+    function start() {
+        var who = me();
+        if (!who) {
+            el('pLoading').classList.add('hide');
+            el('pNeedLogin').classList.remove('hide');
+            return;
+        }
+        if (busy) return;
+        busy = true;
+        el('pLoading').classList.remove('hide');
+        el('pMain').classList.add('hide');
+
+        wait('__qr', function () {
+            if (!window.__qrReady) {
+                el('pLoading').innerHTML = '<div class="state err">二维码组件加载失败，请刷新页面重试</div>';
+                busy = false; return;
+            }
+            wait('__sb', function () {
+                if (!window.__sbReady) {
+                    el('pLoading').innerHTML = '<div class="state err">接口组件加载失败，请刷新页面重试</div>';
+                    busy = false; return;
+                }
+                stop(false);
+                var ua = '';
+                try { ua = navigator.userAgent || ''; } catch (e) {}
+                rpc('qr_grant_create', { p_user_id: who.id, p_session: who.token, p_ua: ua })
+                  .then(function (d) {
+                    if (!d || !d.ok) {
+                        el('pLoading').innerHTML = '<div class="state err">' +
+                            ((d && d.message) || '生成失败') + '</div>';
+                        busy = false; return;
+                    }
+                    code = d.code; secret = d.secret;
+                    TTL = d.ttl || 90;
+                    deadline = Date.now() + TTL * 1000;
+                    el('pLoading').classList.add('hide');
+                    el('pMain').classList.remove('hide');
+                    render(d.url);
+                    setState('等待扫码…', TTL + ' 秒后失效', '');
+                    busy = false;
+                    poll();
+                    timer = setInterval(poll, POLL_MS);
+                  }).catch(function (e) {
+                    el('pLoading').innerHTML = '<div class="state err">生成失败：' +
+                        ((e && e.message) || e) + '</div>';
+                    busy = false;
+                  });
+            });
+        });
+    }
+
+    function poll() {
+        if (!code || !secret) return;
+        var left = Math.ceil((deadline - Date.now()) / 1000);
+        if (left <= 0) {
+            stop(false);
+            el('qrImg').innerHTML = '<div style="padding:60px 10px;color:#8b93a3;font-size:.86rem;">已过期</div>';
+            setState('二维码已过期', '点下面「换一张」重新生成', 'err');
+            return;
+        }
+        el('stateSub').textContent = left + ' 秒后失效';
+
+        rpc('qr_grant_status', { p_code: code, p_secret: secret }).then(function (d) {
+            if (!d || !d.ok) return;
+            if (d.status === 'claimed') {
+                stop(false);
+                var when = d.at || '';
+                el('qrImg').innerHTML = '<div style="padding:52px 10px;font-size:2.6rem;line-height:1;">✅</div>';
+                setState('已被领走', '那台设备已经登录成你的账号了', 'ok');
+                var box = document.createElement('div');
+                box.className = 'claimed';
+                box.innerHTML =
+                    '<div class="row"><span class="k">领取设备 IP</span><span class="v">' + esc(d.claim_ip) + '</span></div>' +
+                    '<div class="row"><span class="k">浏览器</span><span class="v">' + esc(uaText(d.claim_ua)) + '</span></div>' +
+                    '<div class="row"><span class="k">时间</span><span class="v">' + esc(when) + '</span></div>';
+                var old = el('claimedBox');
+                if (old) old.parentNode.removeChild(old);
+                box.id = 'claimedBox';
+                el('stateBox').parentNode.insertBefore(box, el('stateBox').nextSibling);
+                return;
+            }
+            if (d.status === 'expired') {
+                stop(false);
+                el('qrImg').innerHTML = '<div style="padding:60px 10px;color:#8b93a3;font-size:.86rem;">已过期</div>';
+                setState('二维码已过期', '点下面「换一张」重新生成', 'err');
+                return;
+            }
+            if (d.status === 'cancelled') {
+                stop(false);
+                setState('已作废', '点下面「换一张」重新生成', '');
+            }
+        }).catch(function () { /* 单次失败忽略，下次继续 */ });
+    }
+
+    function esc(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[&<>"']/g, function (m) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+        });
+    }
+    function uaText(ua) {
+        if (!ua) return '未知设备';
+        var os = /Windows/i.test(ua) ? 'Windows'
+               : /Android/i.test(ua) ? 'Android'
+               : /iPhone|iPad|iPod/i.test(ua) ? 'iOS'
+               : /Mac OS X/i.test(ua) ? 'macOS'
+               : /Linux/i.test(ua) ? 'Linux' : '未知系统';
+        var br = /Edg\//i.test(ua) ? 'Edge'
+               : /OPR\/|Opera/i.test(ua) ? 'Opera'
+               : /Firefox\//i.test(ua) ? 'Firefox'
+               : /Chrome\//i.test(ua) ? 'Chrome'
+               : /Safari\//i.test(ua) ? 'Safari' : '未知浏览器';
+        return br + ' · ' + os;
+    }
+
+    // 初始化
+    var who0 = me();
+    if (who0) el('whoBox').innerHTML = '当前账号：<b>' + esc(who0.username) + '</b>';
+    el('btnRefresh').onclick = function () { start(); };
+    el('btnCancel').onclick = function () {
+        stop(true);
+        el('qrImg').innerHTML = '<div style="padding:60px 10px;color:#8b93a3;font-size:.86rem;">已作废</div>';
+        setState('已作废', '点下面「换一张」重新生成', '');
+    };
+    window.addEventListener('beforeunload', function () { stop(true); });
+    start();
+})();
+</script>
+</body>
+</html>

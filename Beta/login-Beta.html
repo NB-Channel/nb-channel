@@ -975,6 +975,29 @@ html { -webkit-text-size-adjust: 100%; }
         <div class="lg-seg" role="tablist">
             <button type="button" class="lg-opt on" id="loginTab">🔑 登录</button>
             <button type="button" class="lg-opt" id="registerTab">✨ 注册</button>
+            <button type="button" class="lg-opt" id="qrTab">📱 扫码</button>
+        </div>
+
+        <!-- 扫码登录面板(手机上已登录时,扫一下就能登电脑) -->
+        <div id="qrPanel" style="display:none;">
+            <div id="qrBox" style="text-align:center;">
+                <div id="qrImg" style="display:inline-block;padding:12px;background:#fff;border-radius:14px;border:1px solid var(--line);min-width:196px;min-height:196px;"></div>
+                <div class="lg-hint" id="qrHint" style="display:block;margin-top:12px;">
+                    用手机扫这个二维码，在手机上点一下「确认登录」
+                </div>
+                <div class="lg-err" id="qrError"></div>
+                <div class="lg-back">
+                    <a href="javascript:void(0)" id="qrRefresh">🔄 刷新二维码</a>
+                </div>
+            </div>
+            <div id="qrDone" style="display:none;text-align:center;">
+                <div style="font-size:2.4rem;margin:8px 0;">✅</div>
+                <div class="lg-hint" style="display:block;" id="qrDoneMsg">登录成功，正在跳转…</div>
+            </div>
+            <div class="lg-hint" style="display:block;margin-top:14px;opacity:.75;font-size:.78rem;line-height:1.8;">
+                手机上没有登录？先扫，页面上会引导你在手机登录一次。<br>
+                二维码 2 分钟内有效，过期点「刷新二维码」。
+            </div>
         </div>
 
         <!-- 登录表单(两步:账号密码 -> 邮箱验证码) -->
@@ -1279,19 +1302,171 @@ html { -webkit-text-size-adjust: 100%; }
     var sendTimer = null;
 
     function setMode(reg) {
-        document.getElementById('loginTab').classList.toggle('on', !reg);
-        document.getElementById('registerTab').classList.toggle('on', reg);
-        document.getElementById('loginForm').style.display = reg ? 'none' : 'block';
+        var qr = (arguments.length > 1) && arguments[1];   // setMode(false, true) = 扫码模式
+        document.getElementById('loginTab').classList.toggle('on', !reg && !qr);
+        document.getElementById('registerTab').classList.toggle('on', !!reg && !qr);
+        var qrTab = document.getElementById('qrTab');
+        if (qrTab) qrTab.classList.toggle('on', !!qr);
+        document.getElementById('loginForm').style.display = (reg || qr) ? 'none' : 'block';
         document.getElementById('registerForm').style.display = reg ? 'block' : 'none';
         document.getElementById('bindPanel').style.display = 'none';
-        document.getElementById('lgTitle').textContent = reg ? '注册新账号' : '登录账号';
+        // ⚠️ 变量名别写成 qp —— 外层有个 var qp = new URLSearchParams(...)，
+        //    同名会遮蔽，读代码的人会以为出问题（而且真用错了是静默拿错值）
+        var qrPanelEl = document.getElementById('qrPanel');
+        if (qrPanelEl) qrPanelEl.style.display = qr ? 'block' : 'none';
+        document.getElementById('lgTitle').textContent = qr ? '扫码登录' : (reg ? '注册新账号' : '登录账号');
+        // 离开扫码页就把会话取消掉,别让二维码一直挂着等人确认
+        if (!qr && typeof qrStop === 'function') qrStop(true);
+        if (qr && typeof qrStart === 'function') qrStart();
     }
     document.getElementById('loginTab').addEventListener('click', function () { setMode(false); });
     document.getElementById('registerTab').addEventListener('click', function () { setMode(true); });
+    var _qrTabEl = document.getElementById('qrTab');
+    if (_qrTabEl) _qrTabEl.addEventListener('click', function () { setMode(false, true); });
     var qp = new URLSearchParams(window.location.search);
     if (qp.get('register') === '1') setMode(true);
 
     function errBox(id, msg) { document.getElementById(id).innerText = msg || ''; }
+
+    /* ============================================================
+       📱 扫码登录（电脑端）
+       ------------------------------------------------------------
+       流程:
+         1. qr_login_create → 拿到 code + secret
+         2. 把 code 画成二维码（URL 指向手机端确认页）
+         3. 每 2 秒 qr_login_poll(code, secret)
+         4. 手机扫码确认后，poll 返回 status='ok' + 会话令牌
+         5. 存进 localStorage，和普通登录一样收尾
+
+       为什么轮询要带 secret:
+         二维码里只有 code。令牌只发给同时持有 secret 的那台电脑 ——
+         别人偷看到二维码也拿不走会话。
+
+       ⚠️ 别把 secret 画进二维码，也别写进页面标题/日志。
+       ============================================================ */
+    var qrTimer = null, qrCode = null, qrSecret = null, qrDeadline = 0, qrBusy = false;
+    var QR_POLL_MS = 2000;
+
+    function qrSetHint(t) {
+        var h = document.getElementById('qrHint');
+        if (h) h.textContent = t;
+    }
+
+    // 二维码库：jsDelivr → unpkg 双源，和全站一致
+    function qrLoadLib(cb) {
+        if (window.QRCode) { cb(true); return; }
+        var srcs = [
+            'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js',
+            'https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js'
+        ];
+        (function load(i) {
+            if (i >= srcs.length) { cb(false); return; }
+            var s = document.createElement('script');
+            s.src = srcs[i];
+            s.onload = function () { cb(!!window.QRCode); };
+            s.onerror = function () { load(i + 1); };
+            document.head.appendChild(s);
+        })(0);
+    }
+
+    function qrStop(cancel) {
+        if (qrTimer) { clearInterval(qrTimer); qrTimer = null; }
+        if (cancel && qrCode && qrSecret) {
+            try {
+                supabaseClient.rpc('qr_login_cancel', { p_code: qrCode, p_secret: qrSecret });
+            } catch (e) {}
+        }
+        qrCode = null; qrSecret = null; qrBusy = false;
+    }
+
+    function qrRender(url) {
+        var box = document.getElementById('qrImg');
+        if (!box) return;
+        box.innerHTML = '';
+        try {
+            new QRCode(box, {
+                text: url, width: 172, height: 172,
+                colorDark: '#111827', colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (e) {
+            box.textContent = '二维码生成失败';
+        }
+    }
+
+    function qrStart() {
+        if (qrBusy) return;
+        qrBusy = true;
+        var errEl = document.getElementById('qrError');
+        errEl.textContent = '';
+        document.getElementById('qrBox').style.display = 'block';
+        document.getElementById('qrDone').style.display = 'none';
+        qrSetHint('正在生成二维码…');
+
+        qrLoadLib(function (okLib) {
+            if (!okLib) { errEl.textContent = '二维码组件加载失败，请刷新页面或改用密码登录'; qrBusy = false; return; }
+            qrStop(false);
+            var ua = '';
+            try { ua = navigator.userAgent || ''; } catch (e) {}
+            supabaseClient.rpc('qr_login_create', { p_ua: ua }).then(function (res) {
+                var d = (res && res.data) || {};
+                if (!d.ok) { errEl.textContent = d.message || '生成失败，请稍后再试'; qrBusy = false; return; }
+                qrCode = d.code;
+                qrSecret = d.secret;
+                qrDeadline = Date.now() + (d.ttl || 120) * 1000;
+                qrRender(d.url);
+                qrSetHint('用手机扫这个二维码，在手机上点一下「确认登录」');
+                qrBusy = false;
+                qrPoll();
+                qrTimer = setInterval(qrPoll, QR_POLL_MS);
+            }).catch(function (e) {
+                errEl.textContent = '生成失败：' + ((e && e.message) || e);
+                qrBusy = false;
+            });
+        });
+    }
+
+    function qrPoll() {
+        if (!qrCode || !qrSecret) return;
+        if (Date.now() > qrDeadline) {
+            qrStop(false);
+            document.getElementById('qrImg').innerHTML = '<div style="padding:40px 8px;color:#8b93a3;font-size:.85rem;">二维码已过期</div>';
+            qrSetHint('二维码 2 分钟有效，已过期 —— 点下面「刷新二维码」');
+            return;
+        }
+        supabaseClient.rpc('qr_login_poll', { p_code: qrCode, p_secret: qrSecret }).then(function (res) {
+            var d = (res && res.data) || {};
+            if (!d.ok) return;
+            if (d.status === 'expired') {
+                qrStop(false);
+                document.getElementById('qrImg').innerHTML = '<div style="padding:40px 8px;color:#8b93a3;font-size:.85rem;">二维码已过期</div>';
+                qrSetHint('二维码 2 分钟有效，已过期 —— 点下面「刷新二维码」');
+                return;
+            }
+            if (d.status === 'cancelled') {
+                qrStop(false);
+                qrSetHint('已在手机上取消。要重新登录，点下面「刷新二维码」');
+                return;
+            }
+            if (d.status !== 'ok' || !d.token) return;
+
+            // 成功：和密码登录完全一样的收尾
+            qrStop(false);
+            document.getElementById('qrBox').style.display = 'none';
+            document.getElementById('qrDone').style.display = 'block';
+            document.getElementById('qrDoneMsg').innerHTML =
+                '登录成功：<b>' + (d.username || '') + '</b><br>正在跳转…';
+            try { localStorage.setItem('nb_session', d.token); } catch (e) {}
+            onLoginSuccess({ id: d.id, username: d.username });
+        }).catch(function () { /* 单次轮询失败就忽略，下一次继续 */ });
+    }
+
+    (function bindQrRefresh() {
+        var b = document.getElementById('qrRefresh');
+        if (b) b.addEventListener('click', function () { qrStart(); });
+        // 离开页面时把会话作废，别留个二维码挂着
+        window.addEventListener('beforeunload', function () { qrStop(true); });
+    })();
 
     function sendCodeApi(payload) {
         return fetch(SCF_MAIL_URL, {

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f172a">
+<title>扫码登录 - NB频道</title>
+<script>
+    (function () {
+        try {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #f7f8fa; --ink: #1a1d23; --ink-soft: #5a6270; --ink-faint: #8b93a3;
+    --line: #e8eaee; --brand: #3b82f6; --card: #ffffff;
+    --radius-lg: 20px; --radius-md: 14px;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+}
+html.dark { color-scheme: dark;
+    --bg: #0a101f; --ink: #e5eaf3; --ink-soft: #9aa7bd; --ink-faint: #64748b;
+    --line: rgba(148,163,184,.16); --card: #101a2e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+}
+body {
+    background: var(--bg); color: var(--ink); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 22px 16px calc(22px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust: 100%;
+}
+.wrap { width: 100%; max-width: 420px; }
+.brand { display: flex; align-items: center; gap: 9px; justify-content: center; margin-bottom: 18px; }
+.brand .dot {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: #fff; font-weight: 800; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+}
+.brand b { font-size: 1.05rem; letter-spacing: .5px; }
+.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1); padding: 24px 20px;
+}
+h1 { font-size: 1.16rem; margin-bottom: 6px; text-align: center; }
+.sub { font-size: .86rem; color: var(--ink-soft); text-align: center; line-height: 1.85; }
+.dev {
+    border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: 14px 16px; margin: 18px 0; background: var(--bg); text-align: center;
+}
+.dev .big { font-size: 1.35rem; font-weight: 800; letter-spacing: 1px; margin: 4px 0 2px; }
+.dev .k { font-size: .76rem; color: var(--ink-faint); }
+.warn {
+    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.32);
+    color: #b45309; border-radius: var(--radius-md);
+    padding: 11px 14px; font-size: .84rem; line-height: 1.85; margin-bottom: 16px;
+}
+html.dark .warn { color: #fbbf24; }
+button {
+    width: 100%; border: none; border-radius: 999px; padding: 14px 18px;
+    font-size: 1rem; font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: transform .15s ease;
+}
+button:active { transform: translateY(1px); }
+.btn-main { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff;
+            box-shadow: 0 8px 20px -8px rgba(34,197,94,.6); }
+.btn-ghost { background: transparent; color: var(--ink-soft);
+             border: 1px solid var(--line); margin-top: 10px; }
+.btn-blue { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+            box-shadow: 0 8px 20px -8px rgba(59,130,246,.6); }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+.foot { text-align: center; font-size: .74rem; color: var(--ink-faint); margin-top: 18px; line-height: 1.8; }
+.hide { display: none !important; }
+.spin {
+    width: 22px; height: 22px; border-radius: 50%; margin: 18px auto 6px;
+    border: 3px solid var(--line); border-top-color: var(--brand);
+    animation: sp .8s linear infinite;
+}
+@keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="brand"><span class="dot">NB</span><b>NB频道</b></div>
+
+    <div class="card" id="pLoading">
+        <div class="spin"></div>
+        <div class="sub">正在校验二维码…</div>
+    </div>
+
+    <div class="card hide" id="pError">
+        <h1>😵 无法登录</h1>
+        <p class="sub" id="errMsg" style="margin-bottom:18px;"></p>
+        <button class="btn-blue" onclick="location.reload()">重新加载</button>
+        <button class="btn-ghost" onclick="location.href='index-Beta.html'">回首页</button>
+    </div>
+
+    <div class="card hide" id="pConfirm">
+        <h1>📱 登录这台设备</h1>
+        <p class="sub">扫的是别人电脑上生成的二维码。确认后，<b>这台设备</b>会登录成下面的账号：</p>
+
+        <div class="dev">
+            <div class="k">即将登录为</div>
+            <div class="big" id="dvName">--</div>
+            <div class="k" id="dvTtl"></div>
+        </div>
+
+        <div class="warn">
+            ⚠️ <b>只扫你自己电脑上的二维码。</b><br>
+            别人把二维码发给你，你扫了就会登进<b>他的</b>账号 ——
+            之后你在里面做的任何操作都算在他头上。
+        </div>
+
+        <button class="btn-main" id="btnOk">✅ 确认登录这台设备</button>
+        <button class="btn-ghost" id="btnNo">取消</button>
+    </div>
+
+    <div class="card hide" id="pDone">
+        <h1>✅ 登录成功</h1>
+        <p class="sub" id="doneMsg" style="margin-bottom:18px;"></p>
+        <button class="btn-blue" id="goHome">进入 NB频道</button>
+    </div>
+
+    <div class="foot">NB频道 · 扫码登录<br>本页不读取也不保存任何密码</div>
+</div>
+
+<script>
+    // ===== supabase-js 双源加载(和全站一致) =====
+    (function () {
+        var srcs = [
+            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+            'https://unpkg.com/@supabase/supabase-js@2'
+        ];
+        function load(i) {
+            if (i >= srcs.length) { window.__sbFailed = true; return; }
+            var s = document.createElement('script');
+            s.src = srcs[i];
+            s.onload = function () { window.__sbReady = true; };
+            s.onerror = function () { load(i + 1); };
+            document.head.appendChild(s);
+        }
+        load(0);
+    })();
+</script>
+
+<script>
+/* ============================================================
+   扫码登录 · 手机/设备领取页（方向 B：电脑授权设备）
+   ------------------------------------------------------------
+   和 qr-login-Beta.html 的区别 —— 别搞混，这是两个相反的方向：
+
+     qr-login-Beta.html   手机【已登录】→ 给电脑授权（电脑登录）
+     qr-claim-Beta.html   电脑【已登录】→ 给这台设备发登录（本页登录）
+
+   ⚠️ 本页最要紧的一点：
+     二维码里的 code 本身就是登录凭证。谁扫到、谁点确认，
+     这台设备就登进那个账号。所以：
+       · 有效期只有 90 秒（服务端控制）
+       · 一次性
+       · 页面必须先显示"你会登成谁"，让人看清再点
+       · 明确警告"别扫别人发来的二维码"
+   ============================================================ */
+(function () {
+    'use strict';
+
+    var SB_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    var SB_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+
+    var el = function (id) { return document.getElementById(id); };
+    var code = (new URLSearchParams(location.search).get('c') || '')
+                .replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+
+    function show(id) {
+        ['pLoading', 'pError', 'pConfirm', 'pDone'].forEach(function (p) {
+            el(p).classList.toggle('hide', p !== id);
+        });
+    }
+    function fail(msg) { el('errMsg').textContent = msg; show('pError'); }
+
+    function rpc(fn, body) {
+        return fetch(SB_URL + '/rest/v1/rpc/' + fn, {
+            method: 'POST',
+            headers: {
+                apikey: SB_KEY,
+                Authorization: 'Bearer ' + SB_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body || {})
+        }).then(function (r) {
+            if (!r.ok) throw new Error('接口请求失败 HTTP ' + r.status);
+            return r.json();
+        });
+    }
+
+    function waitSb(cb) {
+        var n = 0;
+        (function loop() {
+            if (window.__sbReady || window.__sbFailed || n++ > 60) { cb(); return; }
+            setTimeout(loop, 100);
+        })();
+    }
+
+    function boot() {
+        if (!code || code.length !== 16) {
+            fail('二维码里的信息不完整。请回到电脑上重新生成一张。');
+            return;
+        }
+        waitSb(function () {
+            rpc('qr_grant_info', { p_code: code }).then(function (d) {
+                if (!d || !d.ok) { fail((d && d.reason) || '二维码无效'); return; }
+
+                el('dvName').textContent = d.username_masked || '(未知)';
+                var sec = Number(d.expires_in) || 0;
+                el('dvTtl').textContent = sec > 0
+                    ? '这张码还有 ' + sec + ' 秒有效'
+                    : '即将过期，请让电脑上刷新一个';
+                show('pConfirm');
+
+                var busy = false;
+                el('btnOk').onclick = function () {
+                    if (busy) return;
+                    busy = true;
+                    el('btnOk').disabled = true;
+                    el('btnNo').disabled = true;
+                    var ua = '';
+                    try { ua = navigator.userAgent || ''; } catch (e) {}
+                    rpc('qr_grant_claim', { p_code: code, p_ua: ua }).then(function (r) {
+                        if (!r || !r.ok) {
+                            busy = false;
+                            el('btnOk').disabled = false;
+                            el('btnNo').disabled = false;
+                            fail((r && r.reason) || '登录失败');
+                            return;
+                        }
+                        try { localStorage.setItem('nb_session', r.token); } catch (e) {}
+                        try {
+                            localStorage.setItem('nb_user', JSON.stringify({ id: r.id, username: r.username }));
+                        } catch (e) {}
+                        el('doneMsg').innerHTML = '已登录为 <b>' + (r.username || '') + '</b>';
+                        show('pDone');
+                        el('goHome').onclick = function () { location.href = 'index-Beta.html'; };
+                        // 3 秒后自动进首页
+                        setTimeout(function () { location.href = 'index-Beta.html'; }, 3000);
+                    }).catch(function (e) {
+                        busy = false;
+                        el('btnOk').disabled = false;
+                        el('btnNo').disabled = false;
+                        fail(e.message);
+                    });
+                };
+                el('btnNo').onclick = function () { location.href = 'index-Beta.html'; };
+            }).catch(function (e) { fail(e.message); });
+        });
+    }
+
+    boot();
+})();
+</script>
+</body>
+</html>

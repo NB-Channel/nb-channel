@@ -1212,6 +1212,23 @@ html { -webkit-text-size-adjust: 100%; }
 
     <hr>
 
+    <h2>📱 登录其他设备</h2>
+    <div class="form-group">
+        <p style="font-size:.88rem;line-height:1.9;color:var(--ink-soft);margin:0 0 12px;">
+            想用手机上新登录，又懒得在手机上再输一遍用户名和密码？<br>
+            生成一个二维码，用手机扫一下就能登录 —— <b>电脑这边保持登录不动</b>。
+        </p>
+        <button id="goQrGrantBtn" type="button"
+                style="background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;border-radius:999px;padding:11px 26px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;">
+            → 生成登录二维码
+        </button>
+        <p style="font-size:.78rem;line-height:1.8;color:var(--ink-faint);margin:10px 0 0;">
+            ⚠️ 二维码等于一次登录凭证，别截图发给别人。90 秒有效、只能用一次。
+        </p>
+    </div>
+
+    <hr>
+
     <h2>🤖 我的自动支持规则</h2>
     <div id="autoRulesContainer" style="overflow-x:auto;">
         <div class="loading">加载中...</div>
@@ -2329,6 +2346,14 @@ function uiHref(p) { return (p && p.indexOf('login.html') === 0) ? '/' + p : p; 
 
     document.getElementById('updateUsernameBtn').addEventListener('click', updateUsername);
     document.getElementById('updatePasswordBtn').addEventListener('click', updatePassword);
+
+    // 「登录其他设备」：跳到扫码授权页（那边会生成二维码，手机扫一下就能登）
+    var _qrGrantBtn = document.getElementById('goQrGrantBtn');
+    if (_qrGrantBtn) {
+        _qrGrantBtn.addEventListener('click', function () {
+            location.href = 'qr-grant-Beta.html';
+        });
+    }
 
     // ===== 界面风格切换（新潮 / 经典 / 官网模式） =====
     function getUiMode() {

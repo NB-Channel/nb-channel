@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f172a">
+<title>扫码登录确认 - NB频道</title>
+<script>
+    // 和全站一样:先按本地存的主题给 html 加 dark,避免闪一下白屏
+    (function () {
+        try {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #f7f8fa; --ink: #1a1d23; --ink-soft: #5a6270; --ink-faint: #8b93a3;
+    --line: #e8eaee; --brand: #3b82f6; --brand-deep: #2563eb; --card: #ffffff;
+    --radius-lg: 20px; --radius-md: 14px;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+}
+html.dark { color-scheme: dark;
+    --bg: #0a101f; --ink: #e5eaf3; --ink-soft: #9aa7bd; --ink-faint: #64748b;
+    --line: rgba(148,163,184,.16); --card: #101a2e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+}
+body {
+    background: var(--bg); color: var(--ink); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 22px 16px calc(22px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust: 100%;
+}
+.wrap { width: 100%; max-width: 420px; }
+.brand { display: flex; align-items: center; gap: 9px; justify-content: center; margin-bottom: 18px; }
+.brand .dot {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: #fff; font-weight: 800; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+}
+.brand b { font-size: 1.05rem; letter-spacing: .5px; }
+.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1); padding: 24px 20px;
+}
+h1 { font-size: 1.16rem; margin-bottom: 6px; text-align: center; }
+.sub { font-size: .86rem; color: var(--ink-soft); text-align: center; line-height: 1.8; }
+.badge {
+    display: inline-block; padding: 3px 11px; border-radius: 999px;
+    font-size: .74rem; font-weight: 700; letter-spacing: .5px;
+}
+.b-ok   { background: rgba(34,197,94,.14);  color: #15803d; }
+.b-warn { background: rgba(245,158,11,.16); color: #b45309; }
+.b-err  { background: rgba(231,76,60,.13);  color: #b91c1c; }
+.b-info { background: rgba(59,130,246,.13); color: #1d4ed8; }
+html.dark .b-ok   { color: #4ade80; }
+html.dark .b-warn { color: #fbbf24; }
+html.dark .b-err  { color: #f87171; }
+html.dark .b-info { color: #93c5fd; }
+
+.dev {
+    border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: 14px 16px; margin: 18px 0; background: var(--bg);
+}
+.dev-row { display: flex; justify-content: space-between; gap: 14px; padding: 6px 0; font-size: .88rem; }
+.dev-row + .dev-row { border-top: 1px dashed var(--line); }
+.dev-row .k { color: var(--ink-faint); flex: none; }
+.dev-row .v { font-weight: 700; text-align: right; word-break: break-all; }
+
+.warn {
+    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.32);
+    color: #b45309; border-radius: var(--radius-md);
+    padding: 11px 14px; font-size: .84rem; line-height: 1.85; margin-bottom: 16px;
+}
+html.dark .warn { color: #fbbf24; }
+
+button {
+    width: 100%; border: none; border-radius: 999px; padding: 14px 18px;
+    font-size: 1rem; font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+button:active { transform: translateY(1px); }
+.btn-main { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff;
+            box-shadow: 0 8px 20px -8px rgba(34,197,94,.6); }
+.btn-ghost { background: transparent; color: var(--ink-soft);
+             border: 1px solid var(--line); margin-top: 10px; }
+.btn-blue { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+            box-shadow: 0 8px 20px -8px rgba(59,130,246,.6); }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+.who {
+    text-align: center; font-size: .86rem; color: var(--ink-soft);
+    margin-top: 16px; line-height: 1.9;
+}
+.who b { color: var(--ink); }
+.foot { text-align: center; font-size: .74rem; color: var(--ink-faint); margin-top: 18px; line-height: 1.8; }
+.hide { display: none !important; }
+.spin {
+    width: 22px; height: 22px; border-radius: 50%; margin: 18px auto 6px;
+    border: 3px solid var(--line); border-top-color: var(--brand);
+    animation: sp .8s linear infinite;
+}
+@keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="brand"><span class="dot">NB</span><b>NB频道</b></div>
+
+    <!-- ============ 加载中 ============ -->
+    <div class="card" id="pLoading">
+        <div class="spin"></div>
+        <div class="sub">正在校验二维码…</div>
+    </div>
+
+    <!-- ============ 出错 ============ -->
+    <div class="card hide" id="pError">
+        <h1>😵 无法确认</h1>
+        <p class="sub" id="errMsg" style="margin-bottom:18px;"></p>
+        <button class="btn-blue" onclick="location.reload()">重新加载</button>
+        <button class="btn-ghost" onclick="location.href='index-Beta.html'">回首页</button>
+    </div>
+
+    <!-- ============ 手机还没登录 ============ -->
+    <div class="card hide" id="pNeedLogin">
+        <h1>🔐 请先登录</h1>
+        <p class="sub" style="margin-bottom:18px;">
+            扫码登录是「用手机上已登录的账号，给电脑授权」。<br>
+            所以要先在<b>这台手机</b>上登录一次你的 NB频道 账号。
+        </p>
+        <button class="btn-blue" id="goLogin">去登录 / 注册</button>
+    </div>
+
+    <!-- ============ 要确认 ============ -->
+    <div class="card hide" id="pConfirm">
+        <h1>🖥️ 有设备请求登录</h1>
+        <p class="sub">确认后，下面这台设备会登录成你的账号</p>
+
+        <div class="dev">
+            <div class="dev-row"><span class="k">浏览器</span><span class="v" id="dvUa">--</span></div>
+            <div class="dev-row"><span class="k">IP</span><span class="v" id="dvIp">--</span></div>
+            <div class="dev-row"><span class="k">请求时间</span><span class="v" id="dvTime">--</span></div>
+        </div>
+
+        <div class="warn" id="dvWarn">
+            ⚠️ <b>如果不是你自己正在用的设备，请不要点确认。</b><br>
+            别人可以把二维码发给你，骗你扫码替他登录。
+        </div>
+
+        <button class="btn-main" id="btnOk">✅ 确认登录</button>
+        <button class="btn-ghost" id="btnNo">不是我，取消</button>
+
+        <div class="who">当前账号：<b id="myName">--</b></div>
+    </div>
+
+    <!-- ============ 成功 / 已取消 ============ -->
+    <div class="card hide" id="pDone">
+        <h1 id="doneTitle">✅ 已确认</h1>
+        <p class="sub" id="doneMsg" style="margin-bottom:18px;"></p>
+        <button class="btn-blue" onclick="location.href='index-Beta.html'">回首页</button>
+    </div>
+
+    <div class="foot">NB频道 · 扫码登录<br>本页只用于确认登录，不会读取或保存任何密码</div>
+</div>
+
+<script>
+    // ===== supabase-js 双源加载(和全站一致:jsDelivr → unpkg) =====
+    (function () {
+        var srcs = [
+            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+            'https://unpkg.com/@supabase/supabase-js@2'
+        ];
+        function load(i) {
+            if (i >= srcs.length) { window.__sbFailed = true; return; }
+            var s = document.createElement('script');
+            s.src = srcs[i];
+            s.onload = function () { window.__sbReady = true; };
+            s.onerror = function () { load(i + 1); };
+            document.head.appendChild(s);
+        }
+        load(0);
+    })();
+</script>
+
+<script>
+/* ============================================================
+   扫码登录 · 手机端确认页
+   ------------------------------------------------------------
+   ⚠️ 三个页面很容易搞混,先说清这是哪一个:
+
+     qr-login-Beta.html  ← 本页。方向 A：手机授权电脑
+                            手机【已登录】,扫电脑上的二维码,点确认 → 电脑登录
+
+     qr-grant-Beta.html    方向 B：电脑授权设备
+                            电脑【已登录】,生成二维码给人扫
+     qr-claim-Beta.html    方向 B：设备领取
+                            手机/别的设备扫上面那个码,点确认 → 这台设备登录
+
+   本页调的服务端接口：qr_login_scan / qr_login_confirm
+   ------------------------------------------------------------
+   设计要点（为什么这么写）:
+     1. 【只是"授权"，不是"登录"】
+        手机上必须自己已经登录着，才能给别人授权。
+        所以这里校验的是手机端自己的会话(_user_ok) ——
+        没登录的人确认不了。
+     2. 【确认前先给人看"是谁在请求"】
+        扫码登录有一个天然的攻击面:别人可以把二维码发给你,
+        骗你扫码替他登录(业内叫 QRLJacking)。
+        挡不住"用户自己点了确认",但可以让他在点之前看清楚:
+        请求方的 IP / 浏览器 / 时间。陌生设备就不该点。
+        ⚠️ 浏览器那一行是电脑端传上来的,可以伪造;
+           IP 是服务端自己读的,伪造不了 —— 所以以 IP 为准。
+     3. 【本页拿不到任何密钥】
+        二维码里只有 code。真正领会话令牌要 code + secret,
+        而 secret 只在电脑端手里,永远不进这个页面。
+        所以就算有人把二维码截走,也只能"替他确认一次",
+        拿不到最后的令牌。
+   ============================================================ */
+(function () {
+    'use strict';
+
+    var SB_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    var SB_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+
+    var el = function (id) { return document.getElementById(id); };
+    var code = (new URLSearchParams(location.search).get('c') || '')
+                .replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+
+    function show(id) {
+        ['pLoading', 'pError', 'pNeedLogin', 'pConfirm', 'pDone'].forEach(function (p) {
+            el(p).classList.toggle('hide', p !== id);
+        });
+    }
+    function fail(msg) {
+        el('errMsg').textContent = msg;
+        show('pError');
+    }
+
+    // 浏览器字符串 → 人看的
+    function uaText(ua) {
+        if (!ua) return '未知设备';
+        var os = /Windows/i.test(ua) ? 'Windows'
+               : /Android/i.test(ua) ? 'Android'
+               : /iPhone|iPad|iPod/i.test(ua) ? 'iOS'
+               : /Mac OS X/i.test(ua) ? 'macOS'
+               : /CrOS/i.test(ua) ? 'ChromeOS'
+               : /Linux/i.test(ua) ? 'Linux' : '未知系统';
+        var br = /Edg\//i.test(ua) ? 'Edge'
+               : /OPR\/|Opera/i.test(ua) ? 'Opera'
+               : /Firefox\//i.test(ua) ? 'Firefox'
+               : /Chrome\//i.test(ua) ? 'Chrome'
+               : /Safari\//i.test(ua) ? 'Safari' : '未知浏览器';
+        return br + ' · ' + os;
+    }
+
+    function rpc(fn, body) {
+        return fetch(SB_URL + '/rest/v1/rpc/' + fn, {
+            method: 'POST',
+            headers: {
+                apikey: SB_KEY,
+                Authorization: 'Bearer ' + SB_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body || {})
+        }).then(function (r) {
+            if (!r.ok) throw new Error('接口请求失败 HTTP ' + r.status);
+            return r.json();
+        });
+    }
+
+    function waitSb(cb) {
+        var n = 0;
+        (function loop() {
+            if (window.__sbReady || n++ > 60) { cb(); return; }
+            if (window.__sbFailed) { cb(); return; }
+            setTimeout(loop, 100);
+        })();
+    }
+
+    // 手机端自己的登录状态
+    function me() {
+        var u = null, t = null;
+        try {
+            u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+            t = localStorage.getItem('nb_session');
+        } catch (e) {}
+        if (!u || !u.id || !t) return null;
+        return { id: u.id, username: u.username, token: t };
+    }
+
+    function boot() {
+        if (!code || code.length !== 16) {
+            fail('二维码里的信息不完整。请回到电脑上重新生成一张。');
+            return;
+        }
+
+        var who = me();
+        if (!who) {
+            el('goLogin').onclick = function () {
+                location.href = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
+            };
+            show('pNeedLogin');
+            return;
+        }
+        el('myName').textContent = who.username || '(未知)';
+
+        waitSb(function () {
+            rpc('qr_login_scan', { p_code: code }).then(function (d) {
+                if (!d || !d.ok) {
+                    fail((d && d.reason) || '二维码无效');
+                    return;
+                }
+                el('dvUa').textContent   = uaText(d.ua);
+                el('dvIp').textContent   = d.ip || '未知';
+                el('dvTime').textContent = d.created_at || '--';
+                show('pConfirm');
+
+                var busy = false;
+                function done(approve) {
+                    if (busy) return;
+                    busy = true;
+                    el('btnOk').disabled = true;
+                    el('btnNo').disabled = true;
+                    rpc('qr_login_confirm', {
+                        p_code: code, p_user_id: who.id,
+                        p_session: who.token, p_approve: approve
+                    }).then(function (r) {
+                        if (!r || !r.ok) {
+                            busy = false;
+                            el('btnOk').disabled = false;
+                            el('btnNo').disabled = false;
+                            fail((r && r.reason) || '确认失败');
+                            return;
+                        }
+                        el('doneTitle').textContent = approve ? '✅ 已确认登录' : '🚫 已取消';
+                        el('doneMsg').innerHTML = approve
+                            ? '电脑上会自动登录成 <b>' + (who.username || '') + '</b>。<br>现在可以关掉这一页了。'
+                            : '已经取消，电脑上不会登录。';
+                        show('pDone');
+                    }).catch(function (e) { fail(e.message); });
+                }
+                el('btnOk').onclick = function () { done(true); };
+                el('btnNo').onclick = function () { done(false); };
+            }).catch(function (e) { fail(e.message); });
+        });
+    }
+
+    boot();
+})();
+</script>
+</body>
+</html>
