@@ -1225,6 +1225,21 @@ html { -webkit-text-size-adjust: 100%; }
         clearTimeout(toastTimer);
         toastTimer = setTimeout(function () { t.classList.remove('show'); }, 4200);
     }
+    // 统一把 RPC 失败的原因说清楚
+    // —— 原来只显示 d.message || '生成失败',把 res.error 和原始返回都吞掉了,
+    //    排查时只能看到一句「生成失败」,什么线索都没有。
+    function exFail(prefix, res) {
+        var d = (res && res.data) || {};
+        var err = (res && res.error) || null;
+        var msg = d.message || (err && err.message) || '没有任何返回内容';
+        var code = (err && err.code) || '';
+        try {
+            console.log('[' + prefix + '] 原始返回 = ' + JSON.stringify(res));
+        } catch (e) {
+            console.log('[' + prefix + '] 原始返回(无法序列化) = ', res);
+        }
+        showToast(prefix + '：' + esc(msg) + (code ? '（' + esc(code) + '）' : ''), false);
+    }
     function callRpc(name, params) {
         var user = getUser();
         if (!user) return Promise.reject(new Error('请先登录'));
@@ -1544,7 +1559,7 @@ html { -webkit-text-size-adjust: 100%; }
         callRpc('create_exchange_code', { p_nb_amount: amt, p_utw_name: utw || null })
             .then(function (res) {
             var d = res.data || {};
-            if (!d.success) { showToast(d.message || '生成失败', false); return; }
+            if (!d.success) { exFail('生成兑换码失败', res); return; }
             showToast('兑换码已生成', true);
             var box = document.getElementById('exCreated');
             if (box) {
@@ -1563,7 +1578,10 @@ html { -webkit-text-size-adjust: 100%; }
             loadExchange();
             loadBalance();
             loadBank();
-        }).catch(function (e) { showToast('生成失败:' + ((e && e.message) || e), false); });
+        }).catch(function (e) {
+            console.error('[create_exchange_code] 抛异常 =', e);
+            showToast('生成兑换码异常：' + esc((e && e.message) || String(e)), false);
+        });
     }
 
     // ---- 作废兑换码(NB币退回) ----
@@ -1573,10 +1591,14 @@ html { -webkit-text-size-adjust: 100%; }
         callRpc('cancel_exchange_code', { p_code: code })
             .then(function (res) {
                 var d = res.data || {};
-                showToast(d.message || (d.success ? '已作废' : '作废失败'), !!d.success);
+                if (!d.success) { exFail('作废失败', res); return; }
+                showToast(d.message || '已作废', true);
                 loadExchange();
                 loadBalance();
-            }).catch(function (e) { showToast('作废失败:' + ((e && e.message) || e), false); });
+            }).catch(function (e) {
+                console.error('[cancel_exchange_code] 抛异常 =', e);
+                showToast('作废异常：' + esc((e && e.message) || String(e)), false);
+            });
     }
 
     // ---- U币 → NB币:提交,立即到账 ----
@@ -1600,14 +1622,17 @@ html { -webkit-text-size-adjust: 100%; }
         callRpc('submit_u_exchange', { p_u_code: code, p_u_amount: amt })
             .then(function (res) {
             var d = res.data || {};
-            if (!d.success) { showToast(d.message || '兑换失败', false); return; }
+            if (!d.success) { exFail('兑换失败', res); return; }
             showToast(d.message || ('已到账 ' + Math.floor(inCode * 1000) + ' NB币'), true);
             if (amtEl) amtEl.value = '';
             if (codeEl) codeEl.value = '';
             loadExchange();
             loadBalance();
             loadBank();
-        }).catch(function (e) { showToast('兑换失败:' + ((e && e.message) || e), false); });
+        }).catch(function (e) {
+            console.error('[submit_u_exchange] 抛异常 =', e);
+            showToast('兑换异常：' + esc((e && e.message) || String(e)), false);
+        });
     }
 
     // ===== 操作(与经典版 RPC 完全一致) =====
