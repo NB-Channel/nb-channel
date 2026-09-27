@@ -51,8 +51,26 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      # ⚠️ 别改回 android-actions/setup-android@v3:
+      #    它内部会跑 `sdkmanager tools`,而 Google 已经把 tools 包下架了 →
+      #    sdkmanager 退出码 1,构建在第 6 步就死,后面全部 skipped。
+      #    (2026-09-15 起全球范围爆的,跟本仓库的代码无关。)
+      #    GitHub 的 ubuntu runner 镜像本来就预装了 Android SDK,直接用现成的,
+      #    这一步不联网安装任何 SDK 组件。
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK" ]; then
+            echo "❌ 找不到预装的 Android SDK: $SDK"
+            exit 1
+          fi
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "✅ Android SDK = $SDK"
+          echo "--- platforms ---";     ls "$SDK/platforms"     2>/dev/null || echo "(空)"
+          echo "--- build-tools ---";   ls "$SDK/build-tools"   2>/dev/null || echo "(空)"
+          echo "--- cmdline-tools ---"; ls "$SDK/cmdline-tools" 2>/dev/null || echo "(空)"
+          echo "--- licenses ---";      ls "$SDK/licenses"      2>/dev/null || echo "(空)"
 
       - name: Install dependencies
         working-directory: app
