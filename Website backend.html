@@ -536,22 +536,10 @@
 
     function getToken() { return adminToken; }
 
-    async function getClientIP() {
-        const services = [
-            'https://icanhazip.com',
-            'https://api.ipify.org?format=text'
-        ];
-        for (const url of services) {
-            try {
-                const response = await fetch(url);
-                if (response.ok) {
-                    const ip = await response.text();
-                    return ip.trim();
-                }
-            } catch (e) { /* 尝试下一个 */ }
-        }
-        return 'unknown';
-    }
+    // 注意：这里原来有个 getClientIP()，靠浏览器调 icanhazip / api.ipify.org 拿 IP
+    // 再传给 admin_create_session 做限频 —— 那个值前端可以随便伪造，等于没有限频。
+    // 现在改成服务端自己从请求头读（sql/fix_admin_login_2fa.sql 里的 _request_ip()），
+    // 已经删掉，不要再加回来。
 
     function escapeHtml(str) {
         if (!str) return '';
