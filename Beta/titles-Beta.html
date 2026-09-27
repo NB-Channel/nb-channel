@@ -683,6 +683,19 @@ html { -webkit-text-size-adjust: 100%; }
         </div>
     </div>
     <button class="nav-burger" id="navBurger" aria-label="打开菜单">☰</button>
+    <!-- 扫码:手机端右上角,在汉堡(☰)的右边。只在 APP 里显示 —— 网页端调不动摄像头。
+         整段自包含(自带样式/脚本),不依赖本页既有的 CSS 变量和导航结构。 -->
+    <a class="nav-scan" id="navScanBtn" href="scan-Beta.html" aria-label="扫一扫" title="扫一扫"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5V6a3 3 0 0 1 3-3h2.5"/><path d="M15.5 3H18a3 3 0 0 1 3 3v2.5"/><path d="M21 15.5V18a3 3 0 0 1-3 3h-2.5"/><path d="M8.5 21H6a3 3 0 0 1-3-3v-2.5"/><path d="M3.2 12h17.6"/></svg></a>
+    <style>
+      .nav-scan{display:none;width:42px;height:42px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.7);border:1px solid var(--line,#e2e8f0);color:var(--ink,#0f172a);align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent}
+      .nav-scan svg{width:21px;height:21px;display:block}
+      .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
+      html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
+      @media (max-width:900px){.nav-scan{display:flex}}
+    </style>
+    <script>/* 扫码入口只在 APP 里显示。旧版 APP 也显示 —— 点进去 scan-Beta.html 会提示他更新 */
+    (function(){try{if(!/NBChannelApp/i.test(navigator.userAgent||"")){var b=document.getElementById("navScanBtn");if(b)b.style.display="none";}}catch(e){}})();</script>
+
 </nav>
 <script>
 // ===== 导航「更多功能」下拉 =====
