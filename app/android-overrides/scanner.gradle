@@ -1,0 +1,27 @@
+// ============================================================
+// NB频道 APP：扫码依赖
+// （由 build-apk.yml 在 cap sync 之后追加到 app/build.gradle 末尾）
+// ------------------------------------------------------------
+// 为什么单独一个文件、而且是追加：
+//   cap sync 会重新生成 android 工程的一部分内容，直接改
+//   app/build.gradle 有被覆盖的风险。追加到末尾最稳，
+//   而且 Gradle 允许出现多个 dependencies 块（会自动合并）。
+//
+// 这个库提供什么：
+//   现成的 CaptureActivity 扫码界面（取景框、手电筒、自动对焦都做好了），
+//   我们只要从 MainActivity 里 startActivityForResult 拉起来就行，
+//   不用自己写 CameraX + 解码。
+//
+// 它自己的 AndroidManifest 里已经声明了：
+//   · <activity com.journeyapps.barcodescanner.CaptureActivity>
+//   · <uses-permission android:name="android.permission.CAMERA" />
+//   这两个会在构建时合并进主 manifest，不用我们再写一遍。
+//
+// ⚠️ 改版本号之前先去 Maven Central 确认存在：
+//      https://repo1.maven.org/maven2/com/journeyapps/zxing-android-embedded/
+//    写错版本号 = APK 构建直接失败 = 用户拿不到更新。
+//    实测：4.3.0 ✅ 存在 ／ 4.3.1 ❌ 404
+// ============================================================
+dependencies {
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+}

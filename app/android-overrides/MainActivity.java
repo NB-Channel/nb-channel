@@ -28,6 +28,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.DownloadListener;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -36,6 +37,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.getcapacitor.BridgeActivity;
+import com.journeyapps.barcodescanner.ScanIntentResult;
+import com.journeyapps.barcodescanner.ScanOptions;
+
+import org.json.JSONObject;
 
 /**
  * NB频道 APP 主 Activity
@@ -45,10 +50,15 @@ import com.getcapacitor.BridgeActivity;
  *  2) 返回手势/返回键:先关网页里的弹窗抽屉 → 再网页后退 → 最后二次确认才退出
  *  3) 加载看门狗:页面没加载好就一直显示开屏图;超时则显示「加载失败 + 重试」
  *  4) 消息通知:把网页里的登录态同步到本地,由 JobScheduler 定期查未读并提醒
+ *  5) 扫码:网页调 window.NBQr.scan(),原生开摄像头扫,结果回给网页
  *
  * 注意:本 APP 用 server.url 加载线上网站,Capacitor 的 JS 桥接不会注入远程页面,
  *      所以这些能力全部放在原生侧实现,前端无需也无法调用。
  *      代码只用 Android 标准 API(不碰 Capacitor 内部类),避免版本升级后编译不过。
+ *
+ *      ⚠️ 第 5 项是个例外:addJavascriptInterface 是【Android 标准 API】,
+ *         它不像 Capacitor 插件桥那样受 server.url 限制 —— 对任何页面都有效。
+ *         所以扫码这条路走得通,网页端可以直接调 window.NBQr。
  */
 public class MainActivity extends BridgeActivity {
 
@@ -91,7 +101,97 @@ public class MainActivity extends BridgeActivity {
         setupDownload();
         setupLongPressImage();
         setupNotifications();
+        setupScanner();
         startWatchdog();
+    }
+
+    // ==================== 5) 扫码（给网页调） ====================
+    // 网页端怎么用：
+    //     window.__nbQrResult = function(ok, data) { ... };   // 先注册回调
+    //     window.NBQr.scan();                                  // 再开扫码
+    // 原生扫完会调 window.__nbQrResult(true, '扫到的内容')
+    //              或 window.__nbQrResult(false, 'cancelled' / 错误信息)
+    //
+    // 为什么要在 APP 里内置：不少手机的相机 App 压根没有扫码功能,
+    // 不能假设用户"用相机扫一下"就行 —— 那是把可用性赌在用户设备上。
+    private static final int QR_SCAN_REQUEST = 9871;
+
+    private void setupScanner() {
+        try {
+            WebView webView = getBridge().getWebView();
+            if (webView == null) return;
+            // addJavascriptInterface 是 Android 标准 API,对 server.url 加载的远程页面同样有效。
+            // API 17+ 只暴露带 @JavascriptInterface 注解的方法,别的拿不到。
+            webView.addJavascriptInterface(new QrBridge(), "NBQr");
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** 暴露给网页的对象：window.NBQr */
+    public class QrBridge {
+        @JavascriptInterface
+        public boolean available() {
+            return true;
+        }
+
+        @JavascriptInterface
+        public void scan() {
+            // ⚠️ @JavascriptInterface 的方法跑在 JavaBridge 线程,
+            //    启动 Activity 必须回主线程
+            ui.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ScanOptions options = new ScanOptions();
+                        options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
+                        options.setPrompt("对准二维码");
+                        options.setBeepEnabled(false);
+                        options.setOrientationLocked(false);   // 跟着手机转,别硬锁横屏
+                        options.setBarcodeImageEnabled(false);
+                        startActivityForResult(options.createScanIntent(MainActivity.this), QR_SCAN_REQUEST);
+                    } catch (Exception e) {
+                        sendQrResult(false, "开启扫码失败: " + e.getMessage());
+                    }
+                }
+            });
+        }
+    }
+
+    /** 把扫码结果回给网页 */
+    private void sendQrResult(final boolean ok, final String data) {
+        try {
+            final WebView wv = getBridge().getWebView();
+            if (wv == null) return;
+            // 用 JSONObject.quote 转义 —— 扫到的内容可能有引号/反斜杠,
+            // 直接拼进 JS 会拼出语法错误甚至注入
+            final String js = "window.__nbQrResult&&window.__nbQrResult("
+                    + ok + "," + JSONObject.quote(data == null ? "" : data) + ")";
+            ui.post(new Runnable() {
+                @Override
+                public void run() {
+                    try { wv.evaluateJavascript(js, null); } catch (Exception ignored) {}
+                }
+            });
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // ⚠️ 必须先调 super —— Capacitor 自己的插件也靠这个回调收结果
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != QR_SCAN_REQUEST) return;
+        try {
+            ScanIntentResult r = ScanIntentResult.parseActivityResult(resultCode, data);
+            String contents = r.getContents();
+            if (contents == null || contents.trim().isEmpty()) {
+                sendQrResult(false, "cancelled");       // 用户按了返回
+            } else {
+                sendQrResult(true, contents.trim());
+            }
+        } catch (Exception e) {
+            sendQrResult(false, String.valueOf(e.getMessage()));
+        }
     }
 
     // ==================== 1) 下载接管 ====================

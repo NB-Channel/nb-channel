@@ -129,6 +129,19 @@ jobs:
             cat app/android-overrides/signing.gradle >> "$GRADLE"
             echo "✅ 已写入签名与 release 构建配置"
           fi
+          # 扫码依赖(zxing)。同样必须放 sync 之后 —— 理由见 scanner.gradle 顶部注释
+          if grep -q "zxing-android-embedded" "$GRADLE"; then
+            echo "扫码依赖已存在,跳过"
+          else
+            cat app/android-overrides/scanner.gradle >> "$GRADLE"
+            echo "✅ 已写入扫码依赖"
+          fi
+          # 构建前自检:MainActivity 里用了 zxing,依赖就必须在
+          if grep -q "com.journeyapps.barcodescanner" app/android-overrides/MainActivity.java \
+             && ! grep -q "zxing-android-embedded" "$GRADLE"; then
+            echo "❌ MainActivity 里用了 zxing 但 build.gradle 里没有依赖,构建会失败"
+            exit 1
+          fi
 
       # 通知权限 + 后台任务 Service 必须等 cap sync 之后再注入,否则会被覆盖
       - name: Inject notification service

@@ -34,6 +34,9 @@ let manifest = fs.readFileSync(manifestPath, 'utf8');
 const needPerms = [
   'android.permission.REQUEST_INSTALL_PACKAGES',
   'android.permission.INTERNET',
+  // 扫码要用相机。zxing 库自己的 manifest 里也声明了这条(构建时会合并),
+  // 这里再写一遍是防御性的 —— 权限漏了会变成运行时崩溃,不好查。
+  'android.permission.CAMERA',
 ];
 let added = 0;
 for (const p of needPerms) {
