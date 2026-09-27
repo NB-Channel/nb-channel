@@ -1032,31 +1032,23 @@ html { -webkit-text-size-adjust: 100%; }
     if (here && box.querySelector('.nav-more-panel a[href="' + here + '"]')) btn.classList.add('active');
 })();
 
-// ===== 「扫一扫」只在 APP 里显示 =====
+// ===== 「扫一扫」入口只在 APP 里显示 =====
 // 网页端（手机浏览器）调不动摄像头 —— 安卓/iOS 都没给网页开放稳定的
 // 扫码接口，所以这个功能只能靠 APP 里的原生实现（window.NBQr）。
-// 不在 APP 里就先把入口藏起来，免得用户点了发现用不了。
+//
+// ⚠️ 判断"在不在 APP 里"要用【UA】，不能用 window.NBQr：
+//    旧版 APP 里没有这个桥，用 NBQr 判断会把旧版 APP 用户误判成浏览器，
+//    于是入口被藏起来 —— 他就永远不知道有这个功能，也就不会去更新 APP。
+//    所以：UA 里有 NBChannelApp 就显示（哪怕他的是旧版），点进去会提示更新。
 (function () {
-    function inApp() {
-        try {
-            return !!(window.NBQr && typeof window.NBQr.available === 'function' && window.NBQr.available());
-        } catch (e) { return false; }
-    }
-    var items = ['navScanItem', 'drawerScanItem'].map(function (id) {
-        return document.getElementById(id);
+    var isApp = false;
+    try { isApp = /NBChannelApp/i.test(navigator.userAgent || ''); } catch (e) {}
+    if (isApp) return;   // 在 APP 里 —— 入口保持显示
+
+    ['navScanItem', 'drawerScanItem'].forEach(function (id) {
+        var el2 = document.getElementById(id);
+        if (el2) el2.style.display = 'none';
     });
-    items.forEach(function (el) { if (el) el.style.display = 'none'; });
-    // 先藏起来，确认在 APP 里再显示 —— 原生桥是页面加载前注入好的，
-    // 但 WebView 里脚本执行的时机偶尔早一点点，所以轮询几次更稳
-    var n = 0;
-    (function wait() {
-        if (inApp()) {
-            items.forEach(function (el) { if (el) el.style.display = ''; });
-            return;
-        }
-        if (n++ > 15) return;          // 确认不在 APP，保持隐藏
-        setTimeout(wait, 100);
-    })();
 })();
 </script>
 

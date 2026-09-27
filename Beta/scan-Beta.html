@@ -89,7 +89,7 @@ html.dark .info { color: #93c5fd; }
 
     <div class="brand"><span class="dot">NB</span><span><b>NB频道</b></span></div>
 
-    <!-- 在 APP 里 -->
+    <!-- 在 APP 里、且 APP 支持扫码 -->
     <div class="card hide" id="pApp">
         <div class="ico">📷</div>
         <h1>扫一扫</h1>
@@ -106,18 +106,34 @@ html.dark .info { color: #93c5fd; }
         <div class="log hide" id="logBox"></div>
     </div>
 
-    <!-- 不在 APP 里 -->
+    <!-- 在 APP 里，但 APP 版本太旧（还没有扫码能力） -->
+    <div class="card hide" id="pOldApp">
+        <div class="ico">⬆️</div>
+        <h1>更新 APP 才能用扫一扫</h1>
+        <p class="sub" style="margin-bottom:6px;">
+            你现在用的 <b>NB频道 APP</b> 版本比较旧，还没有扫码能力。<br>
+            更新一次就能用了 —— <b>签名没变，可以直接覆盖安装</b>，数据不会丢。
+        </p>
+        <div class="info">
+            更新方法：APP 首页底部会自动出现蓝色更新条，点「立即更新」即可；<br>
+            也可以去「我的 → 关于」里手动检查更新。
+        </div>
+        <button class="btn-main" onclick="location.href='index-Beta.html'">回首页更新</button>
+    </div>
+
+    <!-- 不在 APP 里（真的手机浏览器） -->
     <div class="card hide" id="pWeb">
         <div class="ico">📱</div>
         <h1>请在 APP 里用「扫一扫」</h1>
         <p class="sub" style="margin-bottom:6px;">
-            你现在用的是手机浏览器，它没有扫码功能。<br>
-            <b>NB频道 APP 里内置了扫一扫</b>，比在浏览器里方便。
+            你现在用的是手机浏览器，<b>浏览器没有扫码能力</b> ——
+            安卓和 iOS 都没给网页开放稳定的摄像头扫码接口。<br>
+            NB频道 APP 里内置了扫一扫。
         </p>
         <div class="warn">
-            用手机浏览器的话也有办法：<br>
-            · <b>手机自带相机</b>（多数机型都带扫码）对着二维码扫<br>
-            · 或者在 APP 里点「我的」→「扫一扫」
+            不想装 APP 的话也有别的办法：<br>
+            · 用<b>手机自带相机</b>扫（如果你的相机 App 带扫码功能）<br>
+            · 或者让电脑那边直接给你一个链接，点开就行
         </div>
         <button class="btn-main" onclick="location.href='download/index.html'">下载 NB频道 APP</button>
         <button class="btn-ghost" onclick="location.href='index-Beta.html'">返回首页</button>
@@ -158,9 +174,20 @@ html.dark .info { color: #93c5fd; }
     }
 
     function inApp() {
+        try { return /NBChannelApp/i.test(navigator.userAgent || ''); } catch (e) { return false; }
+    }
+    // 能不能扫：靠原生桥 window.NBQr。旧版 APP 里没有这个桥。
+    function canScan() {
         try {
             return !!(window.NBQr && typeof window.NBQr.available === 'function' && window.NBQr.available());
         } catch (e) { return false; }
+    }
+
+    function show(id) {
+        ['pApp', 'pOldApp', 'pWeb'].forEach(function (p) {
+            var el2 = el(p);
+            if (el2) el2.classList.toggle('hide', p !== id);
+        });
     }
 
     // ⭐ 只允许我们自己的域名。别的域名一律拒绝。
@@ -199,7 +226,7 @@ html.dark .info { color: #93c5fd; }
 
     function startScan() {
         if (scanning) return;
-        if (!inApp()) { showWeb(); return; }
+        if (!canScan()) { route(); return; }
         scanning = true;
         var btn = el('btnScan');
         btn.disabled = true;
@@ -215,22 +242,25 @@ html.dark .info { color: #93c5fd; }
         }
     }
 
-    function showApp() {
-        el('pWeb').classList.add('hide');
-        el('pApp').classList.remove('hide');
-        el('btnScan').addEventListener('click', startScan);
-    }
-    function showWeb() {
-        el('pApp').classList.add('hide');
-        el('pWeb').classList.remove('hide');
+    // 三种情况分开处理 —— 别把「旧版 APP」误判成「手机浏览器」，
+    // 那样用户会一脸懵：我明明在 APP 里，怎么说我是浏览器。
+    function route() {
+        if (canScan()) {                         // ① APP 且支持扫码
+            show('pApp');
+            var b = el('btnScan');
+            if (b && !b.__bound) { b.__bound = true; b.addEventListener('click', startScan); }
+            return;
+        }
+        if (inApp()) { show('pOldApp'); return; } // ② APP 但太旧（没有 window.NBQr）
+        show('pWeb');                             // ③ 真的在手机浏览器里
     }
 
     // 等原生桥就绪 —— addJavascriptInterface 是页面加载前就注入好的，
     // 但 WebView 里脚本执行的时机偶尔会早一点点，所以轮询几次更稳
     var n = 0;
     (function wait() {
-        if (inApp()) { showApp(); return; }
-        if (n++ > 20) { showWeb(); return; }
+        if (canScan()) { route(); return; }
+        if (n++ > 20) { route(); return; }
         setTimeout(wait, 100);
     })();
 })();
