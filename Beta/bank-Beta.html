@@ -1473,7 +1473,7 @@ html { -webkit-text-size-adjust: 100%; }
             '<span style="opacity:.8;">金额以码里写的为准(码的第 2~7 位就是金额),你填的数字只用来核对 —— 填错了会被拒绝。</span></div>' +
             '<div class="bk-inrow">' +
             '<input type="number" id="ueWantNb" class="bk-field num" min="100" step="10" placeholder="想兑换的 NB币" style="min-width:170px;">' +
-            '<input type="text" id="ueCode" class="bk-field" maxlength="32" placeholder="兑换码 U002000A1B2C3D4" style="min-width:220px;">' +
+            '<input type="text" id="ueCode" class="bk-field" maxlength="32" placeholder="兑换码 U000100A1B2C3D4E5F6" style="min-width:220px;">' +
             '<button class="bk-btn green" type="button" onclick="doSubmitUExchange()">立即兑换</button>' +
             '</div>' +
             '<div class="bk-help">想换的 NB币 = 需要的 U币 × 1000(填 20000 = 花 20 U币) · 每人每天 500,000 NB币</div>' +
@@ -1656,8 +1656,10 @@ html { -webkit-text-size-adjust: 100%; }
 
         if (!(wantNb >= 100)) { showToast('至少想换 100 NB币', false); return; }
         if (Math.abs(wantNb - Math.round(wantNb)) > 0.001) { showToast('NB币要填整数', false); return; }
-        if (!/^U[0-9]{6}[0-9A-F]{8}$/.test(code)) {
-            showToast('兑换码格式不对,应该像 U002000A1B2C3D4', false); return;
+        // 19 位 = 新格式(带防伪签名);15 位 = 老格式,只在服务端开关 require_sig=0 时才收。
+        // 两种都放行,最终由服务端验签决定 —— 前端只挡明显不像码的输入。
+        if (!/^U[0-9]{6}[0-9A-F]{12}$/.test(code) && !/^U[0-9]{6}[0-9A-F]{8}$/.test(code)) {
+            showToast('兑换码格式不对,应该像 U000100A1B2C3D4E5F6', false); return;
         }
         // 码里第 2~7 位写死了金额(单位 0.01 U币)
         var inCodeU = parseInt(code.substr(1, 6), 10) / 100;
