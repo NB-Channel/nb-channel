@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.growth_fund_config (
 INSERT INTO public.growth_fund_config (key, value) VALUES
     ('enabled',        '1'),
     ('share_pct',      '20'),         -- 税收的 20% 进基金（50% 太猛，25% 又偏多）
-    ('daily_cap',      '20000000'),   -- ⭐ 基金每天最多发 2000 万，发不完的照旧销毁
+    ('daily_cap',      '15000000'),   -- ⭐ 基金每天最多发 1500 万，发不完的照旧销毁
     ('cap_value',      '10000000'),   -- 1000 万（原 2000 万）
     ('tax_free_below', '500000'),     -- 50 万（原 500 万）
     ('regress_k',      '0.015')       -- 新增：均值回归强度
@@ -38,7 +38,7 @@ UPDATE public.growth_fund_config SET value = '500000'   WHERE key = 'tax_free_be
 UPDATE public.growth_fund_config SET value = '20'       WHERE key = 'share_pct'      AND value IN ('50','25');
 INSERT INTO public.growth_fund_config (key, value) VALUES ('regress_k', '0.015')
 ON CONFLICT (key) DO NOTHING;
-INSERT INTO public.growth_fund_config (key, value) VALUES ('daily_cap', '20000000')
+INSERT INTO public.growth_fund_config (key, value) VALUES ('daily_cap', '15000000')
 ON CONFLICT (key) DO NOTHING;
 
 REVOKE ALL ON public.growth_fund_config FROM PUBLIC, anon, authenticated;
@@ -190,7 +190,7 @@ DECLARE
     v_fund_pct   numeric := 20;
     v_cap        numeric := 10000000;
     v_free_below numeric := 500000;
-    v_daily_cap  numeric := 20000000;   -- ⭐ 基金每天发放上限
+    v_daily_cap  numeric := 15000000;   -- ⭐ 基金每天发放上限
     v_fund_amt   numeric := 0;
     v_got_cnt    int := 0;
 BEGIN
@@ -199,7 +199,7 @@ BEGIN
                coalesce(max(value::numeric) FILTER (WHERE key = 'share_pct'), 20),
                coalesce(max(value::numeric) FILTER (WHERE key = 'cap_value'), 10000000),
                coalesce(max(value::numeric) FILTER (WHERE key = 'tax_free_below'), 500000),
-               coalesce(max(value::numeric) FILTER (WHERE key = 'daily_cap'), 20000000)
+               coalesce(max(value::numeric) FILTER (WHERE key = 'daily_cap'), 15000000)
           INTO v_enabled, v_fund_pct, v_cap, v_free_below, v_daily_cap
           FROM public.growth_fund_config;
     EXCEPTION WHEN OTHERS THEN
@@ -322,12 +322,12 @@ SELECT count(*) FILTER (WHERE market_value < 10000000 AND market_value > 0) AS �
        count(*)                                                           AS 总数
   FROM public.user_companies;
 
--- 谁会被分到钱、每天大概分多少（按每日上限 2000 万估算）
+-- 谁会被分到钱、每天大概分多少（按每日上限 1500 万估算）
 WITH pool AS (
     SELECT company_name, market_value, (10000000 - market_value) AS weight
       FROM public.user_companies
      WHERE market_value < 10000000 AND market_value > 0
 ), tot AS (SELECT sum(weight) AS w FROM pool)
 SELECT company_name AS 公司, market_value AS 当前市值,
-       round(weight::numeric / nullif((SELECT w FROM tot), 0) * 20000000) AS 预估每天分到
+       round(weight::numeric / nullif((SELECT w FROM tot), 0) * 15000000) AS 预估每天分到
   FROM pool ORDER BY weight DESC LIMIT 15;
