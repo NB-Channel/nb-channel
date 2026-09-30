@@ -1803,11 +1803,13 @@
         isLoading = true;
         updateTimestamp('loading');
         try {
-            // 全局波动节流由数据库统一处理（market_meta.last_fluctuate，8秒窗口）：
-            // 页面每轮刷新直接调用波动 RPC，由后端决定本轮是否波动；
-            // 与 Actions 定时任务（每5分钟兜底）共用同一节流，互不冲突。
-            const { error: rpcError } = await supabaseClient.rpc('random_fluctuate_market_values');
-            if (rpcError) throw rpcError;
+            // ⚠️ 不要在这里调 random_fluctuate_market_values。
+            //    那个函数已在安全加固里锁定（只给 service_role）—— 因为它能直接推动
+            //    全站行情，属于「能操纵行情」的接口，不该由任意访客触发。
+            //    之前的写法让每次自动刷新都必然拿到 42501，页面于是永远显示
+            //    「⚠️ 上次更新失败」。
+            //    现在波动统一交给后台定时任务（每 5 分钟兜底，见 market_sample 等
+            //    工作流），页面只负责读数据。
             await refreshStockDataFromDB();
             await loadPreviousSnapshot();
             updateTimestamp('success');
