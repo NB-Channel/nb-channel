@@ -435,6 +435,9 @@
                 <option value="365">最近一年</option>
             </select>
             <button id="exReloadBtn" style="background:#e9ecef;color:#333;border:none;border-radius:30px;padding:8px 22px;cursor:pointer;">🔄 刷新</button>
+            <label style="font-size:0.88rem;color:#6c757d;display:flex;align-items:center;gap:5px;cursor:pointer;">
+                <input type="checkbox" id="exShowHidden" style="cursor:pointer;"> 显示已删除
+            </label>
             <input id="exSearch" placeholder="搜账号 / 兑换码" style="padding:7px 12px;border:1px solid #ddd;border-radius:30px;font-size:0.88rem;min-width:180px;">
             <span id="exListInfo" style="font-size:0.84rem;color:#8a94a6;"></span>
         </div>
@@ -1458,7 +1461,10 @@
             p_state:  document.getElementById('exStateFilter').value || null,
             p_days:   parseInt(document.getElementById('exDaysFilter').value, 10) || 7,
             p_limit:  EX_PER_PAGE,
-            p_offset: (exPage - 1) * EX_PER_PAGE
+            p_offset: (exPage - 1) * EX_PER_PAGE,
+            // ⭐ 默认只看未删除的；勾上「显示已删除」才把隐藏的一起拉出来
+            p_hidden: (document.getElementById('exShowHidden') && document.getElementById('exShowHidden').checked)
+                      ? null : '0'
         });
         if (error || !data || !data.success) {
             const msg = (error && error.message) || (data && data.message) || '未知错误';
@@ -1546,15 +1552,20 @@
                 const nbColor = nb < 0 ? '#2f9e44' : '#e8590c';
                 const canReverse = (r.kind === 'u2nb' && r.state === 'credited');
                 const canCancel  = (r.kind === 'nb2u' && r.state === 'pending');
-                let ops = '—';
+                const hid = !!r.hidden;
+                let ops = '';
+                // ⭐ 删除/恢复：不是真删，只是从列表里隐藏，随时能恢复
+                ops += (hid
+                    ? '<button class="ex-hide" data-kind="' + r.kind + '" data-id="' + r.id + '" data-hide="0" style="background:#1971c2;color:#fff;border:none;border-radius:20px;padding:5px 12px;cursor:pointer;font-size:0.78rem;">↩ 恢复</button>'
+                    : '<button class="ex-hide" data-kind="' + r.kind + '" data-id="' + r.id + '" data-hide="1" style="background:#adb5bd;color:#fff;border:none;border-radius:20px;padding:5px 12px;cursor:pointer;font-size:0.78rem;">🗑 删除</button>');
                 if (canReverse) {
-                    ops = '<button class="ex-rev" data-id="' + r.id + '" data-code="' + escapeHtml(r.code) +
+                    ops += '<button class="ex-rev" data-id="' + r.id + '" data-code="' + escapeHtml(r.code) +
                           '" style="background:#e74c3c;color:#fff;border:none;border-radius:20px;padding:5px 14px;cursor:pointer;font-size:0.78rem;">↩️ 追回</button>';
                 } else if (canCancel) {
-                    ops = '<button class="ex-can" data-code="' + escapeHtml(r.code) +
+                    ops += '<button class="ex-can" data-code="' + escapeHtml(r.code) +
                           '" style="background:#868e96;color:#fff;border:none;border-radius:20px;padding:5px 14px;cursor:pointer;font-size:0.78rem;">作废退回</button>';
                 }
-                return '<tr style="border-bottom:1px solid #f0f1f3;">' +
+                return '<tr style="border-bottom:1px solid #f0f1f3;' + (hid ? 'opacity:.45;' : '') + '">' +
                     '<td style="padding:9px 8px;color:#8a94a6;white-space:nowrap;">' + escapeHtml(fmtExTime(r.created_at)) + '</td>' +
                     '<td style="padding:9px 8px;white-space:nowrap;"><b style="color:' + dir[1] + ';">' + dir[0] + '</b></td>' +
                     '<td style="padding:9px 8px;">' + escapeHtml(r.username || '(已注销)') + '</td>' +
@@ -1573,6 +1584,9 @@
         });
         box.querySelectorAll('.ex-can').forEach(function (b) {
             b.onclick = function () { cancelExchangeCode(b.dataset.code); };
+        });
+        box.querySelectorAll('.ex-hide').forEach(function (b) {
+            b.onclick = function () { hideExchange(b.dataset.kind, parseInt(b.dataset.id, 10), b.dataset.hide === '1'); };
         });
 
         const pages = Math.max(1, Math.ceil(total / EX_PER_PAGE));
@@ -1616,6 +1630,22 @@
             return;
         }
         alert(data.message || '已追回');
+        loadExchange(exPage);
+    }
+
+    async function hideExchange(kind, id, hide) {
+        const msg = hide
+            ? '从列表里删掉这条记录？\n\n注意：只是不显示，数据本身保留，随时可以点「恢复」。'
+            : '恢复显示这条记录？';
+        if (!confirm(msg)) return;
+        const { data, error } = await supabaseClient.rpc('admin_hide_exchange', {
+            p_kind: kind, p_id: id, p_token: getToken(), p_hidden: !!hide
+        });
+        if (error || !data || !data.success) {
+            alert((hide ? '删除' : '恢复') + '失败：' +
+                  ((error && error.message) || (data && data.message) || '未知错误'));
+            return;
+        }
         loadExchange(exPage);
     }
 
