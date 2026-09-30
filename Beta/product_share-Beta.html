@@ -1053,13 +1053,14 @@ html += `
         purchasedIdsSet = new Set();
         if (user) {
             const ids = data.map(p => p.id);
-            const { data: purchases, error: purErr } = await supabaseClient
-                .from('product_purchases')
-                .select('product_id')
-                .in('product_id', ids)
-                .eq('buyer_id', user.id);
-            if (!purErr && purchases) {
-                purchases.forEach(x => purchasedIdsSet.add(x.product_id));
+            // 走 RPC：product_purchases 表已经不对匿名开放了。
+            // 必须带 p_session —— 否则 A 传 B 的 user_id 就能查出 B 买过什么。
+            const { data: _pur, error: purErr } = await supabaseClient.rpc('get_my_purchased_ids', {
+                p_user_id: user.id,
+                p_session: localStorage.getItem('nb_session')
+            });
+            if (!purErr && _pur && _pur.ok && Array.isArray(_pur.ids)) {
+                _pur.ids.forEach(id => purchasedIdsSet.add(id));
             }
         }
 

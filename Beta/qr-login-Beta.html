@@ -285,6 +285,54 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; 
         return br + ' · ' + os;
     }
 
+    // ---------- IP 归属地 ----------
+    // 让"这台设备是不是我自己的"更好判断 —— 裸 IP 大多数人看不懂。
+    // 翻译表照搬后台（Website backend.html），保持两边显示口径一致。
+    var GEO_CN_COUNTRY = { CN:'中国', HK:'中国香港', MO:'中国澳门', TW:'中国台湾', US:'美国', JP:'日本', KR:'韩国', SG:'新加坡' };
+    var GEO_CN_REGION = { AH:'安徽', BJ:'北京', CQ:'重庆', FJ:'福建', GS:'甘肃', GD:'广东', GX:'广西', GZ:'贵州',
+        HI:'海南', HE:'河北', HA:'河南', HB:'湖北', HN:'湖南', JL:'吉林', JS:'江苏', JX:'江西', LN:'辽宁',
+        NM:'内蒙古', NX:'宁夏', QH:'青海', SD:'山东', SX:'山西', SN:'陕西', SH:'上海', SC:'四川',
+        TJ:'天津', XZ:'西藏', XJ:'新疆', YN:'云南', ZJ:'浙江' };
+    var GEO_CN_CITY = { Beijing:'北京', Shanghai:'上海', Guangzhou:'广州', Shenzhen:'深圳', Hangzhou:'杭州',
+        Nanjing:'南京', Wuhan:'武汉', Chengdu:'成都', Tianjin:'天津', Chongqing:'重庆', Suzhou:'苏州', Changsha:'长沙' };
+
+    function geoCN(cc, rc, region, city) {
+        var cn = GEO_CN_COUNTRY[cc] || null;
+        var rn = rc ? GEO_CN_REGION[String(rc).toUpperCase()] : null;
+        var cname = city ? (GEO_CN_CITY[city] || null) : null;
+        var parts = [];
+        if (cn) parts.push(cn);
+        if (rn) parts.push(rn); else if (region) parts.push(region);
+        if (cname) parts.push(cname); else if (city && !rn) parts.push(city);
+        if (!parts.length) return [region, city].filter(Boolean).join(' ');
+        return parts.join(' · ');
+    }
+
+    function showGeo(ip) {
+        var box = el('dvIp');
+        if (!ip || !box) return;
+        // 内网/回环地址没什么可查的
+        if (/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip) || ip === '::1') return;
+        var urls = [
+            'https://ipwho.is/' + encodeURIComponent(ip),
+            'https://api.vore.top/api/IPdata?ip=' + encodeURIComponent(ip)
+        ];
+        (function tryNext(k) {
+            if (k >= urls.length) return;      // 两个源都失败就保持裸 IP，不打扰用户
+            fetch(urls[k]).then(function (r) { return r.json(); }).then(function (j) {
+                var name = '';
+                if (j && j.success && j.country_code) {
+                    name = geoCN(j.country_code, j.region_code, j.region, j.city);
+                } else if (j && j.code === 200 && j.ipdata) {
+                    var g = j.ipdata;
+                    name = [g.info1, g.info2, g.info3].filter(Boolean).join(' · ');
+                }
+                if (name) box.textContent = ip + '（' + name + '）';
+                else tryNext(k + 1);
+            }).catch(function () { tryNext(k + 1); });
+        })(0);
+    }
+
     function rpc(fn, body) {
         return fetch(SB_URL + '/rest/v1/rpc/' + fn, {
             method: 'POST',
@@ -345,6 +393,9 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; 
                 el('dvUa').textContent   = uaText(d.ua);
                 el('dvIp').textContent   = d.ip || '未知';
                 el('dvTime').textContent = d.created_at || '--';
+                // ⭐ 补上归属地：光看 106.35.202.35 没几个人反应得过来是哪儿，
+                //    显示成「内蒙古 · 呼和浩特」才能一眼判断这是不是自己的电脑。
+                showGeo(d.ip);
                 show('pConfirm');
 
                 var busy = false;
