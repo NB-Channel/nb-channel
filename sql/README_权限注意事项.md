@@ -161,3 +161,72 @@ IF v_row.code_hash IS NULL OR v_row.code_hash <> md5(...) THEN   -- ✅
 | `URGENT2_lock_legacy_admin.sql` | 锁定 9 个无令牌的旧版管理函数 |
 | `fix_code_null_check.sql` | 验证码校验的空值短路 |
 | `fix_null_password_check.sql` | 旧密码校验的空值短路 |
+
+---
+
+## ⚠️ 第二个坑：权限改动，**不能在自己的地盘验**（2026-09-28）
+
+在 Supabase SQL Editor 里跑完
+
+```sql
+REVOKE SELECT ON public.reports FROM anon, authenticated;
+```
+
+就地跑一句 `SELECT * FROM public.reports LIMIT 1;` —— **它照样吐出数据**，
+看上去像"没生效"。其实**已经生效了**：
+
+> **SQL Editor 是以 `postgres`（表所有者）身份执行的。**
+> `REVOKE ... FROM anon` 撤的是**匿名角色**的权限，
+> 而**超级用户 / 表所有者不受任何表权限限制**。
+
+### 唯一正确的验证方式：用被限制的那个身份，从外面打
+
+拿网页里写死的那把公开 key 直接请求 PostgREST：
+
+```bash
+curl -s "https://<项目>.supabase.co/rest/v1/reports?select=*&limit=1" \
+  -H "apikey: sb_publishable_xxx" -H "Authorization: Bearer sb_publishable_xxx"
+```
+
+| 返回 | 结论 |
+|---|---|
+| `{"code":"42501","message":"permission denied for table reports"}` | ✅ 撤成功了 |
+| 一堆举报数据 | ❌ 没撤掉 |
+
+⚠️ 别在 URL 里加 `&_=时间戳` 之类的缓存破坏参数 —— PostgREST 会把它当成**过滤条件**，
+报 `PGRST100 unexpected "1" expecting ...`，看起来像出了别的问题。
+
+**顺带一条**：表权限撤了之后，`SECURITY DEFINER` 的函数**仍然读得到**
+（它以函数所有者的身份运行）。所以「后台改用 RPC」之后再撤表的 SELECT，
+后台不会受影响 —— 这正是 2026-09-28 那次修复敢撤权限的前提。
+
+---
+
+## ⚠️ 第三个坑：后台前端「直连查表」= 那张表就得对全网开放（2026-09-28 实际漏洞）
+
+有人把 `Website backend.html` 下载下来、部署到自己的 `pages.dev`，
+就看到了后台的举报列表和公司认证申请（只能看不能操作，写操作有 token 挡着）。
+
+**根因**：后台是「纯网页 + 公开 anon key」，而它读举报列表用的是 PostgREST 嵌套查询：
+
+```js
+supabaseClient.from('reports').select(`comments!inner( ... profiles!inner(username) )`)
+```
+
+**匿名要能查，`reports` 表就必须对所有匿名用户开放。** 于是任何人拿网页里
+那把公开 key 都能读走举报内容（谁举报了谁 `reporter_user_id`、举报原因、被举报的评论/公司/作品）。
+实测确认当时**全列可读**。
+
+### 规矩
+
+> 凡是**不该让外人看**的数据，一律走**带鉴权的 RPC**；
+> **永远不要**在网页里直接 `from('表名').select()`。
+> 只有公开数据（评论、作品、公司列表、公告）才允许直连。
+
+修复时新增的三个 RPC（`admin_list_reports` / `admin_list_pending_companies` / `check_my_report`）
+见 `sql/fix_admin_data_leak_20260928.sql`；撤权限见同目录的
+`fix_admin_data_leak_第二步_撤权限.sql`。
+
+**另一条经验**：改这种「前端 + 数据库」联动的东西要**分两步上线** ——
+先建 RPC（纯新增，不影响现有功能）→ 前端上线 → 确认没问题 → 最后才撤表的权限。
+顺序反了，后台会当场读不到数据。
