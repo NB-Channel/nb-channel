@@ -2129,62 +2129,28 @@ html { -webkit-text-size-adjust: 100%; }
             return;
         }
 
-        // ⚠️ 走 RPC,不再直连查 reports 表(那张表已经不对匿名开放了)。
-        //    顺带修掉一个弱点:原来 reporter_user_id 由前端传,可以伪造成别人的 id。
-        const { data: _chk, error: checkError } = await supabaseClient.rpc('check_my_report', {
+        // ⚠️ 整条链路收进一个 RPC：登录校验 + 限频 + 查重 + 写入，原子完成。
+        //    以前是前端自己拼好几步，其中限频依赖的 report_attempts 表
+        //    压根不存在 —— 查询报错被 catch 吞掉，所以限频从来没生效过；
+        //    而且它数的是前端传上去的 IP，伪造一下就能绕过。
+        //    现在 IP 由服务端从请求头自己读，前端伪造不了。
+        const { data: _rep, error: reportError } = await supabaseClient.rpc('submit_comment_report', {
             p_user_id: currentUser.id,
             p_comment_id: pendingReportCommentId,
+            p_reason: reason,
             p_session: localStorage.getItem('nb_session')
         });
-        if (_chk && _chk.ok && _chk.exists) {
-            showMessage('提示', '您已经举报过这条评论了');
-            reportModal.style.display = 'none';
-            return;
-        }
-
-        let ip = null;
-        try {
-            ip = await getClientIP();
-        } catch (err) {
-            console.warn('获取IP失败', err);
-            showMessage('提示', '无法验证您的身份，请稍后重试');
-            reportModal.style.display = 'none';
-            return;
-        }
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const { count, error: countError } = await supabaseClient
-            .from('report_attempts')
-            .select('id', { count: 'exact', head: true })
-            .eq('ip_address', ip)
-            .gte('created_at', tenMinutesAgo);
-        if (countError) {
-            console.error('查询举报频率失败', countError);
-            showMessage('错误', '系统繁忙，请稍后重试');
-            reportModal.style.display = 'none';
-            return;
-        }
-        if (count >= 5) {
-            showMessage('提示', '您举报过于频繁，请10分钟后再试');
-            reportModal.style.display = 'none';
-            return;
-        }
-
-        const { error: insertError } = await supabaseClient
-            .from('reports')
-            .insert({
-                comment_id: pendingReportCommentId,
-                reporter_user_id: currentUser.id,
-                reason: reason
-            });
-        if (insertError) {
+        if (reportError) {
+            console.error('举报失败', reportError);
             showMessage('错误', '举报失败，请稍后重试');
             reportModal.style.display = 'none';
             return;
         }
-
-        await supabaseClient
-            .from('report_attempts')
-            .insert({ ip_address: ip });
+        if (!_rep || !_rep.ok) {
+            showMessage('提示', (_rep && _rep.reason) || '举报失败，请稍后重试');
+            reportModal.style.display = 'none';
+            return;
+        }
 
         showMessage('提示', '举报已提交，我们会尽快处理');
         reportModal.style.display = 'none';
