@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS public.growth_fund_config (
 
 INSERT INTO public.growth_fund_config (key, value) VALUES
     ('enabled',        '1'),
-    ('share_pct',      '50'),
+    ('share_pct',      '25'),         -- 税收的 25% 进基金（原 50%，太猛）
+    ('daily_cap',      '20000000'),   -- ⭐ 基金每天最多发 2000 万，发不完的照旧销毁
     ('cap_value',      '10000000'),   -- 1000 万（原 2000 万）
     ('tax_free_below', '500000'),     -- 50 万（原 500 万）
     ('regress_k',      '0.015')       -- 新增：均值回归强度
@@ -33,7 +34,11 @@ ON CONFLICT (key) DO NOTHING;
 -- 已经跑过旧版的，用这两句把值纠正过来（只在还是旧值时才改，不动你手调过的）
 UPDATE public.growth_fund_config SET value = '10000000' WHERE key = 'cap_value'      AND value = '20000000';
 UPDATE public.growth_fund_config SET value = '500000'   WHERE key = 'tax_free_below' AND value = '5000000';
+-- 已经跑过旧版（share_pct=50）的，降到 25 —— 50% 太猛，一天能把小公司翻半个身
+UPDATE public.growth_fund_config SET value = '25'       WHERE key = 'share_pct'      AND value = '50';
 INSERT INTO public.growth_fund_config (key, value) VALUES ('regress_k', '0.015')
+ON CONFLICT (key) DO NOTHING;
+INSERT INTO public.growth_fund_config (key, value) VALUES ('daily_cap', '20000000')
 ON CONFLICT (key) DO NOTHING;
 
 REVOKE ALL ON public.growth_fund_config FROM PUBLIC, anon, authenticated;
@@ -185,15 +190,17 @@ DECLARE
     v_fund_pct   numeric := 50;
     v_cap        numeric := 10000000;
     v_free_below numeric := 500000;
+    v_daily_cap  numeric := 20000000;   -- ⭐ 基金每天发放上限
     v_fund_amt   numeric := 0;
     v_got_cnt    int := 0;
 BEGIN
     BEGIN
         SELECT coalesce(bool_or(value = '1') FILTER (WHERE key = 'enabled'), true),
-               coalesce(max(value::numeric) FILTER (WHERE key = 'share_pct'), 50),
+               coalesce(max(value::numeric) FILTER (WHERE key = 'share_pct'), 25),
                coalesce(max(value::numeric) FILTER (WHERE key = 'cap_value'), 10000000),
-               coalesce(max(value::numeric) FILTER (WHERE key = 'tax_free_below'), 500000)
-          INTO v_enabled, v_fund_pct, v_cap, v_free_below
+               coalesce(max(value::numeric) FILTER (WHERE key = 'tax_free_below'), 500000),
+               coalesce(max(value::numeric) FILTER (WHERE key = 'daily_cap'), 20000000)
+          INTO v_enabled, v_fund_pct, v_cap, v_free_below, v_daily_cap
           FROM public.growth_fund_config;
     EXCEPTION WHEN OTHERS THEN
         v_enabled := false;
@@ -242,6 +249,10 @@ BEGIN
     -- 一部分税收发给中小公司（零通胀：钱是收来的，不是发的）
     IF v_enabled AND v_fund_pct > 0 AND v_total > 0 THEN
         v_fund_amt := floor(v_total * least(greatest(v_fund_pct, 0), 100) / 100.0);
+        -- ⭐ 封顶：一天最多发这么多，多出来的照旧销毁（不造币）
+        IF v_daily_cap > 0 THEN
+            v_fund_amt := LEAST(v_fund_amt, v_daily_cap);
+        END IF;
         IF v_fund_amt > 0 THEN
             WITH pool AS (
                 SELECT id, (v_cap - market_value) AS weight
@@ -311,12 +322,12 @@ SELECT count(*) FILTER (WHERE market_value < 10000000 AND market_value > 0) AS �
        count(*)                                                           AS 总数
   FROM public.user_companies;
 
--- 谁会被分到钱、每天大概分多少（按 5100 万基金估算）
+-- 谁会被分到钱、每天大概分多少（按每日上限 2000 万估算）
 WITH pool AS (
     SELECT company_name, market_value, (10000000 - market_value) AS weight
       FROM public.user_companies
      WHERE market_value < 10000000 AND market_value > 0
 ), tot AS (SELECT sum(weight) AS w FROM pool)
 SELECT company_name AS 公司, market_value AS 当前市值,
-       round(weight::numeric / nullif((SELECT w FROM tot), 0) * 51000000) AS 预估每天分到
+       round(weight::numeric / nullif((SELECT w FROM tot), 0) * 20000000) AS 预估每天分到
   FROM pool ORDER BY weight DESC LIMIT 15;
