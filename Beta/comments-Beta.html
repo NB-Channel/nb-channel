@@ -2129,13 +2129,14 @@ html { -webkit-text-size-adjust: 100%; }
             return;
         }
 
-        const { data: existing, error: checkError } = await supabaseClient
-            .from('reports')
-            .select('id')
-            .eq('comment_id', pendingReportCommentId)
-            .eq('reporter_user_id', currentUser.id)
-            .maybeSingle();
-        if (existing) {
+        // ⚠️ 走 RPC,不再直连查 reports 表(那张表已经不对匿名开放了)。
+        //    顺带修掉一个弱点:原来 reporter_user_id 由前端传,可以伪造成别人的 id。
+        const { data: _chk, error: checkError } = await supabaseClient.rpc('check_my_report', {
+            p_user_id: currentUser.id,
+            p_comment_id: pendingReportCommentId,
+            p_session: localStorage.getItem('nb_session')
+        });
+        if (_chk && _chk.ok && _chk.exists) {
             showMessage('提示', '您已经举报过这条评论了');
             reportModal.style.display = 'none';
             return;
