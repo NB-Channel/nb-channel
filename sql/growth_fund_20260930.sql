@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.growth_fund_config (
 
 INSERT INTO public.growth_fund_config (key, value) VALUES
     ('enabled',        '1'),
-    ('share_pct',      '25'),         -- 税收的 25% 进基金（原 50%，太猛）
+    ('share_pct',      '20'),         -- 税收的 20% 进基金（50% 太猛，25% 又偏多）
     ('daily_cap',      '20000000'),   -- ⭐ 基金每天最多发 2000 万，发不完的照旧销毁
     ('cap_value',      '10000000'),   -- 1000 万（原 2000 万）
     ('tax_free_below', '500000'),     -- 50 万（原 500 万）
@@ -35,7 +35,7 @@ ON CONFLICT (key) DO NOTHING;
 UPDATE public.growth_fund_config SET value = '10000000' WHERE key = 'cap_value'      AND value = '20000000';
 UPDATE public.growth_fund_config SET value = '500000'   WHERE key = 'tax_free_below' AND value = '5000000';
 -- 已经跑过旧版（share_pct=50）的，降到 25 —— 50% 太猛，一天能把小公司翻半个身
-UPDATE public.growth_fund_config SET value = '25'       WHERE key = 'share_pct'      AND value = '50';
+UPDATE public.growth_fund_config SET value = '20'       WHERE key = 'share_pct'      AND value IN ('50','25');
 INSERT INTO public.growth_fund_config (key, value) VALUES ('regress_k', '0.015')
 ON CONFLICT (key) DO NOTHING;
 INSERT INTO public.growth_fund_config (key, value) VALUES ('daily_cap', '20000000')
@@ -187,7 +187,7 @@ DECLARE
     v_mono_rate  CONSTANT numeric := 0.05;
     v_mono_line  CONSTANT numeric := 0.40;
     v_enabled    boolean := true;
-    v_fund_pct   numeric := 50;
+    v_fund_pct   numeric := 20;
     v_cap        numeric := 10000000;
     v_free_below numeric := 500000;
     v_daily_cap  numeric := 20000000;   -- ⭐ 基金每天发放上限
@@ -196,7 +196,7 @@ DECLARE
 BEGIN
     BEGIN
         SELECT coalesce(bool_or(value = '1') FILTER (WHERE key = 'enabled'), true),
-               coalesce(max(value::numeric) FILTER (WHERE key = 'share_pct'), 25),
+               coalesce(max(value::numeric) FILTER (WHERE key = 'share_pct'), 20),
                coalesce(max(value::numeric) FILTER (WHERE key = 'cap_value'), 10000000),
                coalesce(max(value::numeric) FILTER (WHERE key = 'tax_free_below'), 500000),
                coalesce(max(value::numeric) FILTER (WHERE key = 'daily_cap'), 20000000)
