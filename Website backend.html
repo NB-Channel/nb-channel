@@ -444,6 +444,17 @@
 
         <div id="exchangeList">加载中...</div>
         <div id="exPager" style="display:flex;gap:10px;justify-content:center;margin:18px 0;"></div>
+
+        <!-- ⭐ 兑换失败留痕：以前失败完全查不到，现在能看见原因和是谁 -->
+        <div style="margin-top:8px;border-top:1px solid #eee;padding-top:16px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                <b style="font-size:0.95rem;">⚠️ 兑换失败记录</b>
+                <span id="exFailInfo" style="font-size:0.84rem;color:#8a94a6;"></span>
+                <button id="exFailReload" style="background:#f1f3f5;color:#495057;border:1px solid #dee2e6;border-radius:30px;padding:5px 14px;cursor:pointer;font-size:0.82rem;">刷新</button>
+            </div>
+            <div id="exFailTop" style="margin-bottom:10px;"></div>
+            <div id="exFailList"></div>
+        </div>
     </div>
 
     <div id="announcePanel" style="display:none;">
@@ -1494,6 +1505,59 @@
         exAllRows = data.list || [];
         exTotal = Number(data.total) || 0;
         renderExchangeList();
+        loadExchangeFails();          // ⭐ 顺带刷新失败记录
+    }
+
+    // ---------- 兑换失败记录 ----------
+    // 以前兑换失败不留任何痕迹，用户说"换不了"时后台完全看不出问题。
+    // 现在 submit_u_exchange 外面包了一层，失败会把原因记进 exchange_fail_logs。
+    async function loadExchangeFails() {
+        const box = document.getElementById('exFailList');
+        const info = document.getElementById('exFailInfo');
+        const topBox = document.getElementById('exFailTop');
+        if (!box) return;
+        box.innerHTML = '<div style="padding:14px;color:#8a94a6;">加载中...</div>';
+        const days = parseInt((document.getElementById('exDaysFilter') || {}).value, 10) || 7;
+        const { data, error } = await supabaseClient.rpc('admin_list_exchange_fails', {
+            p_token: getToken(), p_days: days, p_limit: 50, p_offset: 0
+        });
+        if (error || !data || !data.success) {
+            box.innerHTML = '<div style="padding:14px;color:#e74c3c;">加载失败：' +
+                escapeHtml((error && error.message) || (data && data.message) || '未知错误') + '</div>';
+            return;
+        }
+        if (info) info.textContent = '最近 ' + days + ' 天共 ' + (data.total || 0) + ' 条';
+        const top = data.top || [];
+        if (topBox) {
+            topBox.innerHTML = top.length
+                ? '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + top.map(function (t) {
+                      return '<span style="background:#fff5f5;border:1px solid #ffc9c9;color:#c92a2a;border-radius:20px;padding:4px 12px;font-size:0.8rem;">' +
+                             escapeHtml(String(t.reason || '')) + ' × ' + t.n + '</span>';
+                  }).join('') + '</div>'
+                : '';
+        }
+        const rows = data.list || [];
+        if (!rows.length) {
+            box.innerHTML = '<div style="padding:14px;color:#8a94a6;">这段时间没有失败的兑换 ✓</div>';
+            return;
+        }
+        box.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;">' +
+            '<thead><tr style="background:#f8f9fa;">' +
+            '<th style="padding:9px 8px;text-align:left;">时间</th>' +
+            '<th style="padding:9px 8px;text-align:left;">账号</th>' +
+            '<th style="padding:9px 8px;text-align:left;">兑换码</th>' +
+            '<th style="padding:9px 8px;text-align:right;">填的数量</th>' +
+            '<th style="padding:9px 8px;text-align:left;">失败原因</th>' +
+            '</tr></thead><tbody>' +
+            rows.map(function (r) {
+                return '<tr style="border-bottom:1px solid #f0f1f3;">' +
+                    '<td style="padding:8px;color:#8a94a6;white-space:nowrap;">' + escapeHtml(r.created_at || '') + '</td>' +
+                    '<td style="padding:8px;">' + escapeHtml(r.username || '(未登录)') + '</td>' +
+                    '<td style="padding:8px;font-family:monospace;font-size:0.76rem;word-break:break-all;">' + escapeHtml(r.u_code || '') + '</td>' +
+                    '<td style="padding:8px;text-align:right;">' + (r.u_amount != null ? fmtN(r.u_amount) : '—') + '</td>' +
+                    '<td style="padding:8px;color:#c92a2a;">' + escapeHtml(r.reason || '') + '</td>' +
+                    '</tr>';
+            }).join('') + '</tbody></table></div>';
     }
 
     function fmtN(v) {
@@ -1843,6 +1907,8 @@
         // 兑换面板
         const exReload = document.getElementById('exReloadBtn');
         if (exReload) exReload.onclick = () => loadExchange(1);
+    var exFailReloadEl = document.getElementById('exFailReload');
+    if (exFailReloadEl) exFailReloadEl.onclick = () => loadExchangeFails();
         ['exKindFilter', 'exStateFilter', 'exDaysFilter'].forEach(function (id) {
             const el = document.getElementById(id);
             if (el) el.onchange = () => loadExchange(1);
