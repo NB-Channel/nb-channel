@@ -792,6 +792,18 @@
             .jny-h { font-size: 1.02rem; }
             .jny-d { font-size: .78rem; line-height: 1.65; }
             .jny-progress { display: none; }
+            /* ⚡ 手机上最要命的一条：原来每张卡片都挂 backdrop-filter: blur(14px)，
+               11 张叠在一起，GPU 每帧要合成 11 个模糊层 —— 掉帧的主因。
+               换成不透明度更高的纯色背景，观感几乎没差，开销天差地别。 */
+            .jny-card {
+                -webkit-backdrop-filter: none; backdrop-filter: none;
+                background: rgba(15,23,42,.9);
+            }
+            /* 没轮到的卡片用 visibility 隐藏：opacity:0 仍会被合成，visibility 不会 */
+            .jny-card { visibility: hidden; transition: opacity .35s ease, transform .35s ease, visibility 0s linear .35s; }
+            .jny-card.on { visibility: visible; transition: opacity .35s ease, transform .35s ease, visibility 0s; }
+            /* 轨迹上的发光滤镜在手机上也很贵，去掉 */
+            .jny-svg .go { filter: none; }
             /* 窄屏三排之字:节点整体缩小,年份压紧,避免"2025"们叠在一起 */
             .jny-node .jy { font-size: 1.08rem; letter-spacing: .5px; }
             .jny-node .jm { font-size: .5rem; letter-spacing: 1.4px; margin-top: 4px; }
@@ -1754,15 +1766,40 @@ html { -webkit-text-size-adjust: 100%; }
             }
             return d;
         }
+        // ⚡ 性能关键：路径点一次性采样成数组，之后一律查表插值。
+        //    原来每帧都调 basePath.getPointAtLength() —— 那是要二分查找算弧长的重活，
+        //    手机上每滚动一帧调一次，直接把帧率拖垮。
+        //    采样是构建时做一次的固定开销，之后每帧只剩几次数组取值和乘法。
+        var SAMPLE_N = 200;
+        var sx = null, sy = null;
+        function buildSamples() {
+            sx = new Float32Array(SAMPLE_N + 1);
+            sy = new Float32Array(SAMPLE_N + 1);
+            for (var i = 0; i <= SAMPLE_N; i++) {
+                var q = basePath.getPointAtLength(totalLen * i / SAMPLE_N);
+                sx[i] = q.x;
+                sy[i] = q.y;
+            }
+        }
+        // 按弧长取点(线性插值，误差远小于一个像素，肉眼无感)
+        function pointAt(dist) {
+            if (!sx) return { x: 0, y: 0 };
+            var t = dist / totalLen * SAMPLE_N;
+            if (!(t > 0)) return { x: sx[0], y: sy[0] };
+            if (t >= SAMPLE_N) return { x: sx[SAMPLE_N], y: sy[SAMPLE_N] };
+            var i = t | 0, fr = t - i;
+            return { x: sx[i] + (sx[i + 1] - sx[i]) * fr,
+                     y: sy[i] + (sy[i + 1] - sy[i]) * fr };
+        }
+
         var nodesLen = [];   // 各节点在曲线上的弧长位置(用于"到弯道顶点才切换")
         function nearestLen(pt) {
-            if (!basePath || !basePath.getPointAtLength) return 0;
-            var best = 0, bestD2 = 1e18, N = 320;
-            for (var i = 0; i <= N; i++) {
-                var q = basePath.getPointAtLength(totalLen * i / N);
-                var dx = q.x - pt.x, dy = q.y - pt.y;
+            if (!sx) return 0;
+            var best = 0, bestD2 = 1e18;
+            for (var i = 0; i <= SAMPLE_N; i++) {
+                var dx = sx[i] - pt.x, dy = sy[i] - pt.y;
                 var d2 = dx * dx + dy * dy;
-                if (d2 < bestD2) { bestD2 = d2; best = i / N; }
+                if (d2 < bestD2) { bestD2 = d2; best = i / SAMPLE_N; }
             }
             return best * totalLen;
         }
@@ -1791,11 +1828,13 @@ html { -webkit-text-size-adjust: 100%; }
                 goPathEl.style.strokeDashoffset = totalLen;
             }
             // 记录每个节点在曲线上的弧长位置(核心驶过该位置即"到顶点")
+            buildSamples();      // ⚡ 必须排在 nodesLen 之前 —— nearestLen 要用采样表
             nodesLen = pts.map(function (pt) { return nearestLen(pt); });
             nodesLen[0] = 0;
             nodesLen[nodesLen.length - 1] = totalLen;
         }
         // 渲染一个滚动进度 p(滚动与拖拽共用)
+        var progressBar = stage.querySelector('.jny-progress .bar i');   // 只查一次,别每帧查
         var lastActive = -1;   // 节点/卡片 class 只在"驶过节点"那一帧更新,日常滚动不再反复切换
         function renderP(p) {
             var dist = totalLen * p;
@@ -1804,8 +1843,8 @@ html { -webkit-text-size-adjust: 100%; }
             while (k < n && nodesLen[k] <= dist) k++;
             var active = Math.min(k - 1, n - 1);
             if (active < 0) active = 0;
-            if (basePath && totalLen > 1 && basePath.getPointAtLength) {
-                var pt = basePath.getPointAtLength(Math.min(dist, totalLen));
+            if (sx && totalLen > 1) {
+                var pt = pointAt(Math.min(dist, totalLen));
                 // 用 transform 移动(合成层),不用 left/top(避免每帧布局)——移动端流畅的关键
                 batt.style.transform = 'translate(' + pt.x + 'px,' + pt.y + 'px)';
                 goPathEl.style.strokeDashoffset = totalLen - Math.min(dist, totalLen);
@@ -1820,8 +1859,7 @@ html { -webkit-text-size-adjust: 100%; }
                 var ap = pts[Math.min(active, pts.length - 1)];
                 if (bgEl && ap) bgEl.style.transform = 'translate(' + (ap.x - 400) * -0.22 + 'px,' + (ap.y - 220) * -0.22 + 'px)';
             }
-            var pb = stage.querySelector('.jny-progress .bar i');
-            if (pb) pb.style.width = (p * 100).toFixed(1) + '%';
+            if (progressBar) progressBar.style.width = (p * 100).toFixed(1) + '%';
         }
         function update() {
             var sy = window.scrollY || document.documentElement.scrollTop;
@@ -1836,13 +1874,12 @@ html { -webkit-text-size-adjust: 100%; }
         }
         // ---- 拖拽:抓住能量核心沿曲线滑动,反向驱动旅程 ----
         function nearestDist(px, py) {
-            if (!basePath || !basePath.getPointAtLength) return -1;
+            if (!sx) return -1;
             var best = -1, bestD2 = 1e12;
-            for (var i = 0; i <= 260; i++) {
-                var q = basePath.getPointAtLength(totalLen * i / 260);
-                var dx = q.x - px, dy = q.y - py;
+            for (var i = 0; i <= SAMPLE_N; i++) {
+                var dx = sx[i] - px, dy = sy[i] - py;
                 var d2 = dx * dx + dy * dy;
-                if (d2 < bestD2) { bestD2 = d2; best = i / 260; }
+                if (d2 < bestD2) { bestD2 = d2; best = i / SAMPLE_N; }
             }
             return best;
         }
