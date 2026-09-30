@@ -28,6 +28,8 @@ import datetime
 import subprocess
 import threading
 import urllib.request
+import secrets
+import time
 
 from flask import Flask, request, jsonify, send_from_directory, Response
 from supabase import create_client, Client
@@ -51,6 +53,83 @@ _upload_guard = {}
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')  # 兼容旧版本地存储（新文件全部走 S3）
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# ==================== 作品下载直链的签名 ====================
+# 背景：/files/<key> 以前是裸链接 —— 只要知道 key 谁都能下载。
+#       而 products 表里就存着这个 key（file_url），一旦这张表被匿名读走，
+#       付费作品就等于白送（2026-09-28 实测确认可以）。
+#
+# 所以下载直链改成「临时签名」：
+#   /download 在确认过身份之后（作者本人 / 免费 / 已购买 / 扣款成功）
+#   才签发一条带过期时间与签名的链接；/files/<key> 只认这种链接。
+#
+# 为什么凭证放在查询参数里而不是请求头：前端是 window.open(file_url)，
+# 浏览器直接打开链接，带不了自定义头。
+FILE_URL_TTL = 600   # 签名链接有效期（秒）
+
+
+def _load_file_secret():
+    """签名密钥：优先环境变量；没有就在磁盘上落一个随机值。
+
+    ⚠️ 这个仓库是公开的，密钥绝不能硬编码进源码。
+    """
+    env = os.environ.get('FILE_URL_SECRET', '').strip()
+    if env:
+        return env
+    path = os.path.join(BASE_DIR, '.file_url_secret')
+    try:
+        if os.path.isfile(path):
+            with open(path, 'r') as fp:
+                got = fp.read().strip()
+            if got:
+                return got
+        got = secrets.token_hex(32)
+        with open(path, 'w') as fp:
+            fp.write(got)
+        try:
+            os.chmod(path, 0o600)
+        except Exception:
+            pass
+        return got
+    except Exception:
+        # 磁盘不可写时的兜底：至少别让功能挂掉
+        return hashlib.sha256((BASE_DIR or 'nb').encode()).hexdigest()
+
+
+FILE_URL_SECRET = _load_file_secret()
+
+
+def _file_sig(key, exp):
+    return hmac.new(FILE_URL_SECRET.encode(), ('%s|%d' % (key, exp)).encode(),
+                    hashlib.sha256).hexdigest()[:32]
+
+
+def _file_sig_ok(key, exp, sig):
+    """校验下载直链的签名与有效期。"""
+    try:
+        exp_i = int(exp)
+    except (TypeError, ValueError):
+        return False
+    if exp_i < time.time():
+        return False
+    return hmac.compare_digest(_file_sig(key, exp_i), str(sig or ''))
+
+
+def _sign_file_key(key):
+    """给存储 key 签发一条临时下载直链。"""
+    exp = int(time.time()) + FILE_URL_TTL
+    return '%s/files/%s?e=%d&s=%s' % (request.host_url.rstrip('/'), key, exp, _file_sig(key, exp))
+
+
+def _sign_product_url(file_url):
+    """把库里存的 file_url 换成带签名的临时直链；不是本代理链接就原样返回。"""
+    if not file_url:
+        return file_url
+    m = re.search(r'/files/([a-f0-9]{32}(?:\.[a-zA-Z0-9]{1,10})?)', str(file_url))
+    if not m:
+        return file_url
+    return _sign_file_key(m.group(1))
+
 
 # 网站静态文件目录（git 仓库目录，供 / 和 /webhook 使用）
 SITE_DIR = os.environ.get('SITE_DIR', '/home/nbchannel/nb-channel')
@@ -741,7 +820,7 @@ def download():
 
     # 2. 作者本人：直接返回下载地址（不扣费）
     if str(author_id) == str(user_id):
-        return jsonify({'success': True, 'file_url': prod['file_url'], 'message': '你的作品，直接下载'})
+        return jsonify({'success': True, 'file_url': _sign_product_url(prod['file_url']), 'message': '你的作品，直接下载'})
 
     # 3. 免费作品：走 download_product（记录下载次数）
     if price == 0:
@@ -750,7 +829,7 @@ def download():
             return jsonify({'success': False, 'message': '后端错误: %s' % rpc_err}), 500
         if not data or data.get('success') is not True:
             return jsonify({'success': False, 'message': (data and data.get('message')) or '下载失败'}), 400
-        return jsonify({'success': True, 'file_url': data.get('file_url'), 'message': data.get('message', '下载成功')})
+        return jsonify({'success': True, 'file_url': _sign_product_url(data.get('file_url')), 'message': data.get('message', '下载成功')})
 
     # 4. 付费作品：先查是否已购买（避免重复扣费）
     try:
@@ -761,7 +840,7 @@ def download():
     except Exception as e:
         return jsonify({'success': False, 'message': '后端数据库连接失败: %s' % e}), 500
     if pur_rows:
-        return jsonify({'success': True, 'file_url': prod['file_url'], 'message': '已购买，直接下载'})
+        return jsonify({'success': True, 'file_url': _sign_product_url(prod['file_url']), 'message': '已购买，直接下载'})
 
     # 5. 未购买：走 purchase_product（扣款并返回下载地址）
     #    支付方式：pay_type = 'nb'（给作者NB币，默认）| 'market'（加作者公司市值，需 company_id）
@@ -779,7 +858,7 @@ def download():
     if not data or data.get('success') is not True:
         return jsonify({'success': False, 'message': (data and data.get('message')) or '购买失败'}), 400
 
-    return jsonify({'success': True, 'file_url': data.get('file_url'), 'message': data.get('message', '购买成功')})
+    return jsonify({'success': True, 'file_url': _sign_product_url(data.get('file_url')), 'message': data.get('message', '购买成功')})
 
 
 @app.route('/uploads/<path:filename>')
@@ -792,9 +871,17 @@ def serve_file(filename):
 
 @app.route('/files/<path:key>')
 def serve_s3_file(key):
-    """下载作品文件（附件方式）。三级兜底：Supabase Storage → S3 → 本地磁盘（兼容历史文件）。"""
+    """下载作品文件（附件方式）。三级兜底：Supabase Storage → S3 → 本地磁盘（兼容历史文件）。
+
+    ⚠️ 必须带有效签名 —— 签名由 /download 在确认身份之后签发（见 _sign_file_key）。
+       裸链接一律拒绝：否则只要拿到 key（它就在 products.file_url 里）就能白拿付费作品。
+    """
     if not re.match(r'^[a-f0-9]{32}(\.[a-zA-Z0-9]{1,10})?$', key):
         return jsonify({'success': False, 'message': '非法文件名'}), 400
+
+    if not _file_sig_ok(key, request.args.get('e'), request.args.get('s')):
+        return jsonify({'success': False,
+                        'message': '下载链接无效或已过期，请回到作品页重新点击下载'}), 403
 
     # 1) Supabase Storage（新文件）
     try:
