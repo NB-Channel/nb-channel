@@ -1,30 +1,21 @@
 -- ============================================================
--- 扶植中小公司 · 方案（2026-09-30）
+-- 扶植中小公司 · 参数调整 + 中位数锚点接线（2026-09-30）
 -- ============================================================
--- 【要解决的问题】
---   全站 15.64 亿，Utw 一家 14.63 亿（93.57%），其余 91 家合计只有 1.01 亿。
---   光靠垄断税削峰没用 —— 因为他就是分母的 93.57%，削他等于削全站，
---   占比几乎不动（算过：93.57% → 93.2%，按这个速度要 50 天才到 40%）。
+-- 按用户要求改三处：
+--   ① 免征额 500 万 → 50 万
+--   ② 参与分配的门槛 2000 万 → 1000 万
+--   ③ 均值回归锚点：平均值 → 中位数（这次真正接线）
 --
--- 【核心思路：不造币，只重新分配】
---   公司税现在是【直接销毁、不流入任何账户】。改成：
---       一半照旧销毁（保持通缩压力，防通胀）
---       一半注入「成长基金」，按"离门槛还有多远"分给中小公司
---   钱是从大公司手里收来的，不是凭空发的 —— 所以【零通胀】。
---
--- 【预期效果】（按当前数据估算）
---   Utw 每天缴税 ≈ 14.63亿 × 7% = 1.02 亿，其中 5100 万进基金
---   分给 91 家 → 每家每天约 +56 万（从 111 万 → 167 万，一天 +50%）
---   越接近门槛分得越少 → 自动减速，不会无限膨胀
---   ≈10 天后：Utw 7.1 亿 / 中小合计 6.4 亿 → 他占比降到 ~53%
---   ≈20 天后：Utw 3.4 亿 / 中小合计 13.6 亿 → 他占比降到 ~20%，垄断税自动停征
---
--- ⚠️ 三个参数都放在 exchange_config 风格的表里，随时可调，见文件末尾。
+-- ⚠️ ③ 必须同时调回归强度，否则会过猛：
+--    中位数大约 100 万，Utw 14.63 亿 → 偏离 1463 倍，ln(1463) ≈ 7.29
+--    原强度 v_k_day = 0.0474，每天累计约 -17%；再叠加垄断税 7% = -24%/天，
+--    两天掉一半，太快。所以把强度做成可配置，默认降到 0.015
+--    （约 -7%/天，与垄断税叠加约 -14%/天，大约 10 天减半）。
 -- ============================================================
 
 
 -- ============================================================
--- ① 成长基金参数
+-- ① 参数表：改默认值 + 新增回归强度
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.growth_fund_config (
     key   text PRIMARY KEY,
@@ -32,22 +23,146 @@ CREATE TABLE IF NOT EXISTS public.growth_fund_config (
 );
 
 INSERT INTO public.growth_fund_config (key, value) VALUES
-    ('enabled',        '1'),        -- 1=启用 0=关闭
-    ('share_pct',      '50'),       -- 公司税里有多大比例注入基金（%）剩下的照旧销毁
-    ('cap_value',      '20000000'), -- 门槛：市值超过这个数的公司不参与分配
-    ('tax_free_below', '5000000')   -- 免征额：市值低于这个数的公司不收公司税
+    ('enabled',        '1'),
+    ('share_pct',      '50'),
+    ('cap_value',      '10000000'),   -- 1000 万（原 2000 万）
+    ('tax_free_below', '500000'),     -- 50 万（原 500 万）
+    ('regress_k',      '0.015')       -- 新增：均值回归强度
+ON CONFLICT (key) DO NOTHING;
+
+-- 已经跑过旧版的，用这两句把值纠正过来（只在还是旧值时才改，不动你手调过的）
+UPDATE public.growth_fund_config SET value = '10000000' WHERE key = 'cap_value'      AND value = '20000000';
+UPDATE public.growth_fund_config SET value = '500000'   WHERE key = 'tax_free_below' AND value = '5000000';
+INSERT INTO public.growth_fund_config (key, value) VALUES ('regress_k', '0.015')
 ON CONFLICT (key) DO NOTHING;
 
 REVOKE ALL ON public.growth_fund_config FROM PUBLIC, anon, authenticated;
 
 
 -- ============================================================
--- ② 改造 collect_company_tax：收税 + 顺手注资
+-- ② 中位数锚点函数
 -- ============================================================
--- 保留了原有的全部逻辑（分段税率 / 垄断税），只加三件事：
---   · 免征额从 30 万提到 growth_fund_config.tax_free_below
---   · 收上来的税记一个总数
---   · 按比例把一部分发给中小公司
+CREATE OR REPLACE FUNCTION public._market_median_value()
+RETURNS numeric
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+    SELECT coalesce(
+             percentile_cont(0.5) WITHIN GROUP (ORDER BY market_value),
+             20000)
+      FROM public.user_companies
+     WHERE market_value > 0;
+$$;
+REVOKE ALL ON FUNCTION public._market_median_value() FROM PUBLIC, anon, authenticated;
+
+
+-- ============================================================
+-- ③ 重写波动函数：锚点换成中位数 + 强度可配置
+-- ============================================================
+-- 除这两点外，其余逻辑（交易时段、8 秒节流、按真实时间缩放、涨跌停冻结与
+-- 边界、最低市值保底）一字未动。原 v_k_day 是 CONSTANT，改成普通变量。
+CREATE OR REPLACE FUNCTION public.random_fluctuate_market_values()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+DECLARE
+    company        RECORD;
+    change_percent FLOAT;
+    new_value      BIGINT;
+    v_day_open     NUMERIC;
+    v_last         timestamptz;
+    v_anchor       NUMERIC;
+    v_ratio        NUMERIC;
+    v_pull         FLOAT;
+    v_dt           FLOAT;
+    v_sigma        FLOAT;
+    v_k_day        FLOAT := 0.015;
+    v_sigma_day    CONSTANT FLOAT := 0.06;
+    v_session_secs CONSTANT FLOAT := 43200;
+BEGIN
+    IF (now() AT TIME ZONE 'Asia/Shanghai')::time < time '08:00'
+       OR (now() AT TIME ZONE 'Asia/Shanghai')::time >= time '20:00' THEN
+        RETURN;
+    END IF;
+
+    SELECT value::timestamptz INTO v_last FROM public.market_meta WHERE key = 'last_fluctuate';
+    IF v_last IS NOT NULL AND v_last > now() - interval '8 seconds' THEN
+        RETURN;
+    END IF;
+
+    v_dt := LEAST(
+                GREATEST(
+                    EXTRACT(EPOCH FROM (now() - coalesce(v_last, now() - interval '10 seconds')))::float,
+                    0),
+                900);
+
+    -- 锚点：中位数。用平均值会被超大公司一个人拉高，导致"回归"对小公司
+    -- 全是往上拉、对超大公司却几乎不痛（偏离倍数被算小了）。
+    v_anchor := public._market_median_value();
+    IF v_anchor IS NULL OR v_anchor <= 0 THEN v_anchor := 20000; END IF;
+
+    -- 回归强度可配；配置读不到就用默认，绝不让配置问题中断波动
+    BEGIN
+        SELECT max(value::numeric) FILTER (WHERE key = 'regress_k')
+          INTO v_k_day FROM public.growth_fund_config;
+    EXCEPTION WHEN OTHERS THEN
+        v_k_day := 0.015;
+    END;
+    IF v_k_day IS NULL OR v_k_day <= 0 THEN v_k_day := 0.015; END IF;
+
+    FOR company IN SELECT id, market_value FROM user_companies LOOP
+        SELECT open INTO v_day_open
+          FROM public.stock_daily_kline
+         WHERE company_id = company.id AND trade_date = current_date;
+
+        IF v_day_open IS NOT NULL THEN
+            IF company.market_value > v_day_open * 1.50
+               OR company.market_value < v_day_open * 0.50 THEN
+                CONTINUE;
+            END IF;
+        END IF;
+
+        v_sigma := v_sigma_day * sqrt(v_dt / v_session_secs);
+        change_percent := (random() - 0.5) * 2 * v_sigma * sqrt(3);
+
+        IF company.market_value > 0 THEN
+            v_ratio := company.market_value::numeric / v_anchor;
+            IF v_ratio > 0 THEN
+                v_pull := -v_k_day * (v_dt / 86400.0) * ln(v_ratio);
+                v_pull := GREATEST(-0.005, LEAST(0.005, v_pull));
+                change_percent := change_percent + v_pull;
+            END IF;
+        END IF;
+
+        new_value := company.market_value + (company.market_value * change_percent);
+
+        IF v_day_open IS NOT NULL THEN
+            IF new_value > v_day_open * 1.50 THEN
+                new_value := floor(v_day_open * 1.50);
+            ELSIF new_value < v_day_open * 0.50 THEN
+                new_value := GREATEST(floor(v_day_open * 0.50), 10000);
+            END IF;
+        END IF;
+
+        IF new_value < 10000 THEN new_value := 10000; END IF;
+
+        UPDATE user_companies SET market_value = new_value WHERE id = company.id;
+    END LOOP;
+
+    INSERT INTO public.market_meta(key, value) VALUES ('last_fluctuate', now()::text)
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+END;
+$fn$;
+
+-- 页面每 10 秒调它（本身有 8 秒节流 + 按真实时间缩放，调得勤不会加速涨跌）
+REVOKE ALL ON FUNCTION public.random_fluctuate_market_values() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.random_fluctuate_market_values() TO anon;
+
+
+-- ============================================================
+-- ④ 收税函数：同步新默认值（免征 50 万 / 门槛 1000 万）
+-- ============================================================
 CREATE OR REPLACE FUNCTION public.collect_company_tax()
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -66,25 +181,22 @@ DECLARE
     v_mono_total numeric := 0;
     v_mono_rate  CONSTANT numeric := 0.05;
     v_mono_line  CONSTANT numeric := 0.40;
-    -- ⭐ 基金相关
     v_enabled    boolean := true;
     v_fund_pct   numeric := 50;
-    v_cap        numeric := 20000000;
-    v_free_below numeric := 5000000;
+    v_cap        numeric := 10000000;
+    v_free_below numeric := 500000;
     v_fund_amt   numeric := 0;
-    v_gave       numeric := 0;
     v_got_cnt    int := 0;
 BEGIN
-    -- 读参数（表不存在或无值时用默认）
     BEGIN
         SELECT coalesce(bool_or(value = '1') FILTER (WHERE key = 'enabled'), true),
                coalesce(max(value::numeric) FILTER (WHERE key = 'share_pct'), 50),
-               coalesce(max(value::numeric) FILTER (WHERE key = 'cap_value'), 20000000),
-               coalesce(max(value::numeric) FILTER (WHERE key = 'tax_free_below'), 5000000)
+               coalesce(max(value::numeric) FILTER (WHERE key = 'cap_value'), 10000000),
+               coalesce(max(value::numeric) FILTER (WHERE key = 'tax_free_below'), 500000)
           INTO v_enabled, v_fund_pct, v_cap, v_free_below
           FROM public.growth_fund_config;
     EXCEPTION WHEN OTHERS THEN
-        v_enabled := false;   -- 参数表出问题就退化成"纯收税"，不影响主流程
+        v_enabled := false;
     END;
 
     SELECT coalesce(sum(market_value), 0) INTO v_site_total FROM public.user_companies;
@@ -111,7 +223,7 @@ BEGIN
             END IF;
         END IF;
 
-        -- ⭐ 免征额：小公司不交税，让它们专心长大
+        -- 低于免征额的不收税
         IF r.market_value < v_free_below THEN
             CONTINUE;
         END IF;
@@ -127,11 +239,10 @@ BEGIN
         v_count := v_count + 1;
     END LOOP;
 
-    -- ⭐ 把一部分税收发给中小公司（零通胀：钱是收来的，不是发的）
+    -- 一部分税收发给中小公司（零通胀：钱是收来的，不是发的）
     IF v_enabled AND v_fund_pct > 0 AND v_total > 0 THEN
         v_fund_amt := floor(v_total * least(greatest(v_fund_pct, 0), 100) / 100.0);
         IF v_fund_amt > 0 THEN
-            -- 按「离门槛还有多远」加权：越小的公司分得越多，接近门槛就停止
             WITH pool AS (
                 SELECT id, (v_cap - market_value) AS weight
                   FROM public.user_companies
@@ -150,8 +261,6 @@ BEGIN
              WHERE c.id = g.cid AND g.amt >= 1;
 
             GET DIAGNOSTICS v_got_cnt = ROW_COUNT;
-            SELECT coalesce(sum(market_value), 0) INTO v_gave
-              FROM public.user_companies WHERE market_value < v_cap;
         END IF;
     END IF;
 
@@ -159,7 +268,6 @@ BEGIN
     VALUES ('last_tax_date', to_char((now() AT TIME ZONE 'Asia/Shanghai')::date, 'YYYY-MM-DD'))
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
-    -- 记一笔基金流水，方便以后对账
     IF v_fund_amt > 0 THEN
         BEGIN
             INSERT INTO public.growth_fund_logs (day, collected, fund, companies)
@@ -189,75 +297,26 @@ REVOKE ALL ON FUNCTION public.collect_company_tax() FROM PUBLIC, anon, authentic
 
 
 -- ============================================================
--- ③ 基金流水（方便对账："钱收了多少、发了多少、给了几家"）
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.growth_fund_logs (
-    day        date PRIMARY KEY,
-    collected  numeric NOT NULL DEFAULT 0,
-    fund       numeric NOT NULL DEFAULT 0,
-    companies  integer NOT NULL DEFAULT 0,
-    created_at timestamptz NOT NULL DEFAULT now()
-);
-REVOKE ALL ON public.growth_fund_logs FROM PUBLIC, anon, authenticated;
-
-
--- ============================================================
--- ④ 均值回归的锚点：平均 → 中位数
--- ============================================================
--- 现在锚点用的是 avg(market_value) —— 但 Utw 一家占了 93.57%，
--- 平均值被他一个人拉到 1700 万，结果"回归"对所有小公司都是往上拉的，
--- 对他却几乎不痛（他偏离倍数被算小了）。
--- 换成中位数（不受极端值影响，大概在 100 万上下）之后，
--- 他偏离中位数约 1400 倍，回归力度才真正体现出来。
---
--- ⚠️ 这一步【本文件只建函数，不接线】。要真生效得把
---    random_fluctuate_market_values 里那一行 avg(...) 换成这个函数，
---    但那要整体重写那个 90 多行的波动函数（含涨跌停、按时间缩放等逻辑），
---    风险比本文件大，所以拆成第二步单独做。
---    先把成长基金跑几天看效果，需要时再动它。
-CREATE OR REPLACE FUNCTION public._market_median_value()
-RETURNS numeric
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-    SELECT coalesce(
-             percentile_cont(0.5) WITHIN GROUP (ORDER BY market_value),
-             20000)
-      FROM public.user_companies
-     WHERE market_value > 0;
-$$;
-REVOKE ALL ON FUNCTION public._market_median_value() FROM PUBLIC, anon, authenticated;
-
-
--- ============================================================
--- ⑤ 调参（随时可改，改完下一轮收税/波动就生效）
--- ============================================================
--- 关闭基金发放（只收税、不发钱）：
---   UPDATE public.growth_fund_config SET value='0' WHERE key='enabled';
---
--- 调整注资比例（比如从 50% 提到 70%）：
---   UPDATE public.growth_fund_config SET value='70' WHERE key='share_pct';
---
--- 调整门槛（比如允许更大的公司也参与分配）：
---   UPDATE public.growth_fund_config SET value='50000000' WHERE key='cap_value';
---
--- 调整免征额：
---   UPDATE public.growth_fund_config SET value='3000000' WHERE key='tax_free_below';
-
-
--- ============================================================
 -- 验收
 -- ============================================================
 SELECT key AS 参数, value AS 值 FROM public.growth_fund_config ORDER BY key;
 
--- 当前谁会被分到钱、大概分多少（只算，不改数据）
+SELECT public._market_median_value()                                   AS 中位数_新锚点,
+       (SELECT round(avg(market_value)) FROM public.user_companies)    AS 平均值_旧锚点,
+       (SELECT max(market_value) FROM public.user_companies)           AS 最大值;
+
+-- 参与分配的公司数量
+SELECT count(*) FILTER (WHERE market_value < 10000000 AND market_value > 0) AS 参与分配,
+       count(*) FILTER (WHERE market_value >= 10000000)                   AS 不参与,
+       count(*)                                                           AS 总数
+  FROM public.user_companies;
+
+-- 谁会被分到钱、每天大概分多少（按 5100 万基金估算）
 WITH pool AS (
-    SELECT company_name, market_value, (20000000 - market_value) AS weight
+    SELECT company_name, market_value, (10000000 - market_value) AS weight
       FROM public.user_companies
-     WHERE market_value < 20000000 AND market_value > 0
+     WHERE market_value < 10000000 AND market_value > 0
 ), tot AS (SELECT sum(weight) AS w FROM pool)
 SELECT company_name AS 公司, market_value AS 当前市值,
-       round((weight::numeric / nullif((SELECT w FROM tot),0) * 51000000)) AS 预估每天分到
-  FROM pool ORDER BY weight DESC LIMIT 12;
-
--- 当前中位数（均值回归的新锚点）
-SELECT public._market_median_value() AS 市场市值中位数;
+       round(weight::numeric / nullif((SELECT w FROM tot), 0) * 51000000) AS 预估每天分到
+  FROM pool ORDER BY weight DESC LIMIT 15;
