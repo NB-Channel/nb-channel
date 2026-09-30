@@ -294,16 +294,25 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; 
         NM:'内蒙古', NX:'宁夏', QH:'青海', SD:'山东', SX:'山西', SN:'陕西', SH:'上海', SC:'四川',
         TJ:'天津', XZ:'西藏', XJ:'新疆', YN:'云南', ZJ:'浙江' };
     var GEO_CN_CITY = { Beijing:'北京', Shanghai:'上海', Guangzhou:'广州', Shenzhen:'深圳', Hangzhou:'杭州',
-        Nanjing:'南京', Wuhan:'武汉', Chengdu:'成都', Tianjin:'天津', Chongqing:'重庆', Suzhou:'苏州', Changsha:'长沙' };
+        Nanjing:'南京', Wuhan:'武汉', Chengdu:'成都', Tianjin:'天津', Chongqing:'重庆', Suzhou:'苏州', Changsha:'长沙',
+        Xiamen:'厦门', Hohhot:'呼和浩特', Zhengzhou:'郑州', Jinan:'济南', Qingdao:'青岛', Dalian:'大连',
+        Shenyang:'沈阳', Harbin:'哈尔滨', Changchun:'长春', Shijiazhuang:'石家庄', Taiyuan:'太原',
+        Hefei:'合肥', Nanchang:'南昌', Fuzhou:'福州', Kunming:'昆明', Guiyang:'贵阳', Nanning:'南宁',
+        Haikou:'海口', Lanzhou:'兰州', Xining:'西宁', Yinchuan:'银川', Urumqi:'乌鲁木齐', Lhasa:'拉萨',
+        Wuxi:'无锡', Ningbo:'宁波', Wenzhou:'温州', Foshan:'佛山', Dongguan:'东莞', Zhuhai:'珠海', Yantai:'烟台' };
 
     function geoCN(cc, rc, region, city) {
         var cn = GEO_CN_COUNTRY[cc] || null;
         var rn = rc ? GEO_CN_REGION[String(rc).toUpperCase()] : null;
         var cname = city ? (GEO_CN_CITY[city] || null) : null;
+        // 省份优先用翻译，其次原文；城市同理
+        var prov = rn || region || '';
+        var cty  = cname || city || '';
         var parts = [];
         if (cn) parts.push(cn);
-        if (rn) parts.push(rn); else if (region) parts.push(region);
-        if (cname) parts.push(cname); else if (city && !rn) parts.push(city);
+        if (prov) parts.push(prov);
+        // 省市同名（北京/上海/天津/重庆、以及东京这种）时别显示两遍
+        if (cty && cty !== prov) parts.push(cty);
         if (!parts.length) return [region, city].filter(Boolean).join(' ');
         return parts.join(' · ');
     }
@@ -313,19 +322,20 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; 
         if (!ip || !box) return;
         // 内网/回环地址没什么可查的
         if (/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip) || ip === '::1') return;
+        // 主源 ipwho.is；它偶尔限流，所以备一个 ipapi.co（实测 api.vore.top 已不可用）
         var urls = [
-            'https://ipwho.is/' + encodeURIComponent(ip),
-            'https://api.vore.top/api/IPdata?ip=' + encodeURIComponent(ip)
+            { u: 'https://ipwho.is/' + encodeURIComponent(ip),           src: 'ipwho' },
+            { u: 'https://ipapi.co/' + encodeURIComponent(ip) + '/json/', src: 'ipapi' }
         ];
         (function tryNext(k) {
             if (k >= urls.length) return;      // 两个源都失败就保持裸 IP，不打扰用户
-            fetch(urls[k]).then(function (r) { return r.json(); }).then(function (j) {
+            fetch(urls[k].u).then(function (r) { return r.json(); }).then(function (j) {
                 var name = '';
                 if (j && j.success && j.country_code) {
                     name = geoCN(j.country_code, j.region_code, j.region, j.city);
-                } else if (j && j.code === 200 && j.ipdata) {
-                    var g = j.ipdata;
-                    name = [g.info1, g.info2, g.info3].filter(Boolean).join(' · ');
+                } else if (j && j.country_code && !j.error) {
+                    // ipapi.co 的形状：{country_code, region_code, region, city}
+                    name = geoCN(j.country_code, j.region_code, j.region, j.city);
                 }
                 if (name) box.textContent = ip + '（' + name + '）';
                 else tryNext(k + 1);
