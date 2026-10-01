@@ -442,21 +442,46 @@
         }
         var box = exist;
         box.className = 'nb-tip-box';
-        // ⚠️ 这里刻意做得很保守：只在"还没插进去"的时候插一次，
-        //    不做反复的位置纠正 —— 首页那些模块是 ui-nav.js 异步注入的，
-        //    反复挪动元素会触发大量重排，上次就是因为这个把页面拖卡了。
-        //    位置不完美可以接受，页面流畅更重要。
+        // 位置策略（兼顾"放对地方"和"别把页面拖卡"）：
+        //   ui-nav.js 是异步注入首页各个模块的，公告出现得比导航晚。
+        //   所以【等公告出现】再插，插完就不再动。
+        //   为了不无限等，3 秒内没等到就用兜底位置。
+        //   ⚠️ 全程最多插两次（第一次兜底、第二次纠正到公告后面），
+        //      不做反复挪动 —— 上次页面卡就是反复挪 DOM 造成的。
         if (box.parentNode && document.body.contains(box)) {
-            // 已经在页面上：只更新内容，不挪位置
-            var needReinsert = false;
-            var cont0 = document.querySelector('.container') || document.body;
-            if (!cont0.contains(box)) needReinsert = true;
-            if (!needReinsert) { fill(box); return true; }
-            // 被 ui-nav.js 重建时清掉了 → 重新插一次
-            cont0.insertBefore(box, cont0.firstElementChild);
             fill(box);
-            window.__nbAnchor = '重插';
+            // 已经插过了：只有一种情况需要再动一次 ——
+            // 之前用的是兜底位置，现在公告出现了，挪到公告后面去。
+            if (box.dataset.nbAnchored !== 'ann') {
+                var ann2 = document.querySelector('.beta-announce')
+                        || document.querySelector('.announcement-bar')
+                        || document.getElementById('betaAnnounce')
+                        || document.getElementById('announcementBar');
+                if (ann2 && ann2.parentNode && document.body.contains(ann2) &&
+                    document.body.contains(ann2)) {
+                    if (box.previousElementSibling !== ann2) {
+                        ann2.parentNode.insertBefore(box, ann2.nextSibling);
+                    }
+                    box.dataset.nbAnchored = 'ann';
+                    window.__nbAnchor = '公告之后';
+                }
+            }
             return true;
+        }
+
+        // 还没插过：优先等公告
+        // （顶部公告是 ui-nav.js 注入的，通常 1 秒内出现）
+        if (!window.__nbWaitedAnn) {
+            var annNow = document.querySelector('.beta-announce')
+                      || document.querySelector('.announcement-bar')
+                      || document.getElementById('betaAnnounce')
+                      || document.getElementById('announcementBar');
+            if (!annNow) {
+                // 这轮先不插，等下一轮（轮询总共只有 3 秒，不会拖太久）
+                window.__nbWaitCount = (window.__nbWaitCount || 0) + 1;
+                if (window.__nbWaitCount < 4) return false;
+            }
+            window.__nbWaitedAnn = true;
         }
 
         // 兜底：原始 HTML 里那张"友商链接"卡片之前
