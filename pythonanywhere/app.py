@@ -159,26 +159,58 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-# 允许的跨域来源（你的三个站点 + PythonAnywhere 站）
+# 允许的跨域来源
+# ⚠️ 这个白名单是防"私自部署"的第一道闸：别人把站点扒走部署到自己的域名后，
+#    浏览器发来的 Origin 不在名单里，就拿不到 CORS 头，接口直接调不通
+#    （界面能打开，但登录、评论、买卖全废）。
 ALLOWED_ORIGINS = {
     'https://nb-channel.top',
     'https://www.nb-channel.top',
     'https://github.nb-channel.top',
     'https://cloudflare.nb-channel.top',
     'https://pythonanywhere.nb-channel.top',
+    'https://netlify.nb-channel.top',          # Netlify 镜像站
     'https://nbchannel.pythonanywhere.com',
     'https://nb-channel.pages.dev',
+    'https://nb-channel.netlify.app',          # Netlify 默认域名
+    # --- APP（Capacitor 打包，本地页面）---
+    'https://localhost',                       # Capacitor 6 默认 androidScheme=https
+    'http://localhost',
+    'capacitor://localhost',                   # 旧版 Capacitor
+    # --- 本地调试 ---
+    'http://127.0.0.1:8000',
+    'http://127.0.0.1:8080',
+    'http://localhost:8000',
+    'http://localhost:8080',
+    'null',                                    # file:// 直接打开页面时浏览器给的是字符串 null
 }
 
 def _cors_headers():
     origin = request.headers.get('Origin', '')
     allow = origin if origin in ALLOWED_ORIGINS else ''
-    return {
-        'Access-Control-Allow-Origin': allow if allow else '*',
+
+    # ⚠️ 原来这里是 `allow if allow else '*'` —— 不在白名单时反而回一个 *，
+    #    等于白名单完全失效，任何网站都能调这些接口。
+    #    现在不在名单里就【不回】Access-Control-Allow-Origin 头，
+    #    浏览器自己会拦下跨域请求。
+    h = {
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Session',
         'Access-Control-Max-Age': '86400',
+        'Vary': 'Origin',
     }
+    if allow:
+        h['Access-Control-Allow-Origin'] = allow
+    else:
+        # 留个记录，方便看是谁在盗用接口（不影响正常请求）
+        try:
+            if origin:
+                app.logger.warning('CORS 拒绝：Origin=%s Path=%s UA=%s',
+                                   origin, request.path,
+                                   (request.headers.get('User-Agent') or '')[:120])
+        except Exception:
+            pass
+    return h
 
 @app.after_request
 def after_request(resp):
