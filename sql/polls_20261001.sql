@@ -78,6 +78,8 @@ BEGIN
       FROM (
         SELECT po.id, po.slug, po.title, po.description, po.multi, po.closed,
                po.ends_at, po.sort,
+               po.created_at,          -- ⚠️ 必须带出来：外层 jsonb_agg 要按它排序
+
                (po.closed OR (po.ends_at IS NOT NULL AND po.ends_at <= now())) AS is_over,
                to_char(po.ends_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI') AS ends_text,
                -- 给后台的 datetime-local 输入框用，格式必须是 YYYY-MM-DDTHH:MI
