@@ -308,10 +308,12 @@
         'content:"";position:absolute;left:0;top:0;bottom:0;width:3px;' +
         'background:linear-gradient(180deg,#60a5fa,#a78bfa);' +
         '}' +
-        '.nb-tip-box .nb-tip-head{' +
+        '.nb-tip-head{' +
         'font-size:.78rem;font-weight:700;letter-spacing:.04em;' +
-        'color:#3b82f6;margin-bottom:7px;' +
+        'color:#3b82f6;margin-bottom:7px;display:block;' +
         '}' +
+        '.nb-tip-slim .nb-tip-head{margin-bottom:4px;}' +
+        '.nb-tip-panel .nb-tip-head{margin-bottom:8px;}' +
         '.nb-tip-box .nb-tip-text{font-size:.95rem;}' +
         '.nb-tip-box .nb-tip-body{display:block;}' +
         '.nb-tip-box .nb-tip-next{float:right;margin-top:0;}' +
@@ -404,6 +406,10 @@
             wrap.parentNode && wrap.parentNode.removeChild(wrap);
         };
 
+        var head1 = document.createElement('div');
+        head1.className = 'nb-tip-head';
+        head1.textContent = '小Tips：';
+
         var body = document.createElement('div');
         body.appendChild(makeTag());
         body.appendChild(makeText());
@@ -411,6 +417,7 @@
         body.appendChild(makeNextBtn(panel));
 
         panel.appendChild(close);
+        panel.appendChild(head1);
         panel.appendChild(body);
         wrap.appendChild(fab);
         wrap.appendChild(panel);
@@ -529,6 +536,10 @@
 
         var box = document.createElement('div');
         box.className = 'nb-tip-slim';
+        var head2 = document.createElement('div');
+        head2.className = 'nb-tip-head';
+        head2.textContent = '小Tips：';
+        box.appendChild(head2);
         box.appendChild(makeTag());
         box.appendChild(makeText());
         box.appendChild(makeNextBtn(box));
