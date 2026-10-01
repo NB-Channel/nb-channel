@@ -4,9 +4,17 @@
 -- 背景：站长要拿 2026-08-23 之前的旧版当"经典模式"，视觉 100% 还原。
 --      但旧版页面直连的表和函数，有一部分已经不在了：
 --
---        ① 3 个 RPC 不存在
---             can_register / record_registration  —— 仓库里根本没有定义
---             set_item_settings                    —— 有定义但线上 404
+--        ① 3 个 RPC 用不了
+--             can_register / record_registration
+--                —— 探测后确认：函数其实【存在】，参数名是 ip。
+--                   挂掉的原因是它们访问 registration_attempts 表，
+--                   而那张表对 anon 关闭、函数又不是 SECURITY DEFINER，
+--                   于是报 42501 permission denied。
+--                   修法：DROP 掉旧的（返回类型不同，不能 REPLACE），
+--                   重建为 SECURITY DEFINER。参数名必须保持 ip，旧 JS 传的就是它。
+--             set_item_settings
+--                —— 线上只有 4 参数版（session_auth_highrisk 建的），
+--                   旧版传 3 个参数匹配不上。3 参数版不冲突，直接新建。
 --        ② profiles 表被 REVOKE（我批次 2 的安全加固），旧版有 16 处在直连
 --
 --      这个文件把①补上、给②做替代 RPC，然后改旧版 JS 走这些 RPC。
@@ -31,15 +39,21 @@ CREATE INDEX IF NOT EXISTS idx_reg_attempts_ip_time
 REVOKE ALL ON public.registration_attempts FROM PUBLIC, anon, authenticated;
 ALTER TABLE public.registration_attempts ENABLE ROW LEVEL SECURITY;
 
+-- ⚠️ 旧的 can_register 已存在且返回类型不同，CREATE OR REPLACE 会报
+--    42P13 cannot change return type，必须先 DROP。
+DROP FUNCTION IF EXISTS public.can_register(text);
+DROP FUNCTION IF EXISTS public.record_registration(text);
+
 -- 能不能注册：同一 IP 24 小时内不超过 3 次
-CREATE OR REPLACE FUNCTION public.can_register(p_ip text DEFAULT NULL)
+-- ⚠️ 参数名必须是 ip（旧版 JS 就是 .rpc('can_register', { ip })，改名会匹配不上）
+CREATE OR REPLACE FUNCTION public.can_register(ip text DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $fn$
 DECLARE
-    v_ip    text := nullif(btrim(coalesce(p_ip, '')), '');
+    v_ip    text := nullif(btrim(coalesce(ip, '')), '');
     v_cnt   int;
     v_limit CONSTANT int := 3;
 BEGIN
@@ -68,13 +82,13 @@ REVOKE ALL ON FUNCTION public.can_register(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.can_register(text) TO anon;
 
 -- 记一次注册
-CREATE OR REPLACE FUNCTION public.record_registration(p_ip text DEFAULT NULL)
+CREATE OR REPLACE FUNCTION public.record_registration(ip text DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $fn$
-DECLARE v_ip text := nullif(btrim(coalesce(p_ip, '')), '');
+DECLARE v_ip text := nullif(btrim(coalesce(ip, '')), '');
 BEGIN
     IF v_ip IS NULL THEN
         RETURN jsonb_build_object('success', true, 'recorded', false);
@@ -272,6 +286,9 @@ GRANT EXECUTE ON FUNCTION public.change_username(uuid, text, text) TO anon;
 --   ⚠️ 不加 session 校验：旧版没传，加了就等于把背包功能锁死。
 --      安全性由 WHERE user_id = p_user_id 保证（只能改自己的道具）。
 --   4 参数的安全版保持不动，新页面继续用它。
+-- 只删 3 参数版（如果存在）；4 参数的安全版保持不动
+DROP FUNCTION IF EXISTS public.set_item_settings(uuid, bigint, jsonb);
+
 CREATE OR REPLACE FUNCTION public.set_item_settings(
     p_user_id  uuid,
     p_item_id  bigint,
