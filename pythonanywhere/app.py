@@ -832,14 +832,14 @@ def download():
         return jsonify({'success': True, 'file_url': _sign_product_url(data.get('file_url')), 'message': data.get('message', '下载成功')})
 
     # 4. 付费作品：先查是否已购买（避免重复扣费）
-    try:
-        pur_rows = _exec_rows(
-            supabase.table('product_purchases').select('id') \
-            .eq('product_id', product_id).eq('buyer_id', user_id).limit(1)
-        )
-    except Exception as e:
-        return jsonify({'success': False, 'message': '后端数据库连接失败: %s' % e}), 500
-    if pur_rows:
+    #    ⚠️ 这里必须走 RPC，不能直接 select product_purchases ——
+    #    该表已对 anon 关闭（安全加固，防止交易记录被匿名读取），
+    #    而后端用的是 ANON_KEY，直连会报 42501 permission denied。
+    pur, pur_err = rpc('check_product_purchased',
+                       {'p_product_id': str(product_id), 'p_user_id': user_id})
+    if pur_err:
+        return jsonify({'success': False, 'message': '后端错误: %s' % pur_err}), 500
+    if pur and pur.get('purchased'):
         return jsonify({'success': True, 'file_url': _sign_product_url(prod['file_url']), 'message': '已购买，直接下载'})
 
     # 5. 未购买：走 purchase_product（扣款并返回下载地址）
