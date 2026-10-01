@@ -512,7 +512,6 @@
 
         // 已经在正确位置就不动，否则挪过去（首页内容是异步渲染的，
         // 第一次进来可能还找不到"友商"那张卡片，等 DOM 稳定后要能纠正）
-        if (!anchor) return false;
         if (anchor.after) {
             if (box.previousElementSibling !== anchor.n) {
                 anchor.n.parentNode.insertBefore(box, anchor.n.nextSibling);
