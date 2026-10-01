@@ -29,3 +29,5 @@ app/keystore/
 __pycache__/
 *.pyc
 *.pyo
+# 临时提交信息文件（提交后即删，不该进仓库）
+_c*.txt
