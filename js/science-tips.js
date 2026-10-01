@@ -432,7 +432,7 @@
             exist.className = 'nb-tip-box';
             var head0 = document.createElement('div');
             head0.className = 'nb-tip-head';
-            head0.textContent = 'Tips：';
+            head0.textContent = '小Tips：';
             var body0 = document.createElement('div');
             body0.appendChild(makeTag());
             body0.appendChild(makeText());
