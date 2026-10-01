@@ -3,7 +3,10 @@
 
 /*-new.html  /:splat.html  301
 
-# 根路径直接进 Beta 站（用 301 而不是 200 rewrite：
+# 根路径直接进 Beta 站。
+# ⚠️ 末尾的 ! 是必须的：Netlify 的静态文件优先于重定向规则，
+#    根目录存在 index.html，不加 ! 的话它会直接返回那个旧首页。
+# 用 301 而不是 200 rewrite：
 # Beta 页面之间用的是相对链接，rewrite 会让地址栏停在 /，
 # 相对链接就会变成 /bank-Beta.html 而 404）
-/  /Beta/index-Beta.html  301
+/  /Beta/index-Beta.html  301!
