@@ -77,9 +77,11 @@ BEGIN
     SELECT coalesce(jsonb_agg(p ORDER BY p.sort DESC, p.created_at DESC), '[]'::jsonb) INTO v_out
       FROM (
         SELECT po.id, po.slug, po.title, po.description, po.multi, po.closed,
-               po.ends_at,
+               po.ends_at, po.sort,
                (po.closed OR (po.ends_at IS NOT NULL AND po.ends_at <= now())) AS is_over,
                to_char(po.ends_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI') AS ends_text,
+               -- 给后台的 datetime-local 输入框用，格式必须是 YYYY-MM-DDTHH:MI
+               to_char(po.ends_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD"T"HH24:MI') AS ends_local,
                to_char(po.created_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD')      AS created_text,
                (SELECT count(*) FROM public.poll_votes v WHERE v.poll_id = po.id)      AS total,
                (SELECT coalesce(jsonb_agg(o ORDER BY o.idx), '[]'::jsonb) FROM (

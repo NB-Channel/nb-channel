@@ -304,6 +304,7 @@
         <button id="tabFeedback" class="tab-btn">📮 漏洞/建议反馈</button>
         <button id="tabExchange" class="tab-btn">💱 兑换记录</button>
         <button id="tabApi" class="tab-btn">📊 API 日志</button>
+    <button id="tabPoll" class="tab-btn">🗳️ 投票管理</button>
     </div>
 
     <div id="commentFilters" class="filters">
@@ -474,6 +475,51 @@
             <div style="font-weight:600;margin-bottom:8px;font-size:0.9rem;">👀 前台预览(滚动公告条内容)</div>
             <div id="annPreview" style="color:#8a94a6;">(暂无公告)</div>
         </div>
+    </div>
+
+    <div id="pollPanel" style="display:none;">
+        <div style="background:#e7f5ff;border:1px solid #a5d8ff;border-left:4px solid #1971c2;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:0.86rem;color:#1864ab;line-height:1.85;">
+            🗳️ 这里建好的投票会立刻出现在「投票中心」页（<code>Beta/vote-Beta.html</code>），<b>票数实时公开</b>。<br>
+            玩家需要登录才能投，每人一票、投完不能改。到截止时间会自动关闭（服务端判断）。
+        </div>
+
+        <div class="card" style="padding:18px 20px;margin-bottom:18px;">
+            <h3 style="margin:0 0 14px;font-size:0.98rem;">新建 / 覆盖投票</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px;">
+                <label style="font-size:0.84rem;color:#495057;">标识（英文数字连字符，唯一）<br>
+                    <input id="pollSlug" placeholder="mode-2026-10" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;">
+                </label>
+                <label style="font-size:0.84rem;color:#495057;">排序（大的显示在前）<br>
+                    <input id="pollSort" type="number" value="10" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;">
+                </label>
+            </div>
+            <label style="display:block;font-size:0.84rem;color:#495057;margin-bottom:12px;">标题<br>
+                <input id="pollTitle" placeholder="投票标题" style="width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.9rem;margin-top:4px;box-sizing:border-box;">
+            </label>
+            <label style="display:block;font-size:0.84rem;color:#495057;margin-bottom:12px;">说明（可留空）<br>
+                <textarea id="pollDesc" placeholder="补充说明" style="width:100%;min-height:64px;padding:8px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.9rem;margin-top:4px;font-family:inherit;box-sizing:border-box;"></textarea>
+            </label>
+            <label style="display:block;font-size:0.84rem;color:#495057;margin-bottom:12px;">选项（一行一个，至少两个）<br>
+                <textarea id="pollOpts" placeholder="保留「新潮模式」和「简单模式」&#10;不必保留，现在的官网模式就够了&#10;无所谓 / 都行" style="width:100%;min-height:100px;padding:8px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.9rem;margin-top:4px;font-family:inherit;box-sizing:border-box;"></textarea>
+            </label>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:14px;">
+                <label style="font-size:0.84rem;color:#495057;">截止时间（北京时间，留空=不限）<br>
+                    <input id="pollEnds" type="datetime-local" style="padding:8px 12px;border:1px solid #ddd;border-radius:10px;font-size:0.9rem;margin-top:4px;">
+                </label>
+                <label style="font-size:0.86rem;color:#495057;display:flex;align-items:center;gap:6px;margin-top:22px;cursor:pointer;">
+                    <input id="pollMulti" type="checkbox"> 允许多选
+                </label>
+            </div>
+            <button id="pollCreateBtn" style="background:#1971c2;color:#fff;border:none;border-radius:30px;padding:9px 26px;cursor:pointer;font-size:0.9rem;font-weight:600;">保存</button>
+            <span id="pollMsg" style="margin-left:12px;font-size:0.86rem;"></span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+            <b style="font-size:0.95rem;">已有投票</b>
+            <span id="pollListInfo" style="font-size:0.84rem;color:#8a94a6;"></span>
+            <button id="pollReloadBtn" style="background:#f1f3f5;color:#495057;border:1px solid #dee2e6;border-radius:30px;padding:5px 14px;cursor:pointer;font-size:0.82rem;">刷新</button>
+        </div>
+        <div id="pollAdminList">加载中...</div>
     </div>
 
     <div id="apiPanel" style="display:none;">
@@ -1826,9 +1872,9 @@
     function switchTab(tab) {
         currentTab = tab;
         const panels = ['commentFilters','batchActions','reportsContainer','pagination','companyReportsContainer','verificationContainer','companyBatch','verifyBatch','productReportsContainer'];
-        const tabs = ['tabComments','tabCompanies','tabVerification','tabAnnounce','tabApi','tabFeedback','tabExchange'];
+        const tabs = ['tabComments','tabCompanies','tabVerification','tabAnnounce','tabApi','tabFeedback','tabExchange','tabPoll'];
         function hideAll() { panels.forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
-        function hidePanels() { ['announcePanel','apiPanel','feedbackPanel','exchangePanel'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
+        function hidePanels() { ['announcePanel','apiPanel','feedbackPanel','exchangePanel','pollPanel'].forEach(function (id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); }
         tabs.forEach(function (id) { const el = document.getElementById(id); if (el) el.classList.remove('active'); });
         const tabEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
         if (tabEl) tabEl.classList.add('active');
@@ -1860,7 +1906,190 @@
         } else if (tab === 'exchange') {
             document.getElementById('exchangePanel').style.display = 'block';
             loadExchange(1);
+        } else if (tab === 'poll') {
+            document.getElementById('pollPanel').style.display = 'block';
+            loadPolls();
         }
+    }
+
+    // ===================== 投票管理 =====================
+    function pollEsc(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    function pollMsg(text, ok) {
+        const el = document.getElementById('pollMsg');
+        if (!el) return;
+        el.textContent = text || '';
+        el.style.color = ok ? '#2f9e44' : '#e74c3c';
+        if (text) setTimeout(function () { if (el.textContent === text) el.textContent = ''; }, 4000);
+    }
+
+    async function loadPolls() {
+        const box = document.getElementById('pollAdminList');
+        const info = document.getElementById('pollListInfo');
+        if (!box) return;
+        box.innerHTML = '<div style="padding:16px;color:#8a94a6;">加载中...</div>';
+
+        const { data, error } = await supabaseClient.rpc('poll_list', {});
+        if (error || !data || !data.success) {
+            box.innerHTML = '<div style="padding:16px;color:#e74c3c;">加载失败：' +
+                pollEsc((error && error.message) || (data && data.message) || '未知错误') +
+                '<br><span style="font-size:0.82rem;">（如果提示找不到函数，说明 sql/polls_20261001.sql 还没跑）</span></div>';
+            return;
+        }
+        const list = data.list || [];
+        if (info) info.textContent = '共 ' + list.length + ' 个';
+
+        if (!list.length) {
+            box.innerHTML = '<div style="padding:24px;color:#8a94a6;text-align:center;">还没有投票，用上面的表单建一个</div>';
+            return;
+        }
+
+        box.innerHTML = list.map(function (p) {
+            const opts = (p.options || []).map(function (o) {
+                const pct = p.total > 0 ? Math.round(o.votes / p.total * 100) : 0;
+                return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:0.86rem;border-bottom:1px dashed #f0f1f3;">' +
+                    '<span style="flex:1;">' + pollEsc(o.label) + '</span>' +
+                    '<span style="color:#1971c2;font-weight:700;font-variant-numeric:tabular-nums;">' + o.votes + ' 票</span>' +
+                    '<span style="color:#8a94a6;width:52px;text-align:right;font-variant-numeric:tabular-nums;">' + pct + '%</span>' +
+                    '</div>';
+            }).join('');
+
+            const badge = p.is_over
+                ? '<span style="background:#e9ecef;color:#495057;border-radius:20px;padding:3px 11px;font-size:0.76rem;font-weight:700;">已结束</span>'
+                : '<span style="background:#e7f5ff;color:#1971c2;border-radius:20px;padding:3px 11px;font-size:0.76rem;font-weight:700;">进行中</span>';
+
+            const meta = '共 <b>' + (p.total || 0) + '</b> 票' +
+                (p.ends_text ? ' · 截止 ' + pollEsc(p.ends_text) : ' · 不限时') +
+                (p.created_text ? ' · 建于 ' + pollEsc(p.created_text) : '') +
+                (p.multi ? ' · 可多选' : ' · 单选');
+
+            return '<div class="card" style="padding:16px 18px;margin-bottom:12px;">' +
+                '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;">' +
+                    '<b style="flex:1;font-size:0.96rem;line-height:1.6;">' + pollEsc(p.title) + '</b>' + badge +
+                '</div>' +
+                '<div style="font-size:0.78rem;color:#8a94a6;margin-bottom:10px;">' +
+                    '标识 <code>' + pollEsc(p.slug) + '</code> · ' + meta +
+                '</div>' +
+                opts +
+                '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">' +
+                    '<button class="poll-edit" data-slug="' + pollEsc(p.slug) + '" ' +
+                        'style="background:#f1f3f5;color:#495057;border:1px solid #dee2e6;border-radius:30px;padding:5px 14px;cursor:pointer;font-size:0.82rem;">编辑</button>' +
+                    '<button class="poll-close" data-slug="' + pollEsc(p.slug) + '" data-closed="' + (p.closed ? '1' : '0') + '" ' +
+                        'style="background:#fff4e6;color:#d9480f;border:1px solid #ffd8a8;border-radius:30px;padding:5px 14px;cursor:pointer;font-size:0.82rem;">' +
+                        (p.closed ? '重新开启' : '提前关闭') + '</button>' +
+                    '<button class="poll-del" data-slug="' + pollEsc(p.slug) + '" ' +
+                        'style="background:#fff5f5;color:#c92a2a;border:1px solid #ffc9c9;border-radius:30px;padding:5px 14px;cursor:pointer;font-size:0.82rem;">删除</button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        // 把这些投票数据挂起来，编辑时用
+        window.__polls = list;
+
+        box.querySelectorAll('.poll-edit').forEach(function (b) {
+            b.onclick = function () { fillPollForm(b.dataset.slug); };
+        });
+        box.querySelectorAll('.poll-close').forEach(function (b) {
+            b.onclick = function () { togglePoll(b.dataset.slug, b.dataset.closed !== '1'); };
+        });
+        box.querySelectorAll('.poll-del').forEach(function (b) {
+            b.onclick = function () { deletePoll(b.dataset.slug); };
+        });
+    }
+
+    function fillPollForm(slug) {
+        const list = window.__polls || [];
+        const p = list.filter(function (x) { return x.slug === slug; })[0];
+        if (!p) return;
+        const set = function (id, v) { const e = document.getElementById(id); if (e) e.value = v; };
+        set('pollSlug', p.slug);
+        set('pollTitle', p.title || '');
+        set('pollDesc', p.description || '');
+        set('pollOpts', (p.options || []).map(function (o) { return o.label; }).join('\n'));
+        set('pollSort', p.sort != null ? p.sort : 10);
+        set('pollEnds', p.ends_local || '');
+        const m = document.getElementById('pollMulti');
+        if (m) m.checked = !!p.multi;
+        document.getElementById('pollPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        pollMsg('已载入「' + (p.title || slug) + '」，改完点保存即可覆盖（注意：覆盖会清空已有的票）', true);
+    }
+
+    async function createPoll() {
+        const val = function (id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+        const slug  = val('pollSlug');
+        const title = val('pollTitle');
+        const desc  = val('pollDesc');
+        const opts  = val('pollOpts').split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+        const sort  = parseInt(val('pollSort'), 10) || 0;
+        const ends  = val('pollEnds');
+        const multi = !!(document.getElementById('pollMulti') || {}).checked;
+
+        if (!/^[a-z0-9][a-z0-9-]{1,48}$/.test(slug)) {
+            pollMsg('标识只能用小写字母、数字和连字符，长度 2~49', false); return;
+        }
+        if (!title) { pollMsg('标题不能为空', false); return; }
+        if (opts.length < 2) { pollMsg('至少要有两个选项', false); return; }
+
+        // datetime-local 的值按北京时间理解，补上 +08:00
+        const endsIso = ends ? (ends.length === 16 ? ends + ':00+08:00' : ends + '+08:00') : null;
+
+        const btn = document.getElementById('pollCreateBtn');
+        if (btn) btn.disabled = true;
+
+        const { data, error } = await supabaseClient.rpc('admin_poll_create', {
+            p_token: getToken(),
+            p_slug: slug,
+            p_title: title,
+            p_desc: desc || null,
+            p_opts: opts,
+            p_multi: multi,
+            p_ends: endsIso,
+            p_sort: sort
+        });
+
+        if (btn) btn.disabled = false;
+
+        if (error || !data || !data.success) {
+            const msg = (error && error.message) || (data && data.message) || '未知错误';
+            if (!handleAdminError(error || (data && data.message))) pollMsg('保存失败：' + msg, false);
+            return;
+        }
+        pollMsg('已保存 ✓ 现在去投票中心就能看到', true);
+        loadPolls();
+    }
+
+    async function togglePoll(slug, closed) {
+        const { data, error } = await supabaseClient.rpc('admin_poll_close', {
+            p_token: getToken(), p_slug: slug, p_closed: closed
+        });
+        if (error || !data || !data.success) {
+            alert('操作失败：' + ((error && error.message) || (data && data.message) || '未知错误'));
+            return;
+        }
+        loadPolls();
+    }
+
+    async function deletePoll(slug) {
+        if (!confirm('删除投票「' + slug + '」？\n\n连同所有已投的票一起删掉，不能恢复。\n如果只是想停掉，用「提前关闭」更合适。')) return;
+        const { data, error } = await supabaseClient.rpc('admin_poll_delete', {
+            p_token: getToken(), p_slug: slug
+        });
+        if (error || !data || !data.success) {
+            alert('删除失败：' + ((error && error.message) || (data && data.message) || '未知错误'));
+            return;
+        }
+        loadPolls();
+    }
+
+    function bindPollForm() {
+        const btn = document.getElementById('pollCreateBtn');
+        if (btn && !btn.__bound) { btn.__bound = true; btn.onclick = createPoll; }
+        const rb = document.getElementById('pollReloadBtn');
+        if (rb && !rb.__bound) { rb.__bound = true; rb.onclick = loadPolls; }
     }
 
     async function initAdminPage() {
@@ -1893,6 +2122,8 @@
         document.getElementById('tabFeedback').onclick = () => switchTab('feedback');
         document.getElementById('tabExchange').onclick = () => switchTab('exchange');
         document.getElementById('tabApi').onclick = () => switchTab('api');
+        document.getElementById('tabPoll').onclick = () => switchTab('poll');
+        bindPollForm();
         document.getElementById('fbReloadBtn').onclick = () => loadFeedback(fbPage);
         document.getElementById('fbKindFilter').onchange = () => loadFeedback(1);
         document.getElementById('fbStatusFilter').onchange = () => loadFeedback(1);
