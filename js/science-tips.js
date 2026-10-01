@@ -312,20 +312,17 @@
         'font-size:.78rem;font-weight:700;letter-spacing:.04em;' +
         'color:#3b82f6;margin-bottom:7px;display:block;' +
         '}' +
-        '.nb-tip-slim .nb-tip-head{margin-bottom:4px;}' +
+        '.nb-tip-slim .nb-tip-head{margin-bottom:7px;}' +
         '.nb-tip-panel .nb-tip-head{margin-bottom:8px;}' +
         '.nb-tip-box .nb-tip-text{font-size:.95rem;}' +
         '.nb-tip-box .nb-tip-body{display:block;}' +
         '.nb-tip-box .nb-tip-next{float:right;margin-top:0;}' +
-        '.nb-tip-slim{' +
-        'max-width:900px;margin:0 auto 14px;padding:11px 16px;box-sizing:border-box;' +
-        'border:1px dashed var(--line,rgba(128,128,128,.28));border-radius:12px;' +
-        'background:rgba(96,165,250,.05);color:var(--ink,inherit);' +
-        'font-size:.85rem;line-height:1.7;opacity:.92;' +
-        '}' +
+        // 评论区现在直接用 .nb-tip-box，样式与首页完全一致，
+        // 这里不再单独定义 .nb-tip-slim（只留一条兼容旧缓存的空规则）
+        '.nb-tip-slim{}' +
         '@media (max-width:640px){' +
         '.nb-tip-box{margin:20px 12px;padding:14px 16px;}' +
-        '.nb-tip-slim{margin:0 12px 12px;padding:10px 13px;font-size:.82rem;}' +
+        '.nb-tip-slim{margin:20px 12px;padding:14px 16px;}' +
         '}';
 
     function injectCSS() {
@@ -532,10 +529,11 @@
         if (!cs || !cs.parentNode) return false;
         // 已经插过（多页共用脚本时防重）
         if (cs.previousElementSibling && cs.previousElementSibling.classList &&
-            cs.previousElementSibling.classList.contains('nb-tip-slim')) return true;
+            (cs.previousElementSibling.classList.contains('nb-tip-box') ||
+             cs.previousElementSibling.classList.contains('nb-tip-slim'))) return true;
 
         var box = document.createElement('div');
-        box.className = 'nb-tip-slim';
+        box.className = 'nb-tip-box';      // 和首页用同一个 class，样式完全一致
         var head2 = document.createElement('div');
         head2.className = 'nb-tip-head';
         head2.textContent = '小Tips：';
