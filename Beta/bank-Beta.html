@@ -2,6 +2,76 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<script>
+/* ===== 跨子域名登录态同步（github. / netlify. 之间互通）=====
+   localStorage 是按 origin 隔离的，两个子域名各存各的，所以要借 Cookie 中转。
+   Cookie 设 Domain=.nb-channel.top，所有子域名都能读到。
+
+   这里不改页面原本的任何代码 —— 而是劫持 localStorage 的读写：
+     · 页面登录时 setItem('nb_session', ...)  → 顺手写一份到 Cookie
+     · 页面登出时 removeItem('nb_session')    → 顺手把 Cookie 清掉
+     · 页面加载时 Cookie 有、本地没有          → 自动注入进 localStorage
+   所以那 57 处登录/登出代码一行都不用动。
+
+   ⚠️ 这意味着 *.nb-channel.top 下任何一个子域名都能读到这个令牌，
+      包括 product-storage 那个 Workers。将来新增子域名前先想清楚这件事。 */
+(function () {
+    try {
+        var KEY_S = 'nb_session', KEY_U = 'nb_user';
+        var DOMAIN = '.nb-channel.top';
+        var MAXAGE = 30 * 86400;
+
+        // 只在 .nb-channel.top 域下才启用（本地开文件、或别的域名访问时保持原样）
+        if (location.hostname.indexOf('nb-channel.top') < 0) return;
+
+        function readCookie(n) {
+            var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        }
+        function writeCookie(n, v) {
+            document.cookie = n + '=' + encodeURIComponent(v) + ';path=/;domain=' + DOMAIN +
+                              ';max-age=' + MAXAGE + ';SameSite=Lax' +
+                              (location.protocol === 'https:' ? ';Secure' : '');
+        }
+        function dropCookie(n) {
+            document.cookie = n + '=;path=/;domain=' + DOMAIN + ';max-age=0;SameSite=Lax' +
+                              (location.protocol === 'https:' ? ';Secure' : '');
+        }
+
+        // ---- ① 页面加载时双向对齐 ----
+        [KEY_S, KEY_U].forEach(function (k) {
+            var c = readCookie(k), l = null;
+            try { l = localStorage.getItem(k); } catch (e) {}
+            if (l) {
+                if (l !== c) writeCookie(k, l);            // 本地有 → 同步出去
+            } else if (c) {
+                try { localStorage.setItem(k, c); } catch (e) {}   // 本地没有 → 采用 Cookie
+            }
+        });
+
+        // ---- ② 劫持写入：登录时同步到 Cookie ----
+        var _set = localStorage.setItem;
+        localStorage.setItem = function (k, v) {
+            try { if ((k === KEY_S || k === KEY_U) && v) writeCookie(k, v); } catch (e) {}
+            return _set.call(localStorage, k, v);
+        };
+
+        // ---- ③ 劫持删除：登出时同步清 Cookie ----
+        var _rm = localStorage.removeItem;
+        localStorage.removeItem = function (k) {
+            try { if (k === KEY_S || k === KEY_U) dropCookie(k); } catch (e) {}
+            return _rm.call(localStorage, k);
+        };
+
+        // ---- ④ 万一有人用 clear() ----
+        var _cl = localStorage.clear;
+        localStorage.clear = function () {
+            try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+            return _cl.call(localStorage);
+        };
+    } catch (e) {}
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="NB频道银行——活期/定期存款吃利息、抵押贷/信用贷周转,信誉分决定信用额度,存钱有利息·贷款可救急。">
 <meta name="theme-color" content="#0f172a">
