@@ -458,21 +458,16 @@
                 .maybeSingle()
                 .then(({ data: cfg }) => {
                     const limit = cfg && cfg.value ? parseInt(cfg.value) : 10;
-                    // 查询今日已抽次数
-                    lotteryClient.from('lottery_records')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('user_id', user.id)
-                        .gte('created_at', new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }) + 'T00:00:00Z').toISOString())
-                        .then(({ count }) => {
-                            if (remainEl) remainEl.innerText = Math.max(0, limit - (count || 0));
+                    // ⚠️ lottery_records 已对 anon 关闭（防抽奖记录被匿名读取），
+                    //    改走 legacy-shim 里的 RPC 计数
+                    (window.LegacyCount ? window.LegacyCount.lotteryToday(user.id) : Promise.resolve(0))
+                        .then(function (n) {
+                            if (remainEl) remainEl.innerText = Math.max(0, limit - (n || 0));
                         }).catch(() => {});
                 }).catch(() => {
-                    lotteryClient.from('lottery_records')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('user_id', user.id)
-                        .gte('created_at', new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }) + 'T00:00:00Z').toISOString())
-                        .then(({ count }) => {
-                            if (remainEl) remainEl.innerText = Math.max(0, 10 - (count || 0));
+                    (window.LegacyCount ? window.LegacyCount.lotteryToday(user.id) : Promise.resolve(0))
+                        .then(function (n) {
+                            if (remainEl) remainEl.innerText = Math.max(0, 10 - (n || 0));
                         }).catch(() => {});
                 });
         };

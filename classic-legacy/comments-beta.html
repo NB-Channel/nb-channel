@@ -1190,6 +1190,25 @@
             return;
         }
 
+        // ⚠️ 原来这里分 4 步直连 reports / report_attempts 两张表，但那两张表
+        //    已对 anon 关闭（防举报数据泄露）。现在整条链路收进一个 RPC：
+        //    登录校验 + IP 限频 + 查重 + 写入，一次完成，IP 由服务端自己取。
+        const rr = await supabaseClient.rpc('submit_comment_report', {
+            p_user_id: currentUser.id,
+            p_comment_id: pendingReportCommentId,
+            p_reason: reason,
+            p_session: localStorage.getItem('nb_session')
+        });
+        const rd = (rr && rr.data) || {};
+        if (!rd.success) {
+            showMessage('提示', rd.message || '举报失败，请稍后重试');
+            reportModal.style.display = 'none';
+            return;
+        }
+        showMessage('提示', rd.message || '举报已提交，我们会尽快处理');
+        reportModal.style.display = 'none';
+        return;
+        /* 以下是旧实现，保留备查 —— 它依赖的两张表已经不可直连了
         const { data: existing, error: checkError } = await supabaseClient
             .from('reports')
             .select('id')
@@ -1248,6 +1267,7 @@
 
         showMessage('提示', '举报已提交，我们会尽快处理');
         reportModal.style.display = 'none';
+        */
         pendingReportCommentId = null;
     }
 

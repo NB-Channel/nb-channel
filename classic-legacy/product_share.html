@@ -388,15 +388,11 @@
         // 查询当前用户已购买/已下载过的作品（一次性批量查询，真实表用 buyer_id）
         purchasedIdsSet = new Set();
         if (user) {
-            const ids = data.map(p => p.id);
-            const { data: purchases, error: purErr } = await supabaseClient
-                .from('product_purchases')
-                .select('product_id')
-                .in('product_id', ids)
-                .eq('buyer_id', user.id);
-            if (!purErr && purchases) {
-                purchases.forEach(x => purchasedIdsSet.add(x.product_id));
-            }
+            // ⚠️ product_purchases 已对 anon 关闭，改走 legacy-shim 的 RPC
+            const bought = window.LegacyCount
+                ? await window.LegacyCount.myPurchased(user.id, localStorage.getItem('nb_session'))
+                : [];
+            bought.forEach(function (pid) { purchasedIdsSet.add(pid); });
         }
 
         renderProducts();
