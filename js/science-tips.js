@@ -365,9 +365,18 @@
     function makeText() { var s = document.createElement('span'); s.className = 'nb-tip-text'; return s; }
 
     // ---------- ① 左下悬浮 ----------
+    // sessionStorage 在隐私模式 / 禁用 Cookie 时可能直接抛错，
+    // 一旦抛出来整个悬浮卡就挂了，所以全部包起来
+    function tipOff() {
+        try { return sessionStorage.getItem('nb_tip_off') === '1'; } catch (e) { return false; }
+    }
+    function setTipOff() {
+        try { sessionStorage.setItem('nb_tip_off', '1'); } catch (e) {}
+    }
+
     function mountFloat() {
         if (document.getElementById('nbTipFloat')) return;
-        if (sessionStorage.getItem('nb_tip_off') === '1') return;
+        if (tipOff()) return;
 
         var wrap = document.createElement('div');
         wrap.className = 'nb-tip-wrap';
@@ -390,7 +399,7 @@
         close.textContent = '✕';
         close.onclick = function (e) {
             e.stopPropagation();
-            sessionStorage.setItem('nb_tip_off', '1');
+            setTipOff();
             wrap.parentNode && wrap.parentNode.removeChild(wrap);
         };
 
@@ -572,6 +581,6 @@
         all: TIPS,
         count: TIPS.length,
         random: function () { return TIPS[Math.floor(Math.random() * TIPS.length)]; },
-        reset: function () { sessionStorage.removeItem('nb_tip_off'); location.reload(); }
+        reset: function () { try { sessionStorage.removeItem('nb_tip_off'); } catch (e) {} location.reload(); }
     };
 })();
