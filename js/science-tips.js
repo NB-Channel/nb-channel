@@ -313,6 +313,7 @@
         'color:#3b82f6;margin-bottom:7px;' +
         '}' +
         '.nb-tip-box .nb-tip-text{font-size:.95rem;}' +
+        '.nb-tip-box .nb-tip-body{display:block;}' +
         '.nb-tip-box .nb-tip-next{float:right;margin-top:0;}' +
         '.nb-tip-slim{' +
         'max-width:900px;margin:0 auto 14px;padding:11px 16px;box-sizing:border-box;' +
@@ -425,6 +426,22 @@
         return false;
     }
     function mountHomeBox() {
+        // ⭐ 首选：ui-nav.js 注入首页时写好的容器（#nbTipHome）
+        //    它就在公告区块的正下方，位置天然准确，不用猜时机。
+        var preset = document.getElementById('nbTipHome');
+        if (preset && document.body.contains(preset)) {
+            if (!preset.dataset.nbFilled) {
+                var pb = preset.querySelector('.nb-tip-body') || preset;
+                pb.appendChild(makeTag());
+                pb.appendChild(makeText());
+                pb.appendChild(makeNextBtn(preset));
+                preset.dataset.nbFilled = '1';
+            }
+            fill(preset);
+            window.__nbAnchor = '预设容器（公告下面）';
+            return true;
+        }
+
         var exist = document.querySelector('.nb-tip-box');
         if (!exist) {
             exist = document.createElement('div');
