@@ -340,6 +340,7 @@
 
 <script src="data/videos.js"></script>
 <script src="js/common.js"></script>
+<script src="js/legacy-shim.js?v=1"></script>
 <script>
     // ==================== Supabase 配置 ====================
     const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
@@ -524,14 +525,19 @@
 
     // 获取认证用户列表
     async function fetchVerifiedUsers() {
+        // ⚠️ 原来是 profiles(username) 关联查询，profiles 已对 anon 关闭，会失败。
+        //    改成先查认证用户，再由 legacy-shim 批量补用户名。
         const { data, error } = await supabaseClient
             .from('verified_users')
-            .select('profiles(username)');
+            .select('*');
         if (error) {
             console.error('获取认证用户列表失败', error);
             return [];
         }
-        return data.map(item => item.profiles.username);
+        if (window.LegacyJoin) await window.LegacyJoin.attachProfiles(data, 'profiles', 'user_id');
+        return (data || []).map(function (item) {
+            return item.profiles && item.profiles.username;
+        }).filter(Boolean);
     }
 
     // ==================== @提及自动补全 ====================
@@ -1277,7 +1283,9 @@
             const BATCH = 1000;
             const buildQuery = (from) => supabaseClient
                 .from('comments')
-                .select('id, content, user_id, parent_id, created_at, page_path, profiles(username, avatar_url)')
+                // ⚠️ 去掉 profiles(...) 关联（profiles 已对 anon 关闭），
+                //    数据回来后由下面统一补
+                .select('id, content, user_id, parent_id, created_at, page_path')
                 .eq('page_path', pagePath)
                 .order('created_at', { ascending: false })
                 .range(from, from + BATCH - 1);

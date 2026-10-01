@@ -231,6 +231,7 @@
 
 <script src="data/videos.js"></script>
 <script src="js/common.js"></script>
+<script src="js/legacy-shim.js?v=1"></script>
 <script>
     // 公共初始化
     AUTHOR_NAME = 'NB搞事局';
@@ -550,12 +551,15 @@
     async function fetchComments() {
         // 先获取认证用户列表
         verifiedUsernames = await fetchVerifiedUsers();
+        // ⚠️ 去掉 profiles(username) 关联（profiles 已对 anon 关闭），
+        //    改由 legacy-shim 批量补上，保持 renderComments 里 node.profiles 的取值方式不变
         const { data, error } = await supabaseClient
             .from('comments')
-            .select('*, profiles(username)')
+            .select('*')
             .eq('page_path', pagePath)
             .order('created_at', { ascending: true });
         if (error) { console.error(error); return; }
+        if (window.LegacyJoin) await window.LegacyJoin.attachProfiles(data, 'profiles', 'user_id');
         renderComments(data);
     }
 
