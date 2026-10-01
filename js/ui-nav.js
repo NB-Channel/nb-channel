@@ -823,12 +823,6 @@
                 '<div class="ba-title">公告</div>' +
                 '<div class="ba-track-wrap"><div class="ba-track" id="baTrack"></div></div>' +
             '</div>' +
-            // 化学/物理小知识：容器直接写在这里，确保刚好落在公告下面。
-            // 内容由 js/science-tips.js 填充（它看到这个 id 就不再自己找位置了）
-            '<div class="nb-tip-box" id="nbTipHome">' +
-                '<div class="nb-tip-head">Tips：</div>' +
-                '<div class="nb-tip-body"></div>' +
-            '</div>' +
             '<section class="section" id="about">' +
                 '<div class="about-grid">' +
                     '<div class="about-text reveal">' +

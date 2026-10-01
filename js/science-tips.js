@@ -426,22 +426,6 @@
         return false;
     }
     function mountHomeBox() {
-        // ⭐ 首选：ui-nav.js 注入首页时写好的容器（#nbTipHome）
-        //    它就在公告区块的正下方，位置天然准确，不用猜时机。
-        var preset = document.getElementById('nbTipHome');
-        if (preset && document.body.contains(preset)) {
-            if (!preset.dataset.nbFilled) {
-                var pb = preset.querySelector('.nb-tip-body') || preset;
-                pb.appendChild(makeTag());
-                pb.appendChild(makeText());
-                pb.appendChild(makeNextBtn(preset));
-                preset.dataset.nbFilled = '1';
-            }
-            fill(preset);
-            window.__nbAnchor = '预设容器（公告下面）';
-            return true;
-        }
-
         var exist = document.querySelector('.nb-tip-box');
         if (!exist) {
             exist = document.createElement('div');
@@ -470,10 +454,10 @@
             // 已经插过了：只有一种情况需要再动一次 ——
             // 之前用的是兜底位置，现在公告出现了，挪到公告后面去。
             if (box.dataset.nbAnchored !== 'ann') {
-                var ann2 = document.querySelector('.beta-announce')
-                        || document.querySelector('.announcement-bar')
-                        || document.getElementById('betaAnnounce')
-                        || document.getElementById('announcementBar');
+                var ann2 = document.querySelector('.announcement-bar')
+                        || document.getElementById('announcementBar')
+                        || document.querySelector('.beta-announce')
+                        || document.getElementById('betaAnnounce');
                 if (ann2 && ann2.parentNode && document.body.contains(ann2) &&
                     document.body.contains(ann2)) {
                     if (box.previousElementSibling !== ann2) {
@@ -486,20 +470,23 @@
             return true;
         }
 
-        // 还没插过：优先等公告
-        // （顶部公告是 ui-nav.js 注入的，通常 1 秒内出现）
-        if (!window.__nbWaitedAnn) {
-            var annNow = document.querySelector('.beta-announce')
-                      || document.querySelector('.announcement-bar')
-                      || document.getElementById('betaAnnounce')
-                      || document.getElementById('announcementBar');
-            if (!annNow) {
-                // 这轮先不插，等下一轮（轮询总共只有 3 秒，不会拖太久）
-                window.__nbWaitCount = (window.__nbWaitCount || 0) + 1;
-                if (window.__nbWaitCount < 4) return false;
-            }
-            window.__nbWaitedAnn = true;
+        // 还没插过：直接插到公告后面
+        // ⚠️ 之前这里写错了 —— 只是"等公告出现"设了个标记，然后继续走兜底，
+        //    等于等到了也不用。现在改成：找到公告就插它后面。
+        var annNow = document.querySelector('.announcement-bar')
+                  || document.getElementById('announcementBar')
+                  || document.querySelector('.beta-announce')
+                  || document.getElementById('betaAnnounce');
+        if (annNow && annNow.parentNode && document.body.contains(annNow)) {
+            annNow.parentNode.insertBefore(box, annNow.nextSibling);
+            fill(box);
+            box.dataset.nbAnchored = 'ann';
+            window.__nbAnchor = '公告之后';
+            return true;
         }
+        // 公告还没渲染出来 → 这一轮先不插，等下一轮
+        window.__nbWaitCount = (window.__nbWaitCount || 0) + 1;
+        if (window.__nbWaitCount < 5) return false;
 
         // 兜底：原始 HTML 里那张"友商链接"卡片之前
         var anchor = null;
