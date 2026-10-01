@@ -309,8 +309,8 @@
         'background:linear-gradient(180deg,#60a5fa,#a78bfa);' +
         '}' +
         '.nb-tip-box .nb-tip-head{' +
-        'font-size:.76rem;letter-spacing:.06em;opacity:.55;margin-bottom:8px;' +
-        'text-transform:uppercase;' +
+        'font-size:.78rem;font-weight:700;letter-spacing:.04em;' +
+        'color:#3b82f6;margin-bottom:7px;' +
         '}' +
         '.nb-tip-box .nb-tip-text{font-size:.95rem;}' +
         '.nb-tip-box .nb-tip-next{float:right;margin-top:0;}' +
@@ -431,7 +431,7 @@
             exist.className = 'nb-tip-box';
             var head0 = document.createElement('div');
             head0.className = 'nb-tip-head';
-            head0.textContent = '💡 你知道吗';
+            head0.textContent = 'Tips：';
             var body0 = document.createElement('div');
             body0.appendChild(makeTag());
             body0.appendChild(makeText());
@@ -450,7 +450,23 @@
                 || document.querySelector('main')
                 || document.body;
 
-        // 优先挂到主容器里、导航栏之后（导航必须在最上面）
+        // 首选：公告之后（站长要求）
+        // 注意：原始 HTML 里那个 #announcementBar 会被 ui-nav.js 直接【移除】，
+        // 然后它自己重新注入一个 .beta-announce。所以优先认后者。
+        var ann = document.querySelector('.beta-announce')
+               || document.querySelector('.announcement-bar')
+               || document.getElementById('betaAnnounce')
+               || document.getElementById('announcementBar');
+        if (ann && ann.parentNode && document.body.contains(ann)) {
+            if (box.previousElementSibling !== ann) {
+                ann.parentNode.insertBefore(box, ann.nextSibling);
+            }
+            fill(box);
+            window.__nbAnchor = '公告之后';
+            return true;
+        }
+
+        // 其次：主容器里、导航栏之后（导航必须在最上面）
         if (cont) {
             // 找导航：ui-nav.js 生成的那条，或者任何带 nav 字样的元素
             var ref = null;
@@ -461,24 +477,18 @@
             if (navEl && navEl.parentNode === cont) ref = navEl;
 
             if (ref) {
-                if (box.parentNode === cont && box.previousElementSibling === ref) {
-                    fill(box);
-                    window.__nbAnchor = '导航之后';
-                    return true;
+                if (!(box.parentNode === cont && box.previousElementSibling === ref)) {
+                    cont.insertBefore(box, ref.nextSibling);
                 }
-                cont.insertBefore(box, ref.nextSibling);
                 fill(box);
                 window.__nbAnchor = '导航之后';
                 return true;
             }
 
             // 找不到导航就退回"最前面"
-            if (box.parentNode === cont && cont.firstElementChild === box) {
-                fill(box);
-                window.__nbAnchor = '容器最前';
-                return true;
+            if (!(box.parentNode === cont && cont.firstElementChild === box)) {
+                cont.insertBefore(box, cont.firstElementChild);
             }
-            cont.insertBefore(box, cont.firstElementChild);
             fill(box);
             window.__nbAnchor = '容器最前';
             return true;
@@ -550,13 +560,11 @@
     // 有些页面内容是异步渲染的，稍后再补一次（幂等）
     // 首页那些模块（hero / stats / 核心功能 / 友商）是 ui-nav.js 后来注入的，
     // 定时器不一定赶得上。用 MutationObserver 盯着，元素一出现就插。
-    var _homePlaced = false;
     function tryHome() {
-        if (_homePlaced) return true;
         try {
-            if (isHome() && mountHomeBox()) { _homePlaced = true; return true; }
-        } catch (e) {}
-        return false;
+            if (!isHome()) return false;
+            return mountHomeBox();
+        } catch (e) { return false; }
     }
 
     // 定时补几次（应对评论区和一般的异步渲染）
@@ -567,14 +575,17 @@
         }, ms);
     });
 
-    // 主页板块：监听 DOM 变化，直到插成功为止
-    if (isHome() && !tryHome() && window.MutationObserver) {
-        var mo = new MutationObserver(function () {
-            if (tryHome() && mo) { mo.disconnect(); mo = null; }
-        });
-        mo.observe(document.documentElement, { childList: true, subtree: true });
-        // 最多盯 20 秒，避免一直挂着
-        setTimeout(function () { if (mo) { mo.disconnect(); mo = null; } }, 20000);
+    // 首页板块：持续监听。ui-nav.js 会异步重建首页内容，
+    // 插进去的元素可能被清掉，所以要一直盯着、发现没了就重插。
+    if (isHome()) {
+        tryHome();
+        if (window.MutationObserver) {
+            var mo = new MutationObserver(function () {
+                tryHome();
+            });
+            mo.observe(document.documentElement, { childList: true, subtree: true });
+            setTimeout(function () { if (mo) { mo.disconnect(); mo = null; } }, 30000);
+        }
     }
 
     window.NBTips = {
