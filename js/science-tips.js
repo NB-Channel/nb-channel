@@ -556,9 +556,10 @@
     } else {
         mount();
     }
-    // 有些页面内容是异步渲染的，稍后再补一次（幂等）
-    // 首页那些模块（hero / stats / 核心功能 / 友商）是 ui-nav.js 后来注入的，
-    // 定时器不一定赶得上。用 MutationObserver 盯着，元素一出现就插。
+    // 页面上有些内容是异步渲染的（评论列表、首页那些 ui-nav.js 注入的模块），
+    // 所以要补插几次。这里统一用一个定时器轮询，不做 DOM 监听 ——
+    //   ⚠️ 之前用 MutationObserver 盯整棵文档树，页面渲染时 DOM 变动极频繁，
+    //      每次变动都触发查询，会拖慢加载。改成低频轮询后开销可忽略。
     function tryHome() {
         try {
             if (!isHome()) return false;
@@ -566,26 +567,18 @@
         } catch (e) { return false; }
     }
 
-    // 定时补几次（应对评论区和一般的异步渲染）
-    [600, 1500, 3000, 6000].forEach(function (ms) {
-        setTimeout(function () {
-            try { mountAboveComments(); } catch (e) {}
-            tryHome();
-        }, ms);
-    });
+    var _n = 0;
+    var _timer = setInterval(function () {
+        _n++;
+        try { mountAboveComments(); } catch (e) {}
+        if (isHome()) tryHome();
+        // 跑够 10 次（约 4 秒）就停，不管成没成，不给页面留负担
+        if (_n >= 10) { clearInterval(_timer); _timer = null; }
+    }, 400);
 
-    // 首页板块：持续监听。ui-nav.js 会异步重建首页内容，
-    // 插进去的元素可能被清掉，所以要一直盯着、发现没了就重插。
-    if (isHome()) {
-        tryHome();
-        if (window.MutationObserver) {
-            var mo = new MutationObserver(function () {
-                tryHome();
-            });
-            mo.observe(document.documentElement, { childList: true, subtree: true });
-            setTimeout(function () { if (mo) { mo.disconnect(); mo = null; } }, 30000);
-        }
-    }
+    // 首屏立刻试一次，别等到 400ms 后
+    try { mountAboveComments(); } catch (e) {}
+    if (isHome()) tryHome();
 
     window.NBTips = {
         all: TIPS,
