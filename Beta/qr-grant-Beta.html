@@ -374,7 +374,9 @@ button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; 
                     deadline = Date.now() + TTL * 1000;
                     el('pLoading').classList.add('hide');
                     el('pMain').classList.remove('hide');
-                    render(d.url);
+                    // ⭐ 同上：用当前域名拼，别用写死 github 的 d.url
+                    var qrDir = location.pathname.replace(/\/[^\/]*$/, '/');
+                    render(location.origin + qrDir + 'qr-claim-Beta.html?c=' + encodeURIComponent(d.code));
                     setState('等待扫码…', TTL + ' 秒后失效', '');
                     busy = false;
                     poll();

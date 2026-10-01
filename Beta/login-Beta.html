@@ -1501,7 +1501,11 @@ html { -webkit-text-size-adjust: 100%; }
                 qrCode = d.code;
                 qrSecret = d.secret;
                 qrDeadline = Date.now() + (d.ttl || 120) * 1000;
-                qrRender(d.url);
+                // ⭐ 自己拼二维码地址，不用服务端返回的 d.url ——
+                //    那里写死了 github.nb-channel.top，在 netlify 子域名上打开
+                //    会把扫码的人带到另一个站去。用当前域名，扫码就落在同一个站。
+                var qrDir = location.pathname.replace(/\/[^\/]*$/, '/');
+                qrRender(location.origin + qrDir + 'qr-login-Beta.html?c=' + encodeURIComponent(d.code));
                 qrSetHint('用手机扫这个二维码，在手机上点一下「确认登录」');
                 qrBusy = false;
                 qrPoll();
