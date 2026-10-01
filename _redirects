@@ -2,3 +2,8 @@
 # 旧版 -new 链接 → 新版单文件（301 永久重定向）
 
 /*-new.html  /:splat.html  301
+
+# 根路径直接进 Beta 站（用 301 而不是 200 rewrite：
+# Beta 页面之间用的是相对链接，rewrite 会让地址栏停在 /，
+# 相对链接就会变成 /bank-Beta.html 而 404）
+/  /Beta/index-Beta.html  301
