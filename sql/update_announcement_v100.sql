@@ -4,13 +4,14 @@
 -- 两种方式二选一：
 --   A. 在 NB频道 Supabase 的 SQL Editor 里整份跑
 --   B. 到「后台管理 → 公告管理」把下面这段文字原样粘进去
---
--- 这一版是站长自己精简过的：去掉了标题行和几条次要内容，
--- 垄断税那条补了「防止太过严重的通货膨胀」。
 -- ============================================================
 
 INSERT INTO public.admin_config (key, value)
-VALUES ('announcement', $nb$🌐 新增 Netlify 镜像站
+VALUES ('announcement', $nb$🎉 NB频道官网 1.0.0 正式版发布（10.1）
+从 9 月的 Beta 内测到现在，28 个页面陆续完成官网化，功能趋于稳定，即日起转为正式版
+
+
+🌐 新增 Netlify 镜像站
 国内访问更快：netlify.nb-channel.top
 入口在导航页 nb-channel.top 的「镜像站点」一栏
 现在共 4 个站：GitHub Pages（主站）· Cloudflare Pages · PythonAnywhere · Netlify
@@ -25,6 +26,7 @@ VALUES ('announcement', $nb$🌐 新增 Netlify 镜像站
 🚀 接下来的计划
 继续打磨移动端体验 · 经济系统持续调整
 Beta 版官网化页面已经完善，我们会发起投票决定是否保留「新潮模式」和「简单模式」
+🗳️ 投票入口：https://github.nb-channel.top/Beta/vote-Beta.html （导航「更多功能 ▾」里也有「投票中心」）
 投票截止：10 月 7 日晚 8 点
 我们认为目前的官网模式已经十分完善，不必再保留这两个模式，但最终还是尊重大家的选择
 具体安排以实际发布为准
