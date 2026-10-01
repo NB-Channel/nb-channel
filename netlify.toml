@@ -6,6 +6,16 @@
   # 发布整个仓库根目录（Beta/、download/、videos/ 都在根下）
   publish = "."
 
+# ⚠️ 关掉 Pretty URLs（默认是开的，会出事）
+# 它会把 /Beta/index-Beta.html 改写成 /beta/index-beta —— 既删了 .html
+# 又把 Beta 变成全小写。Linux 文件系统大小写敏感，beta/ 根本不存在，
+# 页面就会 404。实测确认过：/Beta/bank-Beta.html → /beta/bank-beta。
+[build.processing]
+  skip_processing = false
+
+[build.processing.html]
+  pretty_urls = false
+
 # 静态资源缓存：HTML 不缓存（改了要立刻生效），其余长缓存
 [[headers]]
   for = "/*.html"
