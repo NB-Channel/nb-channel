@@ -8,41 +8,6 @@
     <title>NB频道官网 - 首页</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/ui-new.css" id="uiNewCss">
-<script>
-/* ⭐ 经典/官网模式：把静态加载的 ui-new.css 直接停用。
-   它是 31KB 的新版皮肤（= ui-nav.js 的 injectStyle + premium.css），
-   经典模式要的是 css/style.css 的原始外观，不是"盖住它"。
-   这段紧跟 <link> 之后同步执行，此时还没渲染，所以不会闪。 */
-(function () {
-    try {
-        var classic = false;
-        var qp = new URLSearchParams(location.search).get('ui');
-        if (qp === 'classic' || qp === 'beta') classic = true;
-        else if (qp !== 'new') {
-            var m = localStorage.getItem('nb_ui_mode');
-            if (m === 'classic' || m === 'beta') classic = true;
-            else if (m !== 'beta' && localStorage.getItem('nb_classic') === '1') classic = true;
-        }
-        var un = document.getElementById('uiNewCss');
-        var dk = document.getElementById('darkCss');
-        if (classic) {
-            if (un) un.disabled = true;    // 停用新版皮肤（31KB）
-            if (dk) dk.disabled = false;   // 启用抽出来的深色规则
-        } else {
-            if (un) un.disabled = false;
-            if (dk) dk.disabled = true;    // ui-new.css 已含深色规则
-        }
-    } catch (err) {}
-})();
-</script>
-    <link rel="stylesheet" href="css/classic.css">
-<!-- ⭐ 深色模式样式：从 ui-new.css 抽出来的 44 条 body.dark-mode 规则。
-     classic 模式下 ui-new.css 被停用，深色模式就靠这个文件。
-     新潮模式用不到它（ui-new.css 本身就含这些规则），默认 disabled。 -->
-<link rel="stylesheet" href="css/dark.css" id="darkCss" disabled>
-    <!-- 官网模式皮肤:静态加载保证渲染前就绪(仅html.beta选择器生效,其他模式零影响;避免动态加载导致的样式闪跳) -->
-    <link rel="stylesheet" href="css/beta.css?v=20260846" id="uiBetaCss">
     <script async src="https://events.vercount.one/js"></script>
     <style>
         /* 原有样式保持不变，调整右上角区域为水平排列 */
@@ -251,14 +216,9 @@
         <a href="product_share.html" class="nav-btn">🛍️ 作品分享</a>
         <a href="messages.html" class="nav-btn">🔔 消息</a>
     </div>
-    <div class="nav-actions">
-        <a href="tools.html" class="nav-btn">🔬 化学工具</a>
-        <a href="titles.html" class="nav-btn">🏅 称号</a>
-        <a href="bank.html" class="nav-btn">🏦 NB银行</a><a href="shop.html" class="nav-btn">🛍️ NB商店</a><a href="backpack.html" class="nav-btn">🎒 背包</a>
-    </div>
 </div>
 
-    <!-- 公告栏（内容在 Supabase admin_config 表，key=announcement，管理后台 Website backend.html） -->
+    <!-- 公告栏（内容在 Supabase admin_config 表，key=announcement，管理后台 admin-announcement.html） -->
     <div id="announcementBar" class="announcement-bar" style="display:none;">
         <div class="marquee-track" id="announcementTrack"></div>
     </div>
@@ -268,15 +228,14 @@
         <p style="text-align:center; margin-top:10px; color:var(--count-text);">🎬 NB频道 LOGO动画</p>
         <video 
             id="logoVideo"
-            poster="videos/nb-logo-poster.jpg"
+            src="https://videos.tuchuangyun.top/autoupload/f/2ybw2nnc3ldHerixYxPOdCfNcKcqEnRmcljopnyJoMs/20260316/5rPu/LOGO%EF%BC%88%E6%9C%80%E7%BB%88%EF%BC%89.mp4" 
+            type="video/mp4" 
             autoplay 
             muted 
             playsinline
             disablePictureInPicture
-            preload="auto"
-            style="width:100%; height:auto; aspect-ratio:5/2; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);"
+            style="width:100%; height:auto; aspect-ratio:16/9; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);"
         >
-            <source src="videos/nb-logo.mp4" type="video/mp4">
             您的浏览器不支持 Video 标签。
         </video>
     </div>
@@ -310,7 +269,6 @@
                 </div>
                 <div id="checkinSection" style="display: none;">
                     <button id="checkinBtn" class="checkin-btn">📅 签到</button>
-                    <button id="fixCheckinBtn" class="checkin-btn" style="background:#9c27b0; display:none;" title="使用补签卡补回最近漏签">📝 补签</button>
                     <div id="nextBonusText" class="next-bonus">明天签到: +? NB</div>
                 </div>
                 <div id="lotterySection" style="display: none;">
@@ -319,7 +277,6 @@
                 </div>
                 <div id="achSection" style="display: none; margin-top:12px;">
                     <a href="achievements.html" style="display:inline-block; background:linear-gradient(135deg,#ffd700,#ff9800); color:#fff; border-radius:30px; padding:8px 20px; text-decoration:none; font-weight:600; box-shadow:0 4px 12px rgba(255,152,0,0.3);">🏆 我的成就</a>
-                    <a href="titles.html" style="display:inline-block; margin-left:8px; background:linear-gradient(135deg,#7c4dff,#448aff); color:#fff; border-radius:30px; padding:8px 20px; text-decoration:none; font-weight:600; box-shadow:0 4px 12px rgba(124,77,255,0.3);">🏅 我的称号</a>
                     <div style="font-size:0.75rem; color:var(--count-text); margin-top:4px;">完成挑战解锁徽章，奖励只发一次</div>
                 </div>
             </div>
@@ -349,12 +306,20 @@
     </div>
 </div>
 
-<div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
-    © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
-    如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a><br>
-    制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
-    托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a> · 视频托管：<a href="https://imgbed.cn/" target="_blank" rel="noopener noreferrer">图床小镇</a> <br>     资源致谢：<a href="https://www.jsdelivr.com/" target="_blank" rel="noopener noreferrer">jsDelivr</a> · <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer">Supabase</a> · <a href="https://www.vercount.one/" target="_blank" rel="noopener noreferrer">Vercount</a>
-</div>
+<p align="center" style="margin-top:15px;">
+    <strong>
+        © 2026 NB频道 
+        <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a>，
+        <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github.nb-channel.top（github站）</a>，<br>
+        <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare.nb-channel.top（cloudflare站）</a>，
+        <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere.nb-channel.top（pythonanywhere站）</a>
+    </strong>
+</p>
+<p align="center" style="margin-top:15px;">如果您对NB频道有任何问题或建议可以联系我：</p>
+<p align="center" style="margin-top:5px;">邮箱：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a>或<a href="mailto:NBchannel@163.com">NBchannel@163.com</a></p>
+<p align="center" style="margin-top:15px;"><strong>制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a></strong></p>
+<p align="center" style="margin-top:15px;"><a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a>、<a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a>和<a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">pythonanywhere</a>提供网站托管服务</p>
+<p align="center" style="margin-top:15px;"><a href="https://imgbed.cn/" target="_blank" rel="noopener noreferrer">图床小镇</a>提供视频托管服务</p>
 
 <div class="fixed-buttons">
     <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
@@ -388,45 +353,12 @@
 </div>
 
 <script src="data/videos.js"></script>
-<script id="uiBootGuard">
-(function () {
-    try {
-        // 经典模式(可选):localStorage nb_classic=1 时加 classic 类(第一帧前生效,零闪跳)
-        var m = localStorage.getItem('nb_ui_mode');
-        try { var qp = new URLSearchParams(location.search).get('ui'); if (qp === 'new' || qp === 'classic' || qp === 'beta') m = qp; } catch (e) {}
-        var isClassic = false;
-        if (m === 'classic' || (m !== 'beta' && localStorage.getItem('nb_classic') === '1')) {
-            document.documentElement.classList.add('classic');
-            isClassic = true;
-        } else if (m === 'beta') {
-            document.documentElement.classList.add('beta');
-            isClassic = true;
-        }
-        // 纯新UI:隐藏 body,等待 ui-nav.js 注入完成后解除(首帧即完整新UI,零闪跳)
-        // ⚠️ classic/beta 模式下不能加这个:那两个模式 ui-nav.js 走空的 initOldUI(),
-        //    不会来解除它,结果就是白屏干等 3500ms 兜底超时。
-        if (!isClassic) {
-            document.documentElement.classList.add('ui-boot-new');
-            var st = document.createElement('style');
-            st.id = 'uiBootHide';
-            st.textContent = 'html.ui-boot-new body{visibility:hidden}';
-            document.head.appendChild(st);
-            setTimeout(function () {
-                document.documentElement.classList.remove('ui-boot-new');
-                var s = document.getElementById('uiBootHide');
-                if (s) s.remove();
-            }, 3500);
-        }
-    } catch (e) {}
-})();
-</script><script src="js/common.js?v=20260845"></script><script src="js/ui-nav.js?v=20260847"></script>
+<script src="js/common.js"></script>
 <script>
     // ========== 幸运转盘 ==========
     const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
-    // 全页复用同一个 supabase 客户端（避免多实例共享 auth 存储键导致 GoTrueClient 警告）
-    window.__nbSupabase = window.__nbSupabase || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const lotteryClient = window.__nbSupabase;
+    const lotteryClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const LOTTERY_SECTORS = [
         { name: '谢谢惠顾', color: '#95a5a6' },
@@ -518,13 +450,21 @@
             modal.style.display = 'flex';
             if (remainEl) remainEl.innerText = '?';
             resultEl.innerText = '';
-            // 剩余次数 = 基础上限 + 抽奖券加成 − 今日已抽（后端 RPC 统一计算）
-            lotteryClient.rpc('get_lottery_today', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')})
-                .then(({ data }) => {
-                    if (data && data.success && remainEl) {
-                        remainEl.innerText = `${data.remaining}/${data.limit + data.extra}`;
-                        remainEl.title = data.extra > 0 ? `抽奖券加成 +${data.extra} 次` : '';
-                    }
+            // 读取每日上限（admin_config，可随时调整）
+            lotteryClient.from('admin_config')
+                .select('value')
+                .eq('key', 'lottery_daily_limit')
+                .maybeSingle()
+                .then(({ data: cfg }) => {
+                    const limit = cfg && cfg.value ? parseInt(cfg.value) : 10;
+                    // 查询今日已抽次数
+                    lotteryClient.from('lottery_records')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('user_id', user.id)
+                        .gte('created_at', new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }) + 'T00:00:00Z').toISOString())
+                        .then(({ count }) => {
+                            if (remainEl) remainEl.innerText = Math.max(0, limit - (count || 0));
+                        }).catch(() => {});
                 }).catch(() => {
                     lotteryClient.from('lottery_records')
                         .select('id', { count: 'exact', head: true })
@@ -674,8 +614,7 @@
     (async function initUserArea() {
         const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
-        window.__nbSupabase = window.__nbSupabase || supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const supabaseClient = window.__nbSupabase;
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const balanceSpan = document.getElementById('balanceDisplay');
         const authBtn = document.getElementById('authButton');
         const profileBtn = document.getElementById('profileBtn');
@@ -701,21 +640,22 @@
                     window.location.href = `login.html?redirect=${redirect}`;
                 };
                 profileBtn.onclick = () => {
-                    window.location.href = uiHref('login.html?redirect=') + encodeURIComponent(window.location.href);
+                    window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
                 };
                 if (checkinSection) checkinSection.style.display = 'none';
                 if (achSection) achSection.style.display = 'none';
                 return;
             }
             // 已登录，获取余额
-            const { data: balRes, error: profileError } = await supabaseClient.rpc('get_my_balance', {
-                p_user_id: user.id,
-                p_session: localStorage.getItem('nb_session')
-            });
-            if (profileError || !balRes || !balRes.ok) {
+            const { data: profile, error: profileError } = await supabaseClient
+                .from('profiles')
+                .select('nb_balance')
+                .eq('id', user.id)
+                .single();
+            if (profileError || !profile) {
                 balanceSpan.innerHTML = '💰 NB币: --';
             } else {
-                balanceSpan.innerHTML = `💰 NB币: ${balRes.balance}`;
+                balanceSpan.innerHTML = `💰 NB币: ${profile.nb_balance}`;
             }
             
             // 获取签到状态
@@ -740,29 +680,15 @@
                     nextBonusSpan.innerHTML = `✨ 明天签到: +${nextBonus} NB`;
                 }
             }
-            // 补签按钮：有补签卡且存在漏签（最近5天有缺口）时显示
-            const fixBtn = document.getElementById('fixCheckinBtn');
-            if (fixBtn) {
-                try {
-                    const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')});
-                    const fixCount = (fx && fx.success) ? (fx.checkin_fix_count || 0) : 0;
-                    if (fixCount > 0) {
-                        fixBtn.style.display = 'inline-block';
-                        fixBtn.title = `补签卡 ×${fixCount}：补回最近漏签的1天`;
-                    } else {
-                        fixBtn.style.display = 'none';
-                    }
-                } catch (e) { fixBtn.style.display = 'none'; }
-            }
             if (achSection) achSection.style.display = 'block';
             
             authBtn.innerHTML = '登出账号';
             authBtn.onclick = () => {
-                localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session');
+                localStorage.removeItem('nb_user');
                 location.reload();
             };
             profileBtn.onclick = () => {
-                window.location.href = uiHref('profile.html');
+                window.location.href = 'profile.html';
             };
 
             // 成就检查：新达成条件自动发奖并提示（幂等，不会重复发）
@@ -802,127 +728,11 @@
             };
         }
 
-        // 补签：弹窗选择要补的日期（今天之前1~5天内的漏签）
-        const fixBtn = document.getElementById('fixCheckinBtn');
-        if (fixBtn) {
-            fixBtn.onclick = async () => {
-                const user = getCurrentUser();
-                if (!user) { await showMessage('提示', '请先登录'); return; }
-                const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: user.id , p_session: localStorage.getItem('nb_session')});
-                const fixCount = (fx && fx.success) ? (fx.checkin_fix_count || 0) : 0;
-                if (fixCount <= 0) { await showMessage('提示', '没有可用的补签卡，去商店购买吧'); return; }
-                // 列出今天之前 1~5 天的日期选项
-                const opts = [];
-                const today = new Date();
-                for (let i = 1; i <= 5; i++) {
-                    const d = new Date(today);
-                    d.setDate(d.getDate() - i);
-                    opts.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-                }
-                const pick = await showPickDate(opts, fixCount);
-                if (!pick) return;
-                const { data, error } = await supabaseClient.rpc('use_checkin_fix', { p_user_id: user.id, p_target_date: pick , p_session: localStorage.getItem('nb_session')});
-                await showMessage(error || !data || !data.success ? '补签失败' : '✅ 补签成功', (error && error.message) || (data && data.message) || '');
-                location.reload();
-            };
-        }
-
-        // 日期选择弹窗（简单版：5个按钮）
-        function showPickDate(dates, fixCount) {
-            return new Promise((resolve) => {
-                const modal = document.createElement('div');
-                modal.className = 'custom-modal';
-                modal.style.display = 'flex';
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <h3>📝 补签（补签卡 ×${fixCount}）</h3>
-                        <p style="margin: 10px 0; color:var(--count-text);">选择要补签的日期（消耗1张补签卡，只补记录，恢复连续天数）</p>
-                        <div style="display:flex; flex-direction:column; gap:8px; margin: 12px 0;">
-                            ${dates.map(d => `<button data-d="${d}" style="background:var(--nav-btn-bg); color:var(--nav-btn-text); border:1px solid var(--card-border); border-radius:14px; padding:10px; cursor:pointer;">📅 ${d}</button>`).join('')}
-                        </div>
-                        <button id="pickCancel" style="background:#6c757d;">取消</button>
-                    </div>
-                `;
-                document.body.appendChild(modal);
-                modal.querySelectorAll('button[data-d]').forEach(b => {
-                    b.onclick = () => { modal.remove(); resolve(b.dataset.d); };
-                });
-                modal.querySelector('#pickCancel').onclick = () => { modal.remove(); resolve(null); };
-            });
-        }
-
         await updateUI();
         window.addEventListener('storage', (e) => {
             if (e.key === 'nb_user') updateUI();
         });
     })();
 </script>
-
-<script>
-    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
-    (function () {
-        function patch(sb) {
-            if (!sb || sb.__secPatched) return;
-            sb.__secPatched = true;
-            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
-            var orig = sb.rpc.bind(sb);
-            sb.rpc = function (fn, args) {
-                if (names.indexOf(fn) !== -1) {
-                    args = Object.assign({}, args || {});
-                    var t = null;
-                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
-                    args.p_session = t;
-                }
-                return orig(fn, args);
-            };
-        }
-        var cands = [];
-        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
-        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
-        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
-        cands.forEach(patch);
-    })();
-</script>
-
-
-<script>
-    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
-    (function () {
-        try {
-            var u = localStorage.getItem('nb_user');
-            var s = localStorage.getItem('nb_session');
-            if (u && !s) {
-                localStorage.removeItem('nb_user');
-                location.reload();
-            }
-        } catch (e) {}
-    })();
-</script>
-
-
-<script>
-    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
-    (function () {
-        function applyBal() {
-            var u = null, t = null;
-            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
-            if (!u || !u.id || !t) return;
-            var el = document.getElementById('balanceDisplay') ||
-                     document.getElementById('balanceSpan') ||
-                     document.getElementById('tradeBalance');
-            if (!el) return;
-            var sb = null;
-            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
-            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
-            if (!sb) return;
-            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
-                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
-            }).catch(function () {});
-        }
-        var tries = 0;
-        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
-    })();
-</script>
-
 </body>
 </html>

@@ -13,19 +13,7 @@
     if (window.__uiNavExecuted) return;
     window.__uiNavExecuted = true;
     function getVer() {
-        // ⭐ 改动：原来是写死 'new'，导致经典模式也照跑新版逻辑（替换导航、注入光斑特效），
-        //    所以 classic.css 怎么盖都盖不干净。现在按用户选定的界面模式返回：
-        //    classic → 'old'，ui-nav.js 直接走空的 initOldUI()，什么也不注入，
-        //    页面就回到 css/style.css 的原始外观。
-        try {
-            var qp = new URLSearchParams(location.search).get('ui');
-            if (qp === 'classic' || qp === 'beta') return 'old';
-            if (qp === 'new') return 'new';
-            var m = localStorage.getItem('nb_ui_mode');
-            if (m === 'classic') return 'old';
-            if (m === 'beta') return 'old';          // 官网模式也不用新版注入（Beta 页自带样式）
-            if (m !== 'beta' && localStorage.getItem('nb_classic') === '1') return 'old';
-        } catch (e) {}
+        // 纯新 UI：永远返回 new
         return 'new';
     }
 
