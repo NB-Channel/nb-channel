@@ -237,132 +237,300 @@
         ["物理 · 综合", "物理学中很多规律都是「守恒」：能量守恒、质量守恒、电荷守恒、动量守恒。"]
     ];
 
-    // ---------- 样式（跟着页面的深浅色走）----------
-    var CSS =
-        '.nb-tip{' +
-        'max-width:900px;margin:38px auto 0;padding:14px 18px;box-sizing:border-box;' +
-        'border:1px solid var(--line, rgba(128,128,128,.22));' +
-        'border-radius:14px;' +
-        'background:var(--card, rgba(128,128,128,.055));' +
-        'color:var(--ink, inherit);' +
-        'font-size:.9rem;line-height:1.75;' +
-        'display:flex;gap:10px;align-items:flex-start;' +
-        'opacity:.9;transition:opacity .25s;' +
+    // ============================================================
+    // 一、左下角悬浮卡（全站）
+    //     默认收起成一个小灯泡圆球，鼠标移上去展开；手机上点一下展开。
+    //     关掉之后本次浏览不再出现（sessionStorage 记住）。
+    // ============================================================
+    var CSS_FLOAT =
+        '.nb-tip-fab{' +
+        'position:fixed;left:18px;bottom:18px;z-index:9000;' +
+        'width:46px;height:46px;border-radius:50%;' +
+        'display:flex;align-items:center;justify-content:center;' +
+        'font-size:1.25rem;cursor:pointer;' +
+        'border:1px solid rgba(128,128,128,.28);' +
+        'background:var(--card,#fff);color:inherit;' +
+        'box-shadow:0 6px 20px rgba(0,0,0,.14);' +
+        'transition:transform .22s cubic-bezier(.34,1.4,.64,1),box-shadow .22s;' +
+        'animation:nbTipPulse 3.2s ease-in-out 4;' +
         '}' +
-        '.nb-tip:hover{opacity:1;}' +
-        '.nb-tip .nb-tip-ico{flex:0 0 auto;font-size:1.05rem;line-height:1.6;}' +
-        '.nb-tip .nb-tip-body{flex:1 1 auto;min-width:0;}' +
-        '.nb-tip .nb-tip-tag{' +
+        '.nb-tip-fab:hover{transform:scale(1.1) rotate(-8deg);box-shadow:0 8px 26px rgba(0,0,0,.2);}' +
+        '@keyframes nbTipPulse{' +
+        '0%,100%{box-shadow:0 6px 20px rgba(0,0,0,.14);}' +
+        '50%{box-shadow:0 6px 20px rgba(0,0,0,.14),0 0 0 8px rgba(96,165,250,.14);}' +
+        '}' +
+        '.nb-tip-panel{' +
+        'position:fixed;left:76px;bottom:18px;z-index:9000;' +
+        'width:min(430px,calc(100vw - 104px));' +
+        'box-sizing:border-box;padding:14px 16px;border-radius:14px;' +
+        'border:1px solid var(--line,rgba(128,128,128,.22));' +
+        'background:var(--card,#fff);color:var(--ink,inherit);' +
+        'font-size:.88rem;line-height:1.7;' +
+        'box-shadow:0 10px 34px rgba(0,0,0,.18);' +
+        'opacity:0;visibility:hidden;transform:translateX(-10px);' +
+        'transition:opacity .2s,transform .2s,visibility .2s;' +
+        '}' +
+        '.nb-tip-fab:hover + .nb-tip-panel,' +
+        '.nb-tip-panel:hover,' +
+        '.nb-tip-wrap.nb-open .nb-tip-panel{opacity:1;visibility:visible;transform:translateX(0);}' +
+        '.nb-tip-close{' +
+        'position:absolute;top:6px;right:8px;cursor:pointer;' +
+        'font-size:.95rem;line-height:1;opacity:.4;background:none;border:none;color:inherit;' +
+        '}' +
+        '.nb-tip-close:hover{opacity:1;}' +
+        '.nb-tip-tag{' +
         'display:inline-block;margin-right:8px;padding:1px 8px;border-radius:999px;' +
-        'font-size:.72rem;' +
-        'border:1px solid var(--line, rgba(128,128,128,.28));' +
-        'background:rgba(96,165,250,.12);color:#3b82f6;' +
-        'vertical-align:1px;white-space:nowrap;' +
+        'font-size:.7rem;border:1px solid var(--line,rgba(128,128,128,.28));' +
+        'background:rgba(96,165,250,.12);color:#3b82f6;vertical-align:1px;white-space:nowrap;' +
         '}' +
-        '.nb-tip .nb-tip-next{' +
-        'flex:0 0 auto;cursor:pointer;user-select:none;opacity:.45;' +
-        'font-size:.78rem;padding:2px 8px;border-radius:8px;' +
-        'border:1px solid transparent;background:none;color:inherit;' +
+        '.nb-tip-next{' +
+        'margin-top:9px;cursor:pointer;font-size:.76rem;opacity:.55;' +
+        'padding:3px 10px;border-radius:8px;background:none;color:inherit;' +
+        'border:1px solid var(--line,rgba(128,128,128,.28));' +
         '}' +
-        '.nb-tip .nb-tip-next:hover{opacity:1;border-color:var(--line, rgba(128,128,128,.28));}' +
+        '.nb-tip-next:hover{opacity:1;}' +
         '@media (max-width:640px){' +
-        '.nb-tip{margin:26px 12px 0;padding:12px 14px;font-size:.85rem;}' +
-        '.nb-tip .nb-tip-next{display:none;}' +
+        '.nb-tip-fab{left:12px;bottom:12px;width:42px;height:42px;font-size:1.1rem;}' +
+        '.nb-tip-panel{left:12px;right:12px;bottom:64px;width:auto;}' +
+        '}';
+
+    // ============================================================
+    // 二、首页固定板块 + 评论区上方（页内嵌）
+    // ============================================================
+    var CSS_INLINE =
+        '.nb-tip-box{' +
+        'max-width:900px;margin:26px auto;padding:16px 20px;box-sizing:border-box;' +
+        'border:1px solid var(--line,rgba(128,128,128,.22));border-radius:16px;' +
+        'background:var(--card,rgba(128,128,128,.05));color:var(--ink,inherit);' +
+        'font-size:.92rem;line-height:1.8;position:relative;overflow:hidden;' +
+        '}' +
+        '.nb-tip-box::before{' +
+        'content:"";position:absolute;left:0;top:0;bottom:0;width:3px;' +
+        'background:linear-gradient(180deg,#60a5fa,#a78bfa);' +
+        '}' +
+        '.nb-tip-box .nb-tip-head{' +
+        'font-size:.76rem;letter-spacing:.06em;opacity:.55;margin-bottom:8px;' +
+        'text-transform:uppercase;' +
+        '}' +
+        '.nb-tip-box .nb-tip-text{font-size:.95rem;}' +
+        '.nb-tip-box .nb-tip-next{float:right;margin-top:0;}' +
+        '.nb-tip-slim{' +
+        'max-width:900px;margin:0 auto 14px;padding:11px 16px;box-sizing:border-box;' +
+        'border:1px dashed var(--line,rgba(128,128,128,.28));border-radius:12px;' +
+        'background:rgba(96,165,250,.05);color:var(--ink,inherit);' +
+        'font-size:.85rem;line-height:1.7;opacity:.92;' +
+        '}' +
+        '@media (max-width:640px){' +
+        '.nb-tip-box{margin:20px 12px;padding:14px 16px;}' +
+        '.nb-tip-slim{margin:0 12px 12px;padding:10px 13px;font-size:.82rem;}' +
         '}';
 
     function injectCSS() {
         if (document.getElementById('nbTipStyle')) return;
         var st = document.createElement('style');
         st.id = 'nbTipStyle';
-        st.textContent = CSS;
+        st.textContent = CSS_FLOAT + CSS_INLINE;
         document.head.appendChild(st);
     }
 
+    // ---------- 小工具 ----------
     var idx = Math.floor(Math.random() * TIPS.length);
-
-    function paint(el) {
-        var t = TIPS[idx];
-        el.querySelector('.nb-tip-tag').textContent = t[0];
-        el.querySelector('.nb-tip-text').textContent = t[1];
+    function nextIndex() {
+        var n = idx;
+        while (TIPS.length > 1 && n === idx) n = Math.floor(Math.random() * TIPS.length);
+        return n;
     }
+    function fill(box) {
+        var t = TIPS[idx];
+        var tag = box.querySelector('.nb-tip-tag');
+        var txt = box.querySelector('.nb-tip-text');
+        if (tag) tag.textContent = t[0];
+        if (txt) txt.textContent = t[1];
+    }
+    function makeNextBtn(box) {
+        var b = document.createElement('button');
+        b.className = 'nb-tip-next';
+        b.type = 'button';
+        b.textContent = '换一条';
+        b.onclick = function (e) {
+            e.stopPropagation(); e.preventDefault();
+            idx = nextIndex();
+            // 同一页上可能有多处，全部一起换，保持一致
+            var all = document.querySelectorAll('.nb-tip-box,.nb-tip-slim,.nb-tip-panel');
+            for (var i = 0; i < all.length; i++) fill(all[i]);
+        };
+        return b;
+    }
+    function makeTag() { var s = document.createElement('span'); s.className = 'nb-tip-tag'; return s; }
+    function makeText() { var s = document.createElement('span'); s.className = 'nb-tip-text'; return s; }
 
-    function build() {
-        var box = document.createElement('div');
-        box.className = 'nb-tip';
-        box.id = 'nbScienceTip';
+    // ---------- ① 左下悬浮 ----------
+    function mountFloat() {
+        if (document.getElementById('nbTipFloat')) return;
+        if (sessionStorage.getItem('nb_tip_off') === '1') return;
 
-        var ico = document.createElement('div');
-        ico.className = 'nb-tip-ico';
-        ico.textContent = '💡';
+        var wrap = document.createElement('div');
+        wrap.className = 'nb-tip-wrap';
+        wrap.id = 'nbTipFloat';
 
-        var body = document.createElement('div');
-        body.className = 'nb-tip-body';
+        var fab = document.createElement('div');
+        fab.className = 'nb-tip-fab';
+        fab.title = '看一条化学 / 物理小知识';
+        fab.textContent = '💡';
+        // 手机上没有 hover，点一下切换
+        fab.onclick = function () { wrap.classList.toggle('nb-open'); };
 
-        var tag = document.createElement('span');
-        tag.className = 'nb-tip-tag';
+        var panel = document.createElement('div');
+        panel.className = 'nb-tip-panel';
 
-        var txt = document.createElement('span');
-        txt.className = 'nb-tip-text';
-
-        body.appendChild(tag);
-        body.appendChild(txt);
-
-        var next = document.createElement('button');
-        next.className = 'nb-tip-next';
-        next.type = 'button';
-        next.title = '换一条';
-        next.textContent = '换一条';
-        next.onclick = function (e) {
+        var close = document.createElement('button');
+        close.className = 'nb-tip-close';
+        close.type = 'button';
+        close.title = '关闭（本次浏览不再显示）';
+        close.textContent = '✕';
+        close.onclick = function (e) {
             e.stopPropagation();
-            // 避免连续抽到同一条
-            var n = idx;
-            while (TIPS.length > 1 && n === idx) {
-                n = Math.floor(Math.random() * TIPS.length);
-            }
-            idx = n;
-            paint(box);
+            sessionStorage.setItem('nb_tip_off', '1');
+            wrap.parentNode && wrap.parentNode.removeChild(wrap);
         };
 
-        box.appendChild(ico);
-        box.appendChild(body);
-        box.appendChild(next);
-        paint(box);
-        return box;
+        var body = document.createElement('div');
+        body.appendChild(makeTag());
+        body.appendChild(makeText());
+        body.appendChild(document.createElement('br'));
+        body.appendChild(makeNextBtn(panel));
+
+        panel.appendChild(close);
+        panel.appendChild(body);
+        wrap.appendChild(fab);
+        wrap.appendChild(panel);
+        document.body.appendChild(wrap);
+        fill(panel);
     }
 
-    // ---------- 找位置：优先放页脚上方，找不到就放 body 末尾 ----------
-    function findAnchor() {
-        // Beta 系列：footer 里的 .footer-bottom
-        var fb = document.querySelector('.footer-bottom');
-        if (fb && fb.parentNode) return { node: fb, before: true };
+    // ---------- ② 首页板块 ----------
+    function isHome() {
+        var p = location.pathname;
+        if (/\/Beta\/index-Beta\.html$/.test(p)) return true;
+        if (/\/(index\.html)?$/.test(p)) return true;
+        return false;
+    }
+    function mountHomeBox() {
+        var exist = document.querySelector('.nb-tip-box');
+        if (!exist) {
+            exist = document.createElement('div');
+            exist.className = 'nb-tip-box';
+            var head0 = document.createElement('div');
+            head0.className = 'nb-tip-head';
+            head0.textContent = '💡 你知道吗';
+            var body0 = document.createElement('div');
+            body0.appendChild(makeTag());
+            body0.appendChild(makeText());
+            body0.appendChild(makeNextBtn(exist));
+            exist.appendChild(head0);
+            exist.appendChild(body0);
+            fill(exist);
+        }
+        var box = exist;
+        box.className = 'nb-tip-box';
+        // 首页首屏那些模块（hero / 统计 / 核心功能 / 友商）是 ui-nav.js
+        // 后来注入的，抓不准时机。这里改成"挂在主容器最前面"——
+        // 主容器第一个子元素一定是导航栏（ui-nav.js 也是插在那），
+        // 所以插在导航之后、hero 之前，是页面上最稳也最显眼的位置。
+        var cont = document.querySelector('.container')
+                || document.querySelector('main')
+                || document.body;
 
-        // 根目录系列：含 © 2026 NB频道 的那个 div
-        var divs = document.querySelectorAll('div');
-        for (var i = 0; i < divs.length; i++) {
-            var d = divs[i];
-            // 只找"直接包含版权文字"的那一层，避免选到外层大容器
-            if (d.children.length <= 6 && /©\s*20\d\d\s*NB频道/.test(d.textContent || '')) {
-                return { node: d, before: true };
+        // 优先挂到主容器里、导航栏之后（导航必须在最上面）
+        if (cont) {
+            // 找导航：ui-nav.js 生成的那条，或者任何带 nav 字样的元素
+            var ref = null;
+            var navEl = cont.querySelector('.top-nav')
+                     || cont.querySelector('[class*="nav"]')
+                     || cont.querySelector('nav');
+            // 只认主容器【直接子元素】里的导航，避免抓到面包屑之类的
+            if (navEl && navEl.parentNode === cont) ref = navEl;
+
+            if (ref) {
+                if (box.parentNode === cont && box.previousElementSibling === ref) {
+                    fill(box);
+                    window.__nbAnchor = '导航之后';
+                    return true;
+                }
+                cont.insertBefore(box, ref.nextSibling);
+                fill(box);
+                window.__nbAnchor = '导航之后';
+                return true;
+            }
+
+            // 找不到导航就退回"最前面"
+            if (box.parentNode === cont && cont.firstElementChild === box) {
+                fill(box);
+                window.__nbAnchor = '容器最前';
+                return true;
+            }
+            cont.insertBefore(box, cont.firstElementChild);
+            fill(box);
+            window.__nbAnchor = '容器最前';
+            return true;
+        }
+
+        // 兜底：原始 HTML 里那张"友商链接"卡片之前
+        var anchor = null;
+        var cards = document.querySelectorAll('.home-card');
+        for (var i2 = 0; i2 < cards.length; i2++) {
+            var t = cards[i2].textContent || '';
+            if (t.indexOf('友商') >= 0 || t.indexOf('虚拟公司的网站') >= 0) {
+                anchor = { n: cards[i2], after: false };
+                break;
             }
         }
+        if (!anchor) {
+            var sc = document.querySelector('.stats-container');
+            if (sc && sc.parentNode) anchor = { n: sc, after: false };
+        }
+        if (!anchor) return false;
 
-        // 兜底：footer 标签
-        var f = document.querySelector('footer');
-        if (f && f.parentNode) return { node: f, before: true };
-
-        return null;
+        // 已经在正确位置就不动，否则挪过去（首页内容是异步渲染的，
+        // 第一次进来可能还找不到"友商"那张卡片，等 DOM 稳定后要能纠正）
+        if (!anchor) return false;
+        if (anchor.after) {
+            if (box.previousElementSibling !== anchor.n) {
+                anchor.n.parentNode.insertBefore(box, anchor.n.nextSibling);
+            }
+        } else {
+            if (box.nextElementSibling !== anchor.n) {
+                anchor.n.parentNode.insertBefore(box, anchor.n);
+            }
+        }
+        fill(box);
+        return true;
     }
 
+    // ---------- ③ 评论区上方 ----------
+    function mountAboveComments() {
+        var cs = document.getElementById('comments') || document.querySelector('.comment-section');
+        if (!cs || !cs.parentNode) return false;
+        // 已经插过（多页共用脚本时防重）
+        if (cs.previousElementSibling && cs.previousElementSibling.classList &&
+            cs.previousElementSibling.classList.contains('nb-tip-slim')) return true;
+
+        var box = document.createElement('div');
+        box.className = 'nb-tip-slim';
+        box.appendChild(makeTag());
+        box.appendChild(makeText());
+        box.appendChild(makeNextBtn(box));
+        cs.parentNode.insertBefore(box, cs);
+        fill(box);
+        return true;
+    }
+
+    // ---------- 挂载 ----------
     function mount() {
-        if (document.getElementById('nbScienceTip')) return;   // 防重复
         injectCSS();
-        var box = build();
-        var a = findAnchor();
-        if (a) {
-            a.node.parentNode.insertBefore(box, a.node);
-        } else {
-            document.body.appendChild(box);
-        }
+        mountFloat();
+        mountAboveComments();
+        if (isHome()) mountHomeBox();
     }
 
     if (document.readyState === 'loading') {
@@ -370,11 +538,40 @@
     } else {
         mount();
     }
+    // 有些页面内容是异步渲染的，稍后再补一次（幂等）
+    // 首页那些模块（hero / stats / 核心功能 / 友商）是 ui-nav.js 后来注入的，
+    // 定时器不一定赶得上。用 MutationObserver 盯着，元素一出现就插。
+    var _homePlaced = false;
+    function tryHome() {
+        if (_homePlaced) return true;
+        try {
+            if (isHome() && mountHomeBox()) { _homePlaced = true; return true; }
+        } catch (e) {}
+        return false;
+    }
 
-    // 供调试：控制台里 window.NBTips.random() 能拿一条
+    // 定时补几次（应对评论区和一般的异步渲染）
+    [600, 1500, 3000, 6000].forEach(function (ms) {
+        setTimeout(function () {
+            try { mountAboveComments(); } catch (e) {}
+            tryHome();
+        }, ms);
+    });
+
+    // 主页板块：监听 DOM 变化，直到插成功为止
+    if (isHome() && !tryHome() && window.MutationObserver) {
+        var mo = new MutationObserver(function () {
+            if (tryHome() && mo) { mo.disconnect(); mo = null; }
+        });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+        // 最多盯 20 秒，避免一直挂着
+        setTimeout(function () { if (mo) { mo.disconnect(); mo = null; } }, 20000);
+    }
+
     window.NBTips = {
         all: TIPS,
         count: TIPS.length,
-        random: function () { return TIPS[Math.floor(Math.random() * TIPS.length)]; }
+        random: function () { return TIPS[Math.floor(Math.random() * TIPS.length)]; },
+        reset: function () { sessionStorage.removeItem('nb_tip_off'); location.reload(); }
     };
 })();
