@@ -1,0 +1,28 @@
+# Netlify 配置（纯静态站点，没有构建步骤）
+# 用途：把部署参数固化进仓库，以后不管谁重新导入项目都不用再手动配。
+[build]
+  # 没有构建步骤 —— 这个仓库里全是现成的 HTML/CSS/JS，直接发布
+  command = ""
+  # 发布整个仓库根目录（Beta/、download/、videos/ 都在根下）
+  publish = "."
+
+# 静态资源缓存：HTML 不缓存（改了要立刻生效），其余长缓存
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/Beta/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/download/*"
+  [headers.values]
+    Cache-Control = "public, max-age=600"
+
+[[headers]]
+  for = "/videos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
