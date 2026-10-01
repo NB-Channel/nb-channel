@@ -122,7 +122,7 @@ AS $fn$
 DECLARE
     v_poll   record;
     v_n      int;
-    v_opt    bigint;
+    v_need   int;
 BEGIN
     IF p_user_id IS NULL OR p_session IS NULL OR NOT public._user_ok(p_user_id, p_session) THEN
         RETURN jsonb_build_object('success', false, 'message', '请先登录再投票');
@@ -148,9 +148,17 @@ BEGIN
     END IF;
 
     -- 校验选项属于这个投票
+    -- ⚠️ 原来这里写的是 IF v_n < CASE WHEN ... END THEN，PostgreSQL 报
+    --    42601 syntax error —— CASE 表达式放在比较里要加括号，干脆拆成变量更清楚。
     SELECT count(*) INTO v_n FROM public.poll_options
      WHERE poll_id = v_poll.id AND id IN (p_option, coalesce(p_option2, p_option));
-    IF v_n < CASE WHEN p_option2 IS NULL OR p_option2 = p_option THEN 1 ELSE 2 END THEN
+
+    v_need := 1;
+    IF p_option2 IS NOT NULL AND p_option2 <> p_option THEN
+        v_need := 2;
+    END IF;
+
+    IF v_n < v_need THEN
         RETURN jsonb_build_object('success', false, 'message', '选项不对');
     END IF;
 
