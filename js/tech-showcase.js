@@ -524,6 +524,42 @@
         return cmds;
     }
 
+/* 按扩展名给 MIME，保证浏览器存成正确的文件类型 */
+    function mimeOf(name) {
+        var ext = (name.split('.').pop() || '').toLowerCase();
+        var map = {
+            py:   'text/x-python',
+            js:   'text/javascript',
+            c:    'text/x-csrc',
+            h:    'text/x-csrc',
+            css:  'text/css',
+            html: 'text/html',
+            sql:  'text/plain',
+            sh:   'text/x-sh',
+            logo: 'text/plain',
+            txt:  'text/plain'
+        };
+        return (map[ext] || 'text/plain') + ';charset=utf-8';
+    }
+    /* 触发下载 */
+    function saveText(name, text) {
+        try {
+            var blob = new Blob([text], { type: mimeOf(name) });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            a.style.cssText = 'position:fixed;left:-9999px;';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function initTerminal(root) {
         var body = root.querySelector('[data-term]');
         if (!body) return;
@@ -662,6 +698,7 @@
     /* ---------- 内容表：每项 = { id, 标签, 说明, SVG, CODE, PLAIN } ---------- */
     var ITEMS = [
         {
+            file: 'sierpinski.py',
             id: 'sierpinski',
             tab: '\uD83D\uDD3A \u8C22\u5C14\u5BBE\u65AF\u57FA',
             name: 'Python \u6D77\u9F9F\u7ED8\u56FE <i>\u00B7 \u8C22\u5C14\u5BBE\u65AF\u57FA\u4E09\u89D2</i>',
@@ -670,6 +707,7 @@
             plain: "import turtle as t\n\n# 谢尔宾斯基三角：把三角形一分为四，挖掉中间那块，对三个角递归\nt.setup(600, 520); t.hideturtle(); t.speed(0)\nt.color(\"#00e5ff\", \"#0b2b38\")\n\ndef mid(p, q):\n    return ((p[0]+q[0])/2, (p[1]+q[1])/2)\n\ndef sierpinski(pts, depth):\n    if depth == 0:\n        t.penup(); t.goto(pts[0]); t.pendown()\n        t.begin_fill()\n        for p in pts[1:]: t.goto(p)\n        t.goto(pts[0])\n        t.end_fill()\n        return\n    a, b, c = pts\n    sierpinski([a, mid(a,b), mid(a,c)], depth-1)\n    sierpinski([mid(a,b), b, mid(b,c)], depth-1)\n    sierpinski([mid(a,c), mid(b,c), c], depth-1)\n\nR = 250\nsierpinski([(-R, -R*0.62), (R, -R*0.62), (0, R*1.05)], 4)\nt.done()"
         }
         ,{
+            file: 'koch.py',
             id: "koch",
             tab: "\u2744 \u79D1\u8D6B\u96EA\u82B1",
             name: "Python \u6D77\u9F9F\u7ED8\u56FE <i>\u00B7 \u79D1\u8D6B\u96EA\u82B1</i>",
@@ -678,6 +716,7 @@
             plain: "import turtle as t, math\n\n# 科赫雪花：把每条边三等分，中间那段换成凸起的等边三角形，然后递归\n# 三条边的凸起必须都【朝外】才是雪花，所以顶点要按逆时针取；\n# 顺时针取的话凸起会朝内，画出来是三朵花。\nt.setup(600, 520); t.hideturtle(); t.speed(0)\nt.color(\"#00e5ff\"); t.pensize(2)\n\ndef koch(p, q, depth):\n    \"\"\"把线段 pq 递归细分成科赫曲线，边算边画\"\"\"\n    if depth == 0:\n        t.goto(q)\n        return\n    dx, dy = (q[0]-p[0])/3, (q[1]-p[1])/3      # 每段长度的向量\n    a = (p[0]+dx, p[1]+dy)                    # 第一个三等分点\n    c = (p[0]+2*dx, p[1]+2*dy)              # 第二个三等分点\n    ang = math.radians(60)\n    b = (a[0] + dx*math.cos(ang) - dy*math.sin(ang),\n         a[1] + dx*math.sin(ang) + dy*math.cos(ang))  # 凸起顶点\n    koch(p, a, depth-1); koch(a, b, depth-1)\n    koch(b, c, depth-1); koch(c, q, depth-1)\n\nR = 205\n# 逆时针取三个顶点（90° → 210° → 330° 反过来）\nP = [(R*math.cos(math.radians(90 - i*120)),\n      R*math.sin(math.radians(90 - i*120))) for i in range(3)]\nt.penup(); t.goto(P[0]); t.pendown()\nfor i in range(3):\n    koch(P[i], P[(i+1)%3], 4)\nt.done()"
         }
         ,{
+            file: 'spiral.py',
             id: "spiral",
             tab: "\uD83C\uDF00 \u9EC4\u91D1\u87BA\u65CB",
             name: "\u9EC4\u91D1\u87BA\u65CB <i>\u00B7 \u542B\u6590\u6CE2\u90A3\u5951\u6B63\u65B9\u5F62\u8F85\u52A9\u7EBF</i>",
@@ -686,6 +725,7 @@
             plain: "import turtle as t\n\n# 黄金螺旋 = 斐波那契正方形 + 每格里的 1/4 圆弧\n# 关键：正方形和圆弧都【左转】（逆时针）。\n#       圆弧的圆心落在正方形的角上，所以正方形要画在圆心那一侧；\n#       右转画出来的正方形会跑到反面，和弧错开一格。\nt.setup(640, 520); t.hideturtle(); t.speed(0)\n\n# 斐波那契：1 1 2 3 5 8 13 21 34\nfib = [1, 1]\nfor _ in range(7):\n    fib.append(fib[-1] + fib[-2])\n\nSCALE = 14\nt.penup(); t.goto(0, 0); t.pendown()\n\nfor s in fib:\n    L = s * SCALE\n    # ① 辅助线：正方形，左转绕一圈（画完海龟回到原点、朝向不变）\n    t.pensize(1); t.color(\"#1b4a5a\")\n    for _ in range(4):\n        t.forward(L); t.left(90)\n    # ② 螺旋：从同一点出发，逆时针扫 1/4 圈\n    t.pensize(2); t.color(\"#00e5ff\")\n    t.circle(L, 90)\nt.done()"
         }
         ,{
+            file: 'terminal.py',
             id: "term",
             tab: "\u25B6 \u7EC8\u7AEF",
             name: "\u4EA4\u4E92\u5F0F\u7EC8\u7AEF <i>\u00B7 \u81EA\u5DF1\u6572\u547D\u4EE4\u8BD5\u8BD5</i>",
@@ -695,6 +735,7 @@
             init: initTerminal
         }
         ,{
+            file: 'visits_chart.py',
             id: "data",
             tab: "\uD83D\uDCCA \u5B9E\u65F6\u6570\u636E",
             name: "\u8BBF\u95EE\u91CF\u8D70\u52BF <i>\u00B7 \u6700\u8FD1 30 \u5929</i>",
@@ -753,12 +794,18 @@
             copyBtn.type = 'button';
             copyBtn.className = 'nb-ts-mini';
             copyBtn.textContent = '\u590D\u5236';
+            var dlBtn = document.createElement('button');
+            dlBtn.type = 'button';
+            dlBtn.className = 'nb-ts-mini';
+            dlBtn.textContent = '\u4E0B\u8F7D';
+            dlBtn.title = '\u5B58\u6210\u6E90\u6587\u4EF6';
             var toggleBtn = document.createElement('button');
             toggleBtn.type = 'button';
             toggleBtn.className = 'nb-ts-mini';
             toggleBtn.textContent = '\u5C55\u5F00 \u25BE';
             head.appendChild(hsp);
             head.appendChild(copyBtn);
+            head.appendChild(dlBtn);
             head.appendChild(toggleBtn);
             var pre = document.createElement('pre');
             pre.className = 'nb-ts-code';
@@ -806,6 +853,17 @@
                 b.onclick = function () { render(it); };
                 tabs.appendChild(b);
             });
+
+            dlBtn.onclick = function () {
+                var name = cur.file || (cur.id + '.py');
+                var ok = saveText(name, cur.plain);
+                dlBtn.textContent = ok ? '\u5DF2\u4E0B\u8F7D \u2713' : '\u4E0B\u8F7D\u5931\u8D25';
+                dlBtn.classList.toggle('done', !!ok);
+                setTimeout(function () {
+                    dlBtn.textContent = '\u4E0B\u8F7D';
+                    dlBtn.classList.remove('done');
+                }, 1600);
+            };
 
             toggleBtn.onclick = function () {
                 var on = wrap.classList.toggle('open');
