@@ -35,32 +35,25 @@ html[theme="national"] body {
     background-attachment: fixed;
 }
 
-/* ------------------------------------------------------------
-   五星红旗（按《国旗法》规格生成的 SVG，比例严格 3:2）
-   — 完整、不变形、不裁剪。放在 Hero 的背景层里（右下角），
-     一进首页就能看到，且不会挡住右侧的 Logo 视频。
-   ------------------------------------------------------------ */
+/* ---- Hero 幕布：深红 + 金色顶光。
+       国旗改由 js/turtle-flag.js 的海龟动画呈现（在 LOGO 视频上方），
+       这里不再放任何静态旗子。 ---- */
 html[theme="national"] .hero {
-    /* 国旗用独立 SVG 文件 —— data URI 那条路在 Edge 上不生效
-       （试过 quote() 编码、把 # 换成 rgb()、去掉 mask，都不行）。
-       垫在左侧文案区下层：hero-inner 的 z-index 是 2，压在旗子之上。 */
     background-image:
-        url("../images/flag-cn.svg"),
         radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
+        radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
         linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
     background-repeat: no-repeat;
-    background-position: left 2% bottom 8%, left top, center;
-    background-size: min(50%, 560px) auto, auto, auto;
+    background-position: left top, right top, center;
+    background-size: auto, auto, auto;
 }
+
+/* 国庆主题的国旗由 js/turtle-flag.js 用海龟动画呈现（在 LOGO 视频上方），
+   这里不再放静态旗子。 */
 
 /* 手机上交叠会太挤，缩小并挪到右下角 */
 @media (max-width: 900px) {
-    html[theme="national"] .hero {
-        background-position: right -10% bottom 16%, left top, right top, center;
-        background-size: min(360px, 78%) auto, auto, auto, auto;
-        opacity: 1;
     }
-}
 
 /* 旗子压在 Hero 的装饰点阵之下，正文之上不受影响 */
 html[theme="national"] .hero::after { opacity: .28; }
