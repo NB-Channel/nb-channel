@@ -58,70 +58,51 @@
         '  .nb-snk-pad{display:grid;}',
         '}',
 
-        /* ---------- 🌃 故障艺术标题 ---------- */
-        '.nb-glx{position:relative;padding:54px 34px;border-radius:12px;',
+        /* ---------- 🌃 赛博朋克 · 霓虹灯牌生成器 ---------- */
+        '.nb-neon{padding:34px 32px 40px;border-radius:12px;',
         '  background:linear-gradient(170deg,#180a2c,#0e0519 60%,#150826);',
         '  border:1px solid rgba(255,46,166,.28);',
-        '  box-shadow:inset 0 0 40px -22px rgba(255,46,166,.8);overflow:hidden;}',
-        '.nb-glx-t{position:relative;font-size:clamp(2rem,5.4vw,3.6rem);font-weight:800;',
-        '  letter-spacing:4px;color:#fff2fc;line-height:1.25;text-align:center;margin:0;}',
-        '.nb-glx-t::before,.nb-glx-t::after{content:attr(data-t);position:absolute;',
-        '  left:0;right:0;top:0;pointer-events:none;}',
-        '.nb-glx-t::before{color:#ff2ea6;animation:nbGlxA 3.1s steps(1,end) infinite;}',
-        '.nb-glx-t::after {color:#00e5ff;animation:nbGlxB 2.7s steps(1,end) infinite;}',
-        '@keyframes nbGlxA{',
-        '  0%,88%,100%{transform:translate(0);opacity:0;}',
-        '  90%{transform:translate(-4px,2px);opacity:.9;}',
-        '  93%{transform:translate(3px,-2px);opacity:.75;}',
-        '  96%{transform:translate(-2px,0);opacity:.85;}',
-        '}',
-        '@keyframes nbGlxB{',
-        '  0%,84%,100%{transform:translate(0);opacity:0;}',
-        '  86%{transform:translate(5px,-1px);opacity:.8;}',
-        '  89%{transform:translate(-3px,2px);opacity:.7;}',
-        '  94%{transform:translate(2px,1px);opacity:.75;}',
-        '}',
-        '.nb-glx-sub{margin:26px 0 0;text-align:center;font-size:.9rem;',
-        '  letter-spacing:2px;color:rgba(214,186,232,.7);}',
-        '.nb-glx-tags{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px;}',
-        '.nb-glx-tag{padding:6px 14px;font-size:.72rem;letter-spacing:1.5px;',
-        '  border:1px solid rgba(255,46,166,.4);color:#ff8ecb;border-radius:2px;}',
-        '.nb-glx-scan{position:absolute;left:0;right:0;height:100px;pointer-events:none;',
-        '  background:linear-gradient(to bottom,transparent,rgba(0,229,255,.1) 45%,',
-        '  rgba(255,46,166,.16) 55%,transparent);',
-        '  animation:nbGlxScan 6.5s linear infinite;}',
-        '@keyframes nbGlxScan{0%{top:-110px;}100%{top:100%;}}',
-        '.nb-glx-lines{position:absolute;inset:0;pointer-events:none;opacity:.5;',
-        '  background:repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,transparent 1px 3px);}',
-
-
-        /* ---------- 🌙 护眼 · 作息提醒 ---------- */
-        '.nb-eye{display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:center;',
-        '  padding:38px 36px;border-radius:12px;background:#dad3c4;',
-        '  border:1px solid rgba(58,54,48,.16);}',
-        '.nb-eye-clock{font-size:3.4rem;font-weight:200;letter-spacing:4px;color:#3a3630;',
-        '  font-variant-numeric:tabular-nums;line-height:1;}',
-        '.nb-eye-date{margin-top:10px;font-size:.78rem;letter-spacing:2px;color:#7a7266;}',
-        '.nb-eye-info .row{display:flex;justify-content:space-between;gap:26px;',
-        '  padding:11px 0;border-bottom:1px solid rgba(58,54,48,.12);font-size:.82rem;}',
-        '.nb-eye-info .row:last-child{border-bottom:none;}',
-        '.nb-eye-info .k{color:#7a7266;letter-spacing:1px;}',
-        '.nb-eye-info .v{color:#3a3630;font-weight:700;font-variant-numeric:tabular-nums;}',
-        '.nb-eye-tip{margin-top:18px;padding:14px 18px;border-radius:6px;',
-        '  background:rgba(107,90,62,.12);border-left:3px solid #6b5a3e;',
-        '  font-size:.82rem;line-height:1.9;color:#524c43;}',
-        '.nb-eye-tip.warn{background:rgba(140,47,35,.12);border-left-color:#8c2f23;}',
-        '.nb-eye-btns{margin-top:16px;display:flex;gap:8px;}',
-        '.nb-eye-btn{padding:7px 15px;border-radius:2px;cursor:pointer;font-family:inherit;',
-        '  font-size:.72rem;letter-spacing:1px;background:#6b5a3e;color:#e0d9cb;border:none;}',
-        '.nb-eye-btn:hover{background:#544730;}',
-        '@media(max-width:860px){',
-        '  .nb-eye{grid-template-columns:1fr;gap:24px;}',
-        '}',
-
-        '@media(prefers-reduced-motion:reduce){',
-        '  .nb-glx-t::before,.nb-glx-t::after,.nb-glx-scan{animation:none;opacity:0;}',
-        '}',
+        '  box-shadow:inset 0 0 44px -24px rgba(255,46,166,.8);}',
+        '.nb-neon-stage{position:relative;display:flex;align-items:center;justify-content:center;',
+        '  min-height:180px;padding:26px 18px;border-radius:8px;',
+        '  background:radial-gradient(620px 270px at 50% 50%,rgba(255,46,166,.1),transparent 70%),#0b0518;',
+        '  border:1px solid rgba(255,46,166,.18);overflow:hidden;}',
+        '.nb-neon-stage::before{content:"";position:absolute;inset:0;pointer-events:none;',
+        '  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 26px),',
+        '  repeating-linear-gradient(90deg,rgba(255,255,255,.022) 0 1px,transparent 1px 52px);}',
+        '.nb-neon-text{position:relative;font-weight:800;letter-spacing:.08em;text-align:center;',
+        '  font-family:ui-monospace,Consolas,"Courier New",monospace;',
+        '  white-space:pre-wrap;word-break:break-word;line-height:1.3;transition:color .2s;}',
+        '.nb-neon-text.on{color:#fff;text-shadow:0 0 4px #fff,0 0 11px var(--nc),',
+        '  0 0 22px var(--nc),0 0 42px var(--nc),0 0 76px var(--nc);}',
+        '.nb-neon-text.off{color:#5b4a6b;text-shadow:none;}',
+        '.nb-neon-text.flicker.on{animation:nbFlick 4.2s steps(1,end) infinite;}',
+        '@keyframes nbFlick{0%,86%,100%{opacity:1;}87%{opacity:.35;}88%{opacity:1;}',
+        '  91%{opacity:.5;}92%{opacity:1;}95%{opacity:.2;}96%{opacity:1;}}',
+        '.nb-neon-ctl{display:grid;grid-template-columns:1fr auto;gap:22px;align-items:end;',
+        '  margin-top:22px;}',
+        '.nb-neon-field{display:flex;flex-direction:column;gap:7px;}',
+        '.nb-neon-field label{font-size:.68rem;letter-spacing:2px;color:#8a6aa8;}',
+        '.nb-neon-field input[type=text]{padding:10px 13px;border-radius:3px;',
+        '  background:rgba(23,10,43,.85);border:1px solid rgba(255,46,166,.35);',
+        '  color:#f6e9ff;font-family:inherit;font-size:.9rem;outline:none;}',
+        '.nb-neon-field input[type=text]:focus{border-color:#ff2ea6;}',
+        '.nb-neon-sw{display:flex;gap:7px;}',
+        '.nb-neon-sw button{width:26px;height:26px;border-radius:50%;cursor:pointer;',
+        '  border:2px solid rgba(255,255,255,.18);padding:0;}',
+        '.nb-neon-sw button.on{border-color:#fff;transform:scale(1.13);}',
+        '.nb-neon-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:18px;}',
+        '.nb-neon-size{display:flex;align-items:center;gap:9px;font-size:.68rem;color:#8a6aa8;}',
+        '.nb-neon-size input{width:118px;accent-color:#ff2ea6;}',
+        '.nb-neon-btns{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap;}',
+        '.nb-neon-btn{padding:8px 15px;border-radius:3px;cursor:pointer;font-family:inherit;',
+        '  font-size:.72rem;letter-spacing:1.5px;background:rgba(255,46,166,.16);',
+        '  color:#ff8ecb;border:1px solid rgba(255,46,166,.45);}',
+        '.nb-neon-btn:hover{background:rgba(255,46,166,.32);}',
+        '.nb-neon-btn.on{background:#ff2ea6;color:#fff2fc;border-color:#ff77a8;}',
+        '.nb-neon-hint{margin-top:14px;font-size:.7rem;letter-spacing:1px;color:#7a5c94;}',
+        '@media(max-width:820px){.nb-neon-ctl{grid-template-columns:1fr;}}',
+        '@media(prefers-reduced-motion:reduce){.nb-neon-text.flicker.on{animation:none;}}',
 
         /* ---------- 墨韵 · 毛笔写的 NB-CHANNEL ---------- */
         '.nb-ink{position:relative;padding:40px 34px 54px;border-radius:12px;',
@@ -133,9 +114,9 @@
            默认已经写好，只有 .nb-ink-go 时才从零"长"出来。 */
         '.nb-ink .gl{fill:#1c1a17;stroke:none;}',
         /* 晕：同一个轮廓往外扩一圈，低透明度，用 SVG 的 stroke 模拟洇边 */
-        '.nb-ink .gl-halo{fill:none;stroke:#3a3228;stroke-width:7;opacity:.14;',
+        '.nb-ink .gl-halo{fill:none;stroke:#3a3228;stroke-width:11;opacity:.24;',
         '  stroke-linejoin:round;}',
-        '.nb-ink .gl-halo2{fill:none;stroke:#5a4d3c;stroke-width:13;opacity:.07;',
+        '.nb-ink .gl-halo2{fill:none;stroke:#5a4d3c;stroke-width:20;opacity:.15;',
         '  stroke-linejoin:round;}',
         '.nb-ink-go .gl,.nb-ink-go .gl-halo,.nb-ink-go .gl-halo2{',
         '  clip-path:inset(0 100% 0 0);animation:nbInkW .62s cubic-bezier(.4,.05,.3,1) forwards;}',
@@ -674,6 +655,119 @@
     };
 
     /* ============================================================
+       赛博朋克 · 霓虹灯牌生成器
+       输入文字实时做成霓虹招牌，可换色、调字号、开关闪烁。
+       （原本这里是个只会抖的标题，不算内容，换掉。）
+       ============================================================ */
+    var NEON = {
+        mount: function (box) {
+            var COLORS = [
+                { c: '#ff2ea6', n: '\u54C1\u7EA2' },
+                { c: '#00e5ff', n: '\u9752\u84DD' },
+                { c: '#a855f7', n: '\u7D2B' },
+                { c: '#39ff88', n: '\u7EFF' },
+                { c: '#ffb020', n: '\u7425\u73C0' }
+            ];
+            var KEY = 'nb_neon_text';
+            var txt = 'NB \u9891\u9053';
+            try { txt = localStorage.getItem(KEY) || txt; } catch (e) {}
+
+            box.innerHTML =
+                '<div class="nb-neon">' +
+                  '<div class="nb-neon-stage">' +
+                    '<div class="nb-neon-text on" data-txt></div>' +
+                  '</div>' +
+                  '<div class="nb-neon-ctl">' +
+                    '<div class="nb-neon-field">' +
+                      '<label>\u706F\u724C\u6587\u5B57</label>' +
+                      '<input type="text" maxlength="24" data-input>' +
+                    '</div>' +
+                    '<div class="nb-neon-field">' +
+                      '<label>\u706F\u7BA1\u989C\u8272</label>' +
+                      '<div class="nb-neon-sw" data-sw></div>' +
+                    '</div>' +
+                  '</div>' +
+                  '<div class="nb-neon-row">' +
+                    '<div class="nb-neon-size">\u5B57\u53F7' +
+                      '<input type="range" min="26" max="86" value="54" data-size></div>' +
+                  '</div>' +
+                  '<div class="nb-neon-btns">' +
+                    '<button class="nb-neon-btn on" data-act="power">\u5F00\u706F</button>' +
+                    '<button class="nb-neon-btn on" data-act="flicker">\u63A5\u89E6\u4E0D\u826F</button>' +
+                    '<button class="nb-neon-btn" data-act="rand">\u968F\u673A\u4E00\u53E5</button>' +
+                  '</div>' +
+                  '<div class="nb-neon-hint">\u6539\u5B57\u3001\u6362\u8272\u3001\u62D6\u6ED1\u5757 \u00B7 \u5168\u90E8\u5B9E\u65F6\u751F\u6548</div>' +
+                '</div>';
+
+            var textEl = box.querySelector('[data-txt]');
+            var inputEl = box.querySelector('[data-input]');
+            var swEl = box.querySelector('[data-sw]');
+            var sizeEl = box.querySelector('[data-size]');
+            var powerBtn = box.querySelector('[data-act="power"]');
+            var flickBtn = box.querySelector('[data-act="flicker"]');
+
+            var color = COLORS[0].c, on = true, flicker = true;
+
+            COLORS.forEach(function (o, i) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.style.background = o.c;
+                b.title = o.n;
+                if (i === 0) b.classList.add('on');
+                b.addEventListener('click', function () {
+                    color = o.c;
+                    swEl.querySelectorAll('button').forEach(function (x) {
+                        x.classList.toggle('on', x === b);
+                    });
+                    paint();
+                });
+                swEl.appendChild(b);
+            });
+
+            var LINES = ['NB \u9891\u9053', '\u70ED\u7231\u7406\u79D1', '\u4E0E\u4F5C\u6B7B\u540C\u884C',
+                'NOBOOK', 'NB-CHANNEL', '\u865A\u62DF\u516C\u53F8', '\u540C\u5B66\u4EEC\u597D',
+                '\u4ECA\u665A\u4E0D\u7761', '\u5168\u90E8\u4E0A\u5CB8', '1 + 1 = 2'];
+
+            function paint() {
+                textEl.textContent = inputEl.value || ' ';
+                textEl.style.fontSize = sizeEl.value + 'px';
+                textEl.style.setProperty('--nc', color);
+                textEl.classList.toggle('on', on);
+                textEl.classList.toggle('off', !on);
+                textEl.classList.toggle('flicker', flicker && on);
+            }
+
+            inputEl.value = txt;
+            inputEl.addEventListener('input', function () {
+                paint();
+                try { localStorage.setItem(KEY, inputEl.value); } catch (e) {}
+            });
+            sizeEl.addEventListener('input', paint);
+            powerBtn.addEventListener('click', function () {
+                on = !on;
+                powerBtn.classList.toggle('on', on);
+                powerBtn.textContent = on ? '\u5F00\u706F' : '\u5DF2\u5173\u706F';
+                paint();
+            });
+            flickBtn.addEventListener('click', function () {
+                flicker = !flicker;
+                flickBtn.classList.toggle('on', flicker);
+                flickBtn.textContent = flicker ? '\u63A5\u89E6\u4E0D\u826F' : '\u4E0D\u95EA';
+                paint();
+            });
+            box.querySelector('[data-act="rand"]').addEventListener('click', function () {
+                inputEl.value = LINES[(Math.random() * LINES.length) | 0];
+                try { localStorage.setItem(KEY, inputEl.value); } catch (e) {}
+                paint();
+            });
+
+            paint();
+            return function () {};
+        }
+    };
+
+
+    /* ============================================================
        模块表 + 挂载
        ============================================================ */
     var MODULES = {
@@ -682,8 +776,8 @@
             mount: function (box) { return SNAKE.mount(box); }
         },
         cyber: {
-            head: '\uD83C\uDF03 \u6545\u969C\u827A\u672F <i>\u00B7 \u6807\u9898\u5B57</i>',
-            mount: function (box) { return GLITCH.mount(box); }
+            head: '\uD83C\uDF03 \u9713\u8679\u706F\u724C <i>\u00B7 \u6539\u5B57\u6362\u8272\u5B9E\u65F6\u770B</i>',
+            mount: function (box) { return NEON.mount(box); }
         },
         ink: {
             head: '\uD83D\uDD8C\uFE0F \u6C34\u58A8\u5C71\u6C34 <i>\u00B7 \u9010\u7B14\u63CF\u51FA</i>',
