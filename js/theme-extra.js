@@ -523,6 +523,15 @@
                 return Math.max(0.35, k) * w;
             }
 
+            /* ---------- 毛边噪声 ----------
+               三层不同频率的正弦叠加，近似分形噪声。
+               单频会抖成规则锯齿（假），三层叠加才像纸纤维的毛边。 */
+            function fiber(s, seed) {
+                return Math.sin(s * 0.27 + seed * 1.7) * 0.50
+                     + Math.sin(s * 0.71 + seed * 3.1) * 0.31
+                     + Math.sin(s * 1.83 + seed * 5.3) * 0.19;
+            }
+
             /* 沿中心线采样，撑出闭合轮廓 */
             function outline(d, w, taper, step) {
                 var probe = document.createElementNS(NS, 'path');
@@ -533,9 +542,10 @@
                 box.appendChild(hide);
 
                 var L = probe.getTotalLength ? probe.getTotalLength() : 120;
-                step = step || Math.max(1.6, L / 60);
+                step = step || Math.max(0.9, L / 110);   /* 采密一点，毛边才有细节 */
 
                 var left = [], right = [], s;
+                var seed = outline._seed = (outline._seed || 0) + 1;
                 for (s = 0; s <= L; s += step) {
                     var t = s / L;
                     var p = probe.getPointAtLength(s);
@@ -545,9 +555,23 @@
                     var dx = p2.x - p.x, dy = p2.y - p.y;
                     var len = Math.hypot(dx, dy) || 1;
                     var nx = -dy / len, ny = dx / len;          /* 法线 */
+
                     var hw = widthAt(t, w, taper);
-                    left.push([p.x + nx * hw, p.y + ny * hw]);
-                    right.push([p.x - nx * hw, p.y - ny * hw]);
+
+                    /* 毛边：起笔和收笔处收敛，中段最明显 ——
+                       真实毛笔的锋尖是干净的，毛边在中段腹部。 */
+                    var amp = Math.sin(Math.PI * Math.pow(t, 0.75));
+                    var n = fiber(s * 0.42, seed);
+
+                    hw *= 1 + n * 0.09 * amp;                   /* 宽度抖 ±9% */
+
+                    /* 点位也轻微游走，边缘就不是光滑曲线了 */
+                    var jitter = fiber(s * 0.31 + 40, seed + 11) * w * 0.05 * amp;
+                    var px = p.x + nx * jitter;
+                    var py = p.y + ny * jitter;
+
+                    left.push([px + nx * hw, py + ny * hw]);
+                    right.push([px - nx * hw, py - ny * hw]);
                 }
                 box.removeChild(hide);
 
