@@ -162,7 +162,35 @@
                 return { cls: 'err', text: '\u7cfb\u7edf\u627e\u4e0d\u5230\u6307\u5b9a\u7684\u6587\u4ef6\u3002' };
             },
             'uptime': function () {
-                return '\u5df2\u8fd0\u884c ' + NB_CO.days + ' \u5929 \u00b7 \u603b\u8bbf\u95ee 3,000+';
+                /* 和首页 #siteDays 完全一样的算法：
+                   建站日 2026-02-17（本地时区），两边都归零到当天 0 点，
+                   取相差的整日数。 */
+                var days = 0;
+                var el = document.getElementById('siteDays');
+                if (el) {
+                    var dt = parseInt(el.getAttribute('data-to') || '', 10);
+                    if (dt > 0) days = dt;
+                    if (!days) {
+                        var tv = parseInt((el.textContent || '').replace(/[^\d]/g, ''), 10);
+                        if (tv > 0) days = tv;
+                    }
+                }
+                if (!days) {
+                    var start = new Date(2026, 1, 17);
+                    var now = new Date();
+                    start.setHours(0, 0, 0, 0);
+                    now.setHours(0, 0, 0, 0);
+                    days = Math.round((now - start) / 86400000);
+                }
+                return [
+                    '\u5df2\u8fd0\u884c ' + days + ' \u5929',
+                    '\u5efa\u7ad9\u65e5 2026-02-17',
+                    '\u4eca\u5929   ' + (function () {
+                        var d = new Date();
+                        function p(n) { return (n < 10 ? '0' : '') + n; }
+                        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+                    })()
+                ].join('\n');
             },
             'date': function () {
                 var d = new Date();
