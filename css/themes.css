@@ -238,22 +238,6 @@ html[theme="tech"] .announcement-bar {
     border-color: rgba(0, 229, 255, .28);
 }
 
-/* 顶部扫描线（一条缓慢移动的青色亮线） */
-html[theme="tech"] body::before {
-    content: "";
-    position: fixed; left: 0; right: 0; top: 0; height: 2px; z-index: 9999;
-    pointer-events: none;
-    background: linear-gradient(90deg, transparent, #00e5ff 30%, #7c3aed 70%, transparent);
-    box-shadow: 0 0 18px 2px rgba(0, 229, 255, .55);
-    animation: nbScan 5.5s linear infinite;
-}
-@keyframes nbScan {
-    0%   { transform: translateY(0);      opacity: 0; }
-    8%   { opacity: 1; }
-    92%  { opacity: 1; }
-    100% { transform: translateY(100vh);  opacity: 0; }
-}
-
 /* 输入框 / 下拉：统一霓虹描边 */
 html[theme="tech"] input,
 html[theme="tech"] textarea,
@@ -373,7 +357,5 @@ html[theme="tech"] .f-icon {
    无障碍：系统设了「减少动态效果」就关掉动画
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-    html[theme="national"] body::after,
-    html[theme="tech"] body::before { animation: none; }
-    html[theme="tech"] body::before { display: none; }
+    html[theme="national"] body::after { animation: none; }
 }
