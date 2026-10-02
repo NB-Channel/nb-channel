@@ -1080,6 +1080,9 @@ html { -webkit-text-size-adjust: 100%; }
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NB频道">
 <meta name="application-name" content="NB频道">
+<!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
+<link rel="stylesheet" href="../css/themes.css">
+<script src="../js/theme.js"></script>
 </head>
 <body>
 <canvas id="fxCanvas"></canvas>
@@ -1265,6 +1268,10 @@ html { -webkit-text-size-adjust: 100%; }
         <button id="styleBetaBtn" style="flex:1; min-width:120px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:#fff;">🏛️ 官网模式</button>
         <div style="width:100%; font-size:0.8rem; color:var(--count-text);" id="styleHint"></div>
     </div>
+
+    <h2>🎨 界面主题</h2>
+    <div class="form-group" id="themeGroup" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+    <div style="font-size:0.8rem; color:var(--count-text);" id="themeHint"></div>
 
     <h2>✏️ 编辑简介</h2>
     <div class="form-group">
@@ -2468,6 +2475,47 @@ function uiHref(p) { return (p && p.indexOf('login.html') === 0) ? '/' + p : p; 
     if (styleClassicBtn) styleClassicBtn.onclick = () => setUiMode('classic');
     if (styleBetaBtn) styleBetaBtn.onclick = () => setUiMode('beta');
     refreshStyleBtns();
+
+    // ===== 界面主题切换（默认 / 国庆 / 科技）=====
+    // 主题只影响配色，不像「界面风格」那样跳转页面，点一下当场生效。
+    (function initThemeUI() {
+        var T = window.NBTheme;
+        var group = document.getElementById('themeGroup');
+        var hint = document.getElementById('themeHint');
+        if (!T || !group) return;
+
+        var BTN_STYLE = 'flex:1; min-width:120px;';
+        var ACTIVE_STYLE = 'flex:1; min-width:120px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:#fff;';
+
+        function render() {
+            var cur = T.resolved();
+            group.innerHTML = '';
+            T.list().forEach(function (item) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = item.icon + ' ' + item.name;
+                b.style.cssText = (item.id === cur) ? ACTIVE_STYLE : BTN_STYLE;
+                b.title = item.desc;
+                b.onclick = function () {
+                    T.set(item.id);
+                    render();
+                };
+                group.appendChild(b);
+            });
+
+            var lines = [];
+            var picked = T.list().filter(function (x) { return x.id === cur; })[0];
+            if (picked) lines.push('当前：' + picked.icon + ' ' + picked.name + ' —— ' + picked.desc);
+            if (T.nationalAvailable()) {
+                lines.push('🇨🇳 国庆主题是限时的，10 月 1 日 ~ 7 日可选，过了这几天会自动回到默认。');
+            } else {
+                lines.push('🇨🇳 国庆主题每年 10 月 1 日 ~ 7 日开放。');
+            }
+            lines.push('主题只改配色，不会影响功能；换设备后需要重新选一次。');
+            hint.innerHTML = lines.join('<br>');
+        }
+        render();
+    })();
 
     loadUserInfo();
 </script>

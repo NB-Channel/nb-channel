@@ -1,0 +1,379 @@
+/* ============================================================
+   NB频道 · 主题包（官网模式）
+   ------------------------------------------------------------
+   官网模式的配色全部走 CSS 变量（--bg / --ink / --brand / --card …），
+   所以这里主要靠覆盖变量换掉整套配色，再补少量装饰。
+
+   加载顺序很重要：这个文件必须排在页面内联 <style> 之后，
+   因为 html[theme=x] 和 html.dark 的特异度相同，靠「后写的赢」压过去。
+   ============================================================ */
+
+/* ============================================================
+   🇨🇳 国庆主题 · 红金
+   限时 10 月 1 日 ~ 7 日（由 js/theme.js 控制可用性）
+   ============================================================ */
+html[theme="national"] {
+    --bg:        #6d1017;
+    --ink:       #ffedcf;
+    --ink-soft:  #e3c49a;
+    --ink-faint: #ab8a63;
+    --line:      rgba(255, 214, 102, .22);
+    --brand:     #ffd24a;
+    --brand-deep:#e8b52c;
+    --card:      #8a151e;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .28);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 26px 56px -22px rgba(0, 0, 0, .55);
+}
+
+/* 底色：深红打底 + 极淡的金色光晕，避免大片纯色显得闷 */
+html[theme="national"] body {
+    background:
+        radial-gradient(1100px 620px at 12% -8%, rgba(255, 210, 74, .16), transparent 62%),
+        radial-gradient(900px 520px at 92% 4%, rgba(255, 120, 90, .13), transparent 60%),
+        var(--bg);
+    background-attachment: fixed;
+}
+
+/* 顶部导航：金线压边 */
+html[theme="national"] .nav {
+    background: rgba(109, 16, 23, .9);
+    border-bottom: 1px solid rgba(255, 214, 102, .32);
+    box-shadow: 0 1px 0 rgba(255, 214, 102, .14), 0 8px 26px -14px rgba(0, 0, 0, .6);
+}
+
+/* 卡片：金色细边 + 内发光 */
+html[theme="national"] .home-card,
+html[theme="national"] .comment-section,
+html[theme="national"] .product-card,
+html[theme="national"] .about-content,
+html[theme="national"] .changelog-content,
+html[theme="national"] .profile-card,
+html[theme="national"] .stat-bar,
+html[theme="national"] .feature-grid > * {
+    border-color: rgba(255, 214, 102, .18);
+    box-shadow: inset 0 1px 0 rgba(255, 214, 102, .07), var(--shadow-1);
+}
+
+/* 标题：金色渐变字（只作用于主标题，不碰正文） */
+html[theme="national"] .hero h1,
+html[theme="national"] .section-title,
+html[theme="national"] .hero-title {
+    background: linear-gradient(100deg, #ffe9b0, #ffd24a 42%, #ffb01f);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #ffd24a;
+}
+
+/* 主按钮：金底红字，反色更醒目 */
+html[theme="national"] .nav-auth.primary,
+html[theme="national"] .hero-btns .primary,
+html[theme="national"] button.primary,
+html[theme="national"] .f-go {
+    background: linear-gradient(135deg, #ffd24a, #e8a91c);
+    color: #6d1017 !important;
+    border-color: rgba(255, 214, 102, .5);
+}
+
+html[theme="national"] .nav-auth.primary:hover,
+html[theme="national"] .hero-btns .primary:hover {
+    background: linear-gradient(135deg, #ffe27a, #f5bb32);
+    box-shadow: 0 6px 22px -6px rgba(255, 210, 74, .5);
+}
+
+/* 链接与高亮 */
+html[theme="national"] a:hover { color: #ffd24a; }
+html[theme="national"] .stat-bar .num { color: #ffd24a; }
+html[theme="national"] .hero-badge,
+html[theme="national"] .hero-badges span {
+    background: rgba(255, 210, 74, .12);
+    border-color: rgba(255, 210, 74, .3);
+    color: #ffe0a3;
+}
+
+/* 公告栏：红底金字 */
+html[theme="national"] .announcement-bar {
+    background: rgba(255, 210, 74, .1);
+    border-color: rgba(255, 210, 74, .3);
+}
+
+/* 顶部两条金色飘带（纯 CSS，不占布局） */
+html[theme="national"] body::before {
+    content: "";
+    position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 9999;
+    pointer-events: none;
+    background: linear-gradient(90deg,
+        transparent, #ffd24a 18%, #fff2c4 50%, #ffd24a 82%, transparent);
+    opacity: .85;
+}
+
+/* 角落灯笼（纯 CSS 画，两个） */
+html[theme="national"] body::after {
+    content: "";
+    position: fixed; top: 0; right: 34px; z-index: 60;
+    width: 30px; height: 30px; pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #ff6a5a, #c8102e 68%, #8c0a1e);
+    box-shadow:
+        0 0 16px 4px rgba(255, 90, 70, .38),
+        0 34px 0 -12px rgba(255, 210, 74, .55),
+        0 66px 0 -15px rgba(200, 16, 46, .45);
+    animation: nbLantern 3.6s ease-in-out infinite;
+    transform-origin: 50% -14px;
+}
+@keyframes nbLantern {
+    0%, 100% { transform: rotate(-3deg); }
+    50%      { transform: rotate(3deg); }
+}
+
+/* ============================================================
+   🚀 科技主题 · 深空蓝 + 霓虹
+   天生就是深色，所以相当于「默认的深色模式」再加上科技感
+   ============================================================ */
+html[theme="tech"] {
+    --bg:        #060a14;
+    --ink:       #d7e5ff;
+    --ink-soft:  #8ea4c9;
+    --ink-faint: #59698a;
+    --line:      rgba(0, 229, 255, .17);
+    --brand:     #00e5ff;
+    --brand-deep:#00b4d8;
+    --card:      #0c1424;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .5), 0 4px 16px rgba(0, 229, 255, .05);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, .55), 0 26px 60px -22px rgba(0, 229, 255, .16);
+}
+
+/* 底色：深空 + 青紫双光源 + 细网格 */
+html[theme="tech"] body {
+    background:
+        linear-gradient(rgba(0, 229, 255, .045) 1px, transparent 1px) 0 0 / 100% 34px,
+        linear-gradient(90deg, rgba(0, 229, 255, .045) 1px, transparent 1px) 0 0 / 34px 100%,
+        radial-gradient(1000px 600px at 14% -10%, rgba(0, 229, 255, .12), transparent 60%),
+        radial-gradient(880px 520px at 88% 6%, rgba(124, 58, 237, .16), transparent 62%),
+        var(--bg);
+    background-attachment: fixed;
+}
+
+/* 导航：玻璃感 + 青色底线 */
+html[theme="tech"] .nav {
+    background: rgba(6, 10, 20, .82);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-bottom: 1px solid rgba(0, 229, 255, .22);
+    box-shadow: 0 0 24px -6px rgba(0, 229, 255, .22);
+}
+
+/* 卡片：霓虹细边 + 四角切角 */
+html[theme="tech"] .home-card,
+html[theme="tech"] .comment-section,
+html[theme="tech"] .product-card,
+html[theme="tech"] .about-content,
+html[theme="tech"] .changelog-content,
+html[theme="tech"] .profile-card {
+    border: 1px solid rgba(0, 229, 255, .2);
+    box-shadow:
+        inset 0 0 24px -14px rgba(0, 229, 255, .55),
+        0 0 0 1px rgba(0, 229, 255, .04),
+        var(--shadow-1);
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px),
+                       calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+
+html[theme="tech"] .home-card:hover,
+html[theme="tech"] .product-card:hover {
+    border-color: rgba(0, 229, 255, .42);
+    box-shadow:
+        inset 0 0 30px -12px rgba(0, 229, 255, .7),
+        0 0 22px -4px rgba(0, 229, 255, .3),
+        var(--shadow-2);
+}
+
+/* 标题：青色发光 */
+html[theme="tech"] .hero h1,
+html[theme="tech"] .section-title,
+html[theme="tech"] .hero-title {
+    color: #eaf7ff;
+    text-shadow:
+        0 0 12px rgba(0, 229, 255, .5),
+        0 0 34px rgba(0, 229, 255, .26);
+}
+
+/* 按钮：霓虹描边风 */
+html[theme="tech"] .nav-auth.primary,
+html[theme="tech"] .hero-btns .primary,
+html[theme="tech"] button.primary,
+html[theme="tech"] .f-go {
+    background: linear-gradient(135deg, rgba(0, 229, 255, .16), rgba(124, 58, 237, .2));
+    color: #b8f4ff !important;
+    border: 1px solid rgba(0, 229, 255, .5);
+    box-shadow: 0 0 18px -4px rgba(0, 229, 255, .45), inset 0 0 14px -8px rgba(0, 229, 255, .8);
+}
+
+html[theme="tech"] .nav-auth.primary:hover,
+html[theme="tech"] .hero-btns .primary:hover {
+    background: linear-gradient(135deg, rgba(0, 229, 255, .28), rgba(124, 58, 237, .32));
+    box-shadow: 0 0 26px -2px rgba(0, 229, 255, .6), inset 0 0 18px -6px rgba(0, 229, 255, .9);
+}
+
+/* 数字与链接：霓虹青 */
+html[theme="tech"] .stat-bar .num {
+    color: #00e5ff;
+    text-shadow: 0 0 14px rgba(0, 229, 255, .55);
+    font-variant-numeric: tabular-nums;
+}
+html[theme="tech"] a:hover { color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, .5); }
+
+html[theme="tech"] .hero-badge,
+html[theme="tech"] .hero-badges span {
+    background: rgba(0, 229, 255, .09);
+    border-color: rgba(0, 229, 255, .32);
+    color: #9defff;
+}
+
+/* 公告栏 */
+html[theme="tech"] .announcement-bar {
+    background: rgba(0, 229, 255, .07);
+    border-color: rgba(0, 229, 255, .28);
+}
+
+/* 顶部扫描线（一条缓慢移动的青色亮线） */
+html[theme="tech"] body::before {
+    content: "";
+    position: fixed; left: 0; right: 0; top: 0; height: 2px; z-index: 9999;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, #00e5ff 30%, #7c3aed 70%, transparent);
+    box-shadow: 0 0 18px 2px rgba(0, 229, 255, .55);
+    animation: nbScan 5.5s linear infinite;
+}
+@keyframes nbScan {
+    0%   { transform: translateY(0);      opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { transform: translateY(100vh);  opacity: 0; }
+}
+
+/* 输入框 / 下拉：统一霓虹描边 */
+html[theme="tech"] input,
+html[theme="tech"] textarea,
+html[theme="tech"] select {
+    background: rgba(6, 10, 20, .72);
+    border-color: rgba(0, 229, 255, .24);
+    color: var(--ink);
+}
+html[theme="tech"] input:focus,
+html[theme="tech"] textarea:focus,
+html[theme="tech"] select:focus {
+    border-color: rgba(0, 229, 255, .6);
+    box-shadow: 0 0 0 3px rgba(0, 229, 255, .14);
+    outline: none;
+}
+
+/* 滚动条也跟着变色（只在支持的时候生效） */
+html[theme="tech"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+html[theme="tech"] ::-webkit-scrollbar-track { background: #060a14; }
+html[theme="tech"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(#00b4d8, #7c3aed);
+    border-radius: 6px;
+    border: 2px solid #060a14;
+}
+
+html[theme="national"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+html[theme="national"] ::-webkit-scrollbar-track { background: #6d1017; }
+html[theme="national"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(#ffd24a, #c8102e);
+    border-radius: 6px;
+    border: 2px solid #6d1017;
+}
+
+/* ============================================================
+   Hero 区：这部分官网模式写的是硬编码颜色（#0b1220 / rgba(59,130,246,…)），
+   不走变量，所以要单独覆盖一遍。
+   ============================================================ */
+
+/* ---- 国庆：深红幕布 + 金色顶光 ---- */
+html[theme="national"] .hero {
+    background:
+        radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
+        radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
+}
+html[theme="national"] .hero::before {
+    background: radial-gradient(620px 310px at 15% 10%, rgba(255, 200, 60, .22), transparent 60%);
+}
+html[theme="national"] .hero::after {
+    background-image: radial-gradient(rgba(255, 214, 102, .09) 1px, transparent 1px);
+}
+html[theme="national"] .hero h1 { color: #fff6e2; }
+html[theme="national"] .hero h1 .light { color: #ffd24a; }
+html[theme="national"] .hero-eyebrow { color: rgba(255, 226, 170, .5); }
+html[theme="national"] .hero-sub { color: rgba(255, 232, 200, .66); }
+html[theme="national"] .hero-link { color: #ffedcf; border-bottom-color: rgba(255, 210, 74, .4); }
+html[theme="national"] .hero-link:hover { color: #ffd24a; border-color: #ffd24a; }
+html[theme="national"] .hero-video {
+    background: #4d0a10;
+    box-shadow: 0 70px 140px -60px rgba(0, 0, 0, .9),
+                0 0 0 1px rgba(255, 210, 74, .16),
+                0 0 60px -20px rgba(255, 210, 74, .28);
+}
+html[theme="national"] .hero-scroll { color: rgba(255, 226, 170, .5); }
+
+/* ---- 科技：深空 + 青色顶光 ---- */
+html[theme="tech"] .hero {
+    background:
+        radial-gradient(880px 470px at 16% 6%, rgba(0, 229, 255, .16), transparent 62%),
+        radial-gradient(720px 470px at 92% 30%, rgba(124, 58, 237, .2), transparent 60%),
+        linear-gradient(168deg, #04070f 0%, #071120 55%, #0a1830 100%);
+}
+html[theme="tech"] .hero::before {
+    background: radial-gradient(620px 310px at 15% 10%, rgba(0, 229, 255, .24), transparent 60%);
+}
+html[theme="tech"] .hero::after {
+    background-image:
+        linear-gradient(rgba(0, 229, 255, .07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, .07) 1px, transparent 1px);
+    background-size: 34px 34px, 34px 34px;
+}
+html[theme="tech"] .hero h1 { color: #f2fbff; }
+html[theme="tech"] .hero h1 .light {
+    color: #00e5ff;
+    text-shadow: 0 0 18px rgba(0, 229, 255, .6);
+}
+html[theme="tech"] .hero-eyebrow { color: rgba(150, 235, 255, .55); }
+html[theme="tech"] .hero-sub { color: rgba(198, 228, 255, .68); }
+html[theme="tech"] .hero-link { color: #d7e5ff; border-bottom-color: rgba(0, 229, 255, .4); }
+html[theme="tech"] .hero-link:hover { color: #00e5ff; border-color: #00e5ff; text-shadow: 0 0 12px rgba(0, 229, 255, .6); }
+html[theme="tech"] .hero-video {
+    background: #04070f;
+    box-shadow: 0 70px 140px -60px rgba(0, 0, 0, .95),
+                0 0 0 1px rgba(0, 229, 255, .22),
+                0 0 70px -18px rgba(0, 229, 255, .35);
+}
+html[theme="tech"] .hero-scroll { color: rgba(150, 235, 255, .5); }
+
+/* 统计条 / 功能区在深色主题下的底色 */
+html[theme="national"] .stat-bar,
+html[theme="national"] .stat-item { background: rgba(255, 210, 74, .07); }
+
+html[theme="tech"] .stat-bar,
+html[theme="tech"] .stat-item {
+    background: rgba(0, 229, 255, .05);
+    border-color: rgba(0, 229, 255, .18);
+}
+
+/* 功能区图标在深色主题下不刺眼 */
+html[theme="national"] .f-icon { background: rgba(255, 210, 74, .14); }
+html[theme="tech"] .f-icon {
+    background: rgba(0, 229, 255, .1);
+    box-shadow: 0 0 20px -6px rgba(0, 229, 255, .5);
+}
+
+/* ============================================================
+   无障碍：系统设了「减少动态效果」就关掉动画
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    html[theme="national"] body::after,
+    html[theme="tech"] body::before { animation: none; }
+    html[theme="tech"] body::before { display: none; }
+}
