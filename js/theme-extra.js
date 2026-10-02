@@ -994,10 +994,6 @@
             head: '\uD83C\uDF19 \u4F5C\u606F\u63D0\u9192 <i>\u00B7 \u770B\u4E45\u4E86\u8BE5\u6B47歇</i>',
             mount: function (box) { return EYE.mount(box); }
         },
-        midautumn: {
-            head: '\uD83E\uDD5E \u6708\u76F8\u76C8\u4E8F <i>\u00B7 \u6309\u5F53\u5929\u65E5\u671F\u7B97</i>',
-            mount: function (box) { return MOON.mount(box); }
-        }
     };
 
     var cleanup = null;
