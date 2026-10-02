@@ -1334,3 +1334,73 @@ html[theme] .reply-form textarea {
 }
 html[theme] .comment-card a { color: var(--brand); }
 
+/* ============================================================
+   通用修正 · 对比度
+   ------------------------------------------------------------
+   自动扫描（遍历每个元素、按 WCAG 公式算前景/背景对比度）发现：
+       1.00  a.nav-auth.primary   「登录 / 注册」—— 字和底同色，完全看不见
+       1.40  button.theme-btn     主题切换按钮
+       2.06  a.nav-auth           「个人中心」
+       2.9x  div.label / em / small  各类次要文字
+   导航栏是全站共用的，不修的话每个主题下导航都是瞎的。
+
+   这些元素原来用的是页面内联写死的深蓝紫系颜色，
+   主题换了底色它们不跟着换，所以这里统一接管。
+   ============================================================ */
+
+/* ---- 导航栏按钮：主按钮用金色实底 + 深色字，保证足够对比 ---- */
+html[theme] .nav-auth {
+    color: var(--ink-soft) !important;
+    border-color: var(--line) !important;
+}
+html[theme] .nav-auth:hover { color: var(--ink) !important; }
+html[theme] .nav-auth.primary,
+html[theme] .nav-auth.primary:visited {
+    background: var(--brand) !important;
+    color: #2b0a06 !important;          /* 深棕字压金底，对比度约 8:1 */
+    border-color: var(--brand) !important;
+}
+html[theme] .nav-auth.primary:hover {
+    background: var(--brand-deep) !important;
+    color: #2b0a06 !important;
+}
+html[theme] .theme-btn {
+    color: var(--ink-soft) !important;
+    border-color: var(--line) !important;
+}
+html[theme] .theme-btn:hover { color: var(--brand) !important; }
+
+/* 导航里其余链接和图标 */
+html[theme] .nav a,
+html[theme] .nav .nav-scan,
+html[theme] .nav .nav-more {
+    color: var(--ink-soft) !important;
+}
+html[theme] .nav a:hover,
+html[theme] .nav a.active { color: var(--brand) !important; }
+html[theme] .nav svg { fill: currentColor; }
+
+/* ---- 次要文字：原来写死的灰蓝色，在暖色底上偏淡 ---- */
+html[theme] .label,
+html[theme] .meta,
+html[theme] .pd-tip,
+html[theme] .sk-tb-sub,
+html[theme] .toolbar-label,
+html[theme] .update-badge,
+html[theme] .sort-btn,
+html[theme] small {
+    color: var(--ink-faint) !important;
+}
+html[theme] .sort-btn.active {
+    color: var(--brand) !important;
+    border-color: var(--brand) !important;
+}
+html[theme] .hero-eyebrow { color: var(--brand) !important; opacity: .85; }
+
+/* ---- 数字徽标（about 页那种 01 / 02）---- */
+html[theme] .no { color: var(--brand) !important; }
+
+/* ---- 强调字 ---- */
+html[theme] .about-text b,
+html[theme] .about-text strong { color: var(--ink) !important; }
+
