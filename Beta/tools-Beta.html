@@ -858,9 +858,15 @@ html { -webkit-text-size-adjust: 100%; }
 .mt-fnlist{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
 .mt-fnrow{display:flex;align-items:center;gap:10px;}
 .mt-fnrow .lhs{
-  width:86px;flex:0 0 auto;padding:10px 10px;border-radius:8px;text-align:center;
+  width:104px;flex:0 0 auto;padding:10px 8px;border-radius:8px;text-align:center;
   background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.15);
-  color:var(--ink,#eaf0ff);font-family:ui-monospace,Consolas,monospace;font-size:.88rem;outline:none;}
+  color:var(--ink,#eaf0ff);font-family:ui-monospace,Consolas,monospace;
+  font-size:.86rem;outline:none;cursor:pointer;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-faint,#8fa0b8) 50%),
+                   linear-gradient(135deg,var(--ink-faint,#8fa0b8) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+  background-size:5px 5px, 5px 5px;background-repeat:no-repeat;padding-right:26px;}
+.mt-fnrow .lhs option{background:#111a2e;color:#eaf0ff;}
 .mt-fnrow .eq{color:var(--ink-faint,#8fa0b8);font-family:ui-monospace,monospace;flex:0 0 auto;}
 .mt-fnrow .rhs{
   flex:1;min-width:0;padding:10px 13px;border-radius:8px;
@@ -881,6 +887,7 @@ html { -webkit-text-size-adjust: 100%; }
   background:transparent;color:var(--ink-soft,#c7d2e8);
   border:1px dashed rgba(255,255,255,.3);}
 .mt-add:hover{background:rgba(255,255,255,.08);color:var(--ink,#eaf0ff);}
+.mt-add[disabled]{opacity:.35;cursor:not-allowed;}
   .mt-canvas-box canvas{height:300px;}
 }
 </style>
@@ -1039,7 +1046,7 @@ html { -webkit-text-size-adjust: 100%; }
 <section class="tl-panel" id="panelPlot">
     <div class="mt-card reveal">
         <h3>函数图像</h3>
-        <p class="hint">左边填 <b>y</b> 或 <b>f(x)</b>（也可以叫 f1(x)、g(x)，随便起名），右边填解析式。<b>x</b> 是自变量；支持 <code>sin cos tan asin acos atan sinh cosh tanh exp log ln sqrt abs floor ceil round sign min max pow</code>，幂用 <code>^</code> 或 <code>**</code>，常数 <code>pi</code> <code>e</code>。按「＋ 添加表达式」可以同时画多条，最多六条。例：<code>sin(x)/x</code>、<code>x^3-3*x</code>、<code>exp(-x^2)</code></p>
+        <p class="hint">左边下拉选这行叫什么（<b>y</b>、<b>f(x)</b>、<b>y1</b>、<b>f1(x)</b> …… 最多到 6），右边填解析式。<b>x</b> 是自变量；支持 <code>sin cos tan asin acos atan sinh cosh tanh exp log ln sqrt abs floor ceil round sign min max pow</code>，幂用 <code>^</code> 或 <code>**</code>，常数 <code>pi</code> <code>e</code>。按「＋ 添加表达式」可以同时画多条，最多六条。例：<code>sin(x)/x</code>、<code>x^3-3*x</code>、<code>exp(-x^2)</code></p>
         <div class="mt-field">
             <label>函数表达式 &nbsp;·&nbsp; 左边写 y 或 f(x)，右边写解析式</label>
             <div class="mt-fnlist" id="fnList"></div>
@@ -2661,7 +2668,7 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     var rows = document.querySelectorAll('#fnList .mt-fnrow');
     var lines = [];
     Array.prototype.forEach.call(rows, function (r) {
-      var lhs = r.querySelector('.lhs').value.trim() || 'y';
+      var lhs = r.querySelector('.lhs').value || 'y';
       var rhs = r.querySelector('.rhs').value.trim();
       if (rhs) lines.push({ lhs: lhs, rhs: rhs });
     });
@@ -2735,13 +2742,22 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
   });
 
   /* ---------- 表达式行的增删 ---------- */
+  /* 左边可以选的名字：y / f(x) / y1 / f1(x) … 到 6 */
+  var LHS_OPTS = ['y', 'f(x)'];
+  for (var _i = 1; _i <= 6; _i++) LHS_OPTS.push('y' + _i, 'f' + _i + '(x)');
+
   function addRow(lhs, rhs) {
     var row = document.createElement('div');
     row.className = 'mt-fnrow';
+    var n = fnList.querySelectorAll('.mt-fnrow').length;
+    /* 没指定就按行号自动挑：第二行给 y2，第三行给 y3 …… */
+    var pick = lhs || (n === 0 ? 'y' : ('y' + (n + 1)));
+    var opts = LHS_OPTS.map(function (o) {
+      return '<option value="' + o + '"' + (o === pick ? ' selected' : '') + '>' + o + '</option>';
+    }).join('');
     row.innerHTML =
       '<span class="dot"></span>' +
-      '<input class="lhs" spellcheck="false" value="' +
-        (lhs || 'y').replace(/"/g, '&quot;') + '">' +
+      '<select class="lhs" title="\u9009\u62E9\u8FD9\u6761\u66F2\u7EBF\u7684\u540D\u5B57">' + opts + '</select>' +
       '<span class="eq">=</span>' +
       '<input class="rhs" spellcheck="false" placeholder="\u4F8B\uFF1Asin(x)\u3001x^2-3\u3001exp(-x*x)" value="' +
         (rhs || '').replace(/"/g, '&quot;') + '">' +
@@ -2765,11 +2781,15 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     Array.prototype.forEach.call(rows, function (r) {
       r.querySelector('.del').disabled = rows.length <= 1;
     });
+    var addBtn = document.getElementById('fnAdd');
+    if (addBtn) addBtn.disabled = rows.length >= 6;
   }
   document.getElementById('fnAdd').addEventListener('click', function () {
     var n = fnList.querySelectorAll('.mt-fnrow').length;
-    var r = addRow('f' + (n + 1) + '(x)', '');
+    if (n >= 6) return;                       /* 颜色只有六种，最多六条 */
+    var r = addRow('', '');                    /* 名字按行号自动挑 */
     r.querySelector('.rhs').focus();
+    paintDots();
     draw();
   });
   if (draw && !window.__mtDraw) window.__mtDraw = draw;
@@ -2783,8 +2803,8 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     c.addEventListener('click', function () {
       var parts = c.dataset.preset.split('|');
       fnList.innerHTML = '';
-      parts.forEach(function (p, i) {
-        addRow(parts.length > 1 ? ('f' + (i + 1) + '(x)') : 'y', p);
+      parts.forEach(function (p) {
+        addRow('', p);                         /* 名字由 addRow 按行号挑 */
       });
       draw();
     });
