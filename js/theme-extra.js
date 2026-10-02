@@ -98,37 +98,37 @@
         '  .nb-glx-t::before,.nb-glx-t::after,.nb-glx-scan{animation:none;opacity:0;}',
         '}',
 
-        /* ---------- 墨韵 · 水墨山水 + 两竿竹 ---------- */
-        '.nb-ink{position:relative;padding:34px 30px;border-radius:12px;',
+        /* ---------- 墨韵 · 手写体 NB-CHANNEL ---------- */
+        '.nb-ink{position:relative;padding:40px 34px 52px;border-radius:12px;',
         '  background:linear-gradient(170deg,#faf7f0,#f4f0e6 60%,#efe9dd);',
         '  border:1px solid rgba(28,26,23,.14);overflow:hidden;}',
-        '.nb-ink-inner{display:grid;grid-template-columns:1fr 230px;gap:28px;align-items:center;}',
-        '.nb-ink svg{display:block;}',
-        /* 每一笔都是独立 path。默认【已经画好】，只有 .nb-ink-go 时才从零描一遍 ——
-           这样即使动画没触发，画也在，不会白板。 */
+        '.nb-ink-inner{display:grid;grid-template-columns:1fr 200px;gap:30px;align-items:center;}',
+        '.nb-ink svg{display:block;max-width:100%;height:auto;}',
+        /* 每一笔一条 path。默认【已经写好】，只有 .nb-ink-go 时才从零描一遍 ——
+           这样动画万一没触发，字也在，不会白板。 */
         '.nb-ink .st{fill:none !important;stroke:#1c1a17;stroke-linecap:round;',
-        '  stroke-linejoin:round;stroke-width:2.6;stroke-dasharray:var(--len,0);',
+        '  stroke-linejoin:round;stroke-width:7;stroke-dasharray:var(--len,0);',
         '  stroke-dashoffset:0;}',
-        '.nb-ink .st.thin{stroke-width:1.5;opacity:.7;}',
-        '.nb-ink .st.mid{stroke-width:2.6;}',
-        '.nb-ink .st.thick{stroke-width:5;}',
-        '.nb-ink .wash{opacity:.14;}',
-        /* 播动画时先藏起来再描 */
+        '.nb-ink .st.thin{stroke-width:5;opacity:.82;}',
+        '.nb-ink .st.mid{stroke-width:7;}',
+        '.nb-ink .st.thick{stroke-width:9;}',
         '.nb-ink-go .st{stroke-dashoffset:var(--len,0);',
-        '  animation:nbInk .95s cubic-bezier(.45,.05,.3,1) forwards;}',
+        '  animation:nbInk .72s cubic-bezier(.45,.05,.3,1) forwards;}',
         '@keyframes nbInk{to{stroke-dashoffset:0;}}',
-        '.nb-ink-seal{opacity:1;transform:rotate(-9deg);transform-origin:50% 50%;}',
-        '.nb-ink-go .nb-ink-seal{opacity:0;transform:scale(1.6) rotate(-16deg);',
-        '  animation:nbSeal2 .4s cubic-bezier(.2,1.7,.4,1) 2.3s forwards;}',
-        '@keyframes nbSeal2{to{opacity:1;transform:scale(1) rotate(-9deg);}}',
+        /* 印章：默认就盖着，播动画时从放大状态落定 */
+        '.nb-ink-seal{opacity:1;transform:rotate(-8deg);transform-origin:50% 50%;}',
+        '.nb-ink-go .nb-ink-seal{opacity:0;transform:scale(1.7) rotate(-18deg);',
+        '  animation:nbSeal2 .38s cubic-bezier(.2,1.7,.4,1) 2.6s forwards;}',
+        '@keyframes nbSeal2{to{opacity:1;transform:scale(1) rotate(-8deg);}}',
         '.nb-ink-side{text-align:right;}',
-        '.nb-ink-side .t{font-size:1.25rem;font-weight:800;letter-spacing:6px;color:#1c1a17;}',
-        '.nb-ink-side .d{margin-top:12px;font-size:.76rem;letter-spacing:1.5px;',
+        '.nb-ink-side .t{font-size:1.2rem;font-weight:800;letter-spacing:6px;color:#1c1a17;}',
+        '.nb-ink-side .d{margin-top:12px;font-size:.74rem;letter-spacing:1.5px;',
         '  color:#6b6459;line-height:2.1;}',
         '.nb-ink-btns{margin-top:18px;display:flex;gap:8px;justify-content:flex-end;}',
         '.nb-ink-btn{padding:7px 15px;border-radius:2px;cursor:pointer;font-family:inherit;',
         '  font-size:.72rem;letter-spacing:1.5px;background:#8c2f23;color:#faf7f0;border:none;}',
         '.nb-ink-btn:hover{background:#6d241a;}',
+        '.nb-ink-cap{margin-top:14px;font-size:.7rem;letter-spacing:4px;color:#8b8375;}',
         '@media(max-width:860px){',
         '  .nb-ink-inner{grid-template-columns:1fr;}',
         '  .nb-ink-side{text-align:center;}',
@@ -136,8 +136,8 @@
         '}',
         '@media(prefers-reduced-motion:reduce){',
         '  .nb-ink .st{stroke-dashoffset:0;animation:none;}',
-        '  .nb-ink-seal{opacity:1;transform:rotate(-9deg);animation:none;}',
-        '}'        ,
+        '  .nb-ink-seal{opacity:1;transform:rotate(-8deg);animation:none;}',
+        '}',
 
         /* ---------- 🥮 月相 + 玉兔 ---------- */
         '.nb-moon{display:grid;grid-template-columns:auto 1fr;gap:38px;align-items:center;',
@@ -447,85 +447,101 @@
     };
 
     /* ============================================================
-       墨韵 · 水墨山水 + 两竿竹
-       一笔一笔描出来：远山三重轮廓 → 山脚淡墨 → 竹竿竹节 → 竹枝 → 竹叶，
-       最后落款盖印。全部是 SVG path，靠 dasharray 从无到有。
-       （汉字轮廓需要字体文件，这里不硬凑，改成画水墨。）
+       墨韵 · 手写体 NB-CHANNEL
+       每个字母 2~4 笔，全部手写成单线路径，按笔顺逐笔描出来，
+       最后落款盖印。和主题名「墨韵」最搭的一套。
        ============================================================ */
     var INK = {
         mount: function (box) {
-            /* 每条 d 是一笔，dl 是它开始的秒数，按顺序递增，读起来像在运笔 */
-            var STROKES = [
-                /* 远山：三重轮廓，越远越淡 */
-                { d: 'M10 168 C58 108 96 96 138 152 C160 180 176 186 196 174', c: 'thin', dl: 0.00 },
-                { d: 'M52 168 C92 126 122 118 152 158', c: 'thin', dl: 0.22 },
-                { d: 'M118 170 C158 122 196 112 240 150 C266 174 288 180 312 168', c: 'mid', dl: 0.44 },
-                { d: 'M176 172 C206 142 238 136 268 160', c: 'thin', dl: 0.62 },
-                /* 山脚一抹淡墨 */
-                { d: 'M24 178 C86 172 150 176 214 176 C264 176 296 178 330 172', c: 'thin', dl: 0.80 },
-                /* 竹竿两节 */
-                { d: 'M352 42 L352 108', c: 'thick', dl: 1.00 },
-                { d: 'M352 122 L352 186', c: 'thick', dl: 1.16 },
-                /* 竹节 */
-                { d: 'M344 112 L360 112', c: 'mid', dl: 1.32 },
-                { d: 'M344 190 L360 190', c: 'mid', dl: 1.40 },
-                /* 竹枝 */
-                { d: 'M352 78 C374 70 384 58 390 44', c: 'mid', dl: 1.52 },
-                { d: 'M352 132 C376 132 388 140 396 152', c: 'mid', dl: 1.66 },
-                { d: 'M352 58 C332 46 322 34 318 20', c: 'mid', dl: 1.78 },
-                /* 竹叶，一叶一笔 */
-                { d: 'M390 44 C404 34 416 32 428 36', c: 'mid', dl: 1.90 },
-                { d: 'M390 44 C400 58 404 70 402 84', c: 'mid', dl: 1.98 },
-                { d: 'M396 152 C412 156 424 166 430 180', c: 'mid', dl: 2.06 },
-                { d: 'M396 152 C410 142 422 138 436 138', c: 'thin', dl: 2.14 },
-                { d: 'M318 20 C306 12 296 10 284 12', c: 'mid', dl: 2.22 },
-                { d: 'M318 20 C314 6 312 -6 314 -16', c: 'mid', dl: 2.28 },
-                { d: 'M352 78 C340 88 332 100 330 112', c: 'thin', dl: 2.34 },
-                { d: 'M352 132 C344 122 334 116 322 114', c: 'thin', dl: 2.40 }
-            ];
+            /* 手写体布局：基线 y=150，字高 44~112，字宽约 56，字距 20。
+               每笔 = { d, w(粗细), dl(延迟秒) }                      */
+            var G = [];   /* 收集所有笔画 */
+            function push(d, w, dl) { G.push({ d: d, w: w, dl: dl }); }
 
-            var WASH =
-                '<g class="wash">' +
-                  '<ellipse cx="150" cy="180" rx="132" ry="12" fill="#1c1a17" opacity=".07"/>' +
-                  '<ellipse cx="354" cy="196" rx="26" ry="6" fill="#1c1a17" opacity=".1"/>' +
-                '</g>';
+            /* ---- N ---- */
+            push('M30 150 L30 40', 'thick', 0.00);
+            push('M30 40 L86 150', 'mid',   0.13);
+            push('M86 150 L86 40', 'thick', 0.26);
 
-            var paths = STROKES.map(function (o, i) {
-                return '<path class="st ' + o.c + '" fill="none" d="' + o.d + '" data-i="' + i + '" ' +
-                       'style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
+            /* ---- B ---- */
+            push('M118 150 L118 40', 'thick', 0.39);
+            push('M118 40 C176 34 186 72 150 94', 'mid', 0.52);
+            push('M150 94 C196 98 198 146 118 150', 'mid', 0.65);
+
+            /* ---- 连字符 ---- */
+            push('M206 100 L256 100', 'thin', 0.78);
+
+            /* ---- C ---- */
+            push('M328 52 C310 30 268 34 268 95 C268 156 310 160 328 138', 'mid', 0.91);
+
+            /* ---- H ---- */
+            push('M354 150 L354 40', 'thick', 1.04);
+            push('M354 96 L410 96', 'mid',   1.17);
+            push('M410 150 L410 40', 'thick', 1.30);
+
+            /* ---- A ---- */
+            push('M434 150 L468 40', 'thick', 1.43);
+            push('M468 40 L502 150', 'thick', 1.56);
+            push('M446 112 L490 112', 'mid',  1.69);
+
+            /* ---- N ---- */
+            push('M528 150 L528 40', 'thick', 1.82);
+            push('M528 40 L584 150', 'mid',   1.95);
+            push('M584 150 L584 40', 'thick', 2.08);
+
+            /* ---- N ---- */
+            push('M612 150 L612 40', 'thick', 2.21);
+            push('M612 40 L668 150', 'mid',   2.34);
+            push('M668 150 L668 40', 'thick', 2.47);
+
+            /* ---- E ---- */
+            push('M700 150 L700 40', 'thick', 2.60);
+            push('M700 40 L750 40', 'mid',   2.70);
+            push('M700 96 L742 96', 'mid',   2.80);
+            push('M700 150 L750 150', 'mid', 2.90);
+
+            /* ---- L ---- */
+            push('M778 40 L778 150', 'thick', 3.02);
+            push('M778 150 L826 150', 'mid',  3.14);
+
+            var paths = G.map(function (o, i) {
+                return '<path class="st ' + o.w + '" fill="none" d="' + o.d + '" ' +
+                       'data-i="' + i + '" style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
             }).join('');
 
             var SEAL =
-                '<svg class="nb-ink-seal" width="72" height="72" viewBox="0 0 72 72" ' +
-                  'style="position:absolute;right:34px;bottom:30px">' +
-                  '<rect x="2" y="2" width="68" height="68" rx="4" fill="#8c2f23"/>' +
-                  '<rect x="8" y="8" width="56" height="56" rx="2" fill="none" ' +
-                    'stroke="#faf7f0" stroke-width="2.4"/>' +
+                '<svg class="nb-ink-seal" width="70" height="70" viewBox="0 0 70 70">' +
+                  '<rect x="2" y="2" width="66" height="66" rx="4" fill="#8c2f23"/>' +
+                  '<rect x="8" y="8" width="54" height="54" rx="2" fill="none" ' +
+                    'stroke="#faf7f0" stroke-width="2.2"/>' +
                   '<g fill="#faf7f0" font-family="ui-monospace,Consolas,monospace" ' +
-                    'font-size="20" font-weight="800" text-anchor="middle">' +
-                    '<text x="24" y="32">N</text>' +
-                    '<text x="48" y="32">B</text>' +
-                    '<text x="24" y="56">\u9891</text>' +
-                    '<text x="48" y="56">\u9053</text>' +
+                    'font-size="19" font-weight="800" text-anchor="middle">' +
+                    '<text x="23" y="31">N</text>' +
+                    '<text x="47" y="31">B</text>' +
+                    '<text x="23" y="55">\u9891</text>' +
+                    '<text x="47" y="55">\u9053</text>' +
                   '</g>' +
                 '</svg>';
 
             box.innerHTML =
                 '<div class="nb-ink" data-root>' +
                   '<div class="nb-ink-inner">' +
-                    '<div><svg width="440" height="210" viewBox="0 0 440 210" ' +
-                      'style="max-width:100%;height:auto">' +
-                      WASH + '<g>' + paths + '</g>' +
-                    '</svg></div>' +
+                    '<div>' +
+                      '<svg width="856" height="200" viewBox="0 0 856 200">' +
+                        '<g>' + paths + '</g>' +
+                      '</svg>' +
+                      '<div class="nb-ink-cap">\u4E00\u7B14\u4E00\u753B \u00B7 \u5171 ' +
+                        G.length + ' \u7B14</div>' +
+                    '</div>' +
                     '<div class="nb-ink-side">' +
                       '<div class="t">\u58A8\u97F5</div>' +
-                      '<div class="d">\u8FDC\u5C71 \u00B7 \u4E24\u7AF9 \u00B7 \u4E00\u65B9\u5370<br>' +
-                        '\u4E00\u7B14\u4E00\u753B\u63CF\u51FA\u6765\u7684</div>' +
+                      '<div class="d">\u624B\u5199\u4F53<br>\u9010\u7B14\u63CF\u51FA</div>' +
                       '<div class="nb-ink-btns">' +
-                        '<button class="nb-ink-btn" data-again>\u91CD\u753B</button>' +
+                        '<button class="nb-ink-btn" data-again>\u91CD\u5199</button>' +
                       '</div>' +
                     '</div>' +
-                  '</div>' + SEAL +
+                  '</div>' +
+                  '<div style="position:absolute;right:34px;bottom:30px">' + SEAL + '</div>' +
                 '</div>';
 
             var root = box.querySelector('[data-root]');
