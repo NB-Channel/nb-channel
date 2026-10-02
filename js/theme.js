@@ -110,9 +110,13 @@
            用途一是方便调试，二是可以让别人分享「某个主题下的这一页」。 */
         try {
             var m = /[?&]theme=([a-z]+)/i.exec(location.search);
+            /* 调试用：?theme=midautumn&preview=1
+               可以无视节日的日期窗口直接预览，方便平时调样式。
+               普通访客不带这个参数，看到的仍然是正常的窗口限制。 */
+            var preview = /[?&]preview=1/i.test(location.search);
             if (m) {
                 var q = m[1].toLowerCase();
-                if (BY_ID[q] && available(q)) return q;
+                if (BY_ID[q] && (preview || available(q))) return q;
                 if (q === 'default') return 'default';
             }
         } catch (e) {}
