@@ -76,7 +76,7 @@
 <meta name="description" content="NB频道化学工具——118 元素周期表、摩尔质量计算、化学方程式配平、纯物质与溶液换算,全部在浏览器内即时完成。">
 <meta name="theme-color" content="#0f172a">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
-<title>化学工具 - NB频道官网</title>
+<title>工具 · NB频道</title>
 <script>
     (function () {
         try {
@@ -771,7 +771,7 @@ html { -webkit-text-size-adjust: 100%; }
                 <a href="achievements-Beta.html">🏆 成就墙</a>
                 <a href="lottery-Beta.html">📅 签到 · 转盘</a>
                 <a href="lottery_records-Beta.html">🎰 抽奖记录</a>
-                <a href="tools-Beta.html">🔬 化学工具</a><a href="math-Beta.html">📈 理科工具</a>
+                <a href="tools-Beta.html">🔧 工具</a>
                 <a href="product_share-Beta.html">📦 作品分享</a>
                 <a href="comments-Beta.html">💬 评论区</a>
                 <a href="ban-Beta.html">🚫 小黑屋</a>
@@ -801,7 +801,62 @@ html { -webkit-text-size-adjust: 100%; }
       .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
       html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
       @media (max-width:900px){.nav-scan{display:flex}}
-    </style>
+    
+/* ==== 从理科工具页并过来的样式 ==== */
+/* ============================================================
+   理科工具页（函数图像 + 加解密）
+   ============================================================ */
+.mt-tabs{display:flex;gap:10px;flex-wrap:wrap;max-width:1180px;margin:0 auto 30px;padding:0 24px;}
+.mt-tab{padding:11px 22px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:.88rem;
+  letter-spacing:1px;background:rgba(255,255,255,.06);color:var(--ink-soft,#c7d2e8);
+  border:1px solid rgba(255,255,255,.12);transition:.25s;}
+.mt-tab:hover{background:rgba(255,255,255,.12);}
+.mt-tab.active{background:var(--brand,#3b82f6);color:#fff;border-color:transparent;}
+.mt-wrap{max-width:1180px;margin:0 auto;padding:0 24px 90px;}
+.mt-card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;padding:26px 26px 30px;margin-bottom:22px;}
+.mt-card h3{margin:0 0 6px;font-size:1.05rem;color:var(--ink,#eaf0ff);letter-spacing:1px;}
+.mt-card .hint{margin:0 0 18px;font-size:.78rem;line-height:1.9;color:var(--ink-faint,#8fa0b8);}
+.mt-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.mt-field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px;}
+.mt-field label{font-size:.7rem;letter-spacing:1.5px;color:var(--ink-faint,#8fa0b8);}
+.mt-field input,.mt-field select,.mt-field textarea{padding:10px 13px;border-radius:8px;
+  background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.15);
+  color:var(--ink,#eaf0ff);font-family:inherit;font-size:.88rem;outline:none;}
+.mt-field input:focus,.mt-field textarea:focus{border-color:var(--brand,#3b82f6);}
+.mt-field textarea{resize:vertical;min-height:104px;line-height:1.7;
+  font-family:ui-monospace,Consolas,monospace;font-size:.84rem;}
+.mt-btn{padding:10px 20px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.82rem;
+  letter-spacing:1px;background:var(--brand,#3b82f6);color:#fff;border:none;transition:.2s;}
+.mt-btn:hover{filter:brightness(1.12);}
+.mt-btn.ghost{background:transparent;color:var(--ink-soft,#c7d2e8);
+  border:1px solid rgba(255,255,255,.2);}
+.mt-btn.ghost:hover{background:rgba(255,255,255,.1);}
+.mt-canvas-box{position:relative;margin-top:18px;border-radius:12px;overflow:hidden;
+  background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);}
+.mt-canvas-box canvas{display:block;width:100%;height:420px;cursor:crosshair;}
+.mt-readout{position:absolute;right:12px;top:12px;padding:6px 12px;border-radius:7px;
+  background:rgba(0,0,0,.62);color:#fff;font-size:.76rem;letter-spacing:.5px;
+  font-family:ui-monospace,Consolas,monospace;pointer-events:none;}
+.mt-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:.76rem;}
+.mt-legend span{display:inline-flex;align-items:center;gap:6px;color:var(--ink-soft,#c7d2e8);}
+.mt-legend i{width:16px;height:3px;border-radius:2px;display:inline-block;}
+.mt-out{margin-top:14px;padding:14px 16px;border-radius:9px;background:rgba(0,0,0,.3);
+  border:1px solid rgba(255,255,255,.1);font-family:ui-monospace,Consolas,monospace;
+  font-size:.84rem;line-height:1.8;color:var(--ink,#eaf0ff);word-break:break-all;
+  min-height:52px;white-space:pre-wrap;}
+.mt-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px;}
+.mt-chip{padding:6px 13px;border-radius:20px;cursor:pointer;font-size:.74rem;letter-spacing:.5px;
+  background:rgba(255,255,255,.07);color:var(--ink-soft,#c7d2e8);
+  border:1px solid rgba(255,255,255,.13);}
+.mt-chip:hover{background:rgba(255,255,255,.15);}
+.mt-chip.on{background:var(--brand,#3b82f6);color:#fff;border-color:transparent;}
+.mt-err{color:#ff8f8f;}
+@media(max-width:700px){
+  .mt-card{padding:20px 18px 24px;}
+  .mt-canvas-box canvas{height:300px;}
+}
+</style>
     <script>/* 扫码入口只在 APP 里显示。旧版 APP 也显示 —— 点进去 scan-Beta.html 会提示他更新 */
     (function(){try{if(!/NBChannelApp/i.test(navigator.userAgent||"")){var b=document.getElementById("navScanBtn");if(b)b.style.display="none";}}catch(e){}})();</script>
 
@@ -825,12 +880,14 @@ html { -webkit-text-size-adjust: 100%; }
 <header class="vhero">
     <div class="vhero-inner">
         <div class="hero-copy">
-            <span class="hero-eyebrow">CHEM LAB · 理科工具箱</span>
-            <h1>化学<span class="light">工具</span></h1>
-            <p class="vhero-sub">118 种元素周期表、摩尔质量、方程式配平与溶液换算——全部在浏览器里即时完成。支持括号、下标、结晶水合物,配平精确到有理数</p>
+            <span class="hero-eyebrow">TOOLBOX · 理科工具箱</span>
+            <h1>理科<span class="light">工具</span></h1>
+            <p class="vhero-sub">化学和数学两套工具放在一起：118 种元素周期表、摩尔质量、方程式配平与溶液换算，外加函数图像绘制和文本加解密——全部在浏览器里即时完成，不上传、不留存</p>
             <div class="vhero-actions">
                 <a class="hero-link" href="#tabPeriodic">元素周期表 ↓</a>
                 <a class="hero-link" href="#tabCalc">化学计算器 ↓</a>
+                <a class="hero-link" href="#tabPlot">函数图像 ↓</a>
+                <a class="hero-link" href="#tabCode">加解密 ↓</a>
             </div>
         </div>
         <div class="pd-stats">
@@ -856,6 +913,8 @@ html { -webkit-text-size-adjust: 100%; }
     <div class="tl-tabs reveal">
         <button class="tl-tab active" id="tabPeriodic" type="button">⚗️ 元素周期表</button>
         <button class="tl-tab" id="tabCalc" type="button">🧮 化学计算器</button>
+        <button class="tl-tab" id="tabPlot" type="button">📈 函数图像</button>
+        <button class="tl-tab" id="tabCode" type="button">🔐 加解密</button>
     </div>
 
     <!-- 周期表面板 -->
@@ -948,6 +1007,92 @@ html { -webkit-text-size-adjust: 100%; }
             </div>
         </div>
     </section>
+
+<!-- ==== 函数图像 ==== -->
+<section class="tl-panel" id="panelPlot">
+    <div class="mt-card reveal">
+        <h3>函数图像</h3>
+        <p class="hint">一行一个函数，最多六条同时画。<b>x</b> 是自变量；支持 <code>sin cos tan asin acos atan sinh cosh tanh exp log ln sqrt abs floor ceil round sign min max pow</code>，幂用 <code>^</code> 或 <code>**</code>，常数 <code>pi</code> <code>e</code>。例：<code>sin(x)/x</code>、<code>x^3-3*x</code>、<code>exp(-x^2)</code></p>
+        <div class="mt-field">
+            <label>函数表达式</label>
+            <textarea id="fnInput" spellcheck="false">sin(x)
+x^3/8 - x
+exp(-x*x/4)</textarea>
+        </div>
+        <div class="mt-row" style="margin-top:16px">
+            <div class="mt-field" style="max-width:130px">
+                <label>x 最小</label><input id="xMin" value="-8">
+            </div>
+            <div class="mt-field" style="max-width:130px">
+                <label>x 最大</label><input id="xMax" value="8">
+            </div>
+            <div class="mt-field" style="max-width:130px">
+                <label>y 最小</label><input id="yMin" value="-3">
+            </div>
+            <div class="mt-field" style="max-width:130px">
+                <label>y 最大</label><input id="yMax" value="3">
+            </div>
+            <button class="mt-btn" id="drawBtn" style="align-self:flex-end">重新绘制</button>
+            <button class="mt-btn ghost" id="resetView" style="align-self:flex-end">复位视野</button>
+        </div>
+        <div class="mt-chips">
+            <span class="mt-chip" data-preset="sin(x)|cos(x)">sin + cos</span>
+            <span class="mt-chip" data-preset="sin(x)/x">sin(x)/x</span>
+            <span class="mt-chip" data-preset="x^2|sqrt(abs(x))">x² 与 √|x|</span>
+            <span class="mt-chip" data-preset="exp(-x*x/2)/sqrt(2*pi)">正态分布</span>
+            <span class="mt-chip" data-preset="tan(x)">tan(x)</span>
+            <span class="mt-chip" data-preset="log(abs(x))">log|x|</span>
+        </div>
+        <div class="mt-canvas-box">
+            <canvas id="plotCanvas"></canvas>
+            <div class="mt-readout" id="readout">把鼠标移到图上</div>
+        </div>
+        <div class="mt-legend" id="legend"></div>
+        <div class="mt-out" id="plotMsg" style="display:none"></div>
+    </div>
+</section>
+
+<section class="tl-panel" id="panelCode">
+    <div class="mt-card reveal">
+        <h3>加解密 / 编码转换</h3>
+        <p class="hint">选一种方式，左边输入右边出结果。全部在本地算，不联网、不留存。哈希是单向的，不能反解。</p>
+        <div class="mt-chips" id="codeChips">
+            <span class="mt-chip on" data-m="base64">Base64</span>
+            <span class="mt-chip" data-m="url">URL 编码</span>
+            <span class="mt-chip" data-m="hex">十六进制</span>
+            <span class="mt-chip" data-m="caesar">凯撒密码</span>
+            <span class="mt-chip" data-m="vigenere">维吉尼亚</span>
+            <span class="mt-chip" data-m="morse">摩斯电码</span>
+            <span class="mt-chip" data-m="rot13">ROT13</span>
+            <span class="mt-chip" data-m="reverse">反转</span>
+            <span class="mt-chip" data-m="sha256">SHA-256</span>
+        </div>
+        <div class="mt-row" id="keyRow" style="margin-top:16px;display:none">
+            <div class="mt-field" style="max-width:200px">
+                <label id="keyLabel">位移量</label>
+                <input id="codeKey" value="3">
+            </div>
+        </div>
+        <div class="mt-row" style="margin-top:16px;align-items:stretch">
+            <div class="mt-field">
+                <label>输入</label>
+                <textarea id="codeIn" spellcheck="false" placeholder="在这里输入……">NB频道 NoBook Channel</textarea>
+            </div>
+            <div class="mt-field">
+                <label>输出</label>
+                <textarea id="codeOut" spellcheck="false" readonly></textarea>
+            </div>
+        </div>
+        <div class="mt-row" style="margin-top:14px">
+            <button class="mt-btn" id="encBtn">加密 / 编码 →</button>
+            <button class="mt-btn ghost" id="decBtn">← 解密 / 解码</button>
+            <button class="mt-btn ghost" id="swapBtn">结果移到输入</button>
+            <button class="mt-btn ghost" id="copyBtn">复制结果</button>
+            <button class="mt-btn ghost" id="clearBtn">清空</button>
+        </div>
+        <div class="mt-out" id="codeMsg" style="display:none"></div>
+    </div>
+</section>
 </main>
 
 <!-- 页脚 -->
@@ -959,7 +1104,7 @@ html { -webkit-text-size-adjust: 100%; }
         </div>
         <div>
             <h5>功能</h5>
-            <a href="stock-Beta.html">虚拟股票</a><a href="bank-Beta.html">NB银行</a><a href="comments-Beta.html">评论区</a><a href="shop-Beta.html">NB商店</a><a href="tools-Beta.html">化学工具</a><a href="math-Beta.html">理科工具</a><a href="titles-Beta.html">称号系统</a><a href="feedback-Beta.html">漏洞/建议反馈</a>
+            <a href="stock-Beta.html">虚拟股票</a><a href="bank-Beta.html">NB银行</a><a href="comments-Beta.html">评论区</a><a href="shop-Beta.html">NB商店</a><a href="tools-Beta.html">工具</a><a href="titles-Beta.html">称号系统</a><a href="feedback-Beta.html">漏洞/建议反馈</a>
         </div>
         <div>
             <h5>友商</h5>
@@ -1001,7 +1146,7 @@ html { -webkit-text-size-adjust: 100%; }
         <a class="d-item" href="achievements-Beta.html">成就墙</a>
         <a class="d-item" href="lottery-Beta.html">签到 · 转盘</a>
         <a class="d-item" href="lottery_records-Beta.html">抽奖记录</a>
-        <a class="d-item" href="tools-Beta.html">化学工具</a><a class="d-item" href="math-Beta.html">理科工具</a>
+        <a class="d-item" href="tools-Beta.html">🔧 工具</a>
         <a class="d-item" href="product_share-Beta.html">作品分享</a>
         <a class="d-item" href="comments-Beta.html">评论区</a>
         <a class="d-item" href="ban-Beta.html">小黑屋</a>
@@ -1832,13 +1977,23 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
 
     // ========== Tab 切换 ==========
     function switchToolTab(which) {
-        document.getElementById('tabPeriodic').classList.toggle('active', which === 'periodic');
-        document.getElementById('tabCalc').classList.toggle('active', which === 'calc');
-        document.getElementById('panelPeriodic').classList.toggle('active', which === 'periodic');
-        document.getElementById('panelCalc').classList.toggle('active', which === 'calc');
+        var ids = ['Periodic', 'Calc', 'Plot', 'Code'];
+        var keys = ['periodic', 'calc', 'plot', 'code'];
+        ids.forEach(function (id, i) {
+            var t = document.getElementById('tab' + id);
+            var p = document.getElementById('panel' + id);
+            if (t) t.classList.toggle('active', which === keys[i]);
+            if (p) p.classList.toggle('active', which === keys[i]);
+        });
+        /* 切到函数图像时按当前宽度重画一次 —— canvas 在隐藏状态下量不到尺寸 */
+        if (which === 'plot' && window.__mtDraw) setTimeout(window.__mtDraw, 40);
     }
-    document.getElementById('tabPeriodic').addEventListener('click', function () { switchToolTab('periodic'); });
-    document.getElementById('tabCalc').addEventListener('click', function () { switchToolTab('calc'); });
+    ['Periodic', 'Calc', 'Plot', 'Code'].forEach(function (id) {
+        var b = document.getElementById('tab' + id);
+        if (b) b.addEventListener('click', function () {
+            switchToolTab(id.toLowerCase());
+        });
+    });
 
     // Hero 区快捷链接:跳转同时自动切换到对应面板
     document.querySelectorAll('.vhero .hero-link').forEach(function (a) {
@@ -1846,6 +2001,8 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
             var h = a.getAttribute('href') || '';
             if (h === '#tabPeriodic') switchToolTab('periodic');
             else if (h === '#tabCalc') switchToolTab('calc');
+            else if (h === '#tabPlot') switchToolTab('plot');
+            else if (h === '#tabCode') switchToolTab('code');
         });
     });
 
@@ -2331,5 +2488,399 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
 })();
 </script>
 <script defer src="../js/science-tips.js?v=23"></script>
+<script>
+(function () {
+  'use strict';
+
+
+  /* ============================================================
+     标签切换
+     ============================================================ */
+  var tabs = document.querySelectorAll('.mt-tab');
+  var panels = document.querySelectorAll('.mt-panel');
+  function go(name) {
+    Array.prototype.forEach.call(tabs, function (t) {
+      t.classList.toggle('active', t.dataset.tab === name);
+    });
+    Array.prototype.forEach.call(panels, function (p) {
+      p.classList.toggle('active', p.dataset.panel === name);
+    });
+    if (name === 'plot') setTimeout(draw, 40);
+  }
+  Array.prototype.forEach.call(tabs, function (t) {
+    t.addEventListener('click', function () {
+      go(t.dataset.tab);
+      var h = t.dataset.tab === 'plot' ? 'tabPlot' : 'tabCode';
+      var el = document.getElementById(h);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  /* ============================================================
+     ① 函数图像
+     ------------------------------------------------------------
+     安全：不用 eval 直接跑原文。先白名单过滤字符，再把 ^ 换成 **、
+     把函数名换成 Math.xxx，最后用 Function 构造。
+     白名单挡掉了分号、方括号、引号、大括号，跑不出任意代码。
+     ============================================================ */
+  var COLORS = ['#3b82f6', '#f472b6', '#22d3ee', '#facc15', '#4ade80', '#a78bfa'];
+  var canvas = document.getElementById('plotCanvas');
+  var ctx = canvas.getContext('2d');
+  var readout = document.getElementById('readout');
+  var legend = document.getElementById('legend');
+  var plotMsg = document.getElementById('plotMsg');
+  var view = { xmin: -8, xmax: 8, ymin: -3, ymax: 3 };
+  var curves = [];
+
+  var SAFE = /^[0-9xXeEpiPI+\-*/^().,\s a-zA-Z]*$/;
+  var REPL = [
+    [/\barcsin\b/g, 'asin'], [/\barccos\b/g, 'acos'], [/\barctan\b/g, 'atan'],
+    [/\bln\b/g, 'log'], [/\bpi\b/gi, 'PI'],
+    [/\bsin\b/g, 'Math.sin'], [/\bcos\b/g, 'Math.cos'], [/\btan\b/g, 'Math.tan'],
+    [/\basin\b/g, 'Math.asin'], [/\bacos\b/g, 'Math.acos'], [/\batan\b/g, 'Math.atan'],
+    [/\bsinh\b/g, 'Math.sinh'], [/\bcosh\b/g, 'Math.cosh'], [/\btanh\b/g, 'Math.tanh'],
+    [/\bexp\b/g, 'Math.exp'], [/\blog\b/g, 'Math.log'], [/\bsqrt\b/g, 'Math.sqrt'],
+    [/\babs\b/g, 'Math.abs'], [/\bfloor\b/g, 'Math.floor'], [/\bceil\b/g, 'Math.ceil'],
+    [/\bround\b/g, 'Math.round'], [/\bsign\b/g, 'Math.sign'],
+    [/\bmin\b/g, 'Math.min'], [/\bmax\b/g, 'Math.max'], [/\bpow\b/g, 'Math.pow'],
+    [/\bPI\b/g, 'Math.PI'], [/\be\b(?![a-zA-Z])/g, 'Math.E']
+  ];
+
+  function compile(line) {
+    var src = line.trim();
+    if (!src) return null;
+    if (!SAFE.test(src)) throw new Error('含有不认识的字符');
+    src = src.replace(/\^/g, '**');
+    REPL.forEach(function (r) { src = src.replace(r[0], r[1]); });
+    var fn = new Function('x', 'return (' + src + ');');
+    fn(1);                       /* 先试跑一次，语法错当场抛 */
+    return fn;
+  }
+
+  function readView() {
+    function num(id, dft) {
+      var v = parseFloat(document.getElementById(id).value);
+      return isFinite(v) ? v : dft;
+    }
+    view.xmin = num('xMin', -8); view.xmax = num('xMax', 8);
+    view.ymin = num('yMin', -3); view.ymax = num('yMax', 3);
+    if (view.xmax <= view.xmin) view.xmax = view.xmin + 1;
+    if (view.ymax <= view.ymin) view.ymax = view.ymin + 1;
+  }
+
+  function toPx(x, y, W, H) {
+    return [
+      (x - view.xmin) / (view.xmax - view.xmin) * W,
+      H - (y - view.ymin) / (view.ymax - view.ymin) * H
+    ];
+  }
+
+  function draw() {
+    readView();
+    var W = canvas.clientWidth, H = canvas.clientHeight;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    /* 底 */
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(8,12,24,.55)';
+    ctx.fillRect(0, 0, W, H);
+
+    /* 网格：步长按视野自动挑 1 / 2 / 5 × 10^n */
+    function step(range) {
+      var raw = range / 10;
+      var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+      var n = raw / mag;
+      return (n < 1.5 ? 1 : n < 3.5 ? 2 : n < 7.5 ? 5 : 10) * mag;
+    }
+    var sx = step(view.xmax - view.xmin), sy = step(view.ymax - view.ymin);
+    ctx.strokeStyle = 'rgba(255,255,255,.07)';
+    ctx.lineWidth = 1;
+    var i, p;
+    for (i = Math.ceil(view.xmin / sx); i * sx <= view.xmax; i++) {
+      p = toPx(i * sx, 0, W, H)[0];
+      ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, H); ctx.stroke();
+    }
+    for (i = Math.ceil(view.ymin / sy); i * sy <= view.ymax; i++) {
+      p = toPx(0, i * sy, W, H)[1];
+      ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(W, p); ctx.stroke();
+    }
+
+    /* 坐标轴 */
+    ctx.strokeStyle = 'rgba(255,255,255,.34)';
+    ctx.lineWidth = 1.4;
+    var ox = toPx(0, 0, W, H);
+    if (ox[0] >= 0 && ox[0] <= W) { ctx.beginPath(); ctx.moveTo(ox[0], 0); ctx.lineTo(ox[0], H); ctx.stroke(); }
+    if (ox[1] >= 0 && ox[1] <= H) { ctx.beginPath(); ctx.moveTo(0, ox[1]); ctx.lineTo(W, ox[1]); ctx.stroke(); }
+
+    /* 刻度数字 */
+    ctx.fillStyle = 'rgba(200,215,240,.55)';
+    ctx.font = '11px ui-monospace,monospace';
+    ctx.textAlign = 'center';
+    for (i = Math.ceil(view.xmin / sx); i * sx <= view.xmax; i++) {
+      if (Math.abs(i * sx) < 1e-9) continue;
+      p = toPx(i * sx, 0, W, H)[0];
+      ctx.fillText(+(i * sx).toFixed(4), p, Math.min(H - 4, Math.max(12, ox[1] + 14)));
+    }
+    ctx.textAlign = 'right';
+    for (i = Math.ceil(view.ymin / sy); i * sy <= view.ymax; i++) {
+      if (Math.abs(i * sy) < 1e-9) continue;
+      p = toPx(0, i * sy, W, H)[1];
+      ctx.fillText(+(i * sy).toFixed(4), Math.min(W - 6, Math.max(30, ox[0] - 8)), p + 4);
+    }
+
+    /* 曲线 */
+    curves = [];
+    var lines = document.getElementById('fnInput').value.split('\n');
+    var errs = [], ci = 0;
+    legend.innerHTML = '';
+    lines.forEach(function (line) {
+      if (!line.trim()) return;
+      var fn;
+      try { fn = compile(line); } catch (e) { errs.push(line.trim() + ' —— ' + e.message); return; }
+      if (!fn) return;
+      var color = COLORS[ci % COLORS.length]; ci++;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      var started = false, prevY = null;
+      for (var px = 0; px <= W; px++) {
+        var x = view.xmin + (px / W) * (view.xmax - view.xmin);
+        var y;
+        try { y = fn(x); } catch (e) { y = NaN; }
+        if (typeof y !== 'number' || !isFinite(y)) { started = false; prevY = null; continue; }
+        var py = H - (y - view.ymin) / (view.ymax - view.ymin) * H;
+        /* 断点跳变（如 tan、1/x）不要连成竖线 */
+        if (started && prevY !== null && Math.abs(py - prevY) > H * 1.6) started = false;
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+        prevY = py;
+      }
+      ctx.stroke();
+      curves.push({ src: line.trim(), fn: fn, color: color });
+
+      var s = document.createElement('span');
+      s.innerHTML = '<i style="background:' + color + '"></i>' + line.trim();
+      legend.appendChild(s);
+    });
+
+    if (errs.length) {
+      plotMsg.style.display = 'block';
+      plotMsg.innerHTML = '<span class="mt-err">这几行没能解析：</span>\n' + errs.join('\n');
+    } else {
+      plotMsg.style.display = 'none';
+    }
+  }
+
+  /* 鼠标读坐标 */
+  canvas.addEventListener('mousemove', function (e) {
+    var r = canvas.getBoundingClientRect();
+    var x = view.xmin + ((e.clientX - r.left) / r.width) * (view.xmax - view.xmin);
+    var txt = 'x = ' + x.toFixed(3);
+    curves.forEach(function (c) {
+      var y;
+      try { y = c.fn(x); } catch (err) { y = NaN; }
+      if (typeof y === 'number' && isFinite(y)) txt += '   y = ' + y.toFixed(3);
+    });
+    readout.textContent = txt;
+  });
+  canvas.addEventListener('mouseleave', function () { readout.textContent = '把鼠标移到图上'; });
+
+  document.getElementById('drawBtn').addEventListener('click', draw);
+  document.getElementById('resetView').addEventListener('click', function () {
+    document.getElementById('xMin').value = '-8';
+    document.getElementById('xMax').value = '8';
+    document.getElementById('yMin').value = '-3';
+    document.getElementById('yMax').value = '3';
+    draw();
+  });
+  document.getElementById('fnInput').addEventListener('input', function () {
+    clearTimeout(window.__mtT);
+    window.__mtT = setTimeout(draw, 320);
+  });
+  ['xMin', 'xMax', 'yMin', 'yMax'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', draw);
+  });
+  document.querySelectorAll('[data-preset]').forEach(function (c) {
+    c.addEventListener('click', function () {
+      document.getElementById('fnInput').value = c.dataset.preset.split('|').join('\n');
+      draw();
+    });
+  });
+  window.addEventListener('resize', function () { clearTimeout(window.__mtR); window.__mtR = setTimeout(draw, 200); });
+
+  /* ============================================================
+     ② 加解密
+     ============================================================ */
+  var method = 'base64';
+  var codeIn = document.getElementById('codeIn');
+  var codeOut = document.getElementById('codeOut');
+  var codeKey = document.getElementById('codeKey');
+  var keyRow = document.getElementById('keyRow');
+  var keyLabel = document.getElementById('keyLabel');
+  var codeMsg = document.getElementById('codeMsg');
+
+  var NEEDS_KEY = { caesar: '位移量（整数）', vigenere: '密钥（字母）' };
+
+  document.querySelectorAll('#codeChips .mt-chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      method = c.dataset.m;
+      document.querySelectorAll('#codeChips .mt-chip').forEach(function (x) {
+        x.classList.toggle('on', x === c);
+      });
+      keyRow.style.display = NEEDS_KEY[method] ? 'flex' : 'none';
+      if (NEEDS_KEY[method]) keyLabel.textContent = NEEDS_KEY[method];
+      if (method === 'caesar') codeKey.value = '3';
+      if (method === 'vigenere') codeKey.value = 'NB';
+      codeMsg.style.display = 'none';
+      run(true);
+    });
+  });
+
+  function b64enc(s) {
+    return btoa(unescape(encodeURIComponent(s)));
+  }
+  function b64dec(s) {
+    return decodeURIComponent(escape(atob(s.trim())));
+  }
+  function caesar(s, n) {
+    return s.replace(/[a-zA-Z]/g, function (ch) {
+      var base = ch <= 'Z' ? 65 : 97;
+      return String.fromCharCode((ch.charCodeAt(0) - base + n % 26 + 26) % 26 + base);
+    });
+  }
+  function vig(s, key, dec) {
+    var k = key.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    if (!k) throw new Error('密钥里没有字母');
+    var i = 0;
+    return s.replace(/[a-zA-Z]/g, function (ch) {
+      var base = ch <= 'Z' ? 65 : 97;
+      var shift = k.charCodeAt(i++ % k.length) - 97;
+      if (dec) shift = -shift;
+      return String.fromCharCode((ch.charCodeAt(0) - base + shift + 26) % 26 + base);
+    });
+  }
+  var MORSE = {
+    A: '.-', B: '-...', C: '-.-.', D: '-..', E: '.', F: '..-.', G: '--.', H: '....',
+    I: '..', J: '.---', K: '-.-', L: '.-..', M: '--', N: '-.', O: '---', P: '.--.',
+    Q: '--.-', R: '.-.', S: '...', T: '-', U: '..-', V: '...-', W: '.--', X: '-..-',
+    Y: '-.--', Z: '--..',
+    '0': '-----', '1': '.----', '2': '..---', '3': '...--', '4': '....-',
+    '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.'
+  };
+  var UNMORSE = {};
+  Object.keys(MORSE).forEach(function (k) { UNMORSE[MORSE[k]] = k; });
+
+  function morseEnc(s) {
+    return s.toUpperCase().split('').map(function (ch) {
+      if (ch === ' ') return '/';
+      return MORSE[ch] || '';
+    }).filter(function (x) { return x !== ''; }).join(' ');
+  }
+  function morseDec(s) {
+    return s.trim().split(/\s+/).map(function (code) {
+      if (code === '/') return ' ';
+      return UNMORSE[code] || '?';
+    }).join('');
+  }
+  function hexEnc(s) {
+    return Array.prototype.map.call(new TextEncoder().encode(s), function (b) {
+      return b.toString(16).padStart(2, '0');
+    }).join(' ');
+  }
+  function hexDec(s) {
+    var parts = s.trim().split(/[\s,]+/).filter(Boolean);
+    var bytes = parts.map(function (h) {
+      var v = parseInt(h, 16);
+      if (!isFinite(v) || v < 0 || v > 255) throw new Error('「' + h + '」不是合法的十六进制字节');
+      return v;
+    });
+    return new TextDecoder().decode(new Uint8Array(bytes));
+  }
+  function sha256(s) {
+    if (!(window.crypto && crypto.subtle)) throw new Error('这个浏览器不支持 SHA-256（需要 https 或 localhost）');
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+        return b.toString(16).padStart(2, '0');
+      }).join('');
+    });
+  }
+
+  function run(enc) {
+    var v = codeIn.value;
+    codeMsg.style.display = 'none';
+    function fail(e) {
+      codeOut.value = '';
+      codeMsg.style.display = 'block';
+      codeMsg.innerHTML = '<span class="mt-err">' + (e && e.message ? e.message : '算不出来') + '</span>';
+    }
+    try {
+      if (method === 'base64') codeOut.value = enc ? b64enc(v) : b64dec(v);
+      else if (method === 'url') codeOut.value = enc ? encodeURIComponent(v) : decodeURIComponent(v);
+      else if (method === 'hex') codeOut.value = enc ? hexEnc(v) : hexDec(v);
+      else if (method === 'caesar') {
+        var n = parseInt(codeKey.value, 10);
+        if (!isFinite(n)) throw new Error('位移量要填整数');
+        codeOut.value = caesar(v, enc ? n : -n);
+      }
+      else if (method === 'vigenere') codeOut.value = vig(v, codeKey.value, !enc);
+      else if (method === 'morse') codeOut.value = enc ? morseEnc(v) : morseDec(v);
+      else if (method === 'rot13') codeOut.value = caesar(v, 13);
+      else if (method === 'reverse') codeOut.value = Array.from(v).reverse().join('');
+      else if (method === 'sha256') {
+        codeOut.value = '计算中……';
+        sha256(v).then(function (h) { codeOut.value = h; })['catch'](fail);
+      }
+    } catch (e) { fail(e); }
+  }
+
+  document.getElementById('encBtn').addEventListener('click', function () { run(true); });
+  document.getElementById('decBtn').addEventListener('click', function () { run(false); });
+  document.getElementById('swapBtn').addEventListener('click', function () {
+    if (!codeOut.value) return;
+    codeIn.value = codeOut.value;
+    run(true);
+  });
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var btn = this;
+    if (!codeOut.value) return;
+    function done(ok) {
+      var old = btn.textContent;
+      btn.textContent = ok ? '已复制' : '复制失败，请手动选';
+      setTimeout(function () { btn.textContent = old; }, 1600);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(codeOut.value)
+        .then(function () { done(true); })
+        ['catch'](function () { done(fallback()); });
+    } else { done(fallback()); }
+    function fallback() {
+      try {
+        codeOut.removeAttribute('readonly');
+        codeOut.select();
+        codeOut.setSelectionRange(0, codeOut.value.length);
+        var ok = document.execCommand('copy');
+        codeOut.setAttribute('readonly', 'readonly');
+        return ok;
+      } catch (e) { return false; }
+    }
+  });
+  document.getElementById('clearBtn').addEventListener('click', function () {
+    codeIn.value = ''; codeOut.value = ''; codeMsg.style.display = 'none';
+  });
+  codeIn.addEventListener('input', function () { clearTimeout(window.__mtC); window.__mtC = setTimeout(function () { run(true); }, 300); });
+
+  /* 初始化 */
+  function init() {
+    readView();
+    draw();
+    run(true);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
 </body>
 </html>
