@@ -74,6 +74,50 @@ html[theme="national"] .vhero-actions .hero-link {
 }
 html[theme="national"] .vhero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
 
+/* ---- 首页「大事记」区块（#milestone，一整套 jny- 类）----
+   这块的颜色写死在 index-Beta.html 的内联样式里，全是蓝紫：
+   舞台顶光 rgba(59,130,246,.16)、节点高亮 #9cc0ff、
+   能量核心 rgba(96,165,250,.9)、卡片底 rgba(15,23,42,.55)、
+   进度条 linear-gradient(90deg,#60a5fa,#a78bfa)。
+   这里整段压成红金。 */
+html[theme="national"] .jny-stage {
+    background-image:
+        radial-gradient(760px 420px at 18% 16%, rgba(255, 210, 74, .15), transparent 60%),
+        radial-gradient(620px 380px at 88% 78%, rgba(255, 108, 74, .12), transparent 62%),
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
+}
+html[theme="national"] .jny-bg {
+    background: radial-gradient(320px 320px at 50% 50%, rgba(255, 210, 74, .16), transparent 65%);
+}
+html[theme="national"] .jny-node { color: rgba(255, 246, 226, .85); }
+html[theme="national"] .jny-node.lit {
+    color: #fff;
+    text-shadow: 0 0 26px rgba(255, 210, 74, .7);
+}
+html[theme="national"] .jny-node.lit .jy { color: var(--brand); }
+html[theme="national"] .jny-svg .base { stroke: rgba(255, 214, 102, .12); }
+html[theme="national"] .jny-svg .go {
+    stroke: rgba(255, 210, 74, .92);
+    filter: drop-shadow(0 0 6px rgba(255, 210, 74, .6));
+}
+html[theme="national"] .jny-batt i {
+    background: #fff6d8;
+    box-shadow: 0 0 22px rgba(255, 210, 74, .9), 0 0 46px rgba(232, 181, 44, .5);
+}
+html[theme="national"] .jny-batt b { border-color: rgba(255, 210, 74, .55); }
+html[theme="national"] .jny-batt.dragging i {
+    box-shadow: 0 0 30px rgba(255, 210, 74, 1), 0 0 70px rgba(232, 181, 44, .75);
+}
+html[theme="national"] .jny-card { background: rgba(74, 10, 16, .62); }
+html[theme="national"] .jny-tag { color: var(--brand); }
+html[theme="national"] .jny-h { color: #fff6e2; }
+html[theme="national"] .jny-d { color: rgba(255, 232, 200, .74); }
+html[theme="national"] .jny-progress { color: rgba(255, 232, 200, .5); }
+html[theme="national"] .jny-progress .bar { background: rgba(255, 214, 102, .16); }
+html[theme="national"] .jny-progress .bar i {
+    background: linear-gradient(90deg, #ffd24a, #ff8a5c);
+}
+
 /* 手机上交叠会太挤，缩小并挪到右下角 */
 @media (max-width: 900px) {
     }
