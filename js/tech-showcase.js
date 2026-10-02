@@ -937,7 +937,10 @@
             };
 
             copyBtn.onclick = function () {
-                function done() {
+                var text = curText();
+                if (!text) { copyBtn.textContent = '\u6CA1\u6709\u5185\u5BB9'; return; }
+
+                function ok() {
                     copyBtn.textContent = '\u5DF2\u590D\u5236 \u2713';
                     copyBtn.classList.add('done');
                     setTimeout(function () {
@@ -945,24 +948,55 @@
                         copyBtn.classList.remove('done');
                     }, 1600);
                 }
-                function fallback() {
+                function manual() {
+                    /* 最后兜底：展开代码并全选，让用户自己按 Ctrl+C */
+                    wrap.classList.add('open');
+                    pre.innerHTML = (curLang ? curLang.code : cur.code);
+                    var picked = false;
+                    try {
+                        var rng = document.createRange();
+                        rng.selectNodeContents(pre);
+                        var sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(rng);
+                        picked = String(sel).length > 0;
+                    } catch (e) { picked = false; }
+                    copyBtn.textContent = picked ? '\u5DF2\u9009\u4E2D Ctrl+C' : '\u8BF7\u624B\u52A8\u590D\u5236';
+                    copyBtn.classList.add('done');
+                    setTimeout(function () {
+                        copyBtn.textContent = '\u590D\u5236';
+                        copyBtn.classList.remove('done');
+                    }, 2600);
+                }
+                function legacy() {
                     try {
                         var ta = document.createElement('textarea');
-                        ta.value = curText();
-                        ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+                        ta.value = text;
+                        ta.setAttribute('readonly', '');
+                        ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
                         document.body.appendChild(ta);
+                        ta.focus();
                         ta.select();
-                        document.execCommand('copy');
+                        try { ta.setSelectionRange(0, ta.value.length); } catch (e0) {}
+                        var copied = false;
+                        try { copied = document.execCommand('copy'); } catch (e1) { copied = false; }
                         document.body.removeChild(ta);
-                        done();
-                    } catch (e2) { copyBtn.textContent = '\u590D\u5236\u5931\u8D25'; }
+                        if (copied) ok(); else manual();
+                    } catch (e2) {
+                        manual();
+                    }
                 }
+
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(curText()).then(done, fallback);
-                    } else { fallback(); }
-                } catch (e) { fallback(); }
-            };
+                        navigator.clipboard.writeText(text).then(ok, legacy);
+                    } else {
+                        legacy();
+                    }
+                } catch (e) {
+                    legacy();
+                }
+            };;
 
             render(ITEMS[0]);
         } catch (e) {}
