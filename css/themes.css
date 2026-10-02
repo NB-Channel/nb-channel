@@ -9,6 +9,318 @@
    ============================================================ */
 
 /* ============================================================
+   🌃 赛博朋克 · 霓虹紫粉 + 雨夜
+   常驻主题。和「科技」的区别：科技是冷静的青蓝，这个是湿热的紫粉。
+   ============================================================ */
+html[theme="cyber"] {
+    --bg:        #0b0518;
+    --ink:       #f6e9ff;
+    --ink-soft:  #c9a5e8;
+    --ink-faint: #8a6aa8;
+    --line:      rgba(255, 46, 166, .22);
+    --brand:     #ff2ea6;
+    --brand-deep:#c9188a;
+    --card:      #170a2b;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .55), 0 4px 18px rgba(255, 46, 166, .1);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .6), 0 28px 64px -24px rgba(255, 46, 166, .28);
+}
+
+/* 底色：深紫底 + 品红与青的霓虹光斑 + 雨丝 */
+html[theme="cyber"] body {
+    background:
+        repeating-linear-gradient(103deg,
+            rgba(255, 255, 255, .028) 0 1px,
+            transparent 1px 7px),
+        radial-gradient(900px 520px at 14% -6%, rgba(255, 46, 166, .22), transparent 62%),
+        radial-gradient(820px 500px at 88% 8%, rgba(0, 229, 255, .18), transparent 60%),
+        linear-gradient(178deg, #150826 0%, #0b0518 58%, #12061f 100%);
+    background-attachment: fixed;
+    background-color: var(--bg);
+}
+
+/* 导航：玻璃 + 品红底线 */
+html[theme="cyber"] .nav {
+    background: rgba(11, 5, 24, .84);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    border-bottom: 1px solid rgba(255, 46, 166, .26);
+    box-shadow: 0 0 26px -8px rgba(255, 46, 166, .5);
+}
+
+/* Hero / vhero */
+html[theme="cyber"] .hero,
+html[theme="cyber"] .vhero {
+    background-image:
+        radial-gradient(880px 460px at 16% 4%, rgba(255, 46, 166, .2), transparent 62%),
+        radial-gradient(760px 460px at 92% 28%, rgba(0, 229, 255, .15), transparent 60%),
+        linear-gradient(168deg, #180a2c 0%, #0e0519 54%, #150826 100%);
+    background-repeat: no-repeat;
+    background-position: left top, right top, center;
+}
+html[theme="cyber"] .vhero::before,
+html[theme="cyber"] .hero::after {
+    background-image: radial-gradient(rgba(255, 46, 166, .12) 1px, transparent 1px);
+}
+html[theme="cyber"] .vhero h1,
+html[theme="cyber"] .hero h1 { color: #fff2fc; }
+html[theme="cyber"] .vhero h1 .light,
+html[theme="cyber"] .hero h1 .light { color: var(--brand); }
+html[theme="cyber"] .vhero-sub,
+html[theme="cyber"] .hero-sub { color: rgba(214, 186, 232, .72); }
+html[theme="cyber"] .hero-eyebrow { color: rgba(255, 120, 200, .65); }
+html[theme="cyber"] .vhero-actions .hero-link,
+html[theme="cyber"] .hero-actions .hero-link {
+    color: #ffe6f7;
+    border-bottom-color: rgba(255, 46, 166, .5);
+}
+html[theme="cyber"] .vhero-fade,
+html[theme="cyber"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+/* 卡片：霓虹描边 + 切角 */
+html[theme="cyber"] .home-card,
+html[theme="cyber"] .comment-section,
+html[theme="cyber"] .product-card,
+html[theme="cyber"] .about-content,
+html[theme="cyber"] .changelog-content,
+html[theme="cyber"] .profile-card {
+    border: 1px solid rgba(255, 46, 166, .24);
+    box-shadow:
+        inset 0 0 26px -16px rgba(255, 46, 166, .7),
+        0 0 26px -10px rgba(255, 46, 166, .3);
+}
+
+/* 按钮 */
+html[theme="cyber"] .nav-cta {
+    background: linear-gradient(135deg, #ff2ea6, #7c3aed);
+    color: #fff2fc;
+    box-shadow: 0 0 22px -6px rgba(255, 46, 166, .85);
+}
+html[theme="cyber"] .stat-bar .num { text-shadow: 0 0 18px rgba(255, 46, 166, .55); }
+html[theme="cyber"] .nav-scan:hover,
+html[theme="cyber"] .theme-btn:hover,
+html[theme="cyber"] .drawer .d-close:hover { color: var(--brand); }
+html[theme="cyber"] .nav-more-panel a:hover {
+    background: rgba(255, 46, 166, .12);
+    color: #fff2fc;
+}
+html[theme="cyber"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="cyber"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(255, 46, 166, .9);
+}
+
+/* CTA */
+html[theme="cyber"] .cta {
+    background: linear-gradient(170deg, #180a2c 0%, #150826 55%, #1d0a33 100%);
+    color: #fff2fc;
+}
+html[theme="cyber"] .cta p { color: rgba(214, 186, 232, .66); }
+html[theme="cyber"] .cta .hero-link { border-bottom-color: rgba(255, 46, 166, .5); }
+
+/* 页脚 */
+html[theme="cyber"] .footer {
+    background: linear-gradient(180deg, #150826 0%, #0b0518 100%);
+    color: #b490cf;
+}
+html[theme="cyber"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 46, 166, .6), rgba(0, 229, 255, .45), transparent);
+}
+html[theme="cyber"] .footer h5 { color: #f6e9ff; }
+html[theme="cyber"] .footer a { color: #a986c6; }
+html[theme="cyber"] .footer a:hover { color: #fff2fc; }
+html[theme="cyber"] .footer .brand { color: #f6e9ff; }
+html[theme="cyber"] .footer .brand .dot {
+    background: linear-gradient(135deg, var(--brand), #00e5ff);
+}
+html[theme="cyber"] .footer .desc { color: #8f6cad; }
+html[theme="cyber"] .footer-bottom {
+    border-top-color: rgba(255, 46, 166, .16);
+    color: #8a6aa8;
+}
+
+/* 输入框 / 滚动条 */
+html[theme="cyber"] input,
+html[theme="cyber"] textarea {
+    background: rgba(23, 10, 43, .8);
+    border-color: rgba(255, 46, 166, .3);
+    color: #f6e9ff;
+}
+html[theme="cyber"] ::-webkit-scrollbar-thumb { background: rgba(255, 46, 166, .45); }
+html[theme="cyber"] ::-webkit-scrollbar-thumb:hover { background: rgba(255, 46, 166, .7); }
+
+/* 标题加一点霓虹故障感（不真做 glitch，只加外发光） */
+html[theme="cyber"] .hero h1,
+html[theme="cyber"] .vhero h1 {
+    text-shadow:
+        0 0 26px rgba(255, 46, 166, .35),
+        2px 0 0 rgba(0, 229, 255, .18);
+}
+
+/* ============================================================
+   🖌️ 墨韵 · 宣纸米白 + 焦墨
+   常驻主题。全套里唯一一个浅色主题 —— 和其余深色形成反差。
+   去掉所有发光和渐变，安静、省电，白天在强光下也看得清。
+   ============================================================ */
+html[theme="ink"] {
+    --bg:        #f4f0e6;
+    --ink:       #1c1a17;
+    --ink-soft:  #4a453d;
+    --ink-faint: #8b8375;
+    --line:      rgba(28, 26, 23, .16);
+    --brand:     #8c2f23;
+    --brand-deep:#6d241a;
+    --card:      #faf7f0;
+
+    --shadow-1: 0 1px 2px rgba(40, 34, 26, .08), 0 4px 12px rgba(40, 34, 26, .06);
+    --shadow-2: 0 2px 8px rgba(40, 34, 26, .1), 0 20px 48px -20px rgba(40, 34, 26, .18);
+}
+
+/* 底色：宣纸的米白，加一点点纸纹 */
+html[theme="ink"] body {
+    background:
+        repeating-linear-gradient(91deg,
+            rgba(28, 26, 23, .012) 0 1px,
+            transparent 1px 4px),
+        radial-gradient(900px 560px at 12% 0%, rgba(140, 47, 35, .05), transparent 62%),
+        var(--bg);
+    background-attachment: fixed;
+    color: var(--ink);
+    background-color: var(--bg);
+}
+
+/* 导航：米白 + 细墨线 */
+html[theme="ink"] .nav {
+    background: rgba(244, 240, 230, .92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(28, 26, 23, .14);
+}
+html[theme="ink"] .nav a { color: var(--ink-soft); }
+html[theme="ink"] .nav a:hover,
+html[theme="ink"] .nav a.active { color: var(--brand); }
+
+html[theme="ink"] .hero,
+html[theme="ink"] .vhero {
+    background-image:
+        radial-gradient(860px 440px at 16% 6%, rgba(140, 47, 35, .07), transparent 62%),
+        linear-gradient(168deg, #f6f2e9 0%, #f1ece1 54%, #ece6d9 100%);
+    background-repeat: no-repeat;
+    background-position: left top, center;
+}
+html[theme="ink"] .vhero::before,
+html[theme="ink"] .hero::after {
+    background-image: radial-gradient(rgba(28, 26, 23, .07) 1px, transparent 1px);
+    opacity: .5;
+}
+html[theme="ink"] .vhero h1,
+html[theme="ink"] .hero h1 { color: #1c1a17; }
+html[theme="ink"] .vhero h1 .light,
+html[theme="ink"] .hero h1 .light { color: var(--brand); font-weight: 200; }
+html[theme="ink"] .vhero-sub,
+html[theme="ink"] .hero-sub { color: rgba(74, 69, 61, .82); }
+html[theme="ink"] .hero-eyebrow { color: rgba(140, 47, 35, .6); }
+html[theme="ink"] .vhero-actions .hero-link,
+html[theme="ink"] .hero-actions .hero-link {
+    color: var(--ink);
+    border-bottom-color: rgba(28, 26, 23, .3);
+}
+html[theme="ink"] .vhero-fade,
+html[theme="ink"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+/* 卡片：白宣纸 + 细边，不加阴影光效 */
+html[theme="ink"] .home-card,
+html[theme="ink"] .comment-section,
+html[theme="ink"] .product-card,
+html[theme="ink"] .about-content,
+html[theme="ink"] .changelog-content,
+html[theme="ink"] .profile-card {
+    background: var(--card);
+    border: 1px solid rgba(28, 26, 23, .12);
+    box-shadow: var(--shadow-1);
+}
+html[theme="ink"] .nav-cta {
+    background: var(--brand);
+    color: #faf7f0;
+    box-shadow: none;
+}
+html[theme="ink"] .stat-bar .num { text-shadow: none; }
+html[theme="ink"] .nav-scan:hover,
+html[theme="ink"] .theme-btn:hover,
+html[theme="ink"] .drawer .d-close:hover { color: var(--brand); }
+html[theme="ink"] .nav-more-panel a:hover {
+    background: rgba(140, 47, 35, .08);
+    color: var(--brand);
+}
+html[theme="ink"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="ink"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: none;
+}
+
+html[theme="ink"] .cta {
+    background: linear-gradient(170deg, #efe9dd 0%, #e9e2d4 100%);
+    color: #1c1a17;
+}
+html[theme="ink"] .cta p { color: rgba(74, 69, 61, .78); }
+html[theme="ink"] .cta .hero-link { border-bottom-color: rgba(28, 26, 23, .3); }
+
+html[theme="ink"] .footer {
+    background: linear-gradient(180deg, #ece6d9 0%, #e4ddcd 100%);
+    color: #4a453d;
+}
+html[theme="ink"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(140, 47, 35, .4), transparent);
+}
+html[theme="ink"] .footer h5 { color: #1c1a17; }
+html[theme="ink"] .footer a { color: #4a453d; }
+html[theme="ink"] .footer a:hover { color: var(--brand); }
+html[theme="ink"] .footer .brand { color: #1c1a17; }
+html[theme="ink"] .footer .brand .dot { background: var(--brand); }
+html[theme="ink"] .footer .desc { color: #6b6459; }
+html[theme="ink"] .footer-bottom {
+    border-top-color: rgba(28, 26, 23, .12);
+    color: #8b8375;
+}
+
+html[theme="ink"] input,
+html[theme="ink"] textarea {
+    background: #faf7f0;
+    border-color: rgba(28, 26, 23, .18);
+    color: #1c1a17;
+}
+html[theme="ink"] ::-webkit-scrollbar-thumb { background: rgba(28, 26, 23, .22); }
+html[theme="ink"] ::-webkit-scrollbar-thumb:hover { background: rgba(140, 47, 35, .5); }
+html[theme="ink"] ::-webkit-scrollbar-track { background: transparent; }
+
+/* 首页「大事记」那套 jny- 也换成纸墨 */
+html[theme="ink"] .jny-stage {
+    background-image:
+        radial-gradient(760px 420px at 18% 16%, rgba(140, 47, 35, .07), transparent 60%),
+        linear-gradient(168deg, #f6f2e9 0%, #efe9dd 54%, #e9e2d4 100%);
+}
+html[theme="ink"] .jny-bg {
+    background: radial-gradient(320px 320px at 50% 50%, rgba(140, 47, 35, .08), transparent 65%);
+}
+html[theme="ink"] .jny-node { color: rgba(28, 26, 23, .75); }
+html[theme="ink"] .jny-node.lit { color: #1c1a17; text-shadow: none; }
+html[theme="ink"] .jny-node.lit .jy { color: var(--brand); }
+html[theme="ink"] .jny-svg .base { stroke: rgba(28, 26, 23, .14); }
+html[theme="ink"] .jny-svg .go { stroke: var(--brand); filter: none; }
+html[theme="ink"] .jny-batt i { background: var(--brand); box-shadow: none; }
+html[theme="ink"] .jny-batt b { border-color: rgba(140, 47, 35, .4); }
+html[theme="ink"] .jny-card { background: rgba(250, 247, 240, .9); }
+html[theme="ink"] .jny-tag { color: var(--brand); }
+html[theme="ink"] .jny-h { color: #1c1a17; }
+html[theme="ink"] .jny-d { color: rgba(74, 69, 61, .8); }
+html[theme="ink"] .jny-progress { color: rgba(74, 69, 61, .6); }
+html[theme="ink"] .jny-progress .bar { background: rgba(28, 26, 23, .12); }
+html[theme="ink"] .jny-progress .bar i { background: var(--brand); }
+
+/* 浅色主题下，深色 logo 图片不用反相 */
+html[theme="ink"] .logo-img { filter: none; }
+
+/* ============================================================
    🇨🇳 国庆主题 · 红金
    限时 10 月 1 日 ~ 7 日（由 js/theme.js 控制可用性）
    ============================================================ */
