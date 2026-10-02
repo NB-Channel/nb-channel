@@ -854,6 +854,33 @@ html { -webkit-text-size-adjust: 100%; }
 .mt-err{color:#ff8f8f;}
 @media(max-width:700px){
   .mt-card{padding:20px 18px 24px;}
+
+.mt-fnlist{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+.mt-fnrow{display:flex;align-items:center;gap:10px;}
+.mt-fnrow .lhs{
+  width:86px;flex:0 0 auto;padding:10px 10px;border-radius:8px;text-align:center;
+  background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.15);
+  color:var(--ink,#eaf0ff);font-family:ui-monospace,Consolas,monospace;font-size:.88rem;outline:none;}
+.mt-fnrow .eq{color:var(--ink-faint,#8fa0b8);font-family:ui-monospace,monospace;flex:0 0 auto;}
+.mt-fnrow .rhs{
+  flex:1;min-width:0;padding:10px 13px;border-radius:8px;
+  background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.15);
+  color:var(--ink,#eaf0ff);font-family:ui-monospace,Consolas,monospace;
+  font-size:.88rem;outline:none;}
+.mt-fnrow .rhs:focus,.mt-fnrow .lhs:focus{border-color:var(--brand,#3b82f6);}
+.mt-fnrow .dot{width:14px;height:14px;border-radius:4px;flex:0 0 auto;}
+.mt-fnrow .del{
+  flex:0 0 auto;width:34px;height:34px;border-radius:8px;cursor:pointer;
+  background:transparent;color:var(--ink-faint,#8fa0b8);
+  border:1px solid rgba(255,255,255,.15);font-size:1rem;line-height:1;}
+.mt-fnrow .del:hover{color:#ff8f8f;border-color:rgba(255,143,143,.5);}
+.mt-fnrow .del[disabled]{opacity:.3;cursor:not-allowed;}
+.mt-add{
+  margin-top:12px;padding:9px 16px;border-radius:9px;cursor:pointer;
+  font-family:inherit;font-size:.8rem;letter-spacing:1px;
+  background:transparent;color:var(--ink-soft,#c7d2e8);
+  border:1px dashed rgba(255,255,255,.3);}
+.mt-add:hover{background:rgba(255,255,255,.08);color:var(--ink,#eaf0ff);}
   .mt-canvas-box canvas{height:300px;}
 }
 </style>
@@ -1014,10 +1041,9 @@ html { -webkit-text-size-adjust: 100%; }
         <h3>函数图像</h3>
         <p class="hint">一行一个函数，最多六条同时画。<b>x</b> 是自变量；支持 <code>sin cos tan asin acos atan sinh cosh tanh exp log ln sqrt abs floor ceil round sign min max pow</code>，幂用 <code>^</code> 或 <code>**</code>，常数 <code>pi</code> <code>e</code>。例：<code>sin(x)/x</code>、<code>x^3-3*x</code>、<code>exp(-x^2)</code></p>
         <div class="mt-field">
-            <label>函数表达式</label>
-            <textarea id="fnInput" spellcheck="false">sin(x)
-x^3/8 - x
-exp(-x*x/4)</textarea>
+            <label>函数表达式 &nbsp;·&nbsp; 左边写 y 或 f(x)，右边写解析式</label>
+            <div class="mt-fnlist" id="fnList"></div>
+            <button class="mt-add" id="fnAdd" type="button">＋ 添加表达式</button>
         </div>
         <div class="mt-row" style="margin-top:16px">
             <div class="mt-field" style="max-width:130px">
@@ -2632,13 +2658,19 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
 
     /* 曲线 */
     curves = [];
-    var lines = document.getElementById('fnInput').value.split('\n');
+    var rows = document.querySelectorAll('#fnList .mt-fnrow');
+    var lines = [];
+    Array.prototype.forEach.call(rows, function (r) {
+      var lhs = r.querySelector('.lhs').value.trim() || 'y';
+      var rhs = r.querySelector('.rhs').value.trim();
+      if (rhs) lines.push({ lhs: lhs, rhs: rhs });
+    });
     var errs = [], ci = 0;
     legend.innerHTML = '';
-    lines.forEach(function (line) {
-      if (!line.trim()) return;
+    lines.forEach(function (item) {
       var fn;
-      try { fn = compile(line); } catch (e) { errs.push(line.trim() + ' —— ' + e.message); return; }
+      try { fn = compile(item.rhs); }
+      catch (e) { errs.push(item.lhs + ' = ' + item.rhs + ' —— ' + e.message); return; }
       if (!fn) return;
       var color = COLORS[ci % COLORS.length]; ci++;
 
@@ -2659,10 +2691,10 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
         prevY = py;
       }
       ctx.stroke();
-      curves.push({ src: line.trim(), fn: fn, color: color });
+      curves.push({ src: item.lhs + ' = ' + item.rhs, fn: fn, color: color });
 
       var s = document.createElement('span');
-      s.innerHTML = '<i style="background:' + color + '"></i>' + line.trim();
+      s.innerHTML = '<i style="background:' + color + '"></i>' + item.lhs + ' = ' + item.rhs;
       legend.appendChild(s);
     });
 
@@ -2696,16 +2728,64 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     document.getElementById('yMax').value = '3';
     draw();
   });
-  document.getElementById('fnInput').addEventListener('input', function () {
+  var fnList = document.getElementById('fnList');
+  fnList.addEventListener('input', function () {
     clearTimeout(window.__mtT);
     window.__mtT = setTimeout(draw, 320);
   });
+
+  /* ---------- 表达式行的增删 ---------- */
+  function addRow(lhs, rhs) {
+    var row = document.createElement('div');
+    row.className = 'mt-fnrow';
+    row.innerHTML =
+      '<span class="dot"></span>' +
+      '<input class="lhs" spellcheck="false" value="' +
+        (lhs || 'y').replace(/"/g, '&quot;') + '">' +
+      '<span class="eq">=</span>' +
+      '<input class="rhs" spellcheck="false" placeholder="\u4F8B\uFF1Asin(x)\u3001x^2-3\u3001exp(-x*x)" value="' +
+        (rhs || '').replace(/"/g, '&quot;') + '">' +
+      '<button class="del" type="button" title="\u5220\u9664">\u00D7</button>';
+    row.querySelector('.del').addEventListener('click', function () {
+      if (fnList.querySelectorAll('.mt-fnrow').length <= 1) return;   /* 至少留一行 */
+      row.remove();
+      paintDots();
+      draw();
+    });
+    fnList.appendChild(row);
+    paintDots();
+    return row;
+  }
+  /* 每行前面那个小方块用曲线颜色，和图上对得上 */
+  function paintDots() {
+    var rows = fnList.querySelectorAll('.mt-fnrow');
+    Array.prototype.forEach.call(rows, function (r, i) {
+      r.querySelector('.dot').style.background = COLORS[i % COLORS.length];
+    });
+    Array.prototype.forEach.call(rows, function (r) {
+      r.querySelector('.del').disabled = rows.length <= 1;
+    });
+  }
+  document.getElementById('fnAdd').addEventListener('click', function () {
+    var n = fnList.querySelectorAll('.mt-fnrow').length;
+    var r = addRow('f' + (n + 1) + '(x)', '');
+    r.querySelector('.rhs').focus();
+    draw();
+  });
+  if (draw && !window.__mtDraw) window.__mtDraw = draw;
+
+  /* 默认只有一行 */
+  addRow('y', 'sin(x)');
   ['xMin', 'xMax', 'yMin', 'yMax'].forEach(function (id) {
     document.getElementById(id).addEventListener('change', draw);
   });
   document.querySelectorAll('[data-preset]').forEach(function (c) {
     c.addEventListener('click', function () {
-      document.getElementById('fnInput').value = c.dataset.preset.split('|').join('\n');
+      var parts = c.dataset.preset.split('|');
+      fnList.innerHTML = '';
+      parts.forEach(function (p, i) {
+        addRow(parts.length > 1 ? ('f' + (i + 1) + '(x)') : 'y', p);
+      });
       draw();
     });
   });
