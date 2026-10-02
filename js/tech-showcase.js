@@ -3,7 +3,217 @@
    第一个内容：Python 海龟画谢尔宾斯基三角（深度 4 → 81 个三角形）。*/
 (function () {
     'use strict';
-    var CSS = ".nb-ts-row{position:relative;z-index:2;max-width:1180px;margin:64px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}\n.nb-ts-left{min-width:0;align-self:start;}\n.nb-ts-right{min-width:0;max-width:100%;display:flex;flex-direction:column;}\n.nb-ts-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}\n.nb-ts-bar .sp{flex:1;min-width:0;font-size:.76rem;letter-spacing:1.2px;color:rgba(150,220,255,.8);}\n.nb-ts-tabs{display:flex;gap:6px;flex-wrap:wrap;}\n.nb-ts-tab{padding:5px 11px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.72rem;letter-spacing:.5px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.22);color:rgba(180,230,255,.85);transition:.2s;}\n.nb-ts-tab:hover{background:rgba(0,229,255,.18);}\n.nb-ts-tab.on{background:rgba(0,229,255,.22);border-color:rgba(0,229,255,.6);color:#eaf9ff;box-shadow:0 0 18px -6px rgba(0,229,255,.7);}\n.nb-ts-svg{display:block;width:100%;height:auto;border-radius:12px;shape-rendering:geometricPrecision;box-shadow:0 20px 50px -30px rgba(0,0,0,.8);}\n.nb-ts-codewrap{display:flex;flex-direction:column;border-radius:12px;background:#1e1e1e;border:1px solid rgba(0,229,255,.2);overflow:hidden;}\n.nb-ts-codehead{display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:.76rem;letter-spacing:1px;color:rgba(180,230,255,.8);}\n.nb-ts-codehead .sp{flex:1;min-width:0;}\n.nb-ts-mini{padding:5px 11px;border-radius:8px;cursor:pointer;font-size:.72rem;font-family:inherit;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);color:#7fe3ff;transition:.2s;}\n.nb-ts-mini:hover{background:rgba(0,229,255,.2);}\n.nb-ts-mini.done{background:rgba(120,220,150,.16);border-color:rgba(120,220,150,.5);color:#9be8b4;}\n.nb-ts-code{margin:0;padding:0 14px 16px;max-width:100%;box-sizing:border-box;font:11.5px/1.85 ui-monospace,Consolas,'Courier New',monospace;color:#d4d4d4;white-space:pre;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 70%,rgba(0,0,0,.4) 88%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0,#000 70%,rgba(0,0,0,.4) 88%,transparent 100%);}\n.nb-ts-code b{color:#569cd6;font-weight:400;}\n.nb-ts-code i{color:#ce9178;font-style:normal;}\n.nb-ts-code u{color:#b5cea8;text-decoration:none;}\n.nb-ts-code s{color:#dcdcaa;text-decoration:none;}\n.nb-ts-code m{color:#4ec9b0;}\n.nb-ts-code em{color:#6a9955;font-style:normal;}\n.nb-ts-codewrap.open .nb-ts-code{overflow:auto;-webkit-mask-image:none;mask-image:none;}\n.nb-ts-poly polygon{fill:rgba(0,229,255,.14);stroke:#00e5ff;stroke-width:1.4;stroke-linejoin:round;opacity:0;animation:nbTsPop .5s cubic-bezier(.16,1,.3,1) forwards;}\n@keyframes nbTsPop{from{opacity:0;transform:scale(.6);transform-origin:center;}to{opacity:1;transform:scale(1);}}\n@media(max-width:900px){.nb-ts-row{grid-template-columns:1fr;gap:22px;margin-top:44px;}.nb-ts-code{font-size:10px;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-poly polygon{animation:none;opacity:1;}}\n.nb-ts-path{fill:none;stroke:#00e5ff;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 2.6s linear forwards;filter:drop-shadow(0 0 5px rgba(0,229,255,.55));}\n@keyframes nbTsDraw{to{stroke-dashoffset:0;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-path{animation:none;stroke-dashoffset:0;}}\n.nb-ts-tline{opacity:0;animation:nbTsLine .28s ease forwards;}\n@keyframes nbTsLine{to{opacity:1;}}\n.nb-ts-caret{animation:nbTsCaret 1.05s steps(1,end) infinite;}\n@keyframes nbTsCaret{0%,49%{opacity:1;}50%,100%{opacity:0;}}\n.nb-ts-chart{fill:none;stroke:#00e5ff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 2.2s cubic-bezier(.4,0,.2,1) forwards;filter:drop-shadow(0 0 6px rgba(0,229,255,.6));}\n.nb-ts-area{opacity:0;animation:nbTsFadeIn 1.6s ease .8s forwards;}\n@keyframes nbTsFadeIn{to{opacity:1;}}\n.nb-ts-pt{fill:#7fe3ff;stroke:#060a14;stroke-width:1.4;opacity:0;animation:nbTsPop2 .4s ease forwards;}\n@keyframes nbTsPop2{to{opacity:1;}}\n.nb-ts-pulse{animation:nbTsPulse 1.9s ease-in-out infinite;}\n@keyframes nbTsPulse{0%,100%{opacity:.55;}50%{opacity:1;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-tline,.nb-ts-area,.nb-ts-pt{animation:none;opacity:1;}.nb-ts-chart{animation:none;stroke-dashoffset:0;}.nb-ts-pulse{animation:none;}}\n.nb-ts-sq path{fill:none;stroke:rgba(0,229,255,.34);stroke-width:1;stroke-dasharray:5 4;opacity:0;animation:nbTsSqIn .5s ease forwards;}\n@keyframes nbTsSqIn{to{opacity:1;}}\n.nb-ts-num text{fill:rgba(0,229,255,.42);font:600 11.5px ui-monospace,Consolas,monospace;text-anchor:middle;opacity:0;animation:nbTsSqIn .5s ease forwards;}\n.nb-ts-spiral path{fill:none;stroke:#00e5ff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 1.1s linear forwards;filter:drop-shadow(0 0 6px rgba(0,229,255,.55));}\n@media(prefers-reduced-motion:reduce){.nb-ts-sq path,.nb-ts-num text{animation:none;opacity:1;}.nb-ts-spiral path{animation:none;stroke-dashoffset:0;}}";
+    var CSS = ".nb-ts-row{position:relative;z-index:2;max-width:1180px;margin:64px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}\n.nb-ts-left{min-width:0;align-self:start;}\n.nb-ts-right{min-width:0;max-width:100%;display:flex;flex-direction:column;}\n.nb-ts-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}\n.nb-ts-bar .sp{flex:1;min-width:0;font-size:.76rem;letter-spacing:1.2px;color:rgba(150,220,255,.8);}\n.nb-ts-tabs{display:flex;gap:6px;flex-wrap:wrap;}\n.nb-ts-tab{padding:5px 11px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.72rem;letter-spacing:.5px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.22);color:rgba(180,230,255,.85);transition:.2s;}\n.nb-ts-tab:hover{background:rgba(0,229,255,.18);}\n.nb-ts-tab.on{background:rgba(0,229,255,.22);border-color:rgba(0,229,255,.6);color:#eaf9ff;box-shadow:0 0 18px -6px rgba(0,229,255,.7);}\n.nb-ts-svg{display:block;width:100%;height:auto;border-radius:12px;shape-rendering:geometricPrecision;box-shadow:0 20px 50px -30px rgba(0,0,0,.8);}\n.nb-ts-codewrap{display:flex;flex-direction:column;border-radius:12px;background:#1e1e1e;border:1px solid rgba(0,229,255,.2);overflow:hidden;}\n.nb-ts-codehead{display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:.76rem;letter-spacing:1px;color:rgba(180,230,255,.8);}\n.nb-ts-codehead .sp{flex:1;min-width:0;}\n.nb-ts-mini{padding:5px 11px;border-radius:8px;cursor:pointer;font-size:.72rem;font-family:inherit;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);color:#7fe3ff;transition:.2s;}\n.nb-ts-mini:hover{background:rgba(0,229,255,.2);}\n.nb-ts-mini.done{background:rgba(120,220,150,.16);border-color:rgba(120,220,150,.5);color:#9be8b4;}\n.nb-ts-code{margin:0;padding:0 14px 16px;max-width:100%;box-sizing:border-box;font:11.5px/1.85 ui-monospace,Consolas,'Courier New',monospace;color:#d4d4d4;white-space:pre;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 70%,rgba(0,0,0,.4) 88%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0,#000 70%,rgba(0,0,0,.4) 88%,transparent 100%);}\n.nb-ts-code b{color:#569cd6;font-weight:400;}\n.nb-ts-code i{color:#ce9178;font-style:normal;}\n.nb-ts-code u{color:#b5cea8;text-decoration:none;}\n.nb-ts-code s{color:#dcdcaa;text-decoration:none;}\n.nb-ts-code m{color:#4ec9b0;}\n.nb-ts-code em{color:#6a9955;font-style:normal;}\n.nb-ts-codewrap.open .nb-ts-code{overflow:auto;-webkit-mask-image:none;mask-image:none;}\n.nb-ts-poly polygon{fill:rgba(0,229,255,.14);stroke:#00e5ff;stroke-width:1.4;stroke-linejoin:round;opacity:0;animation:nbTsPop .5s cubic-bezier(.16,1,.3,1) forwards;}\n@keyframes nbTsPop{from{opacity:0;transform:scale(.6);transform-origin:center;}to{opacity:1;transform:scale(1);}}\n@media(max-width:900px){.nb-ts-row{grid-template-columns:1fr;gap:22px;margin-top:44px;}.nb-ts-code{font-size:10px;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-poly polygon{animation:none;opacity:1;}}\n.nb-ts-path{fill:none;stroke:#00e5ff;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 2.6s linear forwards;filter:drop-shadow(0 0 5px rgba(0,229,255,.55));}\n@keyframes nbTsDraw{to{stroke-dashoffset:0;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-path{animation:none;stroke-dashoffset:0;}}\n.nb-ts-tline{opacity:0;animation:nbTsLine .28s ease forwards;}\n@keyframes nbTsLine{to{opacity:1;}}\n.nb-ts-caret{animation:nbTsCaret 1.05s steps(1,end) infinite;}\n@keyframes nbTsCaret{0%,49%{opacity:1;}50%,100%{opacity:0;}}\n.nb-ts-chart{fill:none;stroke:#00e5ff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 2.2s cubic-bezier(.4,0,.2,1) forwards;filter:drop-shadow(0 0 6px rgba(0,229,255,.6));}\n.nb-ts-area{opacity:0;animation:nbTsFadeIn 1.6s ease .8s forwards;}\n@keyframes nbTsFadeIn{to{opacity:1;}}\n.nb-ts-pt{fill:#7fe3ff;stroke:#060a14;stroke-width:1.4;opacity:0;animation:nbTsPop2 .4s ease forwards;}\n@keyframes nbTsPop2{to{opacity:1;}}\n.nb-ts-pulse{animation:nbTsPulse 1.9s ease-in-out infinite;}\n@keyframes nbTsPulse{0%,100%{opacity:.55;}50%{opacity:1;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-tline,.nb-ts-area,.nb-ts-pt{animation:none;opacity:1;}.nb-ts-chart{animation:none;stroke-dashoffset:0;}.nb-ts-pulse{animation:none;}}\n.nb-ts-sq path{fill:none;stroke:rgba(0,229,255,.34);stroke-width:1;stroke-dasharray:5 4;opacity:0;animation:nbTsSqIn .5s ease forwards;}\n@keyframes nbTsSqIn{to{opacity:1;}}\n.nb-ts-num text{fill:rgba(0,229,255,.42);font:600 11.5px ui-monospace,Consolas,monospace;text-anchor:middle;opacity:0;animation:nbTsSqIn .5s ease forwards;}\n.nb-ts-spiral path{fill:none;stroke:#00e5ff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 1.1s linear forwards;filter:drop-shadow(0 0 6px rgba(0,229,255,.55));}\n@media(prefers-reduced-motion:reduce){.nb-ts-sq path,.nb-ts-num text{animation:none;opacity:1;}.nb-ts-spiral path{animation:none;stroke-dashoffset:0;}}\n.nb-ts-term{display:flex;flex-direction:column;height:100%;min-height:330px;border-radius:12px;background:#080d18;border:1px solid rgba(0,229,255,.22);overflow:hidden;box-shadow:0 20px 50px -30px rgba(0,0,0,.8);}\n.nb-ts-term-bar{display:flex;align-items:center;gap:7px;padding:9px 12px;background:rgba(0,229,255,.055);border-bottom:1px solid rgba(0,229,255,.14);flex:0 0 auto;}\n.nb-ts-term-bar i{width:11px;height:11px;border-radius:50%;display:block;}\n.nb-ts-term-bar .t{margin-left:8px;font:11.5px ui-monospace,Consolas,monospace;color:rgba(150,220,255,.5);}\n.nb-ts-term-body{flex:1;min-height:0;overflow-y:auto;padding:12px 14px;font:12.5px/1.72 ui-monospace,Consolas,'Courier New',monospace;color:rgba(205,228,250,.88);}\n.nb-ts-term-body::-webkit-scrollbar{width:8px;}\n.nb-ts-term-body::-webkit-scrollbar-thumb{background:rgba(0,229,255,.28);border-radius:8px;}\n.nb-ts-tl{white-space:pre-wrap;word-break:break-word;}\n.nb-ts-tl.cmd{color:#7fe3ff;}\n.nb-ts-tl.err{color:#ff8a8a;}\n.nb-ts-tl.dim{color:rgba(150,190,225,.5);}\n.nb-ts-tl.hi{color:#ffd24a;}\n.nb-ts-tl.ok{color:#7ee0a8;}\n.nb-ts-tin{display:flex;align-items:center;gap:0;}\n.nb-ts-tin .ps{color:#7fe3ff;flex:0 0 auto;}\n.nb-ts-tin input{flex:1;min-width:0;background:none;border:none;outline:none;color:#eaf4ff;font:inherit;caret-color:#7fe3ff;padding:0;}\n.nb-ts-thint{padding:7px 14px 10px;font-size:.68rem;letter-spacing:.4px;color:rgba(150,200,235,.42);border-top:1px solid rgba(0,229,255,.09);flex:0 0 auto;}";
+
+
+    /* ============================================================
+       交互式终端引擎
+       ============================================================ */
+    var TERM_FILES = {
+        'about.txt': '\u4e00\u4e2a\u7531 UP\u4e3b\u300cNB\u641e\u4e8b\u5c40\u300d\u5efa\u7acb\u7684\u865a\u62df\u516c\u53f8\u3002\n\u5316\u5b66\u4e0e\u7269\u7406\u5b9e\u9a8c \u00b7 \u65e5\u5e38\u4f5c\u6b7b \u00b7 NB\u5e01\u865a\u62df\u7ecf\u6d4e',
+        'motto.txt': '\u70ed\u7231\u7406\u79d1\uff0c\u4e0e\u4f5c\u6b7b\u540c\u884c'
+    };
+    var TERM_MODULES = ['about', 'videos', 'shop', 'bank', 'stock', 'chat', 'tools', 'vote'];
+    var TERM_TOP = [
+        ['NB\u641e\u4e8b\u5c40', '112,363'],
+        ['\u70ed\u7231\u7406\u79d1', '98,204'],
+        ['\u4f5c\u6b7b\u5c0f\u961f', '76,551'],
+        ['\u5316\u5b66\u8bfe\u4ee3\u8868', '64,930'],
+        ['\u7269\u7406\u8bfe\u4ee3\u8868', '58,127']
+    ];
+    var TERM_FORTUNE = [
+        '\u5316\u5b66\u8003\u8bd5\u4e0d\u4f1a\u7684\u5c31\u9009 C\u3002',
+        '\u522b\u5fd8\u4e86\u4eca\u5929\u7b7e\u5230\u3002',
+        '\u5b9e\u9a8c\u524d\u5148\u770b\u5b89\u5168\u624b\u518c\u3002',
+        '\u80fd\u914d\u5e73\u7684\u65b9\u7a0b\u5f0f\uff0c\u4eba\u751f\u4e5f\u4f1a\u914d\u5e73\u3002',
+        '\u6027\u80fd\u4f18\u5148\uff1a\u5148\u8dd1\u901a\uff0c\u518d\u8dd1\u5feb\u3002',
+        '\u4eca\u5929\u9002\u5408\u5199\u4ee3\u7801\u3002'
+    ];
+
+    function termCommands(write, clear) {
+        return {
+            'help': function () {
+                return [
+                    '\u53ef\u7528\u547d\u4ee4\uff1a',
+                    '  help             \u663e\u793a\u8fd9\u4efd\u5e2e\u52a9',
+                    '  whoami           \u6211\u662f\u8c01',
+                    '  cat about.txt    \u770b\u516c\u53f8\u7b80\u4ecb',
+                    '  ls / ls modules/ \u770b\u76ee\u5f55',
+                    '  uptime           \u8fd0\u884c\u65f6\u957f',
+                    '  nb fans          B \u7ad9\u7c89\u4e1d',
+                    '  nb coin          NB \u5e01\u4f59\u989d',
+                    '  nb motto         \u53e3\u53f7',
+                    '  nb rank          \u6392\u884c\u699c',
+                    '  fortune          \u968f\u673a\u4e00\u53e5',
+                    '  date             \u5f53\u524d\u65f6\u95f4',
+                    '  history          \u5386\u53f2\u547d\u4ee4',
+                    '  clear            \u6e05\u5c4f',
+                    '  exit             \u5173\u95ed\u7ec8\u7aef'
+                ].join('\n');
+            },
+            'whoami': function () { return 'NB\u9891\u9053 \u00b7 NoBook Channel'; },
+            'ls': function (arg) {
+                if (arg === 'modules/' || arg === 'modules') return TERM_MODULES.join('  ');
+                return 'about.txt  motto.txt  modules/  README.md';
+            },
+            'cat': function (arg) {
+                var f = (arg || '').trim();
+                if (!f) return { cls: 'err', text: 'cat: \u7f3a\u5c11\u6587\u4ef6\u540d' };
+                if (TERM_FILES[f] !== undefined) return TERM_FILES[f];
+                return { cls: 'err', text: 'cat: ' + f + ': No such file or directory' };
+            },
+            'uptime': function () { return '\u5df2\u8fd0\u884c 213 \u5929 \u00b7 \u603b\u8bbf\u95ee 3,000+'; },
+            'date': function () {
+                var d = new Date();
+                function p(n) { return (n < 10 ? '0' : '') + n; }
+                return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+                       ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+            },
+            'fortune': function () {
+                return TERM_FORTUNE[Math.floor(Math.random() * TERM_FORTUNE.length)];
+            },
+            'echo': function (arg) { return arg || ''; },
+            'clear': function () { clear(); return null; },
+            'sudo': function () { return { cls: 'err', text: '\u4f60\u5df2\u7ecf\u662f\u7ba1\u7406\u5458\u4e86\u3002' }; },
+            'exit': function () { return { cls: 'dim', text: '\u518d\u89c1\uff0c\u8bb0\u5f97\u56de\u6765\u3002' }; },
+            'nb': function (arg) {
+                var a = (arg || '').trim();
+                if (a === 'fans') return 'B \u7ad9\u7c89\u4e1d\uff1a112,363';
+                if (a === 'coin') return 'NB \u5e01\u4f59\u989d\uff1a12,800';
+                if (a === 'motto') return '\u70ed\u7231\u7406\u79d1\uff0c\u4e0e\u4f5c\u6b7b\u540c\u884c';
+                if (a === 'rank') {
+                    return TERM_TOP.map(function (r, i) {
+                        return '  ' + (i + 1) + '. ' + r[0] + '  ' + r[1];
+                    }).join('\n');
+                }
+                if (a === '--help' || a === '') {
+                    return 'nb <fans|coin|motto|rank>';
+                }
+                return { cls: 'err', text: 'nb: \u672a\u77e5\u5b50\u547d\u4ee4 ' + a };
+            }
+        };
+    }
+
+    function initTerminal(root) {
+        var body = root.querySelector('[data-term]');
+        if (!body) return;
+        var history = [];
+        var hi = -1;
+
+        function el(cls, text) {
+            var d = document.createElement('div');
+            d.className = 'nb-ts-tl' + (cls ? ' ' + cls : '');
+            d.textContent = text;
+            body.appendChild(d);
+            body.scrollTop = body.scrollHeight;
+            return d;
+        }
+        function clear() { body.innerHTML = ''; }
+        var cmds = termCommands(el, clear);
+
+        /* 开场白 */
+        var WELCOME = [
+            ['cmd', '$ nb --version'],
+            ['', 'NB-Channel Shell 1.0.0  (\u865a\u62df\u516c\u53f8\u7248)'],
+            ['', ''],
+            ['cmd', '$ cat about.txt'],
+            ['', TERM_FILES['about.txt']],
+            ['', ''],
+            ['dim', '\u8f93\u5165 help \u770b\u5168\u90e8\u547d\u4ee4\uff0c\u6216\u8005\u76f4\u63a5\u6572\u4e00\u6761\u8bd5\u8bd5\u3002'],
+            ['', '']
+        ];
+        /* 逐行浮现 */
+        WELCOME.forEach(function (row, i) {
+            var d = el(row[0], row[1]);
+            d.style.opacity = '0';
+            d.style.transition = 'opacity .25s ease';
+            setTimeout(function () { d.style.opacity = '1'; }, 120 + i * 110);
+        });
+
+        /* 输入行 */
+        var lineWrap = document.createElement('div');
+        lineWrap.className = 'nb-ts-tin';
+        var ps = document.createElement('span');
+        ps.className = 'ps';
+        ps.textContent = '$ ';
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.setAttribute('autocomplete', 'off');
+        inp.setAttribute('autocapitalize', 'off');
+        inp.setAttribute('spellcheck', 'false');
+        inp.setAttribute('aria-label', '\u8f93\u5165\u547d\u4ee4');
+        lineWrap.appendChild(ps);
+        lineWrap.appendChild(inp);
+        body.appendChild(lineWrap);
+        setTimeout(function () { try { inp.focus(); } catch (e) {} }, 900);
+
+        /* 点终端任意位置都聚焦到输入框 */
+        body.addEventListener('click', function (e) {
+            if (e.target !== inp) { try { inp.focus(); } catch (er) {} }
+        });
+
+        /* 把输入行挪到最后 */
+        function stick() { body.appendChild(lineWrap); body.scrollTop = body.scrollHeight; }
+
+        function run(raw) {
+            var text = raw.trim();
+            el('cmd', '$ ' + text);
+            if (text === 'exit') {
+                var r = cmds['exit']();
+                el(r.cls, r.text);
+                inp.disabled = true;
+                ps.textContent = '';
+                inp.placeholder = '\u5df2\u5173\u95ed\uff0c\u5207\u5230\u522b\u7684\u6807\u7b7e\u9875\u518d\u56de\u6765\u5c31\u91cd\u542f\u4e86';
+                return;
+            }
+            if (!text) return;
+            var sp = text.indexOf(' ');
+            var name = sp < 0 ? text : text.slice(0, sp);
+            var arg = sp < 0 ? '' : text.slice(sp + 1);
+            var fn = cmds[name];
+            if (!fn) {
+                el('err', name + ': command not found');
+                el('dim', '\u8f93\u5165 help \u770b\u53ef\u7528\u547d\u4ee4');
+                return;
+            }
+            var out = fn(arg);
+            if (out === null || out === undefined) return;      /* clear 之类 */
+            if (typeof out === 'string') {
+                out.split('\n').forEach(function (l) { el('', l); });
+            } else {
+                el(out.cls, out.text);
+            }
+        }
+
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                var v = inp.value;
+                if (v.trim()) { history.push(v.trim()); }
+                hi = history.length;
+                inp.value = '';
+                run(v);
+                stick();
+            } else if (e.key === 'ArrowUp') {
+                if (!history.length) return;
+                hi = Math.max(0, hi - 1);
+                inp.value = history[hi] || '';
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown') {
+                if (!history.length) return;
+                hi = Math.min(history.length, hi + 1);
+                inp.value = history[hi] || '';
+                e.preventDefault();
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                var v2 = inp.value.trim();
+                if (!v2) return;
+                var names = Object.keys(cmds);
+                var hit = names.filter(function (n) { return n.indexOf(v2) === 0; });
+                if (hit.length === 1) inp.value = hit[0] + (hit[0] === 'cat' || hit[0] === 'ls' || hit[0] === 'nb' ? ' ' : '');
+                else if (hit.length > 1) el('dim', hit.join('  '));
+            }
+        });
+    }
 
     /* ---------- 内容表：每项 = { id, 标签, 说明, SVG, CODE, PLAIN } ---------- */
     var ITEMS = [
@@ -34,10 +244,11 @@
         ,{
             id: "term",
             tab: "\u25B6 \u7EC8\u7AEF",
-            name: "\u7EC8\u7AEF\u98CE\u683C <i>\u00B7 \u81EA\u6211\u4ECB\u7ECD</i>",
-            svg: "<svg class=\"nb-ts-svg\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 640 520\" width=\"640\" height=\"520\" role=\"img\" aria-label=\"终端风格自我介绍\"><rect width=\"640\" height=\"520\" fill=\"#060a14\" rx=\"12\"/><rect width=\"640\" height=\"520\" fill=\"url(#nbTsGrid)\" rx=\"12\"/><rect x=\"0\" y=\"0\" width=\"640\" height=\"34\" fill=\"rgba(0,229,255,.06)\"/><circle cx=\"20\" cy=\"17\" r=\"5.5\" fill=\"#ff5f57\"/><circle cx=\"38\" cy=\"17\" r=\"5.5\" fill=\"#febc2e\"/><circle cx=\"56\" cy=\"17\" r=\"5.5\" fill=\"#28c840\"/><text x=\"260\" y=\"22\" fill=\"rgba(150,220,255,.55)\" font-size=\"11\" font-family=\"ui-monospace,Consolas,monospace\">nb@channel: ~</text><g class=\"nb-ts-term\"><text class=\"nb-ts-tline\" x=\"22\" y=\"64\" fill=\"#7fe3ff\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:0.00s\">$ whoami</text><text class=\"nb-ts-tline\" x=\"22\" y=\"94\" fill=\"rgba(200,225,250,.82)\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:0.71s\">NB频道 · NoBook Channel</text><text class=\"nb-ts-tline\" x=\"22\" y=\"124\" fill=\"#7fe3ff\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:1.64s\">$ cat about.txt</text><text class=\"nb-ts-tline\" x=\"22\" y=\"154\" fill=\"rgba(200,225,250,.82)\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:2.66s\">一个由 UP主「NB搞事局」建立的虚拟公司</text><text class=\"nb-ts-tline\" x=\"22\" y=\"184\" fill=\"rgba(200,225,250,.82)\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:3.59s\">化学与物理实验 · 日常作死 · NB币虚拟经济</text><text class=\"nb-ts-tline\" x=\"22\" y=\"214\" fill=\"#7fe3ff\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:4.57s\">$ ls modules/</text><text class=\"nb-ts-tline\" x=\"22\" y=\"244\" fill=\"rgba(200,225,250,.82)\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:5.51s\">about  videos  shop  bank  stock  chat  tools</text><text class=\"nb-ts-tline\" x=\"22\" y=\"274\" fill=\"#7fe3ff\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:6.87s\">$ uptime</text><text class=\"nb-ts-tline\" x=\"22\" y=\"304\" fill=\"rgba(200,225,250,.82)\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:7.58s\">已运行 213 天 · 总访问 3,000+ · 粉丝 112,000+</text><text class=\"nb-ts-tline\" x=\"22\" y=\"334\" fill=\"#7fe3ff\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:8.78s\">$ python -c 'import nb; print(nb.motto)'</text><text class=\"nb-ts-tline\" x=\"22\" y=\"364\" fill=\"rgba(200,225,250,.82)\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:10.93s\">热爱理科，与作死同行</text><text class=\"nb-ts-tline\" x=\"22\" y=\"394\" fill=\"#7fe3ff\" font-size=\"13.5\" font-family=\"ui-monospace,Consolas,monospace\" style=\"animation-delay:11.66s\">$ _</text></g><rect class=\"nb-ts-caret\" x=\"22\" y=\"406\" width=\"8\" height=\"15\" fill=\"#7fe3ff\"/></svg>",
-            code: "<b>import</b> <m>time</m>, <m>sys</m>\n\n<em># 用 Python 演一遍这个终端：逐字打印，像真的在敲命令</em>\n<b>def</b> <s>type_out</s>(s, delay=<u>0.03</u>):\n    <em>\"\"\"一个字符一个字符地吐出来，flush 保证立刻上屏\"\"\"</em>\n    <b>for</b> ch <b>in</b> s:\n        <m>sys</m>.<s>stdout</s>.<s>write</s>(ch)\n        <m>sys</m>.<s>stdout</s>.<s>flush</s>()\n        <m>time</m>.<s>sleep</s>(delay)\n    <b>print</b>()\n\nSESSION = [\n    (<i>\"$ whoami\"</i>, <u>0.045</u>),\n    (<i>\"NB频道 · NoBook Channel\"</i>, <u>0.018</u>),\n    (<i>\"$ cat about.txt\"</i>, <u>0.045</u>),\n    (<i>\"一个由 UP主「NB搞事局」建立的虚拟公司\"</i>, <u>0.018</u>),\n    (<i>\"化学与物理实验 · 日常作死 · NB币虚拟经济\"</i>, <u>0.018</u>),\n    (<i>\"$ uptime\"</i>, <u>0.045</u>),\n    (<i>\"已运行 213 天 · 总访问 3,000+ · 粉丝 112,000+\"</i>, <u>0.018</u>),\n    (<i>\"$ _\"</i>, <u>0.4</u>),\n]\n\n<b>for</b> line, d <b>in</b> SESSION:\n    <s>type_out</s>(line, d)",
-            plain: "import time, sys\n\n# 用 Python 演一遍这个终端：逐字打印，像真的在敲命令\ndef type_out(s, delay=0.03):\n    \"\"\"一个字符一个字符地吐出来，flush 保证立刻上屏\"\"\"\n    for ch in s:\n        sys.stdout.write(ch)\n        sys.stdout.flush()\n        time.sleep(delay)\n    print()\n\nSESSION = [\n    (\"$ whoami\", 0.045),\n    (\"NB频道 · NoBook Channel\", 0.018),\n    (\"$ cat about.txt\", 0.045),\n    (\"一个由 UP主「NB搞事局」建立的虚拟公司\", 0.018),\n    (\"化学与物理实验 · 日常作死 · NB币虚拟经济\", 0.018),\n    (\"$ uptime\", 0.045),\n    (\"已运行 213 天 · 总访问 3,000+ · 粉丝 112,000+\", 0.018),\n    (\"$ _\", 0.4),\n]\n\nfor line, d in SESSION:\n    type_out(line, d)"
+            name: "\u4EA4\u4E92\u5F0F\u7EC8\u7AEF <i>\u00B7 \u81EA\u5DF1\u6572\u547D\u4EE4\u8BD5\u8BD5</i>",
+            html: "<div class=\"nb-ts-term\"><div class=\"nb-ts-term-bar\"><i style=\"background:#ff5f57\"></i><i style=\"background:#febc2e\"></i><i style=\"background:#28c840\"></i><span class=\"t\">nb@channel: ~ &mdash; 试试敲 help</span></div><div class=\"nb-ts-term-body\" data-term></div><div class=\"nb-ts-thint\">↑ ↓ 翻历史　·　Tab 补全　·　输入 help 看全部命令</div></div>",
+            code: "<m>import</b> <m>time</b>, <m>sys</b>, <m>random</b>, <m>datetime</b>\n\n<em># 一个能真的敲命令的终端。每条命令对应下面 COMMANDS 里的一个函数。</b>\nNB = {\n    <i>\"name\"</b>:  <i>\"NB频道 · NoBook Channel\"</b>,\n    <i>\"fans\"</b>:  <u>112363</b>,\n    <i>\"days\"</b>:  <u>213</b>,\n    <i>\"motto\"</b>: <i>\"热爱理科，与作死同行\"</b>,\n}\n\n<b>def</b> <s>c_whoami</b>(_):\n    <b>return</b> NB[<i>\"name\"</b>]\n\n<b>def</b> <s>c_uptime</b>(_):\n    <b>return</b> <i>\"已运行 %d 天 · 粉丝 %s\"</b> % (NB[<i>\"days\"</b>], <s>f</b>+{NB[<i>\"fans\"</b>]:,})\n\n<b>def</b> <s>c_fans</b>(_):\n    <b>return</b> <i>\"B站粉丝：%s\"</b> % <s>f</b>+{NB[<i>\"fans\"</b>]:,}</b>\n\n<b>def</b> <s>c_motto</b>(_):\n    <b>return</b> NB[<i>\"motto\"</b>]\n\n<b>def</b> <s>c_fortune</b>(_):\n    <b>return</b> <m>random</b>.<s>choice</b>(<i>\"化学考试不会的就选 C\"</b>, <i>\"别忘了签到\"</b>)\n\n<b>def</b> <s>c_date</b>(_):\n    <b>return</b> <m>datetime</b>.<s>datetime</b>.<s>now</b>().<s>strftime</b>(<i>\"%Y-%m-%d %H:%M:%S\"</b>)\n\nCOMMANDS = {\n    <i>\"whoami\"</b>: <s>c_whoami</b>,  <i>\"uptime\"</b>: <s>c_uptime</b>,\n    <i>\"nb fans\"</b>: <s>c_fans</b>,   <i>\"nb motto\"</b>: <s>c_motto</b>,\n    <i>\"fortune\"</b>: <s>c_fortune</b>, <i>\"date\"</b>: <s>c_date</b>,\n}\n\n<em># 主循环：读一行、找命令、打印结果</b>\n<b>while</b> <b>True</b>:\n    line = <m>input</b>(<i>\"$ \"</b>).<s>strip</b>()\n    <b>if</b> line <b>in</b> (<i>\"\"</b>, <i>\"exit\"</b>):\n        <b>break</b>\n    fn = COMMANDS.<s>get</b>(line)\n    <b>if</b> fn:\n        <s>type_out</b>(fn(line))\n    <b>else</b>:\n        <s>type_out</b>(<i>\"command not found: \"+</b>line)",
+            plain: "import time, sys, random, datetime\n\n# 一个能真的敲命令的终端。每条命令对应下面 COMMANDS 里的一个函数。\nNB = {\n    \"name\":  \"NB频道 · NoBook Channel\",\n    \"fans\":  112363,\n    \"days\":  213,\n    \"motto\": \"热爱理科，与作死同行\",\n}\n\ndef c_whoami(_):\n    return NB[\"name\"]\n\ndef c_uptime(_):\n    return \"已运行 %d 天 · 粉丝 %s\" % (NB[\"days\"], f+{NB[\"fans\"]:,})\n\ndef c_fans(_):\n    return \"B站粉丝：%s\" % f+{NB[\"fans\"]:,}\n\ndef c_motto(_):\n    return NB[\"motto\"]\n\ndef c_fortune(_):\n    return random.choice(\"化学考试不会的就选 C\", \"别忘了签到\")\n\ndef c_date(_):\n    return datetime.datetime.now().strftime(\"%Y-%m-%d %H:%M:%S\")\n\nCOMMANDS = {\n    \"whoami\": c_whoami,  \"uptime\": c_uptime,\n    \"nb fans\": c_fans,   \"nb motto\": c_motto,\n    \"fortune\": c_fortune, \"date\": c_date,\n}\n\n# 主循环：读一行、找命令、打印结果\nwhile True:\n    line = input(\"$ \").strip()\n    if line in (\"\", \"exit\"):\n        break\n    fn = COMMANDS.get(line)\n    if fn:\n        type_out(fn(line))\n    else:\n        type_out(\"command not found: \"+line)",
+            init: initTerminal
         }
         ,{
             id: "data",
@@ -123,7 +334,9 @@
             function render(it) {
                 cur = it;
                 title.innerHTML = it.name;
-                svgBox.innerHTML = it.svg;
+                /* 内容可以是 svg（图形）也可以是 html（比如可交互的终端） */
+                svgBox.innerHTML = it.html || it.svg;
+                if (typeof it.init === 'function') it.init(svgBox);
                 // 代码只截前 SHOW_LINES 行，其余靠「展开」
                 var arr = it.code.split('\n');
                 pre.innerHTML = arr.slice(0, SHOW_LINES).join('\n') +
