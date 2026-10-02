@@ -194,8 +194,6 @@
                             '\u250c\u2500 \u516c\u53f8\u6863\u6848 ' + '\u2500'.repeat(22),
                             '\u2502 \u540d\u79f0    ' + c.company_name,
                             '\u2502 \u5e02\u503c    ' + big(c.market_value) + ' NB',
-                            '\u2502 \u603b\u80a1\u672c  ' + fm(c.total_shares || 0) + ' \u80a1',
-                            '\u2502 \u6d41\u901a\u80a1  ' + fm(c.circulating_shares || 0) + ' \u80a1',
                             '\u2502 \u72b6\u6001    ' + st,
                             '\u2502 \u6210\u7acb    ' + String(c.created_at || '').slice(0, 10),
                             '\u2514' + '\u2500'.repeat(30)
