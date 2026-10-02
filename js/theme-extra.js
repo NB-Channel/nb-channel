@@ -96,6 +96,47 @@
 
         '@media(prefers-reduced-motion:reduce){',
         '  .nb-glx-t::before,.nb-glx-t::after,.nb-glx-scan{animation:none;opacity:0;}',
+        '}',
+
+        /* ---------- 墨韵 · 水墨山水 + 两竿竹 ---------- */
+        '.nb-ink{position:relative;padding:34px 30px;border-radius:12px;',
+        '  background:linear-gradient(170deg,#faf7f0,#f4f0e6 60%,#efe9dd);',
+        '  border:1px solid rgba(28,26,23,.14);overflow:hidden;}',
+        '.nb-ink-inner{display:grid;grid-template-columns:1fr 230px;gap:28px;align-items:center;}',
+        '.nb-ink svg{display:block;}',
+        /* 每一笔都是独立 path。默认【已经画好】，只有 .nb-ink-go 时才从零描一遍 ——
+           这样即使动画没触发，画也在，不会白板。 */
+        '.nb-ink .st{fill:none !important;stroke:#1c1a17;stroke-linecap:round;',
+        '  stroke-linejoin:round;stroke-width:2.6;stroke-dasharray:var(--len,0);',
+        '  stroke-dashoffset:0;}',
+        '.nb-ink .st.thin{stroke-width:1.5;opacity:.7;}',
+        '.nb-ink .st.mid{stroke-width:2.6;}',
+        '.nb-ink .st.thick{stroke-width:5;}',
+        '.nb-ink .wash{opacity:.14;}',
+        /* 播动画时先藏起来再描 */
+        '.nb-ink-go .st{stroke-dashoffset:var(--len,0);',
+        '  animation:nbInk .95s cubic-bezier(.45,.05,.3,1) forwards;}',
+        '@keyframes nbInk{to{stroke-dashoffset:0;}}',
+        '.nb-ink-seal{opacity:1;transform:rotate(-9deg);transform-origin:50% 50%;}',
+        '.nb-ink-go .nb-ink-seal{opacity:0;transform:scale(1.6) rotate(-16deg);',
+        '  animation:nbSeal2 .4s cubic-bezier(.2,1.7,.4,1) 2.3s forwards;}',
+        '@keyframes nbSeal2{to{opacity:1;transform:scale(1) rotate(-9deg);}}',
+        '.nb-ink-side{text-align:right;}',
+        '.nb-ink-side .t{font-size:1.25rem;font-weight:800;letter-spacing:6px;color:#1c1a17;}',
+        '.nb-ink-side .d{margin-top:12px;font-size:.76rem;letter-spacing:1.5px;',
+        '  color:#6b6459;line-height:2.1;}',
+        '.nb-ink-btns{margin-top:18px;display:flex;gap:8px;justify-content:flex-end;}',
+        '.nb-ink-btn{padding:7px 15px;border-radius:2px;cursor:pointer;font-family:inherit;',
+        '  font-size:.72rem;letter-spacing:1.5px;background:#8c2f23;color:#faf7f0;border:none;}',
+        '.nb-ink-btn:hover{background:#6d241a;}',
+        '@media(max-width:860px){',
+        '  .nb-ink-inner{grid-template-columns:1fr;}',
+        '  .nb-ink-side{text-align:center;}',
+        '  .nb-ink-btns{justify-content:center;}',
+        '}',
+        '@media(prefers-reduced-motion:reduce){',
+        '  .nb-ink .st{stroke-dashoffset:0;animation:none;}',
+        '  .nb-ink-seal{opacity:1;transform:rotate(-9deg);animation:none;}',
         '}'        ,
 
         /* ---------- 🥮 月相 + 玉兔 ---------- */
@@ -406,244 +447,112 @@
     };
 
     /* ============================================================
-       🌃 故障艺术标题
+       墨韵 · 水墨山水 + 两竿竹
+       一笔一笔描出来：远山三重轮廓 → 山脚淡墨 → 竹竿竹节 → 竹枝 → 竹叶，
+       最后落款盖印。全部是 SVG path，靠 dasharray 从无到有。
+       （汉字轮廓需要字体文件，这里不硬凑，改成画水墨。）
        ============================================================ */
-    var GLITCH = {
+    var INK = {
         mount: function (box) {
-            box.innerHTML =
-                '<div class="nb-glx">' +
-                  '<div class="nb-glx-lines"></div>' +
-                  '<div class="nb-glx-scan"></div>' +
-                  '<h2 class="nb-glx-t" data-t="NOBOOK CHANNEL">NOBOOK CHANNEL</h2>' +
-                  '<p class="nb-glx-sub">\u70ED\u7231\u7406\u79D1 \u00B7 \u4E0E\u4F5C\u6B7B\u540C\u884C \u00B7 \u865A\u62DF\u516C\u53F8</p>' +
-                  '<div class="nb-glx-tags">' +
-                    '<span class="nb-glx-tag">EST. 2026</span>' +
-                    '<span class="nb-glx-tag">\u5316\u5B66 \u00B7 \u7269\u7406</span>' +
-                    '<span class="nb-glx-tag">NB\u5E01\u7ECF\u6D4E</span>' +
-                    '<span class="nb-glx-tag">\u53CB\u5546\u751F\u6001</span>' +
-                  '</div>' +
-                '</div>';
-            return function () {};
-        }
-    };
-
-/* ============================================================
-       🥮 中秋 · 真实月相 + 玉兔
-       ============================================================ */
-    var MOON = {
-        mount: function (box) {
-            /* 朔望月 29.53059 天。取一个已知新月时刻做基准：
-               2026-09-11 12:27 UTC（这次是实测过的朔） */
-            var SYNODIC = 29.530588853;
-            var BASE = Date.UTC(2026, 8, 11, 12, 27);
-
-            function phaseOf(now) {
-                var days = (now.getTime() - BASE) / 86400000;
-                var p = (days / SYNODIC) % 1;
-                if (p < 0) p += 1;
-                return p;                       /* 0 = 朔，0.5 = 望 */
-            }
-            function moonName(p) {
-                if (p < 0.03 || p > 0.97) return '\u65B0\u6708';
-                if (p < 0.22) return '\u6BDB\u6708';
-                if (p < 0.28) return '\u4E0A\u5F26\u6708';
-                if (p < 0.47) return '\u76C8\u51F8\u6708';
-                if (p < 0.53) return '\u6EE1\u6708';
-                if (p < 0.72) return '\u4E8F\u51F8\u6708';
-                if (p < 0.78) return '\u4E0B\u5F26\u6708';
-                return '\u6B8B\u6708';
-            }
-            /* 照亮比例：用余弦近似，够看就行 */
-            function litRatio(p) { return (1 - Math.cos(2 * Math.PI * p)) / 2; }
-
-            /* 画月相：一个圆，用一个椭圆做明暗界线把它切成月牙 */
-            function moonSVG(p) {
-                var R = 78, C = 95;
-                var k = litRatio(p);
-                /* 明暗界线椭圆的短半轴：0 时是满圆（朔是暗的，这里反过来算） */
-                var rx = Math.abs(R * (1 - 2 * k));
-                var waxing = p < 0.5;               /* 上半月右边亮 */
-                var litRight = waxing ? k > 0 : k < 0.5 ? true : false;
-                /* 亮面在哪边：上半月右侧、下半月左侧 */
-                var side = waxing ? 1 : -1;
-                /* 满月时不用切 */
-                var d;
-                if (k > 0.995) {
-                    d = 'M ' + (C - R) + ' ' + C +
-                        ' a ' + R + ' ' + R + ' 0 1 0 ' + (2 * R) + ' 0' +
-                        ' a ' + R + ' ' + R + ' 0 1 0 ' + (-2 * R) + ' 0';
-                } else if (k < 0.005) {
-                    d = '';
-                } else {
-                    /* 半圆（右或左）+ 椭圆弧回来 */
-                    var sweepOuter = side > 0 ? 1 : 0;
-                    var sweepInner = (rx > 0.5 && k > 0.5) ? sweepOuter : (1 - sweepOuter);
-                    var sweepInner2 = k > 0.5 ? sweepOuter : (1 - sweepOuter);
-                    d = 'M ' + C + ' ' + (C - R) +
-                        ' A ' + R + ' ' + R + ' 0 0 ' + sweepOuter + ' ' + C + ' ' + (C + R) +
-                        ' A ' + rx.toFixed(2) + ' ' + R + ' 0 0 ' + sweepInner2 + ' ' + C + ' ' + (C - R) +
-                        ' Z';
-                }
-                return '' +
-                    '<svg width="190" height="190" viewBox="0 0 190 190">' +
-                      '<defs>' +
-                        '<radialGradient id="nbMoonGlow" cx="50%" cy="50%" r="50%">' +
-                          '<stop offset="60%" stop-color="#ffe796" stop-opacity=".22"/>' +
-                          '<stop offset="100%" stop-color="#ffe796" stop-opacity="0"/>' +
-                        '</radialGradient>' +
-                        '<radialGradient id="nbMoonLit" cx="38%" cy="34%" r="72%">' +
-                          '<stop offset="0%" stop-color="#fffbe8"/>' +
-                          '<stop offset="100%" stop-color="#e8cf8a"/>' +
-                        '</radialGradient>' +
-                      '</defs>' +
-                      '<circle cx="95" cy="95" r="92" fill="url(#nbMoonGlow)"/>' +
-                      '<circle cx="95" cy="95" r="' + R + '" fill="#1b2743"/>' +
-                      (d ? '<path d="' + d + '" fill="url(#nbMoonLit)"/>' : '') +
-                      /* 环形山的暗斑，让月亮不那么平 */
-                      (k > 0.15 ? '<g opacity="' + (0.1 + k * 0.16).toFixed(2) + '">' +
-                        '<circle cx="76" cy="72" r="13" fill="#8a7a52"/>' +
-                        '<circle cx="112" cy="102" r="9" fill="#8a7a52"/>' +
-                        '<circle cx="88" cy="120" r="7" fill="#8a7a52"/>' +
-                      '</g>' : '') +
-                    '</svg>';
-            }
-
-            /* 玉兔：简笔，两只耳朵一支捣药杵 */
-            function rabbitSVG() {
-                return '' +
-                '<svg width="86" height="96" viewBox="0 0 86 96">' +
-                  '<g fill="none" stroke="#f2ecd8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
-                    /* 耳朵 */
-                    '<path d="M32 34 C28 16 34 8 38 12 C42 16 40 26 39 34"/>' +
-                    '<path d="M48 34 C50 16 56 10 59 15 C62 20 55 28 53 35"/>' +
-                    /* 头 */
-                    '<ellipse cx="43" cy="45" rx="17" ry="15"/>' +
-                    /* 眼 */
-                    '<circle cx="37" cy="43" r="1.8" fill="#f2ecd8"/>' +
-                    '<circle cx="49" cy="43" r="1.8" fill="#f2ecd8"/>' +
-                    /* 身 */
-                    '<path d="M30 58 C22 62 20 74 28 80 C36 86 52 86 60 80 C68 74 64 62 56 58"/>' +
-                    /* 捣药杵 */
-                    '<path d="M62 30 L74 66" stroke="#ffe796"/>' +
-                    '<ellipse cx="72" cy="70" rx="9" ry="6" fill="#ffe796" stroke="#ffe796"/>' +
-                  '</g>' +
-                '</svg>';
-            }
-
-            box.innerHTML =
-                '<div class="nb-moon">' +
-                  '<div class="nb-moon-stage" data-stage></div>' +
-                  '<div class="nb-moon-info">' +
-                    '<div class="name" data-name>\u6708\u76F8</div>' +
-                    '<div class="pct" data-pct>--%</div>' +
-                    '<div class="sub">\u6309\u5F53\u5929\u65E5\u671F\u7B97\u51FA\u7684\u771F\u5B9E\u6708\u76F8<br>' +
-                      '\u5851\u671B\u6708 29.53 \u5929\u4E00\u8F6E</div>' +
-                    '<div class="age" data-age></div>' +
-                  '</div>' +
-                '</div>';
-
-            var stage = box.querySelector('[data-stage]');
-            var nameEl = box.querySelector('[data-name]');
-            var pctEl = box.querySelector('[data-pct]');
-            var ageEl = box.querySelector('[data-age]');
-
-            function render() {
-                var p = phaseOf(new Date());
-                var k = litRatio(p);
-                stage.innerHTML = moonSVG(p) + rabbitSVG();
-                nameEl.textContent = moonName(p);
-                pctEl.textContent = Math.round(k * 100) + '%';
-                ageEl.textContent = '\u6708\u9F84 ' + (p * SYNODIC).toFixed(1) + ' \u5929';
-            }
-            render();
-            var t = setInterval(render, 60000);      /* 每分钟刷新一次 */
-            return function () { clearInterval(t); };
-        }
-    };
-
-/* ============================================================
-       🖌️ 墨韵 · 毛笔逐笔写「NB」+ 落款印章
-       笔画用 SVG 路径手写，靠 stroke-dasharray 一笔一笔描出来。
-       ============================================================ */
-    var BRUSH = {
-        mount: function (box) {
-            /* 「N」三笔，「B」两笔 —— 每笔一条 path */
+            /* 每条 d 是一笔，dl 是它开始的秒数，按顺序递增，读起来像在运笔 */
             var STROKES = [
-                /* N */
-                'M40 210 L40 40',
-                'M40 40 L110 210',
-                'M110 210 L110 40',
-                /* B */
-                'M160 40 L160 210',
-                'M160 40 C232 34 246 74 208 110 C252 128 250 196 160 210'
+                /* 远山：三重轮廓，越远越淡 */
+                { d: 'M10 168 C58 108 96 96 138 152 C160 180 176 186 196 174', c: 'thin', dl: 0.00 },
+                { d: 'M52 168 C92 126 122 118 152 158', c: 'thin', dl: 0.22 },
+                { d: 'M118 170 C158 122 196 112 240 150 C266 174 288 180 312 168', c: 'mid', dl: 0.44 },
+                { d: 'M176 172 C206 142 238 136 268 160', c: 'thin', dl: 0.62 },
+                /* 山脚一抹淡墨 */
+                { d: 'M24 178 C86 172 150 176 214 176 C264 176 296 178 330 172', c: 'thin', dl: 0.80 },
+                /* 竹竿两节 */
+                { d: 'M352 42 L352 108', c: 'thick', dl: 1.00 },
+                { d: 'M352 122 L352 186', c: 'thick', dl: 1.16 },
+                /* 竹节 */
+                { d: 'M344 112 L360 112', c: 'mid', dl: 1.32 },
+                { d: 'M344 190 L360 190', c: 'mid', dl: 1.40 },
+                /* 竹枝 */
+                { d: 'M352 78 C374 70 384 58 390 44', c: 'mid', dl: 1.52 },
+                { d: 'M352 132 C376 132 388 140 396 152', c: 'mid', dl: 1.66 },
+                { d: 'M352 58 C332 46 322 34 318 20', c: 'mid', dl: 1.78 },
+                /* 竹叶，一叶一笔 */
+                { d: 'M390 44 C404 34 416 32 428 36', c: 'mid', dl: 1.90 },
+                { d: 'M390 44 C400 58 404 70 402 84', c: 'mid', dl: 1.98 },
+                { d: 'M396 152 C412 156 424 166 430 180', c: 'mid', dl: 2.06 },
+                { d: 'M396 152 C410 142 422 138 436 138', c: 'thin', dl: 2.14 },
+                { d: 'M318 20 C306 12 296 10 284 12', c: 'mid', dl: 2.22 },
+                { d: 'M318 20 C314 6 312 -6 314 -16', c: 'mid', dl: 2.28 },
+                { d: 'M352 78 C340 88 332 100 330 112', c: 'thin', dl: 2.34 },
+                { d: 'M352 132 C344 122 334 116 322 114', c: 'thin', dl: 2.40 }
             ];
-            var paths = STROKES.map(function (d, i) {
-                return '<path class="stroke" d="' + d + '" data-i="' + i + '" ' +
-                       'style="animation-delay:' + (i * 0.42).toFixed(2) + 's"/>';
+
+            var WASH =
+                '<g class="wash">' +
+                  '<ellipse cx="150" cy="180" rx="132" ry="12" fill="#1c1a17" opacity=".07"/>' +
+                  '<ellipse cx="354" cy="196" rx="26" ry="6" fill="#1c1a17" opacity=".1"/>' +
+                '</g>';
+
+            var paths = STROKES.map(function (o, i) {
+                return '<path class="st ' + o.c + '" fill="none" d="' + o.d + '" data-i="' + i + '" ' +
+                       'style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
             }).join('');
 
-            /* 印章：方框 + 「NB」两个篆意小字 */
             var SEAL =
-                '<svg class="nb-brush-seal" viewBox="0 0 96 96">' +
-                  '<rect x="3" y="3" width="90" height="90" rx="6" fill="#8c2f23"/>' +
-                  '<rect x="10" y="10" width="76" height="76" rx="3" ' +
-                    'fill="none" stroke="#faf7f0" stroke-width="3"/>' +
-                  '<g fill="#faf7f0" font-family="ui-monospace,monospace" ' +
-                    'font-size="30" font-weight="800" text-anchor="middle">' +
-                    '<text x="30" y="42">N</text>' +
-                    '<text x="66" y="42">B</text>' +
-                    '<text x="30" y="76">\u9891</text>' +
-                    '<text x="66" y="76">\u9053</text>' +
+                '<svg class="nb-ink-seal" width="72" height="72" viewBox="0 0 72 72" ' +
+                  'style="position:absolute;right:34px;bottom:30px">' +
+                  '<rect x="2" y="2" width="68" height="68" rx="4" fill="#8c2f23"/>' +
+                  '<rect x="8" y="8" width="56" height="56" rx="2" fill="none" ' +
+                    'stroke="#faf7f0" stroke-width="2.4"/>' +
+                  '<g fill="#faf7f0" font-family="ui-monospace,Consolas,monospace" ' +
+                    'font-size="20" font-weight="800" text-anchor="middle">' +
+                    '<text x="24" y="32">N</text>' +
+                    '<text x="48" y="32">B</text>' +
+                    '<text x="24" y="56">\u9891</text>' +
+                    '<text x="48" y="56">\u9053</text>' +
                   '</g>' +
                 '</svg>';
 
             box.innerHTML =
-                '<div class="nb-brush" data-root>' +
-                  '<div class="nb-brush-inner">' +
-                    '<div><svg width="300" height="250" viewBox="0 0 300 250">' +
-                      '<g>' + paths + '</g>' +
+                '<div class="nb-ink" data-root>' +
+                  '<div class="nb-ink-inner">' +
+                    '<div><svg width="440" height="210" viewBox="0 0 440 210" ' +
+                      'style="max-width:100%;height:auto">' +
+                      WASH + '<g>' + paths + '</g>' +
                     '</svg></div>' +
-                    '<div class="nb-brush-side">' +
-                      SEAL +
+                    '<div class="nb-ink-side">' +
                       '<div class="t">\u58A8\u97F5</div>' +
-                      '<div class="d">\u5BA3\u7EB8\u7126\u58A8 \u00B7 \u4E00\u7B14\u4E00\u753B<br>' +
-                        '\u70B9\u300C\u91CD\u5199\u300D\u518D\u770B\u4E00\u904D</div>' +
-                      '<div class="nb-brush-btns">' +
-                        '<button class="nb-brush-btn" data-again>\u91CD\u5199</button>' +
+                      '<div class="d">\u8FDC\u5C71 \u00B7 \u4E24\u7AF9 \u00B7 \u4E00\u65B9\u5370<br>' +
+                        '\u4E00\u7B14\u4E00\u753B\u63CF\u51FA\u6765\u7684</div>' +
+                      '<div class="nb-ink-btns">' +
+                        '<button class="nb-ink-btn" data-again>\u91CD\u753B</button>' +
                       '</div>' +
                     '</div>' +
-                  '</div>' +
+                  '</div>' + SEAL +
                 '</div>';
 
             var root = box.querySelector('[data-root]');
 
-            /* 算每笔的长度写进 --len，动画才知道要描多长 */
             function prep() {
-                root.querySelectorAll('.stroke').forEach(function (p) {
-                    var len = p.getTotalLength ? p.getTotalLength() : 300;
+                root.querySelectorAll('.st').forEach(function (p) {
+                    var len = p.getTotalLength ? p.getTotalLength() : 400;
                     p.style.setProperty('--len', len.toFixed(1));
-                    p.style.strokeDasharray = len.toFixed(1);
-                    p.style.strokeDashoffset = len.toFixed(1);
                 });
             }
             function play() {
-                root.classList.remove('nb-brush-go');
-                void root.offsetWidth;          /* 强制重排，让动画重头播 */
+                root.classList.remove('nb-ink-go');
+                void root.offsetWidth;              /* 强制重排，动画重头播 */
                 prep();
-                root.classList.add('nb-brush-go');
+                root.classList.add('nb-ink-go');
             }
             box.querySelector('[data-again]').addEventListener('click', play);
             prep();
-            /* 进视口再播，免得加载时已经演完了 */
+
             var io = null;
             if ('IntersectionObserver' in window) {
                 io = new IntersectionObserver(function (es) {
                     es.forEach(function (e) { if (e.isIntersecting) { play(); io.disconnect(); } });
-                }, { threshold: 0.25 });
+                }, { threshold: 0.2 });
                 io.observe(root);
-            } else {
-                play();
-            }
+            } else { play(); }
+
             return function () { if (io) io.disconnect(); };
         }
     };
@@ -661,8 +570,8 @@
             mount: function (box) { return GLITCH.mount(box); }
         },
         ink: {
-            head: '\uD83D\uDD8C\uFE0F \u6BDB\u7B14\u5199\u5B57 <i>\u00B7 \u9010\u7B14\u63CF\u51FA</i>',
-            mount: function (box) { return BRUSH.mount(box); }
+            head: '\uD83D\uDD8C\uFE0F \u6C34\u58A8\u5C71\u6C34 <i>\u00B7 \u9010\u7B14\u63CF\u51FA</i>',
+            mount: function (box) { return INK.mount(box); }
         },
         midautumn: {
             head: '\uD83E\uDD5E \u6708\u76F8\u76C8\u4E8F <i>\u00B7 \u6309\u5F53\u5929\u65E5\u671F\u7B97</i>',
