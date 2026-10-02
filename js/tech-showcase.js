@@ -826,6 +826,16 @@
 
             /* ---------- 渲染某个内容 ---------- */
             var cur = null;
+            var curLang = null;          /* 当前选中的语言（没有 langs 就是 null） */
+
+            /* 当前该复制 / 下载的纯文本与文件名 —— 提到这里，
+               因为外层的复制、下载、收起按钮都要用。 */
+            function curText() { return curLang ? curLang.plain : (cur ? cur.plain : ''); }
+            function curFile() {
+                if (curLang) return curLang.file;
+                if (!cur) return 'code.txt';
+                return cur.file || (cur.id + '.py');
+            }
             function render(it) {
                 cur = it;
                 title.innerHTML = it.name;
@@ -834,7 +844,7 @@
                 if (typeof it.init === 'function') it.init(svgBox);
 
                 /* 多语言：渲染一行语言按钮，切换时换代码和文件名 */
-                var curLang = it.langs && it.langs.length ? it.langs[0] : null;
+                curLang = (it.langs && it.langs.length) ? it.langs[0] : null;
                 langBar.innerHTML = '';
                 if (it.langs && it.langs.length) {
                     it.langs.forEach(function (lg) {
@@ -866,8 +876,7 @@
                     copyBtn.textContent = '\u590D\u5236';
                     copyBtn.classList.remove('done');
                 }
-                function curText() { return curLang ? curLang.plain : it.plain; }
-                function curFile() { return curLang ? curLang.file : (it.file || (it.id + '.py')); }
+
                 // 代码只截前 SHOW_LINES 行，其余靠「展开」
                 var arr = it.code.split('\n');
                 pre.innerHTML = arr.slice(0, SHOW_LINES).join('\n') +
@@ -906,8 +915,24 @@
 
             toggleBtn.onclick = function () {
                 var on = wrap.classList.toggle('open');
-                if (on) pre.innerHTML = (curLang ? curLang.code : cur.code);
-                else render(cur);
+                if (on) {
+                    pre.innerHTML = (curLang ? curLang.code : cur.code);
+                } else {
+                    /* 收起：只把代码截回去，不整个重渲染（否则语言按钮会被重置） */
+                    var keep = curLang;
+                    render(cur);
+                    if (keep && cur.langs) {
+                        curLang = keep;
+                        Array.prototype.forEach.call(langBar.children, function (x, i) {
+                            x.classList.toggle('on', cur.langs[i] === keep);
+                        });
+                        var c2 = keep.code.split('\n');
+                        pre.innerHTML = c2.slice(0, SHOW_LINES).join('\n') +
+                            (c2.length > SHOW_LINES
+                                ? '\n<em># \u2026\u2026 \u5171 ' + c2.length + ' \u884C\uFF0C\u70B9\u300C\u5C55\u5F00\u300D\u770B\u5B8C\u6574\u4EE3\u7801</em>'
+                                : '');
+                    }
+                }
                 toggleBtn.textContent = on ? '\u6536\u8D77 \u25B4' : '\u5C55\u5F00 \u25BE';
             };
 
