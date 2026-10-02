@@ -48,8 +48,31 @@ html[theme="national"] .hero {
     background-size: auto, auto, auto;
 }
 
-/* 国庆主题的国旗由 js/turtle-flag.js 用海龟动画呈现（在 LOGO 视频上方），
-   这里不再放静态旗子。 */
+/* ---- 其它页面的 Hero 幕布（类名是 .vhero，比首页多一个 v）----
+   首页只有 index-Beta.html 用 .hero，另外 24 个页面（关于 / 视频 / 更新日志 …）
+   用的是 .vhero 系列。它们在各自内联 <style> 里写死了蓝色顶光，
+   这里统一压成同一套红金，省得逐个页面改。 */
+html[theme="national"] .vhero {
+    background-image:
+        radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
+        radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
+    background-repeat: no-repeat;
+    background-position: left top, right top, center;
+}
+/* 点阵装饰换成金色 */
+html[theme="national"] .vhero::before {
+    background-image: radial-gradient(rgba(255, 214, 102, .085) 1px, transparent 1px);
+}
+html[theme="national"] .vhero h1 { color: #fff6e2; }
+html[theme="national"] .vhero h1 .light { color: var(--brand); }
+html[theme="national"] .vhero-sub { color: rgba(255, 232, 200, .66); }
+html[theme="national"] .hero-eyebrow { color: rgba(255, 226, 170, .55); }
+html[theme="national"] .vhero-actions .hero-link {
+    color: #ffedcf;
+    border-bottom-color: rgba(255, 210, 74, .42);
+}
+html[theme="national"] .vhero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
 
 /* 手机上交叠会太挤，缩小并挪到右下角 */
 @media (max-width: 900px) {
@@ -178,6 +201,40 @@ html[theme="tech"] body {
         var(--bg);
     background-attachment: fixed;
 }
+
+/* ---- Hero 幕布（首页 .hero / 其它 24 个页面 .vhero）----
+   两套版式的内联样式都写死了蓝色顶光，这里统一压成深空 + 青紫双光源。 */
+html[theme="tech"] .hero,
+html[theme="tech"] .vhero {
+    background-image:
+        linear-gradient(rgba(0, 229, 255, .05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, .05) 1px, transparent 1px),
+        radial-gradient(900px 480px at 14% 4%, rgba(0, 229, 255, .14), transparent 62%),
+        radial-gradient(760px 460px at 90% 26%, rgba(124, 58, 237, .17), transparent 60%),
+        linear-gradient(168deg, #060a14 0%, #0a1220 54%, #0e1a2c 100%);
+    background-repeat: no-repeat;
+    background-position: left top, left top, left top, right top, center;
+    background-size: 34px 34px, 34px 34px, auto, auto, auto;
+}
+/* 点阵装饰换成青色 */
+html[theme="tech"] .hero::after,
+html[theme="tech"] .vhero::before {
+    background-image: radial-gradient(rgba(0, 229, 255, .1) 1px, transparent 1px);
+}
+html[theme="tech"] .vhero h1,
+html[theme="tech"] .hero h1 { color: #eaf4ff; }
+html[theme="tech"] .vhero h1 .light,
+html[theme="tech"] .hero h1 .light { color: var(--brand); }
+html[theme="tech"] .vhero-sub,
+html[theme="tech"] .hero-sub { color: rgba(180, 205, 240, .68); }
+html[theme="tech"] .hero-eyebrow { color: rgba(120, 220, 255, .6); }
+html[theme="tech"] .vhero-actions .hero-link,
+html[theme="tech"] .hero-actions .hero-link {
+    color: #cfe9ff;
+    border-bottom-color: rgba(0, 229, 255, .42);
+}
+html[theme="tech"] .vhero-fade,
+html[theme="tech"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
 
 /* 导航：玻璃感 + 青色底线 */
 html[theme="tech"] .nav {
