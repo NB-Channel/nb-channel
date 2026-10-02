@@ -40,10 +40,15 @@ html[theme="national"] body {
        国旗改由 js/turtle-flag.js 的海龟动画呈现（在 LOGO 视频上方），
        这里不再放任何静态旗子。 ---- */
 html[theme="national"] .hero {
+    /* 最底那层用 72% 不透明的深红，好让 body 上的国旗从背后透出来；
+       太透字会糊，太实又看不见旗，这个值是试出来的。 */
     background-image:
         radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
         radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
-        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
+        linear-gradient(168deg,
+            rgba(77, 10, 16, .72) 0%,
+            rgba(109, 16, 23, .72) 52%,
+            rgba(138, 21, 30, .72) 100%);
     background-repeat: no-repeat;
     background-position: left top, right top, center;
     background-size: auto, auto, auto;
@@ -54,10 +59,14 @@ html[theme="national"] .hero {
    用的是 .vhero 系列。它们在各自内联 <style> 里写死了蓝色顶光，
    这里统一压成同一套红金，省得逐个页面改。 */
 html[theme="national"] .vhero {
+    /* 同 .hero：半透明，让国旗透出来 */
     background-image:
         radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
         radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
-        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
+        linear-gradient(168deg,
+            rgba(77, 10, 16, .72) 0%,
+            rgba(109, 16, 23, .72) 52%,
+            rgba(138, 21, 30, .72) 100%);
     background-repeat: no-repeat;
     background-position: left top, right top, center;
 }
