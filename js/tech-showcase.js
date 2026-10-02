@@ -127,6 +127,7 @@
                     '  echo <\u6587\u5b57>       \u539f\u6837\u56de\u663e',
                     '  history           \u5386\u53f2\u547d\u4ee4',
                     '  clear             \u6e05\u5c4f',
+                    '  start <\u9875\u9762>      \u6253\u5f00\u5176\u5b83\u9875\u9762\uff08\u8f93 start \u770b\u5168\u90e8\uff09',
                     '',
                     '\u2500\u2500 \u865a\u62df\u80a1\u7968 \u00b7 \u771f\u5b9e\u6570\u636e \u2500\u2500',
                     '  nb company        \u81ea\u5bb6\u516c\u53f8\u6863\u6848',
@@ -144,6 +145,8 @@
                     '',
                     '\u2500\u2500 \u5176\u4ed6 \u2500\u2500',
                     '  fortune           \u968f\u673a\u4e00\u53e5',
+                    '  matrix            \u4f60\u61c2\u7684',
+                    '  nbcoin            \u4f60\u61c2\u7684',
                     '  exit              \u5173\u95ed\u7ec8\u7aef'
                 ].join('\n');
             },
@@ -170,10 +173,79 @@
             'fortune': function () {
                 return TERM_FORTUNE[Math.floor(Math.random() * TERM_FORTUNE.length)];
             },
+            /* start <页面>：在新标签打开 NB 频道的其它页面 */
+            'start': function (arg) {
+                var PAGES = {
+                    'home':    ['index-Beta.html',        '\u9996\u9875'],
+                    'about':   ['about-Beta.html',        '\u5173\u4e8e\u6211\u4eec'],
+                    'videos':  ['videos-Beta.html',       '\u89c6\u9891'],
+                    'shop':    ['shop-Beta.html',         '\u5468\u8fb9\u5546\u57ce'],
+                    'bank':    ['bank-Beta.html',         'NB\u94f6\u884c'],
+                    'stock':   ['stock-Beta.html',        '\u865a\u62df\u80a1\u7968'],
+                    'chat':    ['chat-Beta.html',         '\u597d\u53cb / \u79c1\u4fe1'],
+                    'vote':    ['vote-Beta.html',         '\u6295\u7968\u4e2d\u5fc3'],
+                    'tools':   ['tools-Beta.html',        '\u5de5\u5177\u7bb1'],
+                    'profile': ['profile-Beta.html',      '\u4e2a\u4eba\u4e2d\u5fc3'],
+                    'messages':['messages-Beta.html',     '\u6d88\u606f\u4e2d\u5fc3'],
+                    'comments':['comments-Beta.html',     '\u8bc4\u8bba\u533a'],
+                    'changelog':['changelog-Beta.html',   '\u66f4\u65b0\u65e5\u5fd7'],
+                    'achievements':['achievements-Beta.html','\u6210\u5c31'],
+                    'backpack':['backpack-Beta.html',     '\u80cc\u5305'],
+                    'lottery': ['lottery-Beta.html',      '\u7b7e\u5230\u62bd\u5956'],
+                    'titles':  ['titles-Beta.html',       '\u79f0\u53f7'],
+                    'feedback':['feedback-Beta.html',     '\u53cd\u9988'],
+                    'product': ['product-Beta.html',      '\u6211\u7684\u4ea7\u54c1'],
+                    'app':     ['APP-Beta.html',          '\u8f6f\u4ef6/APP']
+                };
+                var k = (arg || '').trim().toLowerCase().replace(/\.html$/, '');
+                if (!k) {
+                    var keys = Object.keys(PAGES);
+                    var out = ['\u53ef\u4ee5\u6253\u5f00\u7684\u9875\u9762\uff08start <\u540d\u5b57>\uff09'];
+                    for (var i = 0; i < keys.length; i += 3) {
+                        out.push('  ' + keys.slice(i, i + 3).map(function (x) {
+                            return (x + '            ').slice(0, 13) + PAGES[x][1];
+                        }).join(''));
+                    }
+                    return out.join('\n');
+                }
+                if (!PAGES[k]) {
+                    return {cls: 'err', text: '\u627e\u4e0d\u5230\u9875\u9762\uff1a' + k + '\u3002\u8f93\u5165 start \u770b\u5168\u90e8\u3002'};
+                }
+                try {
+                    window.open(PAGES[k][0], '_blank', 'noopener');
+                } catch (e2) {}
+                return {cls: 'ok', text: '\u6b63\u5728\u6253\u5f00\uff1a' + PAGES[k][1] + '  \u2192 ' + PAGES[k][0]};
+            },
             'echo': function (arg) { return arg || ''; },
             'clear': function () { clear(); return null; },
             'sudo': function (arg) {
-                return { cls: 'err', text: '\u4f60\u5df2\u7ecf\u662f\u7ba1\u7406\u5458\u4e86\u3002' };
+                if (!arg) {
+                    return {cls: 'err', text: '\u6743\u9650\u4e0d\u8db3\uff1a\u4f60\u53ea\u662f\u4e2a\u8bbf\u5ba2\u3002'};
+                }
+                return {cls: 'err', text: 'sudo: ' + arg + ': command not found'};
+            },
+            'rm': function (arg) {
+                if (/-rf?\s*\/?\s*$/.test(arg) || arg.indexOf('-rf') === 0) {
+                    return {cls: 'err', text: '\u6211\u5f88\u60f3\u7167\u505a\uff0c\u4f46\u516c\u53f8\u8fd8\u5f97\u8fd0\u8425\u3002'};
+                }
+                return {cls: 'err', text: 'rm: \u7f3a\u5c11\u64cd\u4f5c\u6570'};
+            },
+            'matrix': function () {
+                var chars = '01NB\u30A2\u30A4\u30A6\u30A8\u30AA\u30AB\u30AD\u30AF';
+                var rows = [];
+                for (var r = 0; r < 8; r++) {
+                    var line = '';
+                    for (var c = 0; c < 46; c++) {
+                        line += Math.random() < 0.28
+                            ? chars[Math.floor(Math.random() * chars.length)]
+                            : ' ';
+                    }
+                    rows.push(line);
+                }
+                return {cls: 'ok', text: rows.join('\n') + '\n\u4f60\u5728\u7f51\u7edc\u4e16\u754c\u91cc\u8d8a\u9677\u8d8a\u6df1\u4e86\u3002'};
+            },
+            'nbcoin': function () {
+                return {cls: 'hi', text: '\u62ff\u7740\uff0c\u522b\u8bf4\u662f\u6211\u7ed9\u7684\u3002\uff08\u7eaf\u5c5e\u5f69\u86cb\uff0c\u8d26\u6237\u91cc\u6ca1\u591a\u4e00\u5206\u94b1\uff09'};
             },
             'exit': function () { return { cls: 'dim', text: '\u518d\u89c1\uff0c\u8bb0\u5f97\u56de\u6765\u3002' }; },
 
@@ -282,19 +354,41 @@
                         });
                 }
 
-                /* 友商：除了自己之外市值最高的几家 */
-                if (sub === 'friend') {
-                    return sbCompanies(12).then(function (all) {
-                        var others = (all || []).filter(function (c) {
-                            return c.company_name.indexOf('NB') !== 0;
-                        }).slice(0, 6);
-                        if (!others.length) return {cls: 'err', text: '\u6682\u65e0\u6570\u636e\u3002'};
-                        return ['\u5e02\u503c\u9760\u524d\u7684\u90bb\u5c45\uff1a'].concat(
-                            others.map(function (c) {
-                                return '  ' + c.company_name.slice(0, 16) + '  ' + big(c.market_value || 0);
-                            })).join('\n');
+                /* 好友：读真实的好友关系（需要登录） */
+                if (sub === 'friend' || sub === 'friends') {
+                    var u = null, sess = '';
+                    try {
+                        u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+                        sess = localStorage.getItem('nb_session') || '';
+                    } catch (e0) {}
+                    if (!u || !u.id || !sess) {
+                        return {cls: 'err', text: '\u8bf7\u5148\u767b\u5f55\u540e\u518d\u67e5\u597d\u53cb\u3002'};
+                    }
+                    return fetch(SB_URL + '/rest/v1/rpc/get_friends', {
+                        method: 'POST',
+                        headers: {
+                            apikey: SB_KEY,
+                            'Authorization': 'Bearer ' + SB_KEY,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ p_user_id: u.id, p_session: sess })
+                    }).then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    }).then(function (list) {
+                        list = list || [];
+                        var me = u.nickname || u.username || '\u6211';
+                        if (!list.length) {
+                            return {cls: 'dim', text: '\u4f60\u8fd8\u6ca1\u6709\u597d\u53cb\u3002\u53bb chat-Beta.html \u52a0\u51e0\u4e2a\u5427\u3002'};
+                        }
+                        var out = [me + ' \u7684\u597d\u53cb\uff08' + list.length + ' \u4f4d\uff09'];
+                        list.forEach(function (f, i) {
+                            var nm = f.nickname || f.username || f.name || ('\u7528\u6237' + (f.id || f.user_id || ''));
+                            out.push('  ' + String(i + 1).padStart(2) + '. ' + String(nm).slice(0, 18));
+                        });
+                        return out.join('\n');
                     }).catch(function (e) {
-                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                        return {cls: 'err', text: '\u597d\u53cb\u5217\u8868\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
                     });
                 }
 
