@@ -74,6 +74,48 @@ html[theme="national"] .vhero-actions .hero-link {
 }
 html[theme="national"] .vhero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
 
+/* ---- 首页页脚上方的 CTA 区块 ----
+   原来是 linear-gradient(170deg,#101c33,#1c1745) 的深蓝紫，
+   完全没接主题。这块在首页最下方，是转化入口，配色得跟上。 */
+html[theme="national"] .cta {
+    background: linear-gradient(170deg, #4d0a10 0%, #5e0d14 55%, #6d1017 100%);
+    color: #fff6e2;
+}
+html[theme="national"] .cta p { color: rgba(255, 232, 200, .62); }
+html[theme="national"] .cta .hero-link { border-bottom-color: rgba(255, 210, 74, .42); }
+
+/* ---- 导航栏按钮 ---- */
+html[theme="national"] .nav-cta {
+    background: linear-gradient(135deg, var(--brand), #ff8a5c);
+    color: #4d0a10;
+}
+html[theme="national"] .nav-scan:hover { color: var(--brand); }
+html[theme="national"] .nav-more-panel a:hover {
+    background: rgba(255, 210, 74, .12);
+    color: #fff6e2;
+}
+html[theme="national"] .theme-btn:hover {
+    border-color: rgba(255, 210, 74, .5);
+    color: var(--brand);
+}
+html[theme="national"] .drawer .d-close:hover { color: var(--brand); }
+
+/* ---- 公告条标题、实时小圆点 ---- */
+html[theme="national"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="national"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(255, 210, 74, .8);
+}
+
+/* ---- 卡片图标与视频缩略图 ---- */
+html[theme="national"] .about-card .ico {
+    background: linear-gradient(135deg, rgba(255, 210, 74, .22), rgba(255, 108, 74, .18));
+    color: var(--brand);
+}
+html[theme="national"] .vcard:nth-child(1) .thumb {
+    background: linear-gradient(135deg, #8a151e, #4d0a10);
+}
+
 /* ---- 页脚：同样换红金 ----
    页脚配色在页面内联样式里写死成深蓝紫
    （background #0f172a→#0a0f1e、顶线 rgba(59,130,246)/rgba(139,92,246)、
@@ -506,6 +548,44 @@ html[theme="tech"] .f-icon {
     html[theme="national"] body::after { animation: none; }
 }
 
+
+/* ---- CTA：深空 + 青色标题 ---- */
+html[theme="tech"] .cta {
+    background: linear-gradient(170deg, #0a1220 0%, #0c1424 55%, #0e1a2c 100%);
+    color: #eaf4ff;
+}
+html[theme="tech"] .cta p { color: rgba(180, 205, 240, .62); }
+html[theme="tech"] .cta .hero-link { border-bottom-color: rgba(0, 229, 255, .42); }
+
+html[theme="tech"] .nav-cta {
+    background: linear-gradient(135deg, var(--brand), #7c3aed);
+    color: #04121a;
+    box-shadow: 0 0 22px -6px rgba(0, 229, 255, .8);
+}
+html[theme="tech"] .nav-scan:hover { color: var(--brand); }
+html[theme="tech"] .nav-more-panel a:hover {
+    background: rgba(0, 229, 255, .1);
+    color: #eaf4ff;
+}
+html[theme="tech"] .theme-btn:hover {
+    border-color: rgba(0, 229, 255, .5);
+    color: var(--brand);
+}
+html[theme="tech"] .drawer .d-close:hover { color: var(--brand); }
+
+html[theme="tech"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="tech"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(0, 229, 255, .85);
+}
+
+html[theme="tech"] .about-card .ico {
+    background: linear-gradient(135deg, rgba(0, 229, 255, .2), rgba(124, 58, 237, .18));
+    color: var(--brand);
+}
+html[theme="tech"] .vcard:nth-child(1) .thumb {
+    background: linear-gradient(135deg, #0c1424, #060a14);
+}
 
 /* ---- 页脚：深空 + 青色顶线 ---- */
 html[theme="tech"] .footer {
