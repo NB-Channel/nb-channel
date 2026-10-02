@@ -1,3 +1,17 @@
+/* ============================================================
+   NB频道 · 主题包（官网模式）
+   ------------------------------------------------------------
+   官网模式的配色全部走 CSS 变量（--bg / --ink / --brand / --card …），
+   所以这里主要靠覆盖变量换掉整套配色，再补少量装饰。
+
+   加载顺序很重要：这个文件必须排在页面内联 <style> 之后，
+   因为 html[theme=x] 和 html.dark 的特异度相同，靠「后写的赢」压过去。
+   ============================================================ */
+
+/* ============================================================
+   🇨🇳 国庆主题 · 红金
+   限时 10 月 1 日 ~ 7 日（由 js/theme.js 控制可用性）
+   ============================================================ */
 html[theme="national"] {
     --bg:        #6d1017;
     --ink:       #ffedcf;
@@ -12,45 +26,23 @@ html[theme="national"] {
     --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 26px 56px -22px rgba(0, 0, 0, .55);
 }
 
-/* 底色：国旗铺最底层 + 金色光晕 + 深红打底。
-   —— 国旗为什么不做成 body::before 那种独立浮层？
-      试过三种 z-index 都不对：0 会被后面的兄弟元素盖住，
-      -1 会沉到 body 背景色【后面】直接看不见，
-      isolation 只是把 -1 困在局部，照样看不见。
-      干脆写成 background 的第一层：它天然在所有子内容之下、
-      又在 background-color 之上，一次到位，不用碰层叠。
-      attachment: fixed 让它滚动时纹丝不动。
-   国旗是完整旗面（红底 + 黄星），红底由 SVG 里的 opacity 压到 0.38，
-   所以既看得出是面旗，又不会盖住正文。 */
+/* 底色：深红打底 + 极淡的金色光晕，避免大片纯色显得闷 */
 html[theme="national"] body {
-    background-image:
-        url('../images/flag-cn.svg'),
+    background:
         radial-gradient(1100px 620px at 12% -8%, rgba(255, 210, 74, .16), transparent 62%),
-        radial-gradient(900px 520px at 92% 4%, rgba(255, 120, 90, .13), transparent 60%);
-    background-repeat: no-repeat, no-repeat, no-repeat;
-    background-position: center center, left top, right top;
-    /* contain：保持 3:2 原比例、整面旗完整放下。
-       千万别用 100% 100% —— 那会把旗子硬拉成屏幕比例，大星被压扁拉斜，
-       看起来就像「方向不对」；cover 又会裁掉大星。
-       旗子本身在 SVG 里带了 0.38 的 opacity，这里不用再调透明度。 */
-    background-size: contain, auto, auto;
-    background-attachment: fixed, fixed, fixed;
-    background-color: var(--bg);
+        radial-gradient(900px 520px at 92% 4%, rgba(255, 120, 90, .13), transparent 60%),
+        var(--bg);
+    background-attachment: fixed;
 }
 
 /* ---- Hero 幕布：深红 + 金色顶光。
        国旗改由 js/turtle-flag.js 的海龟动画呈现（在 LOGO 视频上方），
        这里不再放任何静态旗子。 ---- */
 html[theme="national"] .hero {
-    /* 最底那层用 72% 不透明的深红，好让 body 上的国旗从背后透出来；
-       太透字会糊，太实又看不见旗，这个值是试出来的。 */
     background-image:
         radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
         radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
-        linear-gradient(168deg,
-            rgba(77, 10, 16, .72) 0%,
-            rgba(109, 16, 23, .72) 52%,
-            rgba(138, 21, 30, .72) 100%);
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
     background-repeat: no-repeat;
     background-position: left top, right top, center;
     background-size: auto, auto, auto;
@@ -61,14 +53,10 @@ html[theme="national"] .hero {
    用的是 .vhero 系列。它们在各自内联 <style> 里写死了蓝色顶光，
    这里统一压成同一套红金，省得逐个页面改。 */
 html[theme="national"] .vhero {
-    /* 同 .hero：半透明，让国旗透出来 */
     background-image:
         radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
         radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
-        linear-gradient(168deg,
-            rgba(77, 10, 16, .72) 0%,
-            rgba(109, 16, 23, .72) 52%,
-            rgba(138, 21, 30, .72) 100%);
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
     background-repeat: no-repeat;
     background-position: left top, right top, center;
 }
