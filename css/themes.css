@@ -1,17 +1,3 @@
-/* ============================================================
-   NB频道 · 主题包（官网模式）
-   ------------------------------------------------------------
-   官网模式的配色全部走 CSS 变量（--bg / --ink / --brand / --card …），
-   所以这里主要靠覆盖变量换掉整套配色，再补少量装饰。
-
-   加载顺序很重要：这个文件必须排在页面内联 <style> 之后，
-   因为 html[theme=x] 和 html.dark 的特异度相同，靠「后写的赢」压过去。
-   ============================================================ */
-
-/* ============================================================
-   🇨🇳 国庆主题 · 红金
-   限时 10 月 1 日 ~ 7 日（由 js/theme.js 控制可用性）
-   ============================================================ */
 html[theme="national"] {
     --bg:        #6d1017;
     --ink:       #ffedcf;
@@ -26,13 +12,28 @@ html[theme="national"] {
     --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 26px 56px -22px rgba(0, 0, 0, .55);
 }
 
-/* 底色：深红打底 + 极淡的金色光晕，避免大片纯色显得闷 */
+/* 底色：国旗铺最底层 + 金色光晕 + 深红打底。
+   —— 国旗为什么不做成 body::before 那种独立浮层？
+      试过三种 z-index 都不对：0 会被后面的兄弟元素盖住，
+      -1 会沉到 body 背景色【后面】直接看不见，
+      isolation 只是把 -1 困在局部，照样看不见。
+      干脆写成 background 的第一层：它天然在所有子内容之下、
+      又在 background-color 之上，一次到位，不用碰层叠。
+      attachment: fixed 让它滚动时纹丝不动。
+   国旗用的是「只有五颗黄星」的那版 —— 因为旗面的红底 #de2910
+   和主题红底本来就是一路色，整面铺上去看不出边界，
+   眼睛能认出来的只有黄星。 */
 html[theme="national"] body {
-    background:
+    background-image:
+        url('../images/flag-cn.svg'),
         radial-gradient(1100px 620px at 12% -8%, rgba(255, 210, 74, .16), transparent 62%),
-        radial-gradient(900px 520px at 92% 4%, rgba(255, 120, 90, .13), transparent 60%),
-        var(--bg);
-    background-attachment: fixed;
+        radial-gradient(900px 520px at 92% 4%, rgba(255, 120, 90, .13), transparent 60%);
+    background-repeat: no-repeat, no-repeat, no-repeat;
+    background-position: center center, left top, right top;
+    /* 国旗略放大让星群散开，光晕保持原尺寸 */
+    background-size: 130% 130%, auto, auto;
+    background-attachment: fixed, fixed, fixed;
+    background-color: var(--bg);
 }
 
 /* ---- Hero 幕布：深红 + 金色顶光。
