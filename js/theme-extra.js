@@ -123,40 +123,26 @@
         '  .nb-glx-t::before,.nb-glx-t::after,.nb-glx-scan{animation:none;opacity:0;}',
         '}',
 
-        /* ---------- 墨韵 · 手写体 NB-CHANNEL ---------- */
-        '.nb-ink{position:relative;padding:40px 34px 52px;border-radius:12px;',
+        /* ---------- 墨韵 · 毛笔写的 NB-CHANNEL ---------- */
+        '.nb-ink{position:relative;padding:40px 34px 54px;border-radius:12px;',
         '  background:linear-gradient(170deg,#faf7f0,#f4f0e6 60%,#efe9dd);',
         '  border:1px solid rgba(28,26,23,.14);overflow:hidden;}',
-        '.nb-ink-inner{display:grid;grid-template-columns:1fr 200px;gap:30px;align-items:center;}',
+        '.nb-ink-inner{display:grid;grid-template-columns:1fr 190px;gap:28px;align-items:center;}',
         '.nb-ink svg{display:block;max-width:100%;height:auto;}',
-        /* 每一笔一条 path。默认【已经写好】，只有 .nb-ink-go 时才从零描一遍 ——
-           这样动画万一没触发，字也在，不会白板。 */
-        '.nb-ink .st{fill:none !important;stroke:#1c1a17;stroke-linecap:round;',
-        '  stroke-linejoin:round;stroke-width:7;stroke-dasharray:var(--len,0);',
-        '  stroke-dashoffset:0;}',
-        '.nb-ink .st.thin{stroke-width:5;opacity:.82;}',
-        '.nb-ink .st.mid{stroke-width:7;}',
-        '.nb-ink .st.thick{stroke-width:9;}',
-        /* 晕染：不用 SVG filter（引不稳），改成每笔三层叠加描边 ——
-           b2 最粗最淡（外圈洇开）→ b1 中间 → st 笔锋（最细最实）。
-           三层是同一个 d、同一套 dash 动画，所以是「一边洇一边写」。 */
-        '.nb-ink .b2,.nb-ink .b1{fill:none !important;stroke-linecap:round;',
-        '  stroke-linejoin:round;stroke-dasharray:var(--len,0);stroke-dashoffset:0;}',
-        '.nb-ink .b2{stroke:#5a4d3c;opacity:.13;}',
-        '.nb-ink .b1{stroke:#3a3228;opacity:.26;}',
-        '.nb-ink .b2.w-thin{stroke-width:19;}',
-        '.nb-ink .b2.w-mid{stroke-width:25;}',
-        '.nb-ink .b2.w-thick{stroke-width:33;}',
-        '.nb-ink .b1.w-thin{stroke-width:13;}',
-        '.nb-ink .b1.w-mid{stroke-width:17;}',
-        '.nb-ink .b1.w-thick{stroke-width:23;}',
-        '.nb-ink-go .st,.nb-ink-go .b1,.nb-ink-go .b2{stroke-dashoffset:var(--len,0);',
-        '  animation:nbInk .72s cubic-bezier(.45,.05,.3,1) forwards;}',
-        '@keyframes nbInk{to{stroke-dashoffset:0;}}',
-        /* 印章：默认就盖着，播动画时从放大状态落定 */
+        /* 每一笔是一条【填充轮廓】（不是等宽描边），所以自带粗细变化。
+           默认已经写好，只有 .nb-ink-go 时才从零"长"出来。 */
+        '.nb-ink .gl{fill:#1c1a17;stroke:none;}',
+        /* 晕：同一个轮廓往外扩一圈，低透明度，用 SVG 的 stroke 模拟洇边 */
+        '.nb-ink .gl-halo{fill:none;stroke:#3a3228;stroke-width:7;opacity:.14;',
+        '  stroke-linejoin:round;}',
+        '.nb-ink .gl-halo2{fill:none;stroke:#5a4d3c;stroke-width:13;opacity:.07;',
+        '  stroke-linejoin:round;}',
+        '.nb-ink-go .gl,.nb-ink-go .gl-halo,.nb-ink-go .gl-halo2{',
+        '  clip-path:inset(0 100% 0 0);animation:nbInkW .62s cubic-bezier(.4,.05,.3,1) forwards;}',
+        '@keyframes nbInkW{to{clip-path:inset(0 0 0 0);}}',
         '.nb-ink-seal{opacity:1;transform:rotate(-8deg);transform-origin:50% 50%;}',
         '.nb-ink-go .nb-ink-seal{opacity:0;transform:scale(1.7) rotate(-18deg);',
-        '  animation:nbSeal2 .38s cubic-bezier(.2,1.7,.4,1) 2.6s forwards;}',
+        '  animation:nbSeal2 .38s cubic-bezier(.2,1.7,.4,1) 2.8s forwards;}',
         '@keyframes nbSeal2{to{opacity:1;transform:scale(1) rotate(-8deg);}}',
         '.nb-ink-side{text-align:right;}',
         '.nb-ink-side .t{font-size:1.2rem;font-weight:800;letter-spacing:6px;color:#1c1a17;}',
@@ -173,14 +159,12 @@
         '  .nb-ink-btns{justify-content:center;}',
         '}',
         '@media(prefers-reduced-motion:reduce){',
-        '  .nb-ink .st,.nb-ink .b1,.nb-ink .b2{stroke-dashoffset:0;animation:none;}',
+        '  .nb-ink .gl,.nb-ink .gl-halo,.nb-ink .gl-halo2{clip-path:none;animation:none;}',
         '  .nb-ink-seal{opacity:1;transform:rotate(-8deg);animation:none;}',
         '}',
 
         '@media(max-width:820px){.nb-moon{grid-template-columns:1fr;justify-items:center;text-align:center;}}',
 
-        /* ---------- 🖌️ 毛笔写字 ---------- */
-        '.nb-brush{position:relative;padding:46px 34px;border-radius:12px;',
         '  background:#faf7f0;border:1px solid rgba(28,26,23,.14);}',
         '.nb-brush-inner{display:grid;grid-template-columns:1fr auto;gap:34px;align-items:center;}',
         '.nb-brush svg{display:block;overflow:visible;}',
@@ -472,128 +456,186 @@
     };
 
     /* ============================================================
-       墨韵 · 手写体 NB-CHANNEL
-       每个字母 2~4 笔，全部手写成单线路径，按笔顺逐笔描出来，
-       最后落款盖印。和主题名「墨韵」最搭的一套。
+       墨韵 · 毛笔写的 NB-CHANNEL
+       每一笔给一条【中心线】+ 宽度曲线，运行时沿中心线采样，
+       按法线往两侧撑开，合成一条闭合轮廓再填充。
+       这样起笔顿、行笔饱满、收笔出锋，才是毛笔而不是马克笔。
        ============================================================ */
     var INK = {
         mount: function (box) {
-            /* 手写体布局：基线 y=150，字高 44~112，字宽约 56，字距 20。
-               每笔 = { d, w(粗细), dl(延迟秒) }                      */
-            var G = [];   /* 收集所有笔画 */
-            function push(d, w, dl) { G.push({ d: d, w: w, dl: dl }); }
+            var NS = 'http://www.w3.org/2000/svg';
 
-            /* ---- N ---- */
-            push('M30 150 L30 40', 'thick', 0.00);
-            push('M30 40 L86 150', 'mid',   0.13);
-            push('M86 150 L86 40', 'thick', 0.26);
+            /* 中心线 + 参数
+               d    : 中心线路径
+               w    : 最粗处（半宽，单位是 SVG 坐标）
+               taper: 收笔系数，越小锋越尖
+               dl   : 落笔延迟（秒） */
+            var G = [
+                /* N */
+                { d: 'M32 152 L32 44',  w: 7.2, taper: .3, dl: 0.00 },
+                { d: 'M34 46 L88 152',  w: 6.2, taper: .5, dl: 0.16 },
+                { d: 'M88 150 L88 42',  w: 7.0, taper: .3, dl: 0.32 },
+                /* B */
+                { d: 'M122 152 L122 42', w: 7.2, taper: .3, dl: 0.48 },
+                { d: 'M124 44 C176 40 184 76 148 96', w: 5.4, taper: .45, dl: 0.64 },
+                { d: 'M148 96 C192 100 194 148 122 152', w: 5.6, taper: .5, dl: 0.80 },
+                /* 连字符 */
+                { d: 'M204 100 L254 100', w: 4.6, taper: .85, dl: 0.96 },
+                /* C */
+                { d: 'M326 54 C308 32 268 36 268 96 C268 156 308 160 326 138',
+                  w: 5.8, taper: .55, dl: 1.10 },
+                /* H */
+                { d: 'M354 152 L354 42', w: 7.2, taper: .3, dl: 1.26 },
+                { d: 'M356 98 L410 98',  w: 5.4, taper: .85, dl: 1.42 },
+                { d: 'M410 152 L410 42', w: 7.2, taper: .3, dl: 1.58 },
+                /* A */
+                { d: 'M434 152 L468 42', w: 6.6, taper: .45, dl: 1.74 },
+                { d: 'M468 42 L502 152', w: 6.6, taper: .45, dl: 1.90 },
+                { d: 'M446 114 L490 114', w: 5.0, taper: .8, dl: 2.06 },
+                /* N */
+                { d: 'M528 152 L528 44', w: 7.0, taper: .3, dl: 2.22 },
+                { d: 'M530 46 L584 152', w: 6.2, taper: .5, dl: 2.38 },
+                { d: 'M584 150 L584 42', w: 7.0, taper: .3, dl: 2.54 },
+                /* N */
+                { d: 'M612 152 L612 44', w: 7.0, taper: .3, dl: 2.70 },
+                { d: 'M614 46 L668 152', w: 6.2, taper: .5, dl: 2.86 },
+                { d: 'M668 150 L668 42', w: 7.0, taper: .3, dl: 3.02 },
+                /* E */
+                { d: 'M700 152 L700 42', w: 7.0, taper: .3, dl: 3.18 },
+                { d: 'M702 44 L750 44',  w: 5.0, taper: .8, dl: 3.30 },
+                { d: 'M702 98 L742 98',  w: 4.8, taper: .8, dl: 3.42 },
+                { d: 'M702 150 L750 150', w: 5.0, taper: .8, dl: 3.54 },
+                /* L */
+                { d: 'M778 44 L778 152', w: 7.0, taper: .3, dl: 3.66 },
+                { d: 'M780 152 L826 152', w: 5.2, taper: .8, dl: 3.82 }
+            ];
 
-            /* ---- B ---- */
-            push('M118 150 L118 40', 'thick', 0.39);
-            push('M118 40 C176 34 186 72 150 94', 'mid', 0.52);
-            push('M150 94 C196 98 198 146 118 150', 'mid', 0.65);
-
-            /* ---- 连字符 ---- */
-            push('M206 100 L256 100', 'thin', 0.78);
-
-            /* ---- C ---- */
-            push('M328 52 C310 30 268 34 268 95 C268 156 310 160 328 138', 'mid', 0.91);
-
-            /* ---- H ---- */
-            push('M354 150 L354 40', 'thick', 1.04);
-            push('M354 96 L410 96', 'mid',   1.17);
-            push('M410 150 L410 40', 'thick', 1.30);
-
-            /* ---- A ---- */
-            push('M434 150 L468 40', 'thick', 1.43);
-            push('M468 40 L502 150', 'thick', 1.56);
-            push('M446 112 L490 112', 'mid',  1.69);
-
-            /* ---- N ---- */
-            push('M528 150 L528 40', 'thick', 1.82);
-            push('M528 40 L584 150', 'mid',   1.95);
-            push('M584 150 L584 40', 'thick', 2.08);
-
-            /* ---- N ---- */
-            push('M612 150 L612 40', 'thick', 2.21);
-            push('M612 40 L668 150', 'mid',   2.34);
-            push('M668 150 L668 40', 'thick', 2.47);
-
-            /* ---- E ---- */
-            push('M700 150 L700 40', 'thick', 2.60);
-            push('M700 40 L750 40', 'mid',   2.70);
-            push('M700 96 L742 96', 'mid',   2.80);
-            push('M700 150 L750 150', 'mid', 2.90);
-
-            /* ---- L ---- */
-            push('M778 40 L778 150', 'thick', 3.02);
-            push('M778 150 L826 150', 'mid',  3.14);
-
-            /* 每一笔生成三条 path：b2/b1 是两层晕染，st 是笔锋 */
-            function layer(cls, o) {
-                return '<path class="' + cls + ' w-' + o.w + '" fill="none" d="' + o.d + '" ' +
-                       'style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
+            /* ---------- 宽度曲线 ----------
+               t: 0→1
+               起笔 0.30→1.0（顿笔）  中段 1.0→0.72  收笔 →taper（出锋） */
+            function widthAt(t, w, taper) {
+                var k;
+                if (t < 0.10) k = 0.30 + (t / 0.10) * 0.70;          /* 起笔顿 */
+                else if (t < 0.55) k = 1.0 - ((t - 0.10) / 0.45) * 0.28;
+                else k = 0.72 - ((t - 0.55) / 0.45) * (0.72 - taper);
+                /* 一点点抖动，别太像印刷体 */
+                k *= 1 + (Math.sin(t * 37.1) * 0.035);
+                return Math.max(0.35, k) * w;
             }
-            var bleed = G.map(function (o) { return layer('b2', o); }).join('') +
-                        G.map(function (o) { return layer('b1', o); }).join('');
-            var paths = G.map(function (o, i) {
-                return '<path class="st ' + o.w + '" fill="none" d="' + o.d + '" ' +
-                       'data-i="' + i + '" style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
-            }).join('');
 
+            /* 沿中心线采样，撑出闭合轮廓 */
+            function outline(d, w, taper, step) {
+                var probe = document.createElementNS(NS, 'path');
+                probe.setAttribute('d', d);
+                var hide = document.createElementNS(NS, 'g');
+                hide.setAttribute('visibility', 'hidden');
+                hide.appendChild(probe);
+                box.appendChild(hide);
 
-            var SEAL =
+                var L = probe.getTotalLength ? probe.getTotalLength() : 120;
+                step = step || Math.max(1.6, L / 60);
+
+                var left = [], right = [], s;
+                for (s = 0; s <= L; s += step) {
+                    var t = s / L;
+                    var p = probe.getPointAtLength(s);
+                    /* 切线用邻近点差分算，比 getTangentAtLength 兼容性好 */
+                    var s2 = Math.min(L, s + 1.2);
+                    var p2 = probe.getPointAtLength(s2);
+                    var dx = p2.x - p.x, dy = p2.y - p.y;
+                    var len = Math.hypot(dx, dy) || 1;
+                    var nx = -dy / len, ny = dx / len;          /* 法线 */
+                    var hw = widthAt(t, w, taper);
+                    left.push([p.x + nx * hw, p.y + ny * hw]);
+                    right.push([p.x - nx * hw, p.y - ny * hw]);
+                }
+                box.removeChild(hide);
+
+                var pts = left.concat(right.reverse());
+                var out = 'M' + pts[0][0].toFixed(2) + ' ' + pts[0][1].toFixed(2);
+                for (var i = 1; i < pts.length; i++) {
+                    out += 'L' + pts[i][0].toFixed(2) + ' ' + pts[i][1].toFixed(2);
+                }
+                return out + 'Z';
+            }
+
+            /* ---------- 组装 ---------- */
+            var svg = document.createElementNS(NS, 'svg');
+            svg.setAttribute('width', '856');
+            svg.setAttribute('height', '200');
+            svg.setAttribute('viewBox', '0 0 856 200');
+            svg.style.maxWidth = '100%';
+            svg.style.height = 'auto';
+
+            var layerHalo2 = document.createElementNS(NS, 'g');   /* 最外圈洇 */
+            var layerHalo = document.createElementNS(NS, 'g');    /* 次外圈 */
+            var layerMain = document.createElementNS(NS, 'g');    /* 笔锋本体 */
+            svg.appendChild(layerHalo2);
+            svg.appendChild(layerHalo);
+            svg.appendChild(layerMain);
+
+            G.forEach(function (o) {
+                var dOut = outline(o.d, o.w, o.taper);
+                var delay = o.dl.toFixed(2) + 's';
+
+                [['gl-halo2', layerHalo2], ['gl-halo', layerHalo], ['gl', layerMain]]
+                .forEach(function (pair) {
+                    var el = document.createElementNS(NS, 'path');
+                    el.setAttribute('class', pair[0]);
+                    el.setAttribute('d', dOut);
+                    el.style.animationDelay = delay;
+                    /* 晕圈用原始中心线描边（比填充轮廓更像洇开的边） */
+                    if (pair[0] !== 'gl') {
+                        el.setAttribute('d', o.d);
+                        el.setAttribute('fill', 'none');
+                    }
+                    pair[1].appendChild(el);
+                });
+            });
+
+            var wrap = document.createElement('div');
+            wrap.innerHTML =
+                '<div class="nb-ink" data-root>' +
+                  '<div class="nb-ink-inner">' +
+                    '<div data-svgslot></div>' +
+                    '<div class="nb-ink-side">' +
+                      '<div class="t">\u58A8\u97F5</div>' +
+                      '<div class="d">\u6BDB\u7B14\u4E66\u5199<br>\u8D77\u7B14\u987F \u00B7 \u6536\u7B14\u950B</div>' +
+                      '<div class="nb-ink-btns">' +
+                        '<button class="nb-ink-btn" data-again>\u91CD\u5199</button>' +
+                      '</div>' +
+                    '</div>' +
+                  '</div>' +
+                  '<div class="nb-ink-cap">\u4E00\u7B14\u4E00\u753B \u00B7 \u5171 ' +
+                    G.length + ' \u7B14</div>' +
+                '</div>';
+            box.innerHTML = '';
+            box.appendChild(wrap);
+            var root = box.querySelector('[data-root]');
+            root.querySelector('[data-svgslot]').appendChild(svg);
+
+            /* 印章 */
+            var sealHost = document.createElement('div');
+            sealHost.style.cssText = 'position:absolute;right:34px;bottom:32px';
+            sealHost.innerHTML =
                 '<svg class="nb-ink-seal" width="70" height="70" viewBox="0 0 70 70">' +
                   '<rect x="2" y="2" width="66" height="66" rx="4" fill="#8c2f23"/>' +
                   '<rect x="8" y="8" width="54" height="54" rx="2" fill="none" ' +
                     'stroke="#faf7f0" stroke-width="2.2"/>' +
                   '<g fill="#faf7f0" font-family="ui-monospace,Consolas,monospace" ' +
                     'font-size="19" font-weight="800" text-anchor="middle">' +
-                    '<text x="23" y="31">N</text>' +
-                    '<text x="47" y="31">B</text>' +
-                    '<text x="23" y="55">\u9891</text>' +
-                    '<text x="47" y="55">\u9053</text>' +
+                    '<text x="23" y="31">N</text><text x="47" y="31">B</text>' +
+                    '<text x="23" y="55">\u9891</text><text x="47" y="55">\u9053</text>' +
                   '</g>' +
                 '</svg>';
+            root.appendChild(sealHost);
 
-            box.innerHTML =
-                '<div class="nb-ink" data-root>' +
-                  '<div class="nb-ink-inner">' +
-                    '<div>' +
-                      '<svg width="856" height="200" viewBox="0 0 856 200">' +
-                        '<g>' + bleed + '</g>' +      /* 先洇开的墨 */
-                        '<g>' + paths + '</g>' +      /* 再落下的笔锋 */
-                      '</svg>' +
-                      '<div class="nb-ink-cap">\u4E00\u7B14\u4E00\u753B \u00B7 \u5171 ' +
-                        G.length + ' \u7B14</div>' +
-                    '</div>' +
-                    '<div class="nb-ink-side">' +
-                      '<div class="t">\u58A8\u97F5</div>' +
-                      '<div class="d">\u624B\u5199\u4F53<br>\u9010\u7B14\u63CF\u51FA</div>' +
-                      '<div class="nb-ink-btns">' +
-                        '<button class="nb-ink-btn" data-again>\u91CD\u5199</button>' +
-                      '</div>' +
-                    '</div>' +
-                  '</div>' +
-                  '<div style="position:absolute;right:34px;bottom:30px">' + SEAL + '</div>' +
-                '</div>';
-
-            var root = box.querySelector('[data-root]');
-
-            function prep() {
-                root.querySelectorAll('.st, .b1, .b2').forEach(function (p) {
-                    var len = p.getTotalLength ? p.getTotalLength() : 400;
-                    p.style.setProperty('--len', len.toFixed(1));
-                });
-            }
             function play() {
                 root.classList.remove('nb-ink-go');
-                void root.offsetWidth;              /* 强制重排，动画重头播 */
-                prep();
+                void root.offsetWidth;
                 root.classList.add('nb-ink-go');
             }
             box.querySelector('[data-again]').addEventListener('click', play);
-            prep();
 
             var io = null;
             if ('IntersectionObserver' in window) {
@@ -604,108 +646,6 @@
             } else { play(); }
 
             return function () { if (io) io.disconnect(); };
-        }
-    };
-
-    /* ============================================================
-       🌙 护眼 · 作息提醒
-       不是装饰，是真提醒：显示当前时间、你已看了多久，
-       到点给一句该歇歇了。用 performance 计时，切走不算。
-       ============================================================ */
-    var EYE = {
-        mount: function (box) {
-            var START = Date.now();
-            var LIMIT_KEY = 'nb_eye_limit';
-            var limit = 45;                       /* 默认 45 分钟提醒一次 */
-            try {
-                var lv = parseInt(localStorage.getItem(LIMIT_KEY) || '', 10);
-                if (lv >= 15 && lv <= 180) limit = lv;
-            } catch (e) {}
-
-            box.innerHTML =
-                '<div class="nb-eye">' +
-                  '<div>' +
-                    '<div class="nb-eye-clock" data-clock>--:--</div>' +
-                    '<div class="nb-eye-date" data-date></div>' +
-                  '</div>' +
-                  '<div class="nb-eye-info">' +
-                    '<div class="row"><span class="k">\u5DF2\u770B</span>' +
-                      '<span class="v" data-watch>0 \u5206\u949F</span></div>' +
-                    '<div class="row"><span class="k">\u63D0\u9192\u95F4\u9694</span>' +
-                      '<span class="v" data-limit>' + limit + ' \u5206\u949F</span></div>' +
-                    '<div class="row"><span class="k">\u5EFA\u8BAE</span>' +
-                      '<span class="v" data-advice>\u6B63\u5E38</span></div>' +
-                    '<div class="nb-eye-tip" data-tip></div>' +
-                    '<div class="nb-eye-btns">' +
-                      '<button class="nb-eye-btn" data-act="15">15\u5206</button>' +
-                      '<button class="nb-eye-btn" data-act="45">45\u5206</button>' +
-                      '<button class="nb-eye-btn" data-act="90">90\u5206</button>' +
-                      '<button class="nb-eye-btn" data-act="reset">\u91CD\u8BA1</button>' +
-                    '</div>' +
-                  '</div>' +
-                '</div>';
-
-            var clockEl = box.querySelector('[data-clock]');
-            var dateEl = box.querySelector('[data-date]');
-            var watchEl = box.querySelector('[data-watch]');
-            var limitEl = box.querySelector('[data-limit]');
-            var adviceEl = box.querySelector('[data-advice]');
-            var tipEl = box.querySelector('[data-tip]');
-
-            var WEEK = ['\u65E5', '\u4E00', '\u4E8C', '\u4E09', '\u56DB', '\u4E94', '\u516D'];
-
-            function two(n) { return (n < 10 ? '0' : '') + n; }
-
-            function render() {
-                var d = new Date();
-                clockEl.textContent = two(d.getHours()) + ':' + two(d.getMinutes()) +
-                                      ':' + two(d.getSeconds());
-                dateEl.textContent = d.getFullYear() + ' \u5E74 ' + (d.getMonth() + 1) + ' \u6708 ' +
-                                     d.getDate() + ' \u65E5 \u00B7 \u5468' + WEEK[d.getDay()];
-
-                var mins = Math.floor((Date.now() - START) / 60000);
-                watchEl.textContent = mins + ' \u5206\u949F';
-
-                var h = d.getHours();
-                var late = (h >= 23 || h < 6);
-                var over = mins >= limit;
-
-                if (over) {
-                    adviceEl.textContent = '\u8BE5\u6B47\u4E86';
-                    tipEl.className = 'nb-eye-tip warn';
-                    tipEl.textContent = '\u4F60\u5DF2\u7ECF\u770B\u4E86 ' + mins +
-                        ' \u5206\u949F\u3002\u8D77\u8EAB\u8D70\u4E24\u6B65\u3001\u770B\u770B\u7A97\u5916\u8FDC\u5904\u5427 \u2014\u2014 ' +
-                        '\u773C\u775B\u6BD4\u7AD9\u91CC\u7684\u4EFB\u4F55\u4E1C\u897F\u90FD\u91CD\u8981\u3002';
-                } else if (late) {
-                    adviceEl.textContent = '\u8BE5\u7761\u4E86';
-                    tipEl.className = 'nb-eye-tip warn';
-                    tipEl.textContent = '\u8FD9\u4E2A\u70B9\u8FD8\u5728\u5237\u7AD9\u2026\u2026' +
-                        '\u660E\u5929\u7684\u4F60\u4F1A\u611F\u8C22\u73B0\u5728\u53BB\u7761\u7684\u4F60\u3002';
-                } else {
-                    adviceEl.textContent = '\u6B63\u5E38';
-                    tipEl.className = 'nb-eye-tip';
-                    tipEl.textContent = '\u8FD9\u4E2A\u4E3B\u9898\u628A\u5BF9\u6BD4\u5EA6\u538B\u5230\u4E86\u6700\u4F4E\u3001' +
-                        '\u5173\u6389\u4E86\u53D1\u5149\u548C\u6E10\u53D8\uff0c\u665A\u4E0A\u770B\u4E0D\u523A\u773C\u3002' +
-                        '\u6BCF ' + limit + ' \u5206\u949F\u63D0\u9192\u4E00\u6B21\u3002';
-                }
-            }
-
-            box.querySelectorAll('[data-act]').forEach(function (b) {
-                b.addEventListener('click', function () {
-                    var a = b.dataset.act;
-                    if (a === 'reset') { START = Date.now(); }
-                    else {
-                        limit = parseInt(a, 10);
-                        limitEl.textContent = limit + ' \u5206\u949F';
-                        try { localStorage.setItem(LIMIT_KEY, String(limit)); } catch (e) {}
-                    }
-                    render();
-                });
-            });
-
-            render();
-            var t = setInterval(render, 1000);
-            return function () { clearInterval(t); };
         }
     };
 
