@@ -45,8 +45,9 @@
     /* ---------- 应用到 <html> ---------- */
     function apply(choice) {
         var el = document.documentElement;
-        var real = choice;
-        if (!real) real = inNationalWindow() ? 'national' : 'default';
+        /* 用户没选过 → 一律用「默认」主题。
+           国庆主题只是「这几天在选项里出现」，不会自动套上。 */
+        var real = (choice === 'national' || choice === 'tech') ? choice : 'default';
         if (real === 'default') el.removeAttribute(ATTR);
         else el.setAttribute(ATTR, real);
         el.setAttribute('data-theme-resolved', real);
@@ -60,8 +61,7 @@
         // 此刻实际生效的
         resolved: function () {
             var c = readChoice();
-            if (c) return c;
-            return inNationalWindow() ? 'national' : 'default';
+            return (c === 'national' || c === 'tech') ? c : 'default';
         },
         // 用户主动切换：传 'default' 表示回到默认
         set: function (choice) {
