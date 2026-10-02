@@ -20,9 +20,8 @@ html[theme="national"] {
       干脆写成 background 的第一层：它天然在所有子内容之下、
       又在 background-color 之上，一次到位，不用碰层叠。
       attachment: fixed 让它滚动时纹丝不动。
-   国旗用的是「只有五颗黄星」的那版 —— 因为旗面的红底 #de2910
-   和主题红底本来就是一路色，整面铺上去看不出边界，
-   眼睛能认出来的只有黄星。 */
+   国旗是完整旗面（红底 + 黄星），红底由 SVG 里的 opacity 压到 0.38，
+   所以既看得出是面旗，又不会盖住正文。 */
 html[theme="national"] body {
     background-image:
         url('../images/flag-cn.svg'),
@@ -30,8 +29,11 @@ html[theme="national"] body {
         radial-gradient(900px 520px at 92% 4%, rgba(255, 120, 90, .13), transparent 60%);
     background-repeat: no-repeat, no-repeat, no-repeat;
     background-position: center center, left top, right top;
-    /* 国旗略放大让星群散开，光晕保持原尺寸 */
-    background-size: 130% 130%, auto, auto;
+    /* contain：保持 3:2 原比例、整面旗完整放下。
+       千万别用 100% 100% —— 那会把旗子硬拉成屏幕比例，大星被压扁拉斜，
+       看起来就像「方向不对」；cover 又会裁掉大星。
+       旗子本身在 SVG 里带了 0.38 的 opacity，这里不用再调透明度。 */
+    background-size: contain, auto, auto;
     background-attachment: fixed, fixed, fixed;
     background-color: var(--bg);
 }
