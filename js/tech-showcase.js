@@ -524,22 +524,13 @@
         return cmds;
     }
 
-/* 按扩展名给 MIME，保证浏览器存成正确的文件类型 */
+/* 下载用的 MIME —— 走 text/plain，避开浏览器的脚本拦截 */
     function mimeOf(name) {
-        var ext = (name.split('.').pop() || '').toLowerCase();
-        var map = {
-            py:   'text/x-python',
-            js:   'text/javascript',
-            c:    'text/x-csrc',
-            h:    'text/x-csrc',
-            css:  'text/css',
-            html: 'text/html',
-            sql:  'text/plain',
-            sh:   'text/x-sh',
-            logo: 'text/plain',
-            txt:  'text/plain'
-        };
-        return (map[ext] || 'text/plain') + ';charset=utf-8';
+        /* 下载统一用 text/plain。
+           Chromium 对 text/javascript、text/x-python 这类脚本类型会做安全拦截，
+           弹「此类型的文件可能会损害你的设备」，逼用户手动点保留。
+           换成 text/plain 就只当普通文本存盘 —— 文件名和内容都不变。 */
+        return 'text/plain;charset=utf-8';
     }
     /* 触发下载 */
     function saveText(name, text) {
