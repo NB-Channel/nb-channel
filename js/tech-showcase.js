@@ -256,15 +256,9 @@
             return history.map(function (h, i) { return '  ' + (i + 1) + '  ' + h; }).join('\n');
         };
 
+        /* 开场只留一行提示，不预置任何命令和输出 —— 让访客自己敲 */
         var WELCOME = [
-            ['cmd', '$ nb --version'],
-            ['', 'NB-Channel Shell 1.0.0  (\u865a\u62df\u516c\u53f8\u7248)'],
-            ['', ''],
-            ['cmd', '$ cat about.txt'],
-            ['', TERM_FILES['about.txt']],
-            ['', ''],
-            ['dim', '\u8f93\u5165 help \u770b\u5168\u90e8\u547d\u4ee4\uff0c\u6bd4\u5982 nb company \u770b\u516c\u53f8\u6863\u6848\u3002'],
-            ['', '']
+            ['dim', '\u8f93\u5165 help \u770b\u5168\u90e8\u547d\u4ee4\uff0c\u6216\u8005\u76f4\u63a5\u6572\u4e00\u6761\u8bd5\u8bd5\u3002']
         ];
         WELCOME.forEach(function (row, i) {
             var d = el(row[0], row[1]);
