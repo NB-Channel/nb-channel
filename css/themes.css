@@ -1267,3 +1267,70 @@ html[theme="pixel"] .vhero-fade,
 html[theme="pixel"] .hero-fade { background: linear-gradient(to bottom, transparent, #1a1c2c) !important; }
 html[theme="eyecare"] .vhero-fade,
 html[theme="eyecare"] .hero-fade { background: linear-gradient(to bottom, transparent, #d6cfc0) !important; }
+
+/* ============================================================
+   通用修正 · 浅底卡片
+   ------------------------------------------------------------
+   一批卡片只在 html.dark 下有深色版（比如评论区那条公告：
+   浅色模式是 #fff8e6 米白底，dark 模式才是 #2d2418 深棕底）。
+   但切主题时 theme.js 会摘掉 dark 类，于是主题下走的是浅色底，
+   而文字色又跟着主题走 —— 浅字压浅底，直接看不清。
+
+   这些卡片一律改用主题变量。html[theme] 只在非默认主题下匹配，
+   默认主题完全不受影响。
+   ============================================================ */
+html[theme] .announcement-bar {
+    background: var(--card) !important;
+    border-color: var(--line) !important;
+    border-left: 4px solid var(--brand) !important;
+    color: var(--ink) !important;
+}
+html[theme] .announcement-bar * { color: inherit; }
+
+/* 其它同样「大面积浅底」的容器 */
+html[theme] .drawer {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+}
+html[theme] .drawer a { color: var(--ink-soft); }
+html[theme] .drawer a:hover { color: var(--brand); }
+
+html[theme] .panel,
+html[theme] .tt-card,
+html[theme] .p-card,
+html[theme] .poll-card,
+html[theme] .conv-item,
+html[theme] .bn-item,
+html[theme] .bk-btn,
+html[theme] .lt-btn,
+html[theme] .pk-act,
+html[theme] .pk-mbtn,
+html[theme] .tt-btn-buy,
+html[theme] .bk-cfill {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+}
+
+/* 抽屉里的输入框、下拉，一并跟上 */
+html[theme] .drawer input,
+html[theme] .drawer select,
+html[theme] .drawer textarea {
+    background: var(--bg) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+}
+
+/* 评论区里那几块（评论卡片、回复框）—— 它们用的是自己的变量
+   （--bg-color / --text-color / --card-border），页面内联里已经定义了，
+   但主题没覆盖到，这里补一层，保证底色跟主题一致 */
+html[theme] .comment-section,
+html[theme] .comment-card,
+html[theme] .new-comment-area textarea,
+html[theme] .reply-form textarea {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+}
+html[theme] .comment-card a { color: var(--brand); }
+
