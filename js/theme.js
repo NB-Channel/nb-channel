@@ -21,16 +21,10 @@
        农历节日每年换算出来的公历日期不一样，这里列最近几年。
        表里没有的年份 → 该节日不出现（宁可不显示，也不要显示错）。 */
     var FESTIVAL = {
-        spring: {                    // 春节（正月初一）
-            2027: [2, 6],
-            2028: [1, 26],
-            2029: [2, 13],
-            2030: [2, 3]
-        },
     };
 
     /* 每个节日提前 / 延后几天出现 */
-    var SPAN = { spring: 10 };
+    var SPAN = {};
 
     /* ---------- 主题清单 ----------
        window: 节日主题的正日子来源（FESTIVAL 的键名）
@@ -51,9 +45,6 @@
         { id: 'national',  name: '国庆',      icon: '\uD83C\uDDE8\uD83C\uDDF3',
           desc: '红金配色，限时 10 月 1 日 ~ 7 日',
           fixed: [10, 1, 7] },
-        { id: 'spring',    name: '春节',      icon: '\uD83E\uDDE8',
-          desc: '正红剪纸 + 灯笼，过年前后出现',
-          festival: 'spring' },
     ];
 
     var BY_ID = {};
@@ -101,7 +92,7 @@
            用途一是方便调试，二是可以让别人分享「某个主题下的这一页」。 */
         try {
             var m = /[?&]theme=([a-z]+)/i.exec(location.search);
-            /* 调试用：?theme=spring&preview=1
+            /* 调试用：?theme=xxx&preview=1
                可以无视节日的日期窗口直接预览，方便平时调样式。
                普通访客不带这个参数，看到的仍然是正常的窗口限制。 */
             var preview = /[?&]preview=1/i.test(location.search);

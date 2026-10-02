@@ -94,21 +94,6 @@
         '.nb-glx-lines{position:absolute;inset:0;pointer-events:none;opacity:.5;',
         '  background:repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,transparent 1px 3px);}',
 
-        /* ---------- 🧨 春节 · 点鞭炮 ---------- */
-        '.nb-fw{position:relative;border-radius:12px;overflow:hidden;',
-        '  background:linear-gradient(175deg,#6d0a0e,#8c0f13 55%,#a3161b);',
-        '  border:1px solid rgba(255,216,94,.28);cursor:crosshair;}',
-        '.nb-fw canvas{display:block;width:100%;height:340px;}',
-        '.nb-fw-hint{position:absolute;left:0;right:0;bottom:16px;text-align:center;',
-        '  font-size:.76rem;letter-spacing:2px;color:rgba(255,238,210,.7);pointer-events:none;}',
-        '.nb-fw-top{position:absolute;left:20px;top:16px;display:flex;gap:22px;',
-        '  font-size:.76rem;letter-spacing:1px;color:rgba(255,238,210,.8);pointer-events:none;}',
-        '.nb-fw-top b{color:#ffd85e;font-size:1.1rem;}',
-        '.nb-fw-side{position:absolute;right:20px;top:16px;display:flex;gap:8px;}',
-        '.nb-fw-btn{padding:6px 13px;border-radius:2px;cursor:pointer;font-family:inherit;',
-        '  font-size:.72rem;letter-spacing:1px;background:rgba(255,216,94,.16);',
-        '  color:#ffe9a8;border:1px solid rgba(255,216,94,.4);}',
-        '.nb-fw-btn:hover{background:rgba(255,216,94,.3);}',
 
         /* ---------- 🌙 护眼 · 作息提醒 ---------- */
         '.nb-eye{display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:center;',
@@ -152,14 +137,20 @@
         '.nb-ink .st.thin{stroke-width:5;opacity:.82;}',
         '.nb-ink .st.mid{stroke-width:7;}',
         '.nb-ink .st.thick{stroke-width:9;}',
-        /* 晕染层：同一个 d 加粗 + 高斯模糊，垫在笔锋下面，像是洇开的墨 */
-        '.nb-ink .bl{fill:none !important;stroke:#3a3228;stroke-linecap:round;',
-        '  stroke-linejoin:round;stroke-dasharray:var(--len,0);stroke-dashoffset:0;',
-        '  filter:url(#nbInkBleed);opacity:.26;}',
-        '.nb-ink .bl.w-thin{stroke-width:11;}',
-        '.nb-ink .bl.w-mid{stroke-width:15;}',
-        '.nb-ink .bl.w-thick{stroke-width:20;}',
-        '.nb-ink-go .st,.nb-ink-go .bl{stroke-dashoffset:var(--len,0);',
+        /* 晕染：不用 SVG filter（引不稳），改成每笔三层叠加描边 ——
+           b2 最粗最淡（外圈洇开）→ b1 中间 → st 笔锋（最细最实）。
+           三层是同一个 d、同一套 dash 动画，所以是「一边洇一边写」。 */
+        '.nb-ink .b2,.nb-ink .b1{fill:none !important;stroke-linecap:round;',
+        '  stroke-linejoin:round;stroke-dasharray:var(--len,0);stroke-dashoffset:0;}',
+        '.nb-ink .b2{stroke:#5a4d3c;opacity:.13;}',
+        '.nb-ink .b1{stroke:#3a3228;opacity:.26;}',
+        '.nb-ink .b2.w-thin{stroke-width:19;}',
+        '.nb-ink .b2.w-mid{stroke-width:25;}',
+        '.nb-ink .b2.w-thick{stroke-width:33;}',
+        '.nb-ink .b1.w-thin{stroke-width:13;}',
+        '.nb-ink .b1.w-mid{stroke-width:17;}',
+        '.nb-ink .b1.w-thick{stroke-width:23;}',
+        '.nb-ink-go .st,.nb-ink-go .b1,.nb-ink-go .b2{stroke-dashoffset:var(--len,0);',
         '  animation:nbInk .72s cubic-bezier(.45,.05,.3,1) forwards;}',
         '@keyframes nbInk{to{stroke-dashoffset:0;}}',
         /* 印章：默认就盖着，播动画时从放大状态落定 */
@@ -182,7 +173,7 @@
         '  .nb-ink-btns{justify-content:center;}',
         '}',
         '@media(prefers-reduced-motion:reduce){',
-        '  .nb-ink .st,.nb-ink .bl{stroke-dashoffset:0;animation:none;}',
+        '  .nb-ink .st,.nb-ink .b1,.nb-ink .b2{stroke-dashoffset:0;animation:none;}',
         '  .nb-ink-seal{opacity:1;transform:rotate(-8deg);animation:none;}',
         '}',
 
@@ -538,29 +529,18 @@
             push('M778 40 L778 150', 'thick', 3.02);
             push('M778 150 L826 150', 'mid',  3.14);
 
-            /* 每一笔生成两条 path：bl 是晕染层（粗 + 模糊），st 是笔锋层 */
-            var bleed = G.map(function (o, i) {
-                return '<path class="bl w-' + o.w + '" fill="none" d="' + o.d + '" ' +
+            /* 每一笔生成三条 path：b2/b1 是两层晕染，st 是笔锋 */
+            function layer(cls, o) {
+                return '<path class="' + cls + ' w-' + o.w + '" fill="none" d="' + o.d + '" ' +
                        'style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
-            }).join('');
+            }
+            var bleed = G.map(function (o) { return layer('b2', o); }).join('') +
+                        G.map(function (o) { return layer('b1', o); }).join('');
             var paths = G.map(function (o, i) {
                 return '<path class="st ' + o.w + '" fill="none" d="' + o.d + '" ' +
                        'data-i="' + i + '" style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
             }).join('');
 
-            /* 晕染滤镜：两次高斯模糊叠一点位移，边缘才像洇开而不是单纯糊 */
-            var DEFS =
-                '<defs>' +
-                  '<filter id="nbInkBleed" x="-25%" y="-25%" width="150%" height="150%">' +
-                    '<feGaussianBlur in="SourceGraphic" stdDeviation="3.6" result="b1"/>' +
-                    '<feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b2"/>' +
-                    '<feMerge>' +
-                      '<feMergeNode in="b1"/>' +
-                      '<feMergeNode in="b1"/>' +
-                      '<feMergeNode in="b2"/>' +
-                    '</feMerge>' +
-                  '</filter>' +
-                '</defs>';
 
             var SEAL =
                 '<svg class="nb-ink-seal" width="70" height="70" viewBox="0 0 70 70">' +
@@ -581,7 +561,6 @@
                   '<div class="nb-ink-inner">' +
                     '<div>' +
                       '<svg width="856" height="200" viewBox="0 0 856 200">' +
-                        DEFS +
                         '<g>' + bleed + '</g>' +      /* 先洇开的墨 */
                         '<g>' + paths + '</g>' +      /* 再落下的笔锋 */
                       '</svg>' +
@@ -602,7 +581,7 @@
             var root = box.querySelector('[data-root]');
 
             function prep() {
-                root.querySelectorAll('.st, .bl').forEach(function (p) {
+                root.querySelectorAll('.st, .b1, .b2').forEach(function (p) {
                     var len = p.getTotalLength ? p.getTotalLength() : 400;
                     p.style.setProperty('--len', len.toFixed(1));
                 });
@@ -625,177 +604,6 @@
             } else { play(); }
 
             return function () { if (io) io.disconnect(); };
-        }
-    };
-
-    /* ============================================================
-       🧨 春节 · 点鞭炮
-       画布上点哪儿炸哪儿；每隔一会儿天上掉红包，点中加分。
-       ============================================================ */
-    var FIRE = {
-        mount: function (box) {
-            box.innerHTML =
-                '<div class="nb-fw" data-root>' +
-                  '<canvas></canvas>' +
-                  '<div class="nb-fw-top">' +
-                    '<span>\u70B9\u71C3 <b data-boom>0</b></span>' +
-                    '<span>\u7EA2\u5305 <b data-pkt>0</b></span>' +
-                  '</div>' +
-                  '<div class="nb-fw-side">' +
-                    '<button class="nb-fw-btn" data-act="auto">\u81EA\u52A8\u653E</button>' +
-                    '<button class="nb-fw-btn" data-act="clear">\u6E05\u7A7A</button>' +
-                  '</div>' +
-                  '<div class="nb-fw-hint">\u70B9\u4E00\u4E0B\u5C31\u653E\u4E00\u4E2A \u00B7 \u7EA2\u5305\u6389\u4E0B\u6765\u4E5F\u80FD\u70B9</div>' +
-                '</div>';
-
-            var root = box.querySelector('[data-root]');
-            var cv = box.querySelector('canvas');
-            var ctx = cv.getContext('2d');
-            var boomEl = box.querySelector('[data-boom]');
-            var pktEl = box.querySelector('[data-pkt]');
-
-            var W = 0, H = 340, DPR = Math.min(window.devicePixelRatio || 1, 2);
-            function resize() {
-                W = root.clientWidth || 900;
-                cv.width = W * DPR;
-                cv.height = H * DPR;
-                ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-            }
-
-            var parts = [];      /* 火花 */
-            var pkts = [];       /* 红包 */
-            var booms = 0, caught = 0, auto = false, raf = null, last = 0;
-
-            var COLORS = ['#ffd85e', '#ff9a3c', '#ff5c3c', '#fff4e0', '#ffe9a8'];
-
-            function burst(x, y, n) {
-                n = n || 46;
-                for (var i = 0; i < n; i++) {
-                    var a = Math.random() * Math.PI * 2;
-                    var sp = 1.4 + Math.random() * 4.2;
-                    parts.push({
-                        x: x, y: y,
-                        vx: Math.cos(a) * sp,
-                        vy: Math.sin(a) * sp - 0.6,
-                        life: 1, decay: 0.012 + Math.random() * 0.018,
-                        r: 1.2 + Math.random() * 2.4,
-                        c: COLORS[(Math.random() * COLORS.length) | 0]
-                    });
-                }
-                booms++;
-                boomEl.textContent = booms;
-            }
-            function dropPkt() {
-                pkts.push({
-                    x: 40 + Math.random() * Math.max(40, W - 80),
-                    y: -40, vy: 0.7 + Math.random() * 0.9,
-                    sway: Math.random() * Math.PI * 2, r: 15, life: 1
-                });
-            }
-            function drawPkt(p) {
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(Math.sin(p.sway) * 0.18);
-                /* 红包：红底金边 */
-                ctx.fillStyle = '#c9182a';
-                ctx.fillRect(-p.r, -p.r * 1.28, p.r * 2, p.r * 2.56);
-                ctx.strokeStyle = '#ffd85e';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(-p.r, -p.r * 1.28, p.r * 2, p.r * 2.56);
-                /* 金元宝 */
-                ctx.fillStyle = '#ffd85e';
-                ctx.beginPath();
-                ctx.arc(0, 0, p.r * 0.46, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            }
-
-            function frame(t) {
-                raf = requestAnimationFrame(frame);
-                if (!last) last = t;
-                var dt = Math.min(2.4, (t - last) / 16.7);
-                last = t;
-
-                /* 底：夜空般的深红，带一点金色光晕 */
-                var g = ctx.createRadialGradient(W * .5, H * .9, 20, W * .5, H * .9, H * 1.3);
-                g.addColorStop(0, 'rgba(255,216,94,.09)');
-                g.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.fillStyle = '#5e0d14';
-                ctx.fillRect(0, 0, W, H);
-                ctx.fillStyle = g;
-                ctx.fillRect(0, 0, W, H);
-
-                /* 自动放 */
-                if (auto && Math.random() < 0.035) {
-                    burst(60 + Math.random() * (W - 120), 70 + Math.random() * (H - 180), 40);
-                }
-                /* 掉红包 */
-                if (Math.random() < 0.0075) dropPkt();
-
-                /* 火花 */
-                for (var i = parts.length - 1; i >= 0; i--) {
-                    var p = parts[i];
-                    p.x += p.vx * dt; p.y += p.vy * dt;
-                    p.vy += 0.075 * dt; p.vx *= 0.988;
-                    p.life -= p.decay * dt;
-                    if (p.life <= 0) { parts.splice(i, 1); continue; }
-                    ctx.globalAlpha = Math.max(0, p.life);
-                    ctx.fillStyle = p.c;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.globalAlpha = 1;
-
-                /* 红包 */
-                for (var k = pkts.length - 1; k >= 0; k--) {
-                    var q = pkts[k];
-                    q.y += q.vy * dt;
-                    q.sway += 0.03 * dt;
-                    drawPkt(q);
-                    if (q.y > H + 50) pkts.splice(k, 1);
-                }
-            }
-
-            function hit(x, y) {
-                /* 先看点没点中红包 */
-                for (var i = pkts.length - 1; i >= 0; i--) {
-                    var q = pkts[i];
-                    if (Math.abs(x - q.x) < q.r + 8 && Math.abs(y - q.y) < q.r * 1.4 + 8) {
-                        burst(q.x, q.y, 60);
-                        pkts.splice(i, 1);
-                        caught++;
-                        pktEl.textContent = caught;
-                        return;
-                    }
-                }
-                burst(x, y);
-            }
-
-            cv.addEventListener('pointerdown', function (e) {
-                var r = cv.getBoundingClientRect();
-                hit(e.clientX - r.left, e.clientY - r.top);
-            });
-            box.querySelector('[data-act="auto"]').addEventListener('click', function () {
-                auto = !auto;
-                this.textContent = auto ? '\u505C\u4E0B' : '\u81EA\u52A8\u653E';
-            });
-            box.querySelector('[data-act="clear"]').addEventListener('click', function () {
-                parts.length = 0; pkts.length = 0;
-                booms = 0; caught = 0;
-                boomEl.textContent = '0'; pktEl.textContent = '0';
-            });
-
-            resize();
-            window.addEventListener('resize', resize);
-            raf = requestAnimationFrame(frame);
-            /* 开场先放一个，让人知道能点 */
-            setTimeout(function () { burst(W * 0.5, H * 0.42, 54); }, 320);
-
-            return function () {
-                if (raf) cancelAnimationFrame(raf);
-                window.removeEventListener('resize', resize);
-            };
         }
     };
 
@@ -916,10 +724,6 @@
         ink: {
             head: '\uD83D\uDD8C\uFE0F \u6C34\u58A8\u5C71\u6C34 <i>\u00B7 \u9010\u7B14\u63CF\u51FA</i>',
             mount: function (box) { return INK.mount(box); }
-        },
-        spring: {
-            head: '\uD83E\uDDE8 \u70B9\u97AD\u70AE <i>\u00B7 \u70B9\u54EA\u513F\u70B8\u54EA\u513F</i>',
-            mount: function (box) { return FIRE.mount(box); }
         },
         eyecare: {
             head: '\uD83C\uDF19 \u4F5C\u606F\u63D0\u9192 <i>\u00B7 \u770B\u4E45\u4E86\u8BE5\u6B47歇</i>',
