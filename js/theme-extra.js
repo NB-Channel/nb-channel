@@ -112,7 +112,14 @@
         '.nb-ink .st.thin{stroke-width:5;opacity:.82;}',
         '.nb-ink .st.mid{stroke-width:7;}',
         '.nb-ink .st.thick{stroke-width:9;}',
-        '.nb-ink-go .st{stroke-dashoffset:var(--len,0);',
+        /* 晕染层：同一个 d 加粗 + 高斯模糊，垫在笔锋下面，像是洇开的墨 */
+        '.nb-ink .bl{fill:none !important;stroke:#3a3228;stroke-linecap:round;',
+        '  stroke-linejoin:round;stroke-dasharray:var(--len,0);stroke-dashoffset:0;',
+        '  filter:url(#nbInkBleed);opacity:.26;}',
+        '.nb-ink .bl.w-thin{stroke-width:11;}',
+        '.nb-ink .bl.w-mid{stroke-width:15;}',
+        '.nb-ink .bl.w-thick{stroke-width:20;}',
+        '.nb-ink-go .st,.nb-ink-go .bl{stroke-dashoffset:var(--len,0);',
         '  animation:nbInk .72s cubic-bezier(.45,.05,.3,1) forwards;}',
         '@keyframes nbInk{to{stroke-dashoffset:0;}}',
         /* 印章：默认就盖着，播动画时从放大状态落定 */
@@ -135,7 +142,7 @@
         '  .nb-ink-btns{justify-content:center;}',
         '}',
         '@media(prefers-reduced-motion:reduce){',
-        '  .nb-ink .st{stroke-dashoffset:0;animation:none;}',
+        '  .nb-ink .st,.nb-ink .bl{stroke-dashoffset:0;animation:none;}',
         '  .nb-ink-seal{opacity:1;transform:rotate(-8deg);animation:none;}',
         '}',
 
@@ -504,10 +511,29 @@
             push('M778 40 L778 150', 'thick', 3.02);
             push('M778 150 L826 150', 'mid',  3.14);
 
+            /* 每一笔生成两条 path：bl 是晕染层（粗 + 模糊），st 是笔锋层 */
+            var bleed = G.map(function (o, i) {
+                return '<path class="bl w-' + o.w + '" fill="none" d="' + o.d + '" ' +
+                       'style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
+            }).join('');
             var paths = G.map(function (o, i) {
                 return '<path class="st ' + o.w + '" fill="none" d="' + o.d + '" ' +
                        'data-i="' + i + '" style="animation-delay:' + o.dl.toFixed(2) + 's"/>';
             }).join('');
+
+            /* 晕染滤镜：两次高斯模糊叠一点位移，边缘才像洇开而不是单纯糊 */
+            var DEFS =
+                '<defs>' +
+                  '<filter id="nbInkBleed" x="-25%" y="-25%" width="150%" height="150%">' +
+                    '<feGaussianBlur in="SourceGraphic" stdDeviation="3.6" result="b1"/>' +
+                    '<feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b2"/>' +
+                    '<feMerge>' +
+                      '<feMergeNode in="b1"/>' +
+                      '<feMergeNode in="b1"/>' +
+                      '<feMergeNode in="b2"/>' +
+                    '</feMerge>' +
+                  '</filter>' +
+                '</defs>';
 
             var SEAL =
                 '<svg class="nb-ink-seal" width="70" height="70" viewBox="0 0 70 70">' +
@@ -528,7 +554,9 @@
                   '<div class="nb-ink-inner">' +
                     '<div>' +
                       '<svg width="856" height="200" viewBox="0 0 856 200">' +
-                        '<g>' + paths + '</g>' +
+                        DEFS +
+                        '<g>' + bleed + '</g>' +      /* 先洇开的墨 */
+                        '<g>' + paths + '</g>' +      /* 再落下的笔锋 */
                       '</svg>' +
                       '<div class="nb-ink-cap">\u4E00\u7B14\u4E00\u753B \u00B7 \u5171 ' +
                         G.length + ' \u7B14</div>' +
@@ -547,7 +575,7 @@
             var root = box.querySelector('[data-root]');
 
             function prep() {
-                root.querySelectorAll('.st').forEach(function (p) {
+                root.querySelectorAll('.st, .bl').forEach(function (p) {
                     var len = p.getTotalLength ? p.getTotalLength() : 400;
                     p.style.setProperty('--len', len.toFixed(1));
                 });
