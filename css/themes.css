@@ -74,6 +74,32 @@ html[theme="national"] .vhero-actions .hero-link {
 }
 html[theme="national"] .vhero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
 
+/* ---- 页脚：同样换红金 ----
+   页脚配色在页面内联样式里写死成深蓝紫
+   （background #0f172a→#0a0f1e、顶线 rgba(59,130,246)/rgba(139,92,246)、
+     a #8fa0b8、desc #7c8ba5、footer-bottom #5b6a85），
+   这里整段压过来。 */
+html[theme="national"] .footer {
+    background: linear-gradient(180deg, #4d0a10 0%, #3a070c 100%);
+    color: #e3c49a;
+}
+html[theme="national"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 210, 74, .55), rgba(255, 108, 74, .42), transparent);
+}
+html[theme="national"] .footer h5 { color: #fff6e2; }
+html[theme="national"] .footer a { color: #e0bd93; }
+html[theme="national"] .footer a:hover { color: #fff; }
+html[theme="national"] .footer .brand { color: #fff6e2; }
+html[theme="national"] .footer .brand .dot {
+    background: linear-gradient(135deg, var(--brand), #ff8a5c);
+}
+html[theme="national"] .footer .desc { color: #c9a274; }
+html[theme="national"] .footer-bottom {
+    border-top-color: rgba(255, 214, 102, .16);
+    color: #ab8a63;
+}
+html[theme="national"] .footer .logo-img { filter: none; }
+
 /* ---- 首页「大事记」区块（#milestone，一整套 jny- 类）----
    这块的颜色写死在 index-Beta.html 的内联样式里，全是蓝紫：
    舞台顶光 rgba(59,130,246,.16)、节点高亮 #9cc0ff、
@@ -478,4 +504,27 @@ html[theme="tech"] .f-icon {
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
     html[theme="national"] body::after { animation: none; }
+}
+
+
+/* ---- 页脚：深空 + 青色顶线 ---- */
+html[theme="tech"] .footer {
+    background: linear-gradient(180deg, #0a1220 0%, #060a14 100%);
+    color: #8ea4c9;
+}
+html[theme="tech"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, .6), rgba(124, 58, 237, .45), transparent);
+}
+html[theme="tech"] .footer h5 { color: #d7e5ff; }
+html[theme="tech"] .footer a { color: #7f97bd; }
+html[theme="tech"] .footer a:hover { color: #eaf4ff; }
+html[theme="tech"] .footer .brand { color: #eaf4ff; }
+html[theme="tech"] .footer .brand .dot {
+    background: linear-gradient(135deg, var(--brand), #7c3aed);
+    box-shadow: 0 0 12px -2px rgba(0, 229, 255, .8);
+}
+html[theme="tech"] .footer .desc { color: #6d80a3; }
+html[theme="tech"] .footer-bottom {
+    border-top-color: rgba(0, 229, 255, .13);
+    color: #59698a;
 }
