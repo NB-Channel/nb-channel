@@ -6,12 +6,13 @@
     var CSS = ".nb-ts-row{position:relative;z-index:2;max-width:1180px;margin:64px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}\n.nb-ts-left{min-width:0;align-self:start;}\n.nb-ts-right{min-width:0;max-width:100%;display:flex;flex-direction:column;}\n.nb-ts-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}\n.nb-ts-bar .sp{flex:1;min-width:0;font-size:.76rem;letter-spacing:1.2px;color:rgba(150,220,255,.8);}\n.nb-ts-tabs{display:flex;gap:6px;flex-wrap:wrap;}\n.nb-ts-tab{padding:5px 11px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.72rem;letter-spacing:.5px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.22);color:rgba(180,230,255,.85);transition:.2s;}\n.nb-ts-tab:hover{background:rgba(0,229,255,.18);}\n.nb-ts-tab.on{background:rgba(0,229,255,.22);border-color:rgba(0,229,255,.6);color:#eaf9ff;box-shadow:0 0 18px -6px rgba(0,229,255,.7);}\n.nb-ts-svg{display:block;width:100%;height:auto;border-radius:12px;shape-rendering:geometricPrecision;box-shadow:0 20px 50px -30px rgba(0,0,0,.8);}\n.nb-ts-codewrap{display:flex;flex-direction:column;border-radius:12px;background:#1e1e1e;border:1px solid rgba(0,229,255,.2);overflow:hidden;}\n.nb-ts-codehead{display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:.76rem;letter-spacing:1px;color:rgba(180,230,255,.8);}\n.nb-ts-codehead .sp{flex:1;min-width:0;}\n.nb-ts-mini{padding:5px 11px;border-radius:8px;cursor:pointer;font-size:.72rem;font-family:inherit;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);color:#7fe3ff;transition:.2s;}\n.nb-ts-mini:hover{background:rgba(0,229,255,.2);}\n.nb-ts-mini.done{background:rgba(120,220,150,.16);border-color:rgba(120,220,150,.5);color:#9be8b4;}\n.nb-ts-code{margin:0;padding:0 14px 16px;max-width:100%;box-sizing:border-box;font:11.5px/1.85 ui-monospace,Consolas,'Courier New',monospace;color:#d4d4d4;white-space:pre;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 70%,rgba(0,0,0,.4) 88%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0,#000 70%,rgba(0,0,0,.4) 88%,transparent 100%);}\n.nb-ts-code b{color:#569cd6;font-weight:400;}\n.nb-ts-code i{color:#ce9178;font-style:normal;}\n.nb-ts-code u{color:#b5cea8;text-decoration:none;}\n.nb-ts-code s{color:#dcdcaa;text-decoration:none;}\n.nb-ts-code m{color:#4ec9b0;}\n.nb-ts-code em{color:#6a9955;font-style:normal;}\n.nb-ts-codewrap.open .nb-ts-code{overflow:auto;-webkit-mask-image:none;mask-image:none;}\n.nb-ts-poly polygon{fill:rgba(0,229,255,.14);stroke:#00e5ff;stroke-width:1.4;stroke-linejoin:round;opacity:0;animation:nbTsPop .5s cubic-bezier(.16,1,.3,1) forwards;}\n@keyframes nbTsPop{from{opacity:0;transform:scale(.6);transform-origin:center;}to{opacity:1;transform:scale(1);}}\n@media(max-width:900px){.nb-ts-row{grid-template-columns:1fr;gap:22px;margin-top:44px;}.nb-ts-code{font-size:10px;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-poly polygon{animation:none;opacity:1;}}\n.nb-ts-path{fill:none;stroke:#00e5ff;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 2.6s linear forwards;filter:drop-shadow(0 0 5px rgba(0,229,255,.55));}\n@keyframes nbTsDraw{to{stroke-dashoffset:0;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-path{animation:none;stroke-dashoffset:0;}}\n.nb-ts-tline{opacity:0;animation:nbTsLine .28s ease forwards;}\n@keyframes nbTsLine{to{opacity:1;}}\n.nb-ts-caret{animation:nbTsCaret 1.05s steps(1,end) infinite;}\n@keyframes nbTsCaret{0%,49%{opacity:1;}50%,100%{opacity:0;}}\n.nb-ts-chart{fill:none;stroke:#00e5ff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 2.2s cubic-bezier(.4,0,.2,1) forwards;filter:drop-shadow(0 0 6px rgba(0,229,255,.6));}\n.nb-ts-area{opacity:0;animation:nbTsFadeIn 1.6s ease .8s forwards;}\n@keyframes nbTsFadeIn{to{opacity:1;}}\n.nb-ts-pt{fill:#7fe3ff;stroke:#060a14;stroke-width:1.4;opacity:0;animation:nbTsPop2 .4s ease forwards;}\n@keyframes nbTsPop2{to{opacity:1;}}\n.nb-ts-pulse{animation:nbTsPulse 1.9s ease-in-out infinite;}\n@keyframes nbTsPulse{0%,100%{opacity:.55;}50%{opacity:1;}}\n@media(prefers-reduced-motion:reduce){.nb-ts-tline,.nb-ts-area,.nb-ts-pt{animation:none;opacity:1;}.nb-ts-chart{animation:none;stroke-dashoffset:0;}.nb-ts-pulse{animation:none;}}\n.nb-ts-sq path{fill:none;stroke:rgba(0,229,255,.34);stroke-width:1;stroke-dasharray:5 4;opacity:0;animation:nbTsSqIn .5s ease forwards;}\n@keyframes nbTsSqIn{to{opacity:1;}}\n.nb-ts-num text{fill:rgba(0,229,255,.42);font:600 11.5px ui-monospace,Consolas,monospace;text-anchor:middle;opacity:0;animation:nbTsSqIn .5s ease forwards;}\n.nb-ts-spiral path{fill:none;stroke:#00e5ff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:nbTsDraw 1.1s linear forwards;filter:drop-shadow(0 0 6px rgba(0,229,255,.55));}\n@media(prefers-reduced-motion:reduce){.nb-ts-sq path,.nb-ts-num text{animation:none;opacity:1;}.nb-ts-spiral path{animation:none;stroke-dashoffset:0;}}\n.nb-ts-term{display:flex;flex-direction:column;height:100%;min-height:330px;border-radius:12px;background:#080d18;border:1px solid rgba(0,229,255,.22);overflow:hidden;box-shadow:0 20px 50px -30px rgba(0,0,0,.8);}\n.nb-ts-term-bar{display:flex;align-items:center;gap:7px;padding:9px 12px;background:rgba(0,229,255,.055);border-bottom:1px solid rgba(0,229,255,.14);flex:0 0 auto;}\n.nb-ts-term-bar i{width:11px;height:11px;border-radius:50%;display:block;}\n.nb-ts-term-bar .t{margin-left:8px;font:11.5px ui-monospace,Consolas,monospace;color:rgba(150,220,255,.5);}\n.nb-ts-term-body{flex:1;min-height:0;overflow-y:auto;padding:12px 14px;font:12.5px/1.72 ui-monospace,Consolas,'Courier New',monospace;color:rgba(205,228,250,.88);}\n.nb-ts-term-body::-webkit-scrollbar{width:8px;}\n.nb-ts-term-body::-webkit-scrollbar-thumb{background:rgba(0,229,255,.28);border-radius:8px;}\n.nb-ts-tl{white-space:pre-wrap;word-break:break-word;}\n.nb-ts-tl.cmd{color:#7fe3ff;}\n.nb-ts-tl.err{color:#ff8a8a;}\n.nb-ts-tl.dim{color:rgba(150,190,225,.5);}\n.nb-ts-tl.hi{color:#ffd24a;}\n.nb-ts-tl.ok{color:#7ee0a8;}\n.nb-ts-tin{display:flex;align-items:center;gap:0;}\n.nb-ts-tin .ps{color:#7fe3ff;flex:0 0 auto;}\n.nb-ts-tin input{flex:1;min-width:0;background:none;border:none;outline:none;color:#eaf4ff;font:inherit;caret-color:#7fe3ff;padding:0;}\n.nb-ts-thint{padding:7px 14px 10px;font-size:.68rem;letter-spacing:.4px;color:rgba(150,200,235,.42);border-top:1px solid rgba(0,229,255,.09);flex:0 0 auto;}";
 
 
-    /* ============================================================
+/* ============================================================
        交互式终端引擎
        ============================================================ */
     var TERM_FILES = {
         'about.txt': '\u4e00\u4e2a\u7531 UP\u4e3b\u300cNB\u641e\u4e8b\u5c40\u300d\u5efa\u7acb\u7684\u865a\u62df\u516c\u53f8\u3002\n\u5316\u5b66\u4e0e\u7269\u7406\u5b9e\u9a8c \u00b7 \u65e5\u5e38\u4f5c\u6b7b \u00b7 NB\u5e01\u865a\u62df\u7ecf\u6d4e',
-        'motto.txt': '\u70ed\u7231\u7406\u79d1\uff0c\u4e0e\u4f5c\u6b7b\u540c\u884c'
+        'motto.txt': '\u70ed\u7231\u7406\u79d1\uff0c\u4e0e\u4f5c\u6b7b\u540c\u884c',
+        'README.md': '# NB\u9891\u9053\n\n\u8fd0\u884c `nb company` \u770b\u516c\u53f8\u6863\u6848\u3002'
     };
     var TERM_MODULES = ['about', 'videos', 'shop', 'bank', 'stock', 'chat', 'tools', 'vote'];
     var TERM_TOP = [
@@ -27,42 +28,92 @@
         '\u5b9e\u9a8c\u524d\u5148\u770b\u5b89\u5168\u624b\u518c\u3002',
         '\u80fd\u914d\u5e73\u7684\u65b9\u7a0b\u5f0f\uff0c\u4eba\u751f\u4e5f\u4f1a\u914d\u5e73\u3002',
         '\u6027\u80fd\u4f18\u5148\uff1a\u5148\u8dd1\u901a\uff0c\u518d\u8dd1\u5feb\u3002',
-        '\u4eca\u5929\u9002\u5408\u5199\u4ee3\u7801\u3002'
+        '\u4eca\u5929\u9002\u5408\u5199\u4ee3\u7801\u3002',
+        '\u4e70\u80a1\u4e0d\u5982\u4e70\u77e5\u8bc6\u3002'
     ];
 
+    /* 市值等经营数据：以粉丝数为锚，换算成一套自洽的数字 */
+    var NB_CO = {
+        name: 'NB\u9891\u9053 \u00b7 NoBook Channel',
+        founded: '2026-02',
+        hq: '\u5730\u7403 \u00b7 \u7f51\u7edc',
+        holders: '\u5168\u4f53\u7c89\u4e1d',
+        fans: 112363,
+        staff: 11,
+        friends: 11,
+        days: 213
+    };
+
+    function fmt(n) {
+        return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    /* 用粉丝数推市值：粉丝 × 1.86 NB币，再折算成"亿元" */
+    function mcap() { return NB_CO.fans * 1.86 / 10000; }
+    function price() { return NB_CO.fans / 4552; }
+
+    /* 迷你走势图：把一串数字画成 ▁▂▃▄▅▆▇█ */
+    function spark(nums) {
+        var blocks = ['\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588'];
+        var mn = Math.min.apply(null, nums), mx = Math.max.apply(null, nums);
+        var span = (mx - mn) || 1;
+        return nums.map(function (v) {
+            var i = Math.round((v - mn) / span * (blocks.length - 1));
+            return blocks[i];
+        }).join('');
+    }
+
     function termCommands(write, clear) {
-        return {
+        var CMD_ERR = function (name) {
+            /* 仿 Windows CMD 的报错 */
+            return { cls: 'err', text: "'" + name + "' \u4e0d\u662f\u5185\u90e8\u6216\u5916\u90e8\u547d\u4ee4\uff0c\u4e5f\u4e0d\u662f\u53ef\u8fd0\u884c\u7684\u7a0b\u5e8f\n\u6216\u6279\u5904\u7406\u6587\u4ef6\u3002" };
+        };
+        var cmds = {
             'help': function () {
                 return [
-                    '\u53ef\u7528\u547d\u4ee4\uff1a',
-                    '  help             \u663e\u793a\u8fd9\u4efd\u5e2e\u52a9',
-                    '  whoami           \u6211\u662f\u8c01',
-                    '  cat about.txt    \u770b\u516c\u53f8\u7b80\u4ecb',
-                    '  ls / ls modules/ \u770b\u76ee\u5f55',
-                    '  uptime           \u8fd0\u884c\u65f6\u957f',
-                    '  nb fans          B \u7ad9\u7c89\u4e1d',
-                    '  nb coin          NB \u5e01\u4f59\u989d',
-                    '  nb motto         \u53e3\u53f7',
-                    '  nb rank          \u6392\u884c\u699c',
-                    '  fortune          \u968f\u673a\u4e00\u53e5',
-                    '  date             \u5f53\u524d\u65f6\u95f4',
-                    '  history          \u5386\u53f2\u547d\u4ee4',
-                    '  clear            \u6e05\u5c4f',
-                    '  exit             \u5173\u95ed\u7ec8\u7aef'
+                    '\u2500\u2500 \u57fa\u7840 \u2500\u2500',
+                    '  help / ?          \u663e\u793a\u8fd9\u4efd\u5e2e\u52a9',
+                    '  whoami            \u6211\u662f\u8c01',
+                    '  cat <\u6587\u4ef6>        \u8bfb\u6587\u4ef6\uff08about.txt / motto.txt / README.md\uff09',
+                    '  ls [modules/]     \u5217\u76ee\u5f55',
+                    '  uptime            \u8fd0\u884c\u65f6\u957f',
+                    '  date              \u5f53\u524d\u65f6\u95f4',
+                    '  echo <\u6587\u5b57>       \u539f\u6837\u56de\u663e',
+                    '  history           \u5386\u53f2\u547d\u4ee4',
+                    '  clear             \u6e05\u5c4f',
+                    '',
+                    '\u2500\u2500 \u516c\u53f8\u7ecf\u8425 \u2500\u2500',
+                    '  nb company        \u516c\u53f8\u6863\u6848\uff08\u542b\u5e02\u503c\uff09',
+                    '  nb mcap           \u5e02\u503c\u4e0e\u6da8\u8dcc',
+                    '  nb stock [\u5929\u6570]   \u80a1\u4ef7\u8d70\u52bf\uff08\u9ed8\u8ba4 20 \u65e5\uff09',
+                    '  nb revenue        \u8425\u6536\u6784\u6210',
+                    '  nb product        \u4ea7\u54c1\u7ebf',
+                    '  nb staff          \u56e2\u961f\u4eba\u6570',
+                    '  nb friend         \u53cb\u5546\u540d\u5355',
+                    '  nb news           \u6700\u8fd1\u516c\u544a',
+                    '',
+                    '\u2500\u2500 \u4e2a\u4eba \u2500\u2500',
+                    '  nb fans           B \u7ad9\u7c89\u4e1d',
+                    '  nb coin           NB \u5e01\u4f59\u989d',
+                    '  nb rank           \u6392\u884c\u699c',
+                    '  nb badge          \u5df2\u89e3\u9501\u5fbd\u7ae0',
+                    '  fortune           \u968f\u673a\u4e00\u53e5',
+                    '  exit              \u5173\u95ed\u7ec8\u7aef'
                 ].join('\n');
             },
-            'whoami': function () { return 'NB\u9891\u9053 \u00b7 NoBook Channel'; },
+            'whoami': function () { return NB_CO.name; },
             'ls': function (arg) {
                 if (arg === 'modules/' || arg === 'modules') return TERM_MODULES.join('  ');
-                return 'about.txt  motto.txt  modules/  README.md';
+                return 'about.txt  motto.txt  README.md  modules/';
             },
             'cat': function (arg) {
                 var f = (arg || '').trim();
-                if (!f) return { cls: 'err', text: 'cat: \u7f3a\u5c11\u6587\u4ef6\u540d' };
+                if (!f) return { cls: 'err', text: '\u547d\u4ee4\u8bed\u6cd5\u4e0d\u6b63\u786e\u3002' };
                 if (TERM_FILES[f] !== undefined) return TERM_FILES[f];
-                return { cls: 'err', text: 'cat: ' + f + ': No such file or directory' };
+                return { cls: 'err', text: '\u7cfb\u7edf\u627e\u4e0d\u5230\u6307\u5b9a\u7684\u6587\u4ef6\u3002' };
             },
-            'uptime': function () { return '\u5df2\u8fd0\u884c 213 \u5929 \u00b7 \u603b\u8bbf\u95ee 3,000+'; },
+            'uptime': function () {
+                return '\u5df2\u8fd0\u884c ' + NB_CO.days + ' \u5929 \u00b7 \u603b\u8bbf\u95ee 3,000+';
+            },
             'date': function () {
                 var d = new Date();
                 function p(n) { return (n < 10 ? '0' : '') + n; }
@@ -74,24 +125,113 @@
             },
             'echo': function (arg) { return arg || ''; },
             'clear': function () { clear(); return null; },
-            'sudo': function () { return { cls: 'err', text: '\u4f60\u5df2\u7ecf\u662f\u7ba1\u7406\u5458\u4e86\u3002' }; },
+            'sudo': function (arg) {
+                return { cls: 'err', text: '\u4f60\u5df2\u7ecf\u662f\u7ba1\u7406\u5458\u4e86\u3002' };
+            },
             'exit': function () { return { cls: 'dim', text: '\u518d\u89c1\uff0c\u8bb0\u5f97\u56de\u6765\u3002' }; },
+
+            /* ---------- 公司经营 ---------- */
             'nb': function (arg) {
                 var a = (arg || '').trim();
-                if (a === 'fans') return 'B \u7ad9\u7c89\u4e1d\uff1a112,363';
-                if (a === 'coin') return 'NB \u5e01\u4f59\u989d\uff1a12,800';
-                if (a === 'motto') return '\u70ed\u7231\u7406\u79d1\uff0c\u4e0e\u4f5c\u6b7b\u540c\u884c';
-                if (a === 'rank') {
+                var sub = a.split(/\s+/)[0];
+                var rest = a.slice(sub.length).trim();
+
+                if (sub === 'company' || sub === 'info') {
+                    return [
+                        '\u250c\u2500 \u516c\u53f8\u6863\u6848 ' + '\u2500'.repeat(24),
+                        '\u2502 \u540d\u79f0    ' + NB_CO.name,
+                        '\u2502 \u6210\u7acb    ' + NB_CO.founded,
+                        '\u2502 \u603b\u90e8    ' + NB_CO.hq,
+                        '\u2502 \u80a1\u4e1c    ' + NB_CO.holders,
+                        '\u2502 \u5458\u5de5    ' + NB_CO.staff + ' \u4eba',
+                        '\u2502 \u53cb\u5546    ' + NB_CO.friends + ' \u5bb6',
+                        '\u2502 \u7c89\u4e1d    ' + fmt(NB_CO.fans),
+                        '\u2502 \u5e02\u503c    ' + mcap().toFixed(2) + ' \u4ebf NB',
+                        '\u2514' + '\u2500'.repeat(32)
+                    ].join('\n');
+                }
+                if (sub === 'mcap' || sub === 'market') {
+                    var p = price(), chg = 3.42;
+                    return [
+                        '\u5e02\u503c  ' + mcap().toFixed(2) + ' \u4ebf NB',
+                        '\u80a1\u4ef7  ' + p.toFixed(2) + ' NB   \u25b2 +' + chg.toFixed(2) + '%',
+                        '',
+                        '\u8fd1 20 \u65e5  ' + spark([18.2,18.6,18.1,19.0,19.4,19.1,19.8,20.3,20.0,20.6,
+                                                    21.2,20.9,21.5,22.1,21.8,22.4,23.0,22.7,23.4,24.68]),
+                        '         20 \u65e5\u524d' + ' '.repeat(16) + '\u4eca\u5929'
+                    ].join('\n');
+                }
+                if (sub === 'stock') {
+                    var n = parseInt(rest, 10);
+                    if (!n || n < 5) n = 20;
+                    if (n > 60) n = 60;
+                    var seed = 18.2, arr = [];
+                    for (var i = 0; i < n; i++) {
+                        seed += 0.33 + Math.sin(i / 2.7) * 0.55 + Math.sin(i / 1.3 + 1) * 0.25;
+                        arr.push(seed);
+                    }
+                    var first = arr[0], last = arr[n - 1];
+                    var pct = (last - first) / first * 100;
+                    return [
+                        'NB  ' + last.toFixed(2) + '  ' + (pct >= 0 ? '\u25b2 +' : '\u25bc ') + pct.toFixed(2) + '%',
+                        '',
+                        '\u8fd1 ' + n + ' \u65e5',
+                        '  ' + spark(arr)
+                    ].join('\n');
+                }
+                if (sub === 'revenue') {
+                    return [
+                        '\u8425\u6536\u6784\u6210\uff08\u4e0a\u6708\uff09',
+                        '  \u5e7f\u544a\u5408\u4f5c   ' + ' \u2588'.repeat(11) + '  46%',
+                        '  NB \u5e01\u6d88\u8d39  ' + ' \u2588'.repeat(7) + '      29%',
+                        '  \u5468\u8fb9\u5546\u57ce   ' + ' \u2588'.repeat(4) + '          17%',
+                        '  \u5176\u4ed6       ' + ' \u2588'.repeat(2) + '           8%'
+                    ].join('\n');
+                }
+                if (sub === 'product') {
+                    return [
+                        '\u4ea7\u54c1\u7ebf',
+                        '  \u5316\u5b66\u5b9e\u9a8c\u7cfb\u5217   12 \u671f',
+                        '  \u7269\u7406\u4f5c\u6b7b\u7cfb\u5217   9 \u671f',
+                        '  NB \u5e01\u7ecf\u6d4e\u7cfb\u7edf  \u5df2\u4e0a\u7ebf',
+                        '  \u865a\u62df\u516c\u53f8\u6a21\u5757  \u5df2\u4e0a\u7ebf',
+                        '  \u6392\u884c\u699c\u7cfb\u7edf    \u5f00\u53d1\u4e2d'
+                    ].join('\n');
+                }
+                if (sub === 'staff') {
+                    return '\u5168\u804c ' + NB_CO.staff + ' \u4eba\uff08\u542b AI \u52a9\u7406\uff09\u3002\u62db\u4eba\u4e2d\u3002';
+                }
+                if (sub === 'friend') {
+                    return '\u53cb\u5546 ' + NB_CO.friends + ' \u5bb6\uff1a' +
+                           '\u5316\u5b66\u5c0f\u7ad9  \u7269\u7406\u5c0f\u7ad9  \u6570\u5b66\u5c0f\u7ad9  \u751f\u7269\u5c0f\u7ad9  \u2026';
+                }
+                if (sub === 'news') {
+                    return [
+                        '[\u516c\u544a] \u79cb\u5b63\u6d3b\u52a8\u5f00\u542f\uff0c\u767b\u5f55\u9001 200 NB\u5e01',
+                        '[\u516c\u544a] \u80a1\u5e02\u6a21\u5757\u4e0a\u7ebf\uff0c\u652f\u6301\u81ea\u5b9a\u4e49\u516c\u53f8',
+                        '[\u516c\u544a] \u65b0\u589e 686 \u6761\u7406\u79d1\u5c0f\u77e5\u8bc6'
+                    ].join('\n');
+                }
+                if (sub === 'fans') return 'B \u7ad9\u7c89\u4e1d\uff1a' + fmt(NB_CO.fans);
+                if (sub === 'coin') return 'NB \u5e01\u4f59\u989d\uff1a12,800';
+                if (sub === 'motto') return TERM_FILES['motto.txt'];
+                if (sub === 'rank') {
                     return TERM_TOP.map(function (r, i) {
                         return '  ' + (i + 1) + '. ' + r[0] + '  ' + r[1];
                     }).join('\n');
                 }
-                if (a === '--help' || a === '') {
-                    return 'nb <fans|coin|motto|rank>';
+                if (sub === 'badge') {
+                    return '\u5df2\u89e3\u9501 7 / 24\uff1a\u521d\u6765\u4e4d\u5230 \u00b7 \u9996\u6b21\u8bc4\u8bba \u00b7 \u7b7e\u5230\u4e03\u5929 \u00b7 \u2026';
                 }
-                return { cls: 'err', text: 'nb: \u672a\u77e5\u5b50\u547d\u4ee4 ' + a };
+                if (sub === '--help' || sub === '') {
+                    return '\u7528\u6cd5\uff1anb <company|mcap|stock|revenue|product|staff|friend|news|fans|coin|motto|rank|badge>';
+                }
+                return { cls: 'err', text: '\u53c2\u6570\u9519\u8bef\uff1a' + sub + '\u3002\u8f93\u5165 nb --help \u770b\u7528\u6cd5\u3002' };
             }
         };
+        /* ? 等同 help，history 由外层注入 */
+        cmds['?'] = cmds['help'];
+        return cmds;
     }
 
     function initTerminal(root) {
@@ -99,6 +239,7 @@
         if (!body) return;
         var history = [];
         var hi = -1;
+        var cmds = null;
 
         function el(cls, text) {
             var d = document.createElement('div');
@@ -109,9 +250,12 @@
             return d;
         }
         function clear() { body.innerHTML = ''; }
-        var cmds = termCommands(el, clear);
+        cmds = termCommands(el, clear);
+        cmds['history'] = function () {
+            if (!history.length) return '\u6682\u65e0\u5386\u53f2\u547d\u4ee4\u3002';
+            return history.map(function (h, i) { return '  ' + (i + 1) + '  ' + h; }).join('\n');
+        };
 
-        /* 开场白 */
         var WELCOME = [
             ['cmd', '$ nb --version'],
             ['', 'NB-Channel Shell 1.0.0  (\u865a\u62df\u516c\u53f8\u7248)'],
@@ -119,18 +263,16 @@
             ['cmd', '$ cat about.txt'],
             ['', TERM_FILES['about.txt']],
             ['', ''],
-            ['dim', '\u8f93\u5165 help \u770b\u5168\u90e8\u547d\u4ee4\uff0c\u6216\u8005\u76f4\u63a5\u6572\u4e00\u6761\u8bd5\u8bd5\u3002'],
+            ['dim', '\u8f93\u5165 help \u770b\u5168\u90e8\u547d\u4ee4\uff0c\u6bd4\u5982 nb company \u770b\u516c\u53f8\u6863\u6848\u3002'],
             ['', '']
         ];
-        /* 逐行浮现 */
         WELCOME.forEach(function (row, i) {
             var d = el(row[0], row[1]);
             d.style.opacity = '0';
             d.style.transition = 'opacity .25s ease';
-            setTimeout(function () { d.style.opacity = '1'; }, 120 + i * 110);
+            setTimeout(function () { d.style.opacity = '1'; }, 110 + i * 105);
         });
 
-        /* 输入行 */
         var lineWrap = document.createElement('div');
         lineWrap.className = 'nb-ts-tin';
         var ps = document.createElement('span');
@@ -147,12 +289,9 @@
         body.appendChild(lineWrap);
         setTimeout(function () { try { inp.focus(); } catch (e) {} }, 900);
 
-        /* 点终端任意位置都聚焦到输入框 */
         body.addEventListener('click', function (e) {
             if (e.target !== inp) { try { inp.focus(); } catch (er) {} }
         });
-
-        /* 把输入行挪到最后 */
         function stick() { body.appendChild(lineWrap); body.scrollTop = body.scrollHeight; }
 
         function run(raw) {
@@ -172,18 +311,24 @@
             var arg = sp < 0 ? '' : text.slice(sp + 1);
             var fn = cmds[name];
             if (!fn) {
-                el('err', name + ': command not found');
-                el('dim', '\u8f93\u5165 help \u770b\u53ef\u7528\u547d\u4ee4');
+                /* 仿 CMD 的报错 */
+                var e = cmds.__err(name);
+                el('err', e.text);
+                el('dim', '\u8f93\u5165 help \u67e5\u770b\u53ef\u7528\u547d\u4ee4\u3002');
                 return;
             }
             var out = fn(arg);
-            if (out === null || out === undefined) return;      /* clear 之类 */
+            if (out === null || out === undefined) return;
             if (typeof out === 'string') {
                 out.split('\n').forEach(function (l) { el('', l); });
             } else {
                 el(out.cls, out.text);
             }
         }
+        /* 把 CMD 报错挂进命令表 */
+        cmds.__err = function (name) {
+            return { cls: 'err', text: "'" + name + "' \u4e0d\u662f\u5185\u90e8\u6216\u5916\u90e8\u547d\u4ee4\uff0c\u4e5f\u4e0d\u662f\u53ef\u8fd0\u884c\u7684\u7a0b\u5e8f\n\u6216\u6279\u5904\u7406\u6587\u4ef6\u3002" };
+        };
 
         inp.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
@@ -207,9 +352,9 @@
                 e.preventDefault();
                 var v2 = inp.value.trim();
                 if (!v2) return;
-                var names = Object.keys(cmds);
+                var names = Object.keys(cmds).filter(function (n) { return n.indexOf('__') !== 0; });
                 var hit = names.filter(function (n) { return n.indexOf(v2) === 0; });
-                if (hit.length === 1) inp.value = hit[0] + (hit[0] === 'cat' || hit[0] === 'ls' || hit[0] === 'nb' ? ' ' : '');
+                if (hit.length === 1) inp.value = hit[0];
                 else if (hit.length > 1) el('dim', hit.join('  '));
             }
         });
