@@ -35,6 +35,30 @@ html[theme="national"] body {
     background-attachment: fixed;
 }
 
+/* ------------------------------------------------------------
+   五星红旗（按《国旗法》规格生成的 SVG，比例严格 3:2）
+   — 完整、不变形、不裁剪，只做极淡的背景水印；
+     右下角一面，配渐隐遮罩，不抢正文。
+   ------------------------------------------------------------ */
+html[theme="national"] body::before {
+    content: "";
+    position: fixed;
+    right: -6vw; bottom: -4vh;
+    width: min(760px, 62vw);
+    aspect-ratio: 3 / 2;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20300%20200%27%20preserveAspectRatio%3D%27xMidYMid%20meet%27%3E%3Crect%20width%3D%27300%27%20height%3D%27200%27%20fill%3D%27%23de2910%27%2F%3E%3Cg%20fill%3D%27%23ffde00%27%3E%3Cpolygon%20points%3D%2750.00%2C20.00%2056.74%2C40.73%2078.53%2C40.73%2060.90%2C53.54%2067.63%2C74.27%2050.00%2C61.46%2032.37%2C74.27%2039.10%2C53.54%2021.47%2C40.73%2043.26%2C40.73%27%2F%3E%3Cpolygon%20points%3D%27104.84%2C16.15%20107.09%2C23.06%20114.34%2C23.06%20108.47%2C27.32%20110.72%2C34.23%20104.84%2C29.97%2098.97%2C34.23%20101.22%2C27.32%2095.34%2C23.06%20102.60%2C23.06%27%2F%3E%3Cpolygon%20points%3D%27125.45%2C32.63%20127.70%2C39.55%20134.96%2C39.55%20129.08%2C43.80%20131.33%2C50.72%20125.45%2C46.46%20119.58%2C50.72%20121.83%2C43.80%20115.95%2C39.55%20123.21%2C39.55%27%2F%3E%3Cpolygon%20points%3D%27127.17%2C64.20%20129.42%2C71.11%20136.68%2C71.11%20130.80%2C75.37%20133.05%2C82.28%20127.17%2C78.03%20121.30%2C82.28%20123.55%2C75.37%20117.67%2C71.11%20124.93%2C71.11%27%2F%3E%3Cpolygon%20points%3D%27106.19%2C82.81%20108.44%2C89.72%20115.70%2C89.72%20109.82%2C93.98%20112.07%2C100.89%20106.19%2C96.64%20100.32%2C100.89%20102.57%2C93.98%2096.69%2C89.72%20103.95%2C89.72%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: .085;
+    -webkit-mask-image: radial-gradient(closest-side at 62% 58%, #000 32%, transparent 88%);
+    mask-image: radial-gradient(closest-side at 62% 58%, #000 32%, transparent 88%);
+}
+
+/* 内容要压在星纹之上 */
+html[theme="national"] body > * { position: relative; z-index: 1; }
+
 /* 顶部导航：金线压边 */
 html[theme="national"] .nav {
     background: rgba(109, 16, 23, .9);
@@ -98,8 +122,8 @@ html[theme="national"] .announcement-bar {
     border-color: rgba(255, 210, 74, .3);
 }
 
-/* 顶部两条金色飘带（纯 CSS，不占布局） */
-html[theme="national"] body::before {
+/* 顶部金色飘带（挂在 <html> 上，避开国旗用的 body::before） */
+html[theme="national"]::before {
     content: "";
     position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 9999;
     pointer-events: none;
