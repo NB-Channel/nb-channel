@@ -54,9 +54,9 @@ html[theme="cyber"] .vhero {
     background-image:
         radial-gradient(880px 460px at 16% 4%, rgba(255, 46, 166, .2), transparent 62%),
         radial-gradient(760px 460px at 92% 28%, rgba(0, 229, 255, .15), transparent 60%),
-        linear-gradient(168deg, #180a2c 0%, #0e0519 54%, #150826 100%);
-    background-repeat: no-repeat;
-    background-position: left top, right top, center;
+        linear-gradient(168deg, #180a2c 0%, #0e0519 54%, #150826 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, right top, center !important;
 }
 html[theme="cyber"] .vhero::before,
 html[theme="cyber"] .hero::after {
@@ -204,9 +204,9 @@ html[theme="ink"] .hero,
 html[theme="ink"] .vhero {
     background-image:
         radial-gradient(860px 440px at 16% 6%, rgba(140, 47, 35, .07), transparent 62%),
-        linear-gradient(168deg, #f6f2e9 0%, #f1ece1 54%, #ece6d9 100%);
-    background-repeat: no-repeat;
-    background-position: left top, center;
+        linear-gradient(168deg, #f6f2e9 0%, #f1ece1 54%, #ece6d9 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, center !important;
 }
 html[theme="ink"] .vhero::before,
 html[theme="ink"] .hero::after {
@@ -394,11 +394,11 @@ html[theme="pixel"] .product-card:hover {
 
 html[theme="pixel"] .hero,
 html[theme="pixel"] .vhero {
-    background-color: var(--bg);
+    background-color: var(--bg) !important;
     background-image:
-        repeating-linear-gradient(0deg, rgba(41, 173, 255, .05) 0 2px, transparent 2px 4px);
-    background-repeat: repeat;
-    background-position: center;
+        repeating-linear-gradient(0deg, rgba(41, 173, 255, .05) 0 2px, transparent 2px 4px) !important;
+    background-repeat: repeat !important;
+    background-position: center !important;
 }
 html[theme="pixel"] .vhero::before,
 html[theme="pixel"] .hero::after {
@@ -557,8 +557,8 @@ html[theme="eyecare"] .nav a.active { color: var(--brand); }
 
 html[theme="eyecare"] .hero,
 html[theme="eyecare"] .vhero {
-    background-color: #dad3c4;
-    background-image: none;
+    background-color: #dad3c4 !important;
+    background-image: none !important;
 }
 html[theme="eyecare"] .vhero::before,
 html[theme="eyecare"] .hero::after { background-image: none; }
@@ -689,10 +689,10 @@ html[theme="national"] .hero {
     background-image:
         radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
         radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
-        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
-    background-repeat: no-repeat;
-    background-position: left top, right top, center;
-    background-size: auto, auto, auto;
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, right top, center !important;
+    background-size: auto, auto, auto !important;
 }
 
 /* ---- 其它页面的 Hero 幕布（类名是 .vhero，比首页多一个 v）----
@@ -970,10 +970,10 @@ html[theme="tech"] .vhero {
         linear-gradient(90deg, rgba(0, 229, 255, .05) 1px, transparent 1px),
         radial-gradient(900px 480px at 14% 4%, rgba(0, 229, 255, .14), transparent 62%),
         radial-gradient(760px 460px at 90% 26%, rgba(124, 58, 237, .17), transparent 60%),
-        linear-gradient(168deg, #060a14 0%, #0a1220 54%, #0e1a2c 100%);
-    background-repeat: no-repeat;
-    background-position: left top, left top, left top, right top, center;
-    background-size: 34px 34px, 34px 34px, auto, auto, auto;
+        linear-gradient(168deg, #060a14 0%, #0a1220 54%, #0e1a2c 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, left top, left top, right top, center !important;
+    background-size: 34px 34px, 34px 34px, auto, auto, auto !important;
 }
 /* 点阵装饰换成青色 */
 html[theme="tech"] .hero::after,
@@ -1143,7 +1143,7 @@ html[theme="tech"] .hero {
     background:
         radial-gradient(880px 470px at 16% 6%, rgba(0, 229, 255, .16), transparent 62%),
         radial-gradient(720px 470px at 92% 30%, rgba(124, 58, 237, .2), transparent 60%),
-        linear-gradient(168deg, #04070f 0%, #071120 55%, #0a1830 100%);
+        linear-gradient(168deg, #04070f 0%, #071120 55%, #0a1830 100%) !important;
 }
 html[theme="tech"] .hero::before {
     background: radial-gradient(620px 310px at 15% 10%, rgba(0, 229, 255, .24), transparent 60%);
@@ -1255,3 +1255,321 @@ html[theme="tech"] .footer-bottom {
     border-top-color: rgba(0, 229, 255, .13);
     color: #59698a;
 }
+
+/* ============================================================
+   🧨 春节 · 正红剪纸 + 金
+   节日主题。由 js/theme.js 按农历正月初一（查表）前后各 10 天开放。
+   和国庆的区别：国庆是庄重的深红 + 星，这个是热闹的正红 + 剪纸窗花。
+   ============================================================ */
+html[theme="spring"] {
+    --bg:        #8c0f13;
+    --ink:       #fff4e0;
+    --ink-soft:  #f0cfa0;
+    --ink-faint: #c69a68;
+    --line:      rgba(255, 214, 120, .24);
+    --brand:     #ffd85e;
+    --brand-deep:#e8b52c;
+    --card:      #a3161b;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .3);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .42), 0 26px 58px -22px rgba(0, 0, 0, .58);
+}
+
+/* 底色：正红 + 金色光晕 + 剪纸窗花的暗纹 */
+html[theme="spring"] body {
+    background-image:
+        /* 斜向剪纸纹（菱形网格） */
+        repeating-linear-gradient(45deg,
+            rgba(255, 216, 94, .05) 0 2px, transparent 2px 12px),
+        repeating-linear-gradient(-45deg,
+            rgba(255, 216, 94, .05) 0 2px, transparent 2px 12px),
+        radial-gradient(1000px 600px at 14% -6%, rgba(255, 216, 94, .2), transparent 62%),
+        radial-gradient(860px 520px at 90% 6%, rgba(255, 120, 90, .14), transparent 60%);
+    background-color: var(--bg);
+    background-attachment: fixed;
+}
+
+/* 导航 */
+html[theme="spring"] .nav {
+    background: rgba(140, 15, 19, .9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 216, 94, .3);
+}
+html[theme="spring"] .nav-cta {
+    background: linear-gradient(135deg, var(--brand), #ff9a3c);
+    color: #7a0d10;
+    box-shadow: 0 0 22px -8px rgba(255, 216, 94, .9);
+}
+
+html[theme="spring"] .hero,
+html[theme="spring"] .vhero {
+    background-image:
+        radial-gradient(880px 470px at 16% 6%, rgba(255, 216, 94, .2), transparent 62%),
+        radial-gradient(720px 470px at 92% 30%, rgba(255, 130, 80, .15), transparent 60%),
+        linear-gradient(168deg, #6d0a0e 0%, #8c0f13 52%, #a3161b 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, right top, center !important;
+}
+html[theme="spring"] .vhero::before,
+html[theme="spring"] .hero::after {
+    background-image: radial-gradient(rgba(255, 216, 94, .1) 1px, transparent 1px);
+}
+html[theme="spring"] .vhero h1,
+html[theme="spring"] .hero h1 { color: #fff8e8; }
+html[theme="spring"] .vhero h1 .light,
+html[theme="spring"] .hero h1 .light { color: var(--brand); }
+html[theme="spring"] .vhero-sub,
+html[theme="spring"] .hero-sub { color: rgba(255, 238, 210, .72); }
+html[theme="spring"] .hero-eyebrow { color: rgba(255, 216, 94, .65); }
+html[theme="spring"] .vhero-actions .hero-link,
+html[theme="spring"] .hero-actions .hero-link {
+    color: #fff4e0;
+    border-bottom-color: rgba(255, 216, 94, .5);
+}
+html[theme="spring"] .vhero-fade,
+html[theme="spring"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+html[theme="spring"] .home-card,
+html[theme="spring"] .comment-section,
+html[theme="spring"] .product-card,
+html[theme="spring"] .about-content,
+html[theme="spring"] .changelog-content,
+html[theme="spring"] .profile-card {
+    border: 1px solid rgba(255, 216, 94, .24);
+    box-shadow: inset 0 0 26px -16px rgba(255, 216, 94, .5), var(--shadow-1);
+}
+html[theme="spring"] .stat-bar .num { text-shadow: 0 0 18px rgba(255, 216, 94, .55); }
+html[theme="spring"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(255, 216, 94, .85);
+}
+html[theme="spring"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="spring"] .nav-scan:hover,
+html[theme="spring"] .theme-btn:hover,
+html[theme="spring"] .drawer .d-close:hover { color: var(--brand); }
+html[theme="spring"] .nav-more-panel a:hover {
+    background: rgba(255, 216, 94, .14);
+    color: #fff8e8;
+}
+
+html[theme="spring"] .cta {
+    background: linear-gradient(170deg, #6d0a0e 0%, #8c0f13 55%, #a3161b 100%);
+    color: #fff8e8;
+}
+html[theme="spring"] .cta p { color: rgba(255, 238, 210, .68); }
+html[theme="spring"] .cta .hero-link { border-bottom-color: rgba(255, 216, 94, .5); }
+
+html[theme="spring"] .footer {
+    background: linear-gradient(180deg, #6d0a0e 0%, #55070a 100%);
+    color: #e8c9a0;
+}
+html[theme="spring"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 216, 94, .6), rgba(255, 130, 80, .45), transparent);
+}
+html[theme="spring"] .footer h5 { color: #fff8e8; }
+html[theme="spring"] .footer a { color: #e0b98c; }
+html[theme="spring"] .footer a:hover { color: #fff8e8; }
+html[theme="spring"] .footer .brand { color: #fff8e8; }
+html[theme="spring"] .footer .brand .dot { background: linear-gradient(135deg, var(--brand), #ff9a3c); }
+html[theme="spring"] .footer .desc { color: #c9a074; }
+html[theme="spring"] .footer-bottom {
+    border-top-color: rgba(255, 216, 94, .18);
+    color: #a8825c;
+}
+
+html[theme="spring"] input,
+html[theme="spring"] textarea {
+    background: rgba(163, 22, 27, .7);
+    border-color: rgba(255, 216, 94, .3);
+    color: #fff4e0;
+}
+html[theme="spring"] ::-webkit-scrollbar-thumb { background: rgba(255, 216, 94, .45); }
+
+/* 大事记 */
+html[theme="spring"] .jny-stage {
+    background-image:
+        radial-gradient(760px 420px at 18% 16%, rgba(255, 216, 94, .16), transparent 60%),
+        linear-gradient(168deg, #6d0a0e 0%, #8c0f13 52%, #a3161b 100%);
+}
+html[theme="spring"] .jny-bg {
+    background: radial-gradient(320px 320px at 50% 50%, rgba(255, 216, 94, .18), transparent 65%);
+}
+html[theme="spring"] .jny-node.lit { color: #fff8e8; text-shadow: 0 0 26px rgba(255, 216, 94, .7); }
+html[theme="spring"] .jny-node.lit .jy { color: var(--brand); }
+html[theme="spring"] .jny-svg .base { stroke: rgba(255, 216, 94, .13); }
+html[theme="spring"] .jny-svg .go { stroke: rgba(255, 216, 94, .95); filter: drop-shadow(0 0 6px rgba(255, 216, 94, .6)); }
+html[theme="spring"] .jny-batt i { background: #fff4e0; box-shadow: 0 0 22px rgba(255, 216, 94, .9); }
+html[theme="spring"] .jny-batt b { border-color: rgba(255, 216, 94, .55); }
+html[theme="spring"] .jny-card { background: rgba(109, 10, 14, .62); }
+html[theme="spring"] .jny-tag { color: var(--brand); }
+html[theme="spring"] .jny-h { color: #fff8e8; }
+html[theme="spring"] .jny-d { color: rgba(255, 238, 210, .76); }
+html[theme="spring"] .jny-progress { color: rgba(255, 238, 210, .5); }
+html[theme="spring"] .jny-progress .bar { background: rgba(255, 216, 94, .16); }
+html[theme="spring"] .jny-progress .bar i { background: linear-gradient(90deg, #ffd85e, #ff9a3c); }
+
+/* ============================================================
+   🥮 中秋 · 月白 + 桂黄 + 夜空
+   节日主题。由 js/theme.js 按农历八月十五（查表）前后各 5 天开放。
+   底色是深靛蓝的夜空，比「科技」更暖、更静。
+   ============================================================ */
+html[theme="midautumn"] {
+    --bg:        #101a33;
+    --ink:       #f2ecd8;
+    --ink-soft:  #c3bc9e;
+    --ink-faint: #8d876e;
+    --line:      rgba(255, 231, 150, .22);
+    --brand:     #ffe796;
+    --brand-deep:#d9bd63;
+    --card:      #18243f;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 16px rgba(0, 0, 0, .3);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .45), 0 26px 60px -24px rgba(0, 0, 0, .6);
+}
+
+/* 底色：夜蓝 + 月光 + 几点星 */
+html[theme="midautumn"] body {
+    background-image:
+        radial-gradient(1.6px 1.6px at 18% 12%, rgba(255, 255, 255, .5), transparent),
+        radial-gradient(1.4px 1.4px at 72% 8%,  rgba(255, 255, 255, .42), transparent),
+        radial-gradient(1.6px 1.6px at 42% 24%, rgba(255, 255, 255, .34), transparent),
+        radial-gradient(1.2px 1.2px at 88% 30%, rgba(255, 255, 255, .3), transparent),
+        radial-gradient(1000px 620px at 78% -10%, rgba(255, 231, 150, .2), transparent 60%),
+        radial-gradient(900px 560px at 12% 6%, rgba(90, 130, 220, .16), transparent 62%);
+    background-color: var(--bg);
+    background-attachment: fixed;
+}
+
+html[theme="midautumn"] .nav {
+    background: rgba(16, 26, 51, .88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 231, 150, .26);
+}
+html[theme="midautumn"] .nav-cta {
+    background: linear-gradient(135deg, var(--brand), #9fb8e8);
+    color: #101a33;
+    box-shadow: 0 0 22px -8px rgba(255, 231, 150, .85);
+}
+
+html[theme="midautumn"] .hero,
+html[theme="midautumn"] .vhero {
+    background-image:
+        radial-gradient(620px 420px at 84% 8%, rgba(255, 231, 150, .22), transparent 62%),
+        radial-gradient(760px 460px at 12% 22%, rgba(90, 130, 220, .16), transparent 62%),
+        linear-gradient(168deg, #0b1329 0%, #131f3d 54%, #1a2a4d 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: right top, left top, center !important;
+}
+html[theme="midautumn"] .vhero::before,
+html[theme="midautumn"] .hero::after {
+    background-image: radial-gradient(rgba(255, 231, 150, .12) 1px, transparent 1px);
+}
+html[theme="midautumn"] .vhero h1,
+html[theme="midautumn"] .hero h1 { color: #faf5e4; }
+html[theme="midautumn"] .vhero h1 .light,
+html[theme="midautumn"] .hero h1 .light { color: var(--brand); }
+html[theme="midautumn"] .vhero-sub,
+html[theme="midautumn"] .hero-sub { color: rgba(232, 226, 200, .7); }
+html[theme="midautumn"] .hero-eyebrow { color: rgba(255, 231, 150, .6); }
+html[theme="midautumn"] .vhero-actions .hero-link,
+html[theme="midautumn"] .hero-actions .hero-link {
+    color: #f2ecd8;
+    border-bottom-color: rgba(255, 231, 150, .45);
+}
+html[theme="midautumn"] .vhero-fade,
+html[theme="midautumn"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+html[theme="midautumn"] .home-card,
+html[theme="midautumn"] .comment-section,
+html[theme="midautumn"] .product-card,
+html[theme="midautumn"] .about-content,
+html[theme="midautumn"] .changelog-content,
+html[theme="midautumn"] .profile-card {
+    border: 1px solid rgba(255, 231, 150, .2);
+    box-shadow: inset 0 0 26px -16px rgba(255, 231, 150, .45), var(--shadow-1);
+}
+html[theme="midautumn"] .stat-bar .num { text-shadow: 0 0 18px rgba(255, 231, 150, .5); }
+html[theme="midautumn"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(255, 231, 150, .8);
+}
+html[theme="midautumn"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="midautumn"] .nav-scan:hover,
+html[theme="midautumn"] .theme-btn:hover,
+html[theme="midautumn"] .drawer .d-close:hover { color: var(--brand); }
+html[theme="midautumn"] .nav-more-panel a:hover {
+    background: rgba(255, 231, 150, .12);
+    color: #faf5e4;
+}
+
+html[theme="midautumn"] .cta {
+    background: linear-gradient(170deg, #0b1329 0%, #131f3d 55%, #1a2a4d 100%);
+    color: #faf5e4;
+}
+html[theme="midautumn"] .cta p { color: rgba(232, 226, 200, .66); }
+html[theme="midautumn"] .cta .hero-link { border-bottom-color: rgba(255, 231, 150, .45); }
+
+html[theme="midautumn"] .footer {
+    background: linear-gradient(180deg, #0b1329 0%, #070d1d 100%);
+    color: #b3ad93;
+}
+html[theme="midautumn"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 231, 150, .55), rgba(120, 160, 230, .4), transparent);
+}
+html[theme="midautumn"] .footer h5 { color: #f2ecd8; }
+html[theme="midautumn"] .footer a { color: #a8a288; }
+html[theme="midautumn"] .footer a:hover { color: #faf5e4; }
+html[theme="midautumn"] .footer .brand { color: #f2ecd8; }
+html[theme="midautumn"] .footer .brand .dot { background: linear-gradient(135deg, var(--brand), #9fb8e8); }
+html[theme="midautumn"] .footer .desc { color: #8a8570; }
+html[theme="midautumn"] .footer-bottom {
+    border-top-color: rgba(255, 231, 150, .14);
+    color: #7d7963;
+}
+
+html[theme="midautumn"] input,
+html[theme="midautumn"] textarea {
+    background: rgba(24, 36, 63, .8);
+    border-color: rgba(255, 231, 150, .28);
+    color: #f2ecd8;
+}
+html[theme="midautumn"] ::-webkit-scrollbar-thumb { background: rgba(255, 231, 150, .4); }
+
+/* 大事记 */
+html[theme="midautumn"] .jny-stage {
+    background-image:
+        radial-gradient(760px 420px at 80% 12%, rgba(255, 231, 150, .18), transparent 60%),
+        linear-gradient(168deg, #0b1329 0%, #131f3d 52%, #1a2a4d 100%);
+}
+html[theme="midautumn"] .jny-bg {
+    background: radial-gradient(320px 320px at 50% 50%, rgba(255, 231, 150, .16), transparent 65%);
+}
+html[theme="midautumn"] .jny-node.lit { color: #faf5e4; text-shadow: 0 0 26px rgba(255, 231, 150, .65); }
+html[theme="midautumn"] .jny-node.lit .jy { color: var(--brand); }
+html[theme="midautumn"] .jny-svg .base { stroke: rgba(255, 231, 150, .12); }
+html[theme="midautumn"] .jny-svg .go { stroke: rgba(255, 231, 150, .9); filter: drop-shadow(0 0 6px rgba(255, 231, 150, .55)); }
+html[theme="midautumn"] .jny-batt i { background: #faf5e4; box-shadow: 0 0 22px rgba(255, 231, 150, .9); }
+html[theme="midautumn"] .jny-batt b { border-color: rgba(255, 231, 150, .5); }
+html[theme="midautumn"] .jny-card { background: rgba(11, 19, 41, .66); }
+html[theme="midautumn"] .jny-tag { color: var(--brand); }
+html[theme="midautumn"] .jny-h { color: #faf5e4; }
+html[theme="midautumn"] .jny-d { color: rgba(232, 226, 200, .74); }
+html[theme="midautumn"] .jny-progress { color: rgba(232, 226, 200, .48); }
+html[theme="midautumn"] .jny-progress .bar { background: rgba(255, 231, 150, .14); }
+html[theme="midautumn"] .jny-progress .bar i { background: linear-gradient(90deg, #ffe796, #9fb8e8); }
+
+/* fade 的端点写死颜色，不依赖 CSS 变量继承（中秋那版就栽在这） */
+html[theme="midautumn"] .vhero-fade,
+html[theme="midautumn"] .hero-fade { background: linear-gradient(to bottom, transparent, #101a33) !important; }
+html[theme="spring"] .vhero-fade,
+html[theme="spring"] .hero-fade { background: linear-gradient(to bottom, transparent, #8c0f13) !important; }
+html[theme="cyber"] .vhero-fade,
+html[theme="cyber"] .hero-fade { background: linear-gradient(to bottom, transparent, #0b0518) !important; }
+html[theme="ink"] .vhero-fade,
+html[theme="ink"] .hero-fade { background: linear-gradient(to bottom, transparent, #f4f0e6) !important; }
+html[theme="pixel"] .vhero-fade,
+html[theme="pixel"] .hero-fade { background: linear-gradient(to bottom, transparent, #1a1c2c) !important; }
+html[theme="eyecare"] .vhero-fade,
+html[theme="eyecare"] .hero-fade { background: linear-gradient(to bottom, transparent, #d6cfc0) !important; }
