@@ -794,7 +794,7 @@
             head.className = 'nb-ts-codehead';
             var hsp = document.createElement('span');
             hsp.className = 'sp';
-            hsp.textContent = '\uD83D\uDCCB Python \u6E90\u7801';
+            hsp.textContent = '\uD83D\uDCCB \u6E90\u7801';
             var copyBtn = document.createElement('button');
             copyBtn.type = 'button';
             copyBtn.className = 'nb-ts-mini';
@@ -869,6 +869,9 @@
                 showCode();
 
                 function showCode() {
+                    /* 标题跟着当前语言走 */
+                    hsp.textContent = '\uD83D\uDCCB ' +
+                        (curLang ? curLang.name : 'Python') + ' \u6E90\u7801';
                     var code = curLang ? curLang.code : it.code;
                     var arr = code.split('\n');
                     pre.innerHTML = arr.slice(0, SHOW_LINES).join('\n') +
