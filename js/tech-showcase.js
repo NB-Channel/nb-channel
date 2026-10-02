@@ -120,7 +120,7 @@
                     '\u2500\u2500 \u57fa\u7840 \u2500\u2500',
                     '  help / ?          \u663e\u793a\u8fd9\u4efd\u5e2e\u52a9',
                     '  whoami            \u6211\u662f\u8c01',
-                    '  cat <\u6587\u4ef6>        \u8bfb\u6587\u4ef6\uff08about.txt / motto.txt / README.md\uff09',
+                    '  cat <\u6587\u4ef6>        \u8bfb\u6587\u4ef6',
                     '  ls [modules/]     \u5217\u76ee\u5f55',
                     '  uptime            \u8fd0\u884c\u65f6\u957f',
                     '  date              \u5f53\u524d\u65f6\u95f4',
@@ -128,21 +128,21 @@
                     '  history           \u5386\u53f2\u547d\u4ee4',
                     '  clear             \u6e05\u5c4f',
                     '',
-                    '\u2500\u2500 \u516c\u53f8\u7ecf\u8425 \u2500\u2500',
-                    '  nb company        \u516c\u53f8\u6863\u6848\uff08\u542b\u5e02\u503c\uff09',
+                    '\u2500\u2500 \u865a\u62df\u80a1\u7968 \u00b7 \u771f\u5b9e\u6570\u636e \u2500\u2500',
+                    '  nb company        \u81ea\u5bb6\u516c\u53f8\u6863\u6848',
                     '  nb mcap           \u5e02\u503c\u4e0e\u5168\u7ad9\u6392\u540d',
-                    '  nb stock [n]      \u5168\u5e02\u573a\u8d70\u52bf\uff08\u771f\u5b9e\u5feb\u7167\uff09',
+                    '  nb rank [n]       \u5e02\u503c\u699c\u524d n \u5bb6',
+                    '  nb richest        \u5e02\u503c\u7b2c\u4e00\u662f\u8c01',
+                    '  nb verified       \u5df2\u8ba4\u8bc1\u516c\u53f8',
+                    '  nb count          \u516c\u53f8\u603b\u6570 / \u603b\u5e02\u503c',
+                    '  nb new            \u6700\u8fd1\u6ce8\u518c\u7684\u516c\u53f8',
+                    '  nb search <\u8bcd>    \u641c\u516c\u53f8',
                     '  nb market         \u5168\u5e02\u573a\u603b\u5e02\u503c',
-                    '  nb product        \u4ea7\u54c1\u7ebf',
-                    '  nb staff          \u56e2\u961f\u4eba\u6570',
-                    '  nb friend         \u53cb\u5546\u540d\u5355',
-                    '  nb news           \u6700\u8fd1\u516c\u544a',
+                    '  nb history [n]    \u5386\u53f2\u5feb\u7167\u6982\u51b5',
+                    '  nb stock [n]      \u8d70\u52bf\u56fe',
+                    '  nb friend         \u5e02\u503c\u9760\u524d\u7684\u90bb\u5c45',
                     '',
-                    '\u2500\u2500 \u4e2a\u4eba \u2500\u2500',
-                    '  nb fans           B \u7ad9\u7c89\u4e1d',
-                    '  nb coin           NB \u5e01\u4f59\u989d',
-                    '  nb rank [n]       \u5e02\u503c\u6392\u884c\u699c\uff08\u771f\u5b9e\u6570\u636e\uff09',
-                    '  nb badge          \u5df2\u89e3\u9501\u5fbd\u7ae0',
+                    '\u2500\u2500 \u5176\u4ed6 \u2500\u2500',
                     '  fortune           \u968f\u673a\u4e00\u53e5',
                     '  exit              \u5173\u95ed\u7ec8\u7aef'
                 ].join('\n');
@@ -298,13 +298,99 @@
                     });
                 }
 
-                /* 老命令保持同步返回 */
-                if (sub === 'fans') return 'B \u7ad9\u7c89\u4e1d\uff1a' + fm(112363);
-                if (sub === 'coin') return 'NB \u5e01\u4f4e\u989d\uff1a12,800';
-                if (sub === 'motto') return TERM_FILES['motto.txt'];
-                if (sub === 'badge') {
-                    return '\u5df2\u89e3\u9501 7 / 24\uff1a\u521d\u6765\u4e4d\u5230 \u00b7 \u9996\u6b21\u8bc4\u8bba \u00b7 \u7b7e\u5230\u4e03\u5929 \u00b7 \u2026';
+                /* 已认证的公司 */
+                if (sub === 'verified') {
+                    return sbGet('user_companies?select=company_name,market_value' +
+                                 '&verification_status=eq.approved&order=market_value.desc&limit=12')
+                        .then(function (all) {
+                            if (!all || !all.length) return {cls: 'dim', text: '\u76ee\u524d\u6ca1\u6709\u5df2\u8ba4\u8bc1\u7684\u516c\u53f8\u3002'};
+                            return ['\u5df2\u8ba4\u8bc1\uff08' + all.length + ' \u5bb6\uff09'].concat(
+                                all.map(function (c, i) {
+                                    return '  ' + String(i + 1).padStart(2) + '. ' +
+                                           c.company_name.slice(0, 16) + '  ' + big(c.market_value || 0);
+                                })).join('\n');
+                        }).catch(function (e) {
+                            return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                        });
                 }
+
+                /* 全站公司总数 */
+                if (sub === 'count') {
+                    return sbCompanies(1000).then(function (all) {
+                        var n2 = (all || []).length;
+                        var vf = (all || []).filter(function (c) { return c.verified; }).length;
+                        var tot = (all || []).reduce(function (a, c) { return a + (c.market_value || 0); }, 0);
+                        return '\u516c\u53f8\u603b\u6570  ' + n2 + ' \u5bb6\n' +
+                               '\u5df2\u8ba4\u8bc1    ' + vf + ' \u5bb6\n' +
+                               '\u603b\u5e02\u503c    ' + big(tot) + ' NB';
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
+                }
+
+                /* 最新注册的公司 */
+                if (sub === 'new') {
+                    return sbGet('user_companies?select=company_name,market_value,created_at' +
+                                 '&order=created_at.desc&limit=8').then(function (all) {
+                        if (!all || !all.length) return {cls: 'dim', text: '\u6682\u65e0\u6570\u636e\u3002'};
+                        return ['\u6700\u8fd1\u6ce8\u518c'].concat(all.map(function (c) {
+                            return '  ' + String(c.created_at || '').slice(0, 10) + '  ' +
+                                   c.company_name.slice(0, 16) + '  ' + big(c.market_value || 0);
+                        })).join('\n');
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
+                }
+
+                /* 搜公司 */
+                if (sub === 'search' || sub === 'find') {
+                    if (!rest) return {cls: 'err', text: '\u7528\u6cd5\uff1anb search <\u516c\u53f8\u540d>'};
+                    return sbGet('user_companies?select=company_name,market_value,verified' +
+                                 '&company_name=ilike.*' + encodeURIComponent(rest) +
+                                 '*&order=market_value.desc&limit=10').then(function (all) {
+                        if (!all || !all.length) return {cls: 'dim', text: '\u6ca1\u627e\u5230\u5339\u914d\u7684\u516c\u53f8\u3002'};
+                        return ['\u5339\u914d ' + all.length + ' \u5bb6'].concat(all.map(function (c) {
+                            return '  ' + c.company_name.slice(0, 18) + (c.verified ? ' \u2713' : '') +
+                                   '  ' + big(c.market_value || 0);
+                        })).join('\n');
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
+                }
+
+                /* 市值第一 */
+                if (sub === 'richest' || sub === 'no1') {
+                    return sbCompanies(1).then(function (all) {
+                        var c = (all || [])[0];
+                        if (!c) return {cls: 'dim', text: '\u6682\u65e0\u6570\u636e\u3002'};
+                        return '\u5e02\u503c\u7b2c\u4e00  ' + c.company_name + '\n' +
+                               '\u5e02\u503c      ' + big(c.market_value || 0) + ' NB';
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
+                }
+
+                /* 历史快照条数 */
+                if (sub === 'history') {
+                    var nn2 = parseInt(rest, 10);
+                    if (!nn2 || nn2 < 10) nn2 = 30;
+                    if (nn2 > 200) nn2 = 200;
+                    return sbGet('stock_history_full?select=total_value,created_at' +
+                                 '&order=created_at.desc&limit=' + nn2).then(function (all) {
+                        if (!all || !all.length) return {cls: 'dim', text: '\u6682\u65e0\u5386\u53f2\u5feb\u7167\u3002'};
+                        var vals = all.map(function (h) { return h.total_value; }).reverse();
+                        var first = vals[0], last = vals[vals.length - 1];
+                        var pct = first ? (last - first) / first * 100 : 0;
+                        return '\u5386\u53f2\u5feb\u7167  ' + all.length + ' \u6761\n' +
+                               '\u65f6\u95f4\u8de8\u5ea6  ' + String(all[all.length - 1].created_at || '').slice(0, 16).replace('T', ' ') +
+                               ' \u2192 ' + String(all[0].created_at || '').slice(0, 16).replace('T', ' ') + '\n' +
+                               '\u603b\u5e02\u503c    ' + big(last) + ' NB  ' +
+                               (pct >= 0 ? '\u25b2 +' : '\u25bc ') + pct.toFixed(2) + '%';
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
+                }
+
                 if (sub === '--help' || sub === '') {
                     return '\u7528\u6cd5\uff1anb <company|mcap|rank|market|stock|friend|fans|coin|motto|badge>';
                 }
