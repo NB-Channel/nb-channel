@@ -62,6 +62,53 @@
         }).join('');
     }
 
+/* ============================================================
+       虚拟股票的真实数据（只读）
+       直接打 Supabase 的 REST 接口，用页面上同一个 anon key。
+       ============================================================ */
+    var SB_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    var SB_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+
+    function sbGet(path) {
+        return fetch(SB_URL + '/rest/v1/' + path, {
+            headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+        }).then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        });
+    }
+
+    /* 全站公司按市值降序，取前 n 家 */
+    function sbCompanies(n) {
+        return sbGet('user_companies?select=company_name,market_value,total_shares,verified,' +
+                     'verification_status,created_at&order=market_value.desc&limit=' + (n || 10));
+    }
+    /* 找一家公司（按名字模糊匹配） */
+    function sbFindCompany(name) {
+        return sbGet('user_companies?select=*&company_name=ilike.*' + encodeURIComponent(name) +
+                     '*&order=market_value.desc&limit=1').then(function (a) {
+            return (a && a.length) ? a[0] : null;
+        });
+    }
+
+    /* 数字千分位 */
+    function fm(n) {
+        return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    /* 把大数折成「亿 / 万」 */
+    function big(n) {
+        if (n >= 1e8) return (n / 1e8).toFixed(2) + ' \u4ebf';
+        if (n >= 1e4) return (n / 1e4).toFixed(2) + ' \u4e07';
+        return fm(n);
+    }
+    /* ▁▂▃▄▅▆▇█ 迷你走势 */
+    function spark(nums) {
+        var b = ['\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588'];
+        var mn = Math.min.apply(null, nums), mx = Math.max.apply(null, nums);
+        var sp = (mx - mn) || 1;
+        return nums.map(function (v) { return b[Math.round((v - mn) / sp * 7)]; }).join('');
+    }
+
     function termCommands(write, clear) {
         var CMD_ERR = function (name) {
             /* 仿 Windows CMD 的报错 */
@@ -83,9 +130,9 @@
                     '',
                     '\u2500\u2500 \u516c\u53f8\u7ecf\u8425 \u2500\u2500',
                     '  nb company        \u516c\u53f8\u6863\u6848\uff08\u542b\u5e02\u503c\uff09',
-                    '  nb mcap           \u5e02\u503c\u4e0e\u6da8\u8dcc',
-                    '  nb stock [\u5929\u6570]   \u80a1\u4ef7\u8d70\u52bf\uff08\u9ed8\u8ba4 20 \u65e5\uff09',
-                    '  nb revenue        \u8425\u6536\u6784\u6210',
+                    '  nb mcap           \u5e02\u503c\u4e0e\u5168\u7ad9\u6392\u540d',
+                    '  nb stock [n]      \u5168\u5e02\u573a\u8d70\u52bf\uff08\u771f\u5b9e\u5feb\u7167\uff09',
+                    '  nb market         \u5168\u5e02\u573a\u603b\u5e02\u503c',
                     '  nb product        \u4ea7\u54c1\u7ebf',
                     '  nb staff          \u56e2\u961f\u4eba\u6570',
                     '  nb friend         \u53cb\u5546\u540d\u5355',
@@ -94,7 +141,7 @@
                     '\u2500\u2500 \u4e2a\u4eba \u2500\u2500',
                     '  nb fans           B \u7ad9\u7c89\u4e1d',
                     '  nb coin           NB \u5e01\u4f59\u989d',
-                    '  nb rank           \u6392\u884c\u699c',
+                    '  nb rank [n]       \u5e02\u503c\u6392\u884c\u699c\uff08\u771f\u5b9e\u6570\u636e\uff09',
                     '  nb badge          \u5df2\u89e3\u9501\u5fbd\u7ae0',
                     '  fortune           \u968f\u673a\u4e00\u53e5',
                     '  exit              \u5173\u95ed\u7ec8\u7aef'
@@ -131,102 +178,139 @@
             'exit': function () { return { cls: 'dim', text: '\u518d\u89c1\uff0c\u8bb0\u5f97\u56de\u6765\u3002' }; },
 
             /* ---------- 公司经营 ---------- */
+            /* ---------- 公司经营：直连虚拟股票的真实数据 ---------- */
             'nb': function (arg) {
                 var a = (arg || '').trim();
-                var sub = a.split(/\s+/)[0];
+                var sub = a.split(/\s+/)[0] || '';
                 var rest = a.slice(sub.length).trim();
 
+                /* 公司档案：优先查名字里带 NB 的自家公司 */
                 if (sub === 'company' || sub === 'info') {
-                    return [
-                        '\u250c\u2500 \u516c\u53f8\u6863\u6848 ' + '\u2500'.repeat(24),
-                        '\u2502 \u540d\u79f0    ' + NB_CO.name,
-                        '\u2502 \u6210\u7acb    ' + NB_CO.founded,
-                        '\u2502 \u603b\u90e8    ' + NB_CO.hq,
-                        '\u2502 \u80a1\u4e1c    ' + NB_CO.holders,
-                        '\u2502 \u5458\u5de5    ' + NB_CO.staff + ' \u4eba',
-                        '\u2502 \u53cb\u5546    ' + NB_CO.friends + ' \u5bb6',
-                        '\u2502 \u7c89\u4e1d    ' + fmt(NB_CO.fans),
-                        '\u2502 \u5e02\u503c    ' + mcap().toFixed(2) + ' \u4ebf NB',
-                        '\u2514' + '\u2500'.repeat(32)
-                    ].join('\n');
+                    return sbFindCompany('NB').then(function (c) {
+                        if (!c) return {cls: 'err', text: '\u6ca1\u67e5\u5230\u516c\u53f8\u8bb0\u5f55\u3002'};
+                        var st = c.verification_status === 'approved' ? '\u5df2\u8ba4\u8bc1'
+                               : (c.verification_status === 'pending' ? '\u5ba1\u6838\u4e2d' : '\u672a\u8ba4\u8bc1');
+                        return [
+                            '\u250c\u2500 \u516c\u53f8\u6863\u6848 ' + '\u2500'.repeat(22),
+                            '\u2502 \u540d\u79f0    ' + c.company_name,
+                            '\u2502 \u5e02\u503c    ' + big(c.market_value) + ' NB',
+                            '\u2502 \u603b\u80a1\u672c  ' + fm(c.total_shares || 0) + ' \u80a1',
+                            '\u2502 \u6d41\u901a\u80a1  ' + fm(c.circulating_shares || 0) + ' \u80a1',
+                            '\u2502 \u72b6\u6001    ' + st,
+                            '\u2502 \u6210\u7acb    ' + String(c.created_at || '').slice(0, 10),
+                            '\u2514' + '\u2500'.repeat(30)
+                        ].join('\n');
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
                 }
+
+                /* 市值 + 全站排名 */
                 if (sub === 'mcap' || sub === 'market') {
-                    var p = price(), chg = 3.42;
-                    return [
-                        '\u5e02\u503c  ' + mcap().toFixed(2) + ' \u4ebf NB',
-                        '\u80a1\u4ef7  ' + p.toFixed(2) + ' NB   \u25b2 +' + chg.toFixed(2) + '%',
-                        '',
-                        '\u8fd1 20 \u65e5  ' + spark([18.2,18.6,18.1,19.0,19.4,19.1,19.8,20.3,20.0,20.6,
-                                                    21.2,20.9,21.5,22.1,21.8,22.4,23.0,22.7,23.4,24.68]),
-                        '         20 \u65e5\u524d' + ' '.repeat(16) + '\u4eca\u5929'
-                    ].join('\n');
+                    return Promise.all([sbFindCompany('NB'), sbCompanies(200)]).then(function (r) {
+                        var c = r[0], all = r[1] || [];
+                        if (!c) return {cls: 'err', text: '\u6ca1\u67e5\u5230\u516c\u53f8\u8bb0\u5f55\u3002'};
+                        var rank = all.findIndex(function (x) { return x.company_name === c.company_name; }) + 1;
+                        var total = all.reduce(function (s2, x) { return s2 + (x.market_value || 0); }, 0);
+                        var share = total ? (c.market_value / total * 100) : 0;
+                        return [
+                            '\u5e02\u503c  ' + big(c.market_value) + ' NB',
+                            '\u6392\u540d  ' + (rank || '-') + ' / ' + all.length + '  \u5168\u5e02\u573a ' + big(total) + ' NB',
+                            '\u5360\u6bd4  ' + share.toFixed(2) + '%'
+                        ].join('\n');
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
                 }
-                if (sub === 'stock') {
-                    var n = parseInt(rest, 10);
-                    if (!n || n < 5) n = 20;
-                    if (n > 60) n = 60;
-                    var seed = 18.2, arr = [];
-                    for (var i = 0; i < n; i++) {
-                        seed += 0.33 + Math.sin(i / 2.7) * 0.55 + Math.sin(i / 1.3 + 1) * 0.25;
-                        arr.push(seed);
-                    }
-                    var first = arr[0], last = arr[n - 1];
-                    var pct = (last - first) / first * 100;
-                    return [
-                        'NB  ' + last.toFixed(2) + '  ' + (pct >= 0 ? '\u25b2 +' : '\u25bc ') + pct.toFixed(2) + '%',
-                        '',
-                        '\u8fd1 ' + n + ' \u65e5',
-                        '  ' + spark(arr)
-                    ].join('\n');
-                }
-                if (sub === 'revenue') {
-                    return [
-                        '\u8425\u6536\u6784\u6210\uff08\u4e0a\u6708\uff09',
-                        '  \u5e7f\u544a\u5408\u4f5c   ' + ' \u2588'.repeat(11) + '  46%',
-                        '  NB \u5e01\u6d88\u8d39  ' + ' \u2588'.repeat(7) + '      29%',
-                        '  \u5468\u8fb9\u5546\u57ce   ' + ' \u2588'.repeat(4) + '          17%',
-                        '  \u5176\u4ed6       ' + ' \u2588'.repeat(2) + '           8%'
-                    ].join('\n');
-                }
-                if (sub === 'product') {
-                    return [
-                        '\u4ea7\u54c1\u7ebf',
-                        '  \u5316\u5b66\u5b9e\u9a8c\u7cfb\u5217   12 \u671f',
-                        '  \u7269\u7406\u4f5c\u6b7b\u7cfb\u5217   9 \u671f',
-                        '  NB \u5e01\u7ecf\u6d4e\u7cfb\u7edf  \u5df2\u4e0a\u7ebf',
-                        '  \u865a\u62df\u516c\u53f8\u6a21\u5757  \u5df2\u4e0a\u7ebf',
-                        '  \u6392\u884c\u699c\u7cfb\u7edf    \u5f00\u53d1\u4e2d'
-                    ].join('\n');
-                }
-                if (sub === 'staff') {
-                    return '\u5168\u804c ' + NB_CO.staff + ' \u4eba\uff08\u542b AI \u52a9\u7406\uff09\u3002\u62db\u4eba\u4e2d\u3002';
-                }
-                if (sub === 'friend') {
-                    return '\u53cb\u5546 ' + NB_CO.friends + ' \u5bb6\uff1a' +
-                           '\u5316\u5b66\u5c0f\u7ad9  \u7269\u7406\u5c0f\u7ad9  \u6570\u5b66\u5c0f\u7ad9  \u751f\u7269\u5c0f\u7ad9  \u2026';
-                }
-                if (sub === 'news') {
-                    return [
-                        '[\u516c\u544a] \u79cb\u5b63\u6d3b\u52a8\u5f00\u542f\uff0c\u767b\u5f55\u9001 200 NB\u5e01',
-                        '[\u516c\u544a] \u80a1\u5e02\u6a21\u5757\u4e0a\u7ebf\uff0c\u652f\u6301\u81ea\u5b9a\u4e49\u516c\u53f8',
-                        '[\u516c\u544a] \u65b0\u589e 686 \u6761\u7406\u79d1\u5c0f\u77e5\u8bc6'
-                    ].join('\n');
-                }
-                if (sub === 'fans') return 'B \u7ad9\u7c89\u4e1d\uff1a' + fmt(NB_CO.fans);
-                if (sub === 'coin') return 'NB \u5e01\u4f59\u989d\uff1a12,800';
-                if (sub === 'motto') return TERM_FILES['motto.txt'];
+
+                /* 市值排行榜 */
                 if (sub === 'rank') {
-                    return TERM_TOP.map(function (r, i) {
-                        return '  ' + (i + 1) + '. ' + r[0] + '  ' + r[1];
-                    }).join('\n');
+                    var n = parseInt(rest, 10);
+                    if (!n || n < 3) n = 10;
+                    if (n > 30) n = 30;
+                    return sbCompanies(n).then(function (all) {
+                        if (!all || !all.length) return {cls: 'err', text: '\u6682\u65e0\u516c\u53f8\u6570\u636e\u3002'};
+                        var lines = ['\u5168\u5e02\u573a\u5e02\u503c\u699c\uff08\u524d ' + all.length + '\uff09'];
+                        all.forEach(function (c, i) {
+                            var tag = c.verified ? ' \u2713' : '';
+                            lines.push('  ' + String(i + 1).padStart(2) + '. ' +
+                                       c.company_name.slice(0, 16) + tag +
+                                       '  ' + big(c.market_value || 0));
+                        });
+                        return lines.join('\n');
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
                 }
+
+                /* 全市场概览 */
+                if (sub === 'market') {
+                    return sbGet('stock_latest?select=total_value,created_at&order=created_at.desc&limit=1')
+                        .then(function (a) {
+                            var t = (a && a[0]) ? a[0].total_value : 0;
+                            return '\u5168\u5e02\u573a\u603b\u5e02\u503c  ' + big(t) + ' NB\n' +
+                                   '\u5feb\u7167\u65f6\u95f4      ' + String((a[0] || {}).created_at || '').slice(0, 19).replace('T', ' ');
+                        }).catch(function (e) {
+                            return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                        });
+                }
+
+                /* 股价走势：用市值历史画 sparkline */
+                if (sub === 'stock') {
+                    var nn = parseInt(rest, 10);
+                    if (!nn || nn < 5) nn = 20;
+                    if (nn > 60) nn = 60;
+                    return Promise.all([sbFindCompany('NB'),
+                                        sbGet('stock_history_full?select=total_value,created_at' +
+                                              '&order=created_at.desc&limit=' + nn)])
+                        .then(function (r2) {
+                            var c = r2[0], hist = (r2[1] || []).slice().reverse();
+                            if (!c) return {cls: 'err', text: '\u6ca1\u67e5\u5230\u516c\u53f8\u8bb0\u5f55\u3002'};
+                            var out = ['\u5e02\u503c  ' + big(c.market_value) + ' NB'];
+                            if (hist.length >= 5) {
+                                var vals = hist.map(function (h) { return h.total_value; });
+                                var first = vals[0], last = vals[vals.length - 1];
+                                var pct = first ? (last - first) / first * 100 : 0;
+                                out.push('\u5168\u5e02\u573a\u8fd1 ' + vals.length + ' \u6b21\u5feb\u7167  ' +
+                                         (pct >= 0 ? '\u25b2 +' : '\u25bc ') + pct.toFixed(2) + '%');
+                                out.push('');
+                                out.push('  ' + spark(vals));
+                            } else {
+                                out.push('\u5386\u53f2\u5feb\u7167\u4e0d\u8db3\uff0c\u591a\u5237\u65b0\u51e0\u6b21\u540e\u518d\u770b\u3002');
+                            }
+                            return out.join('\n');
+                        }).catch(function (e) {
+                            return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                        });
+                }
+
+                /* 友商：除了自己之外市值最高的几家 */
+                if (sub === 'friend') {
+                    return sbCompanies(12).then(function (all) {
+                        var others = (all || []).filter(function (c) {
+                            return c.company_name.indexOf('NB') !== 0;
+                        }).slice(0, 6);
+                        if (!others.length) return {cls: 'err', text: '\u6682\u65e0\u6570\u636e\u3002'};
+                        return ['\u5e02\u503c\u9760\u524d\u7684\u90bb\u5c45\uff1a'].concat(
+                            others.map(function (c) {
+                                return '  ' + c.company_name.slice(0, 16) + '  ' + big(c.market_value || 0);
+                            })).join('\n');
+                    }).catch(function (e) {
+                        return {cls: 'err', text: '\u8054\u7f51\u67e5\u8be2\u5931\u8d25\uff1a' + e.message};
+                    });
+                }
+
+                /* 老命令保持同步返回 */
+                if (sub === 'fans') return 'B \u7ad9\u7c89\u4e1d\uff1a' + fm(112363);
+                if (sub === 'coin') return 'NB \u5e01\u4f4e\u989d\uff1a12,800';
+                if (sub === 'motto') return TERM_FILES['motto.txt'];
                 if (sub === 'badge') {
                     return '\u5df2\u89e3\u9501 7 / 24\uff1a\u521d\u6765\u4e4d\u5230 \u00b7 \u9996\u6b21\u8bc4\u8bba \u00b7 \u7b7e\u5230\u4e03\u5929 \u00b7 \u2026';
                 }
                 if (sub === '--help' || sub === '') {
-                    return '\u7528\u6cd5\uff1anb <company|mcap|stock|revenue|product|staff|friend|news|fans|coin|motto|rank|badge>';
+                    return '\u7528\u6cd5\uff1anb <company|mcap|rank|market|stock|friend|fans|coin|motto|badge>';
                 }
-                return { cls: 'err', text: '\u53c2\u6570\u9519\u8bef\uff1a' + sub + '\u3002\u8f93\u5165 nb --help \u770b\u7528\u6cd5\u3002' };
+                return {cls: 'err', text: '\u53c2\u6570\u9519\u8bef\uff1a' + sub + '\u3002\u8f93\u5165 nb --help \u770b\u7528\u6cd5\u3002'};
             }
         };
         /* ? 等同 help，history 由外层注入 */
@@ -250,6 +334,14 @@
             return d;
         }
         function clear() { body.innerHTML = ''; }
+        function print(out) {
+            if (out === null || out === undefined) return;
+            if (typeof out === 'string') {
+                out.split('\n').forEach(function (l) { el('', l); });
+            } else {
+                el(out.cls, out.text);
+            }
+        }
         cmds = termCommands(el, clear);
         cmds['history'] = function () {
             if (!history.length) return '\u6682\u65e0\u5386\u53f2\u547d\u4ee4\u3002';
@@ -312,12 +404,19 @@
                 return;
             }
             var out = fn(arg);
-            if (out === null || out === undefined) return;
-            if (typeof out === 'string') {
-                out.split('\n').forEach(function (l) { el('', l); });
-            } else {
-                el(out.cls, out.text);
+            /* 命令可以返回字符串、{cls,text}，也可以返回 Promise（联网查询） */
+            if (out && typeof out.then === 'function') {
+                var tip = el('dim', '查询中…');
+                out.then(function (r2) {
+                    tip.parentNode.removeChild(tip);
+                    print(r2);
+                }, function (e) {
+                    tip.parentNode.removeChild(tip);
+                    el('err', '查询失败：' + e);
+                });
+                return;
             }
+            print(out);
         }
         /* 把 CMD 报错挂进命令表 */
         cmds.__err = function (name) {
