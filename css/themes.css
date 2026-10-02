@@ -43,14 +43,14 @@ html[theme="national"] body {
 html[theme="national"] .hero {
     /* 国旗用独立 SVG 文件 —— data URI 那条路在 Edge 上不生效
        （试过 quote() 编码、把 # 换成 rgb()、去掉 mask，都不行）。
-       透明度写死在 SVG 内部，做极淡的水印，不抢正文。 */
+       垫在左侧文案区下层：hero-inner 的 z-index 是 2，压在旗子之上。 */
     background-image:
         url("../images/flag-cn.svg"),
         radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
         linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
     background-repeat: no-repeat;
-    background-position: right 6% bottom 12%, left top, center;
-    background-size: min(46%, 520px) auto, auto, auto;
+    background-position: left 2% bottom 8%, left top, center;
+    background-size: min(50%, 560px) auto, auto, auto;
 }
 
 /* 手机上交叠会太挤，缩小并挪到右下角 */
