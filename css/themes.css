@@ -165,8 +165,8 @@ html[theme="cyber"] .vhero h1 {
 html[theme="ink"] {
     --bg:        #f4f0e6;
     --ink:       #1c1a17;
-    --ink-soft:  #4a453d;
-    --ink-faint: #8b8375;
+    --ink-soft:  #3d3830;
+    --ink-faint: #6b6459;
     --line:      rgba(28, 26, 23, .16);
     --brand:     #8c2f23;
     --brand-deep:#6d241a;
@@ -319,6 +319,341 @@ html[theme="ink"] .jny-progress .bar i { background: var(--brand); }
 
 /* 浅色主题下，深色 logo 图片不用反相 */
 html[theme="ink"] .logo-img { filter: none; }
+
+/* ============================================================
+   👾 像素风 · 8-bit 有限色板
+   常驻主题。参考 PICO-8 那套 16 色：
+   不用渐变、不用圆角、不用阴影模糊，全部换成硬边和纯色块。
+   ============================================================ */
+html[theme="pixel"] {
+    --bg:        #1a1c2c;
+    --ink:       #f4f4f4;
+    --ink-soft:  #c2c3c7;
+    --ink-faint: #8b8fa3;
+    --line:      rgba(41, 173, 255, .35);
+    --brand:     #29adff;
+    --brand-deep:#1d7fbd;
+    --card:      #24263a;
+
+    --shadow-1: 3px 3px 0 rgba(0, 0, 0, .5);
+    --shadow-2: 5px 5px 0 rgba(0, 0, 0, .55);
+}
+
+html[theme="pixel"] body {
+    /* 棋盘格底纹，像老游戏的背景 */
+    background-image:
+        linear-gradient(45deg, rgba(41, 173, 255, .035) 25%, transparent 25% 75%, rgba(41, 173, 255, .035) 75%),
+        linear-gradient(45deg, rgba(41, 173, 255, .035) 25%, transparent 25% 75%, rgba(41, 173, 255, .035) 75%);
+    background-size: 16px 16px, 16px 16px;
+    background-position: 0 0, 8px 8px;
+    background-color: var(--bg);
+    background-attachment: fixed;
+    /* 全站等宽字体，最有 8-bit 味 */
+    font-family: ui-monospace, Consolas, 'Courier New', monospace;
+}
+
+/* 一律方角、硬边 */
+html[theme="pixel"] .home-card,
+html[theme="pixel"] .comment-section,
+html[theme="pixel"] .product-card,
+html[theme="pixel"] .about-content,
+html[theme="pixel"] .changelog-content,
+html[theme="pixel"] .profile-card,
+html[theme="pixel"] .nav,
+html[theme="pixel"] .cta,
+html[theme="pixel"] .footer,
+html[theme="pixel"] button,
+html[theme="pixel"] input,
+html[theme="pixel"] textarea {
+    border-radius: 0 !important;
+}
+
+html[theme="pixel"] .nav {
+    background: var(--bg);
+    border-bottom: 3px solid var(--brand);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+html[theme="pixel"] .home-card,
+html[theme="pixel"] .comment-section,
+html[theme="pixel"] .product-card,
+html[theme="pixel"] .about-content,
+html[theme="pixel"] .changelog-content,
+html[theme="pixel"] .profile-card {
+    background: var(--card);
+    border: 3px solid #3a3f5c;
+    box-shadow: var(--shadow-1);
+}
+html[theme="pixel"] .home-card:hover,
+html[theme="pixel"] .product-card:hover {
+    border-color: var(--brand);
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-2);
+}
+
+html[theme="pixel"] .hero,
+html[theme="pixel"] .vhero {
+    background-color: var(--bg);
+    background-image:
+        repeating-linear-gradient(0deg, rgba(41, 173, 255, .05) 0 2px, transparent 2px 4px);
+    background-repeat: repeat;
+    background-position: center;
+}
+html[theme="pixel"] .vhero::before,
+html[theme="pixel"] .hero::after {
+    background-image: none;
+}
+html[theme="pixel"] .vhero h1,
+html[theme="pixel"] .hero h1 {
+    color: #ffec27;
+    text-shadow: 4px 4px 0 #b9004f;
+    letter-spacing: 2px;
+}
+html[theme="pixel"] .vhero h1 .light,
+html[theme="pixel"] .hero h1 .light { color: #ff77a8; font-weight: 800; }
+html[theme="pixel"] .vhero-sub,
+html[theme="pixel"] .hero-sub { color: var(--ink-soft); }
+html[theme="pixel"] .hero-eyebrow { color: #29adff; letter-spacing: 3px; }
+html[theme="pixel"] .vhero-actions .hero-link,
+html[theme="pixel"] .hero-actions .hero-link {
+    color: #ffec27;
+    border-bottom: 3px solid #b9004f;
+}
+html[theme="pixel"] .vhero-fade,
+html[theme="pixel"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+html[theme="pixel"] .nav-cta {
+    background: #ff004d;
+    color: #fff1e8;
+    border: 3px solid #ff77a8;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, .5);
+}
+html[theme="pixel"] .stat-bar .num {
+    color: #ffec27;
+    text-shadow: 2px 2px 0 #b9004f;
+}
+html[theme="pixel"] .stat .label .live {
+    background: #00e436;
+    border-radius: 0;
+    box-shadow: none;
+}
+html[theme="pixel"] .beta-announce .ba-title { color: #ffec27; }
+html[theme="pixel"] .nav-scan:hover,
+html[theme="pixel"] .theme-btn:hover,
+html[theme="pixel"] .drawer .d-close:hover { color: #ffec27; }
+html[theme="pixel"] .nav-more-panel a:hover {
+    background: #ff004d;
+    color: #fff1e8;
+}
+
+html[theme="pixel"] .cta {
+    background: #24263a;
+    color: #ffec27;
+    border-top: 3px solid #29adff;
+}
+html[theme="pixel"] .cta p { color: var(--ink-soft); }
+html[theme="pixel"] .cta .hero-link { border-bottom-color: #ff004d; }
+
+html[theme="pixel"] .footer {
+    background: #13141f;
+    color: #8b8fa3;
+    border-top: 3px solid #29adff;
+}
+html[theme="pixel"] .footer::before { background: none; }
+html[theme="pixel"] .footer h5 { color: #ffec27; }
+html[theme="pixel"] .footer a { color: #8b8fa3; }
+html[theme="pixel"] .footer a:hover { color: #29adff; }
+html[theme="pixel"] .footer .brand { color: #f4f4f4; }
+html[theme="pixel"] .footer .brand .dot {
+    background: #ff004d;
+    border-radius: 0;
+}
+html[theme="pixel"] .footer .desc { color: #6d7186; }
+html[theme="pixel"] .footer-bottom {
+    border-top: 3px solid #24263a;
+    color: #6d7186;
+}
+
+html[theme="pixel"] input,
+html[theme="pixel"] textarea {
+    background: #13141f;
+    border: 3px solid #3a3f5c;
+    color: #f4f4f4;
+}
+html[theme="pixel"] ::-webkit-scrollbar { width: 12px; }
+html[theme="pixel"] ::-webkit-scrollbar-thumb {
+    background: #29adff;
+    border-radius: 0;
+}
+html[theme="pixel"] ::-webkit-scrollbar-track { background: #13141f; }
+
+/* 首页「大事记」 */
+html[theme="pixel"] .jny-stage {
+    background-color: var(--bg);
+    background-image: repeating-linear-gradient(0deg, rgba(41, 173, 255, .05) 0 2px, transparent 2px 4px);
+    border: 3px solid #3a3f5c;
+    border-radius: 0;
+}
+html[theme="pixel"] .jny-bg { background: none; }
+html[theme="pixel"] .jny-node { color: var(--ink-faint); }
+html[theme="pixel"] .jny-node.lit { color: #ffec27; text-shadow: 2px 2px 0 #b9004f; }
+html[theme="pixel"] .jny-node.lit .jy { color: #ff77a8; }
+html[theme="pixel"] .jny-svg .base { stroke: rgba(255, 255, 255, .1); }
+html[theme="pixel"] .jny-svg .go { stroke: #29adff; filter: none; stroke-width: 3; }
+html[theme="pixel"] .jny-batt i { background: #ffec27; box-shadow: none; }
+html[theme="pixel"] .jny-batt b { border: 3px solid #ff004d; }
+html[theme="pixel"] .jny-card {
+    background: var(--card);
+    border: 3px solid #3a3f5c;
+    border-radius: 0;
+}
+html[theme="pixel"] .jny-tag { color: #29adff; }
+html[theme="pixel"] .jny-h { color: #ffec27; }
+html[theme="pixel"] .jny-d { color: var(--ink-soft); }
+html[theme="pixel"] .jny-progress { color: var(--ink-faint); }
+html[theme="pixel"] .jny-progress .bar { background: #13141f; border-radius: 0; }
+html[theme="pixel"] .jny-progress .bar i { background: #29adff; border-radius: 0; }
+
+/* ============================================================
+   🌙 护眼 · 低对比暖灰
+   常驻主题。不是「好看」用的，是「晚上看站不刺眼」用的：
+   去掉全部发光、阴影和渐变，把对比压到最低，色温偏暖。
+   ============================================================ */
+html[theme="eyecare"] {
+    --bg:        #d6cfc0;
+    --ink:       #3a3630;
+    --ink-soft:  #524c43;
+    --ink-faint: #7a7266;
+    --line:      rgba(58, 54, 48, .16);
+    --brand:     #6b5a3e;
+    --brand-deep:#544730;
+    --card:      #e0d9cb;
+
+    --shadow-1: none;
+    --shadow-2: none;
+}
+
+html[theme="eyecare"] body {
+    background: var(--bg);
+    background-image: none;
+    color: var(--ink);
+}
+
+/* 把所有装饰性效果关掉 */
+html[theme="eyecare"] * {
+    text-shadow: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+html[theme="eyecare"] .nav {
+    background: #cdc5b5;
+    border-bottom: 1px solid var(--line);
+}
+html[theme="eyecare"] .nav a { color: var(--ink-soft); }
+html[theme="eyecare"] .nav a:hover,
+html[theme="eyecare"] .nav a.active { color: var(--brand); }
+
+html[theme="eyecare"] .hero,
+html[theme="eyecare"] .vhero {
+    background-color: #dad3c4;
+    background-image: none;
+}
+html[theme="eyecare"] .vhero::before,
+html[theme="eyecare"] .hero::after { background-image: none; }
+html[theme="eyecare"] .vhero h1,
+html[theme="eyecare"] .hero h1 { color: var(--ink); }
+html[theme="eyecare"] .vhero h1 .light,
+html[theme="eyecare"] .hero h1 .light { color: var(--brand); font-weight: 300; }
+html[theme="eyecare"] .vhero-sub,
+html[theme="eyecare"] .hero-sub { color: var(--ink-soft); }
+html[theme="eyecare"] .hero-eyebrow { color: var(--ink-faint); }
+html[theme="eyecare"] .vhero-actions .hero-link,
+html[theme="eyecare"] .hero-actions .hero-link {
+    color: var(--ink);
+    border-bottom-color: rgba(58, 54, 48, .3);
+}
+html[theme="eyecare"] .vhero-fade,
+html[theme="eyecare"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+html[theme="eyecare"] .home-card,
+html[theme="eyecare"] .comment-section,
+html[theme="eyecare"] .product-card,
+html[theme="eyecare"] .about-content,
+html[theme="eyecare"] .changelog-content,
+html[theme="eyecare"] .profile-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+}
+html[theme="eyecare"] .nav-cta {
+    background: var(--brand);
+    color: #e0d9cb;
+}
+html[theme="eyecare"] .stat-bar .num { color: var(--ink); }
+html[theme="eyecare"] .stat .label .live { background: #7a8a55; }
+html[theme="eyecare"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="eyecare"] .nav-scan:hover,
+html[theme="eyecare"] .theme-btn:hover,
+html[theme="eyecare"] .drawer .d-close:hover { color: var(--brand); }
+html[theme="eyecare"] .nav-more-panel a:hover {
+    background: rgba(58, 54, 48, .08);
+    color: var(--ink);
+}
+
+html[theme="eyecare"] .cta {
+    background: #d2cabb;
+    color: var(--ink);
+}
+html[theme="eyecare"] .cta p { color: var(--ink-soft); }
+html[theme="eyecare"] .cta .hero-link { border-bottom-color: rgba(58, 54, 48, .3); }
+
+html[theme="eyecare"] .footer {
+    background: #cdc5b5;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--line);
+}
+html[theme="eyecare"] .footer::before { background: none; }
+html[theme="eyecare"] .footer h5 { color: var(--ink); }
+html[theme="eyecare"] .footer a { color: var(--ink-soft); }
+html[theme="eyecare"] .footer a:hover { color: var(--brand); }
+html[theme="eyecare"] .footer .brand { color: var(--ink); }
+html[theme="eyecare"] .footer .brand .dot { background: var(--brand); }
+html[theme="eyecare"] .footer .desc { color: var(--ink-faint); }
+html[theme="eyecare"] .footer-bottom {
+    border-top-color: var(--line);
+    color: var(--ink-faint);
+}
+
+html[theme="eyecare"] input,
+html[theme="eyecare"] textarea {
+    background: #e0d9cb;
+    border: 1px solid var(--line);
+    color: var(--ink);
+}
+html[theme="eyecare"] ::-webkit-scrollbar-thumb { background: rgba(58, 54, 48, .28); }
+html[theme="eyecare"] ::-webkit-scrollbar-thumb:hover { background: rgba(107, 90, 62, .5); }
+
+/* 大事记 */
+html[theme="eyecare"] .jny-stage {
+    background-color: #dad3c4;
+    background-image: none;
+}
+html[theme="eyecare"] .jny-bg { background: none; }
+html[theme="eyecare"] .jny-node { color: var(--ink-faint); }
+html[theme="eyecare"] .jny-node.lit { color: var(--ink); }
+html[theme="eyecare"] .jny-node.lit .jy { color: var(--brand); }
+html[theme="eyecare"] .jny-svg .base { stroke: rgba(58, 54, 48, .16); }
+html[theme="eyecare"] .jny-svg .go { stroke: var(--brand); filter: none; }
+html[theme="eyecare"] .jny-batt i { background: var(--brand); }
+html[theme="eyecare"] .jny-batt b { border-color: rgba(107, 90, 62, .4); }
+html[theme="eyecare"] .jny-card { background: var(--card); }
+html[theme="eyecare"] .jny-tag { color: var(--brand); }
+html[theme="eyecare"] .jny-h { color: var(--ink); }
+html[theme="eyecare"] .jny-d { color: var(--ink-soft); }
+html[theme="eyecare"] .jny-progress { color: var(--ink-faint); }
+html[theme="eyecare"] .jny-progress .bar { background: rgba(58, 54, 48, .14); }
+html[theme="eyecare"] .jny-progress .bar i { background: var(--brand); }
 
 /* ============================================================
    🇨🇳 国庆主题 · 红金
