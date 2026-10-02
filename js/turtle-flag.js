@@ -15,9 +15,13 @@
         try {
             if (document.documentElement.getAttribute('theme') !== 'national') return;
             if (document.getElementById('nbTurtleRow')) return;
-            var inner = document.querySelector('.hero-inner');
-            var hero = document.querySelector('.hero');
-            if (!inner || !hero) return;
+            /* 锚点兼容两种版式：
+                 首页      <header class="hero">  > .hero-inner
+                 其他页面  <header class="vhero"> > .vhero-inner
+               两者内部都有 .hero-copy，所以只看 inner 就行。 */
+            var inner = document.querySelector('.hero-inner, .vhero-inner');
+            if (!inner) return;
+            var host = inner.parentNode;
 
             if (!document.getElementById('nbTurtleFlagCss')) {
                 var st = document.createElement('style');
@@ -145,9 +149,10 @@
             row.appendChild(left);
             row.appendChild(right);
 
-            var scroll = hero.querySelector('.hero-scroll');
-            if (scroll && scroll.parentNode === hero) hero.insertBefore(row, scroll);
-            else inner.parentNode.insertBefore(row, inner.nextSibling);
+            /* 插在 hero-inner 之后；若外层还有 .hero-scroll 就插在它前面 */
+            var scroll = host.querySelector ? host.querySelector('.hero-scroll') : null;
+            if (scroll && scroll.parentNode === host) host.insertBefore(row, scroll);
+            else host.insertBefore(row, inner.nextSibling);
 
             /* 说明开关：关掉后整组引线 display:none，
                重新打开会从头播一遍动画。选择记在本地。 */
