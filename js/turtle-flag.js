@@ -80,6 +80,7 @@
                 var arr = CODE.split('\n');
                 pre.innerHTML = arr.slice(0, n).join('\n') +
                     '\n<em># …… 共 ' + arr.length + ' 行，点「展开」看完整代码</em>';
+                return n;
             }
             fitLines();
             window.addEventListener('resize', function () {
@@ -94,7 +95,7 @@
                 var on = wrap.classList.toggle('open');
                 /* 展开/收起时直接换内容 —— 收起是真的把后面的代码删掉，
                    不是用遮罩盖住。 */
-                pre.innerHTML = on ? CODE : CODE_SHORT;
+                if (on) pre.innerHTML = CODE; else fitLines();
                 toggleBtn.textContent = on ? '\u6536\u8D77 \u25B4' : '\u5C55\u5F00 \u25BE';
             };
 
