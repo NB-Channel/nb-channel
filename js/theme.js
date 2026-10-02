@@ -27,16 +27,10 @@
             2029: [2, 13],
             2030: [2, 3]
         },
-        midautumn: {                 // 中秋（八月十五）
-            2026: [9, 25],
-            2027: [9, 15],
-            2028: [10, 3],
-            2029: [9, 22]
-        }
     };
 
     /* 每个节日提前 / 延后几天出现 */
-    var SPAN = { spring: 10, midautumn: 5 };
+    var SPAN = { spring: 10 };
 
     /* ---------- 主题清单 ----------
        window: 节日主题的正日子来源（FESTIVAL 的键名）
@@ -60,9 +54,6 @@
         { id: 'spring',    name: '春节',      icon: '\uD83E\uDDE8',
           desc: '正红剪纸 + 灯笼，过年前后出现',
           festival: 'spring' },
-        { id: 'midautumn', name: '中秋',      icon: '\uD83E\uDD5E',
-          desc: '月白桂黄 + 玉兔，中秋前后出现',
-          festival: 'midautumn' }
     ];
 
     var BY_ID = {};
@@ -110,7 +101,7 @@
            用途一是方便调试，二是可以让别人分享「某个主题下的这一页」。 */
         try {
             var m = /[?&]theme=([a-z]+)/i.exec(location.search);
-            /* 调试用：?theme=midautumn&preview=1
+            /* 调试用：?theme=spring&preview=1
                可以无视节日的日期窗口直接预览，方便平时调样式。
                普通访客不带这个参数，看到的仍然是正常的窗口限制。 */
             var preview = /[?&]preview=1/i.test(location.search);

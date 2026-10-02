@@ -94,6 +94,46 @@
         '.nb-glx-lines{position:absolute;inset:0;pointer-events:none;opacity:.5;',
         '  background:repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,transparent 1px 3px);}',
 
+        /* ---------- 🧨 春节 · 点鞭炮 ---------- */
+        '.nb-fw{position:relative;border-radius:12px;overflow:hidden;',
+        '  background:linear-gradient(175deg,#6d0a0e,#8c0f13 55%,#a3161b);',
+        '  border:1px solid rgba(255,216,94,.28);cursor:crosshair;}',
+        '.nb-fw canvas{display:block;width:100%;height:340px;}',
+        '.nb-fw-hint{position:absolute;left:0;right:0;bottom:16px;text-align:center;',
+        '  font-size:.76rem;letter-spacing:2px;color:rgba(255,238,210,.7);pointer-events:none;}',
+        '.nb-fw-top{position:absolute;left:20px;top:16px;display:flex;gap:22px;',
+        '  font-size:.76rem;letter-spacing:1px;color:rgba(255,238,210,.8);pointer-events:none;}',
+        '.nb-fw-top b{color:#ffd85e;font-size:1.1rem;}',
+        '.nb-fw-side{position:absolute;right:20px;top:16px;display:flex;gap:8px;}',
+        '.nb-fw-btn{padding:6px 13px;border-radius:2px;cursor:pointer;font-family:inherit;',
+        '  font-size:.72rem;letter-spacing:1px;background:rgba(255,216,94,.16);',
+        '  color:#ffe9a8;border:1px solid rgba(255,216,94,.4);}',
+        '.nb-fw-btn:hover{background:rgba(255,216,94,.3);}',
+
+        /* ---------- 🌙 护眼 · 作息提醒 ---------- */
+        '.nb-eye{display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:center;',
+        '  padding:38px 36px;border-radius:12px;background:#dad3c4;',
+        '  border:1px solid rgba(58,54,48,.16);}',
+        '.nb-eye-clock{font-size:3.4rem;font-weight:200;letter-spacing:4px;color:#3a3630;',
+        '  font-variant-numeric:tabular-nums;line-height:1;}',
+        '.nb-eye-date{margin-top:10px;font-size:.78rem;letter-spacing:2px;color:#7a7266;}',
+        '.nb-eye-info .row{display:flex;justify-content:space-between;gap:26px;',
+        '  padding:11px 0;border-bottom:1px solid rgba(58,54,48,.12);font-size:.82rem;}',
+        '.nb-eye-info .row:last-child{border-bottom:none;}',
+        '.nb-eye-info .k{color:#7a7266;letter-spacing:1px;}',
+        '.nb-eye-info .v{color:#3a3630;font-weight:700;font-variant-numeric:tabular-nums;}',
+        '.nb-eye-tip{margin-top:18px;padding:14px 18px;border-radius:6px;',
+        '  background:rgba(107,90,62,.12);border-left:3px solid #6b5a3e;',
+        '  font-size:.82rem;line-height:1.9;color:#524c43;}',
+        '.nb-eye-tip.warn{background:rgba(140,47,35,.12);border-left-color:#8c2f23;}',
+        '.nb-eye-btns{margin-top:16px;display:flex;gap:8px;}',
+        '.nb-eye-btn{padding:7px 15px;border-radius:2px;cursor:pointer;font-family:inherit;',
+        '  font-size:.72rem;letter-spacing:1px;background:#6b5a3e;color:#e0d9cb;border:none;}',
+        '.nb-eye-btn:hover{background:#544730;}',
+        '@media(max-width:860px){',
+        '  .nb-eye{grid-template-columns:1fr;gap:24px;}',
+        '}',
+
         '@media(prefers-reduced-motion:reduce){',
         '  .nb-glx-t::before,.nb-glx-t::after,.nb-glx-scan{animation:none;opacity:0;}',
         '}',
@@ -146,19 +186,6 @@
         '  .nb-ink-seal{opacity:1;transform:rotate(-8deg);animation:none;}',
         '}',
 
-        /* ---------- 🥮 月相 + 玉兔 ---------- */
-        '.nb-moon{display:grid;grid-template-columns:auto 1fr;gap:38px;align-items:center;',
-        '  padding:40px 34px;border-radius:12px;',
-        '  background:linear-gradient(170deg,#0b1329,#131f3d 55%,#1a2a4d);',
-        '  border:1px solid rgba(255,231,150,.22);',
-        '  box-shadow:inset 0 0 44px -24px rgba(255,231,150,.7);}',
-        '.nb-moon-stage{position:relative;width:190px;height:190px;flex:0 0 auto;}',
-        '.nb-moon svg{display:block;overflow:visible;}',
-        '.nb-moon-info .name{font-size:1.5rem;font-weight:800;letter-spacing:3px;color:#faf5e4;}',
-        '.nb-moon-info .pct{font-size:2.2rem;font-weight:800;color:#ffe796;letter-spacing:1px;',
-        '  margin:8px 0 4px;font-variant-numeric:tabular-nums;}',
-        '.nb-moon-info .sub{font-size:.82rem;letter-spacing:1px;color:rgba(232,226,200,.66);line-height:2;}',
-        '.nb-moon-info .age{margin-top:16px;font-size:.78rem;color:rgba(232,226,200,.5);}',
         '@media(max-width:820px){.nb-moon{grid-template-columns:1fr;justify-items:center;text-align:center;}}',
 
         /* ---------- 🖌️ 毛笔写字 ---------- */
@@ -602,6 +629,279 @@
     };
 
     /* ============================================================
+       🧨 春节 · 点鞭炮
+       画布上点哪儿炸哪儿；每隔一会儿天上掉红包，点中加分。
+       ============================================================ */
+    var FIRE = {
+        mount: function (box) {
+            box.innerHTML =
+                '<div class="nb-fw" data-root>' +
+                  '<canvas></canvas>' +
+                  '<div class="nb-fw-top">' +
+                    '<span>\u70B9\u71C3 <b data-boom>0</b></span>' +
+                    '<span>\u7EA2\u5305 <b data-pkt>0</b></span>' +
+                  '</div>' +
+                  '<div class="nb-fw-side">' +
+                    '<button class="nb-fw-btn" data-act="auto">\u81EA\u52A8\u653E</button>' +
+                    '<button class="nb-fw-btn" data-act="clear">\u6E05\u7A7A</button>' +
+                  '</div>' +
+                  '<div class="nb-fw-hint">\u70B9\u4E00\u4E0B\u5C31\u653E\u4E00\u4E2A \u00B7 \u7EA2\u5305\u6389\u4E0B\u6765\u4E5F\u80FD\u70B9</div>' +
+                '</div>';
+
+            var root = box.querySelector('[data-root]');
+            var cv = box.querySelector('canvas');
+            var ctx = cv.getContext('2d');
+            var boomEl = box.querySelector('[data-boom]');
+            var pktEl = box.querySelector('[data-pkt]');
+
+            var W = 0, H = 340, DPR = Math.min(window.devicePixelRatio || 1, 2);
+            function resize() {
+                W = root.clientWidth || 900;
+                cv.width = W * DPR;
+                cv.height = H * DPR;
+                ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+            }
+
+            var parts = [];      /* 火花 */
+            var pkts = [];       /* 红包 */
+            var booms = 0, caught = 0, auto = false, raf = null, last = 0;
+
+            var COLORS = ['#ffd85e', '#ff9a3c', '#ff5c3c', '#fff4e0', '#ffe9a8'];
+
+            function burst(x, y, n) {
+                n = n || 46;
+                for (var i = 0; i < n; i++) {
+                    var a = Math.random() * Math.PI * 2;
+                    var sp = 1.4 + Math.random() * 4.2;
+                    parts.push({
+                        x: x, y: y,
+                        vx: Math.cos(a) * sp,
+                        vy: Math.sin(a) * sp - 0.6,
+                        life: 1, decay: 0.012 + Math.random() * 0.018,
+                        r: 1.2 + Math.random() * 2.4,
+                        c: COLORS[(Math.random() * COLORS.length) | 0]
+                    });
+                }
+                booms++;
+                boomEl.textContent = booms;
+            }
+            function dropPkt() {
+                pkts.push({
+                    x: 40 + Math.random() * Math.max(40, W - 80),
+                    y: -40, vy: 0.7 + Math.random() * 0.9,
+                    sway: Math.random() * Math.PI * 2, r: 15, life: 1
+                });
+            }
+            function drawPkt(p) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(Math.sin(p.sway) * 0.18);
+                /* 红包：红底金边 */
+                ctx.fillStyle = '#c9182a';
+                ctx.fillRect(-p.r, -p.r * 1.28, p.r * 2, p.r * 2.56);
+                ctx.strokeStyle = '#ffd85e';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-p.r, -p.r * 1.28, p.r * 2, p.r * 2.56);
+                /* 金元宝 */
+                ctx.fillStyle = '#ffd85e';
+                ctx.beginPath();
+                ctx.arc(0, 0, p.r * 0.46, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function frame(t) {
+                raf = requestAnimationFrame(frame);
+                if (!last) last = t;
+                var dt = Math.min(2.4, (t - last) / 16.7);
+                last = t;
+
+                /* 底：夜空般的深红，带一点金色光晕 */
+                var g = ctx.createRadialGradient(W * .5, H * .9, 20, W * .5, H * .9, H * 1.3);
+                g.addColorStop(0, 'rgba(255,216,94,.09)');
+                g.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = '#5e0d14';
+                ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = g;
+                ctx.fillRect(0, 0, W, H);
+
+                /* 自动放 */
+                if (auto && Math.random() < 0.035) {
+                    burst(60 + Math.random() * (W - 120), 70 + Math.random() * (H - 180), 40);
+                }
+                /* 掉红包 */
+                if (Math.random() < 0.0075) dropPkt();
+
+                /* 火花 */
+                for (var i = parts.length - 1; i >= 0; i--) {
+                    var p = parts[i];
+                    p.x += p.vx * dt; p.y += p.vy * dt;
+                    p.vy += 0.075 * dt; p.vx *= 0.988;
+                    p.life -= p.decay * dt;
+                    if (p.life <= 0) { parts.splice(i, 1); continue; }
+                    ctx.globalAlpha = Math.max(0, p.life);
+                    ctx.fillStyle = p.c;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+
+                /* 红包 */
+                for (var k = pkts.length - 1; k >= 0; k--) {
+                    var q = pkts[k];
+                    q.y += q.vy * dt;
+                    q.sway += 0.03 * dt;
+                    drawPkt(q);
+                    if (q.y > H + 50) pkts.splice(k, 1);
+                }
+            }
+
+            function hit(x, y) {
+                /* 先看点没点中红包 */
+                for (var i = pkts.length - 1; i >= 0; i--) {
+                    var q = pkts[i];
+                    if (Math.abs(x - q.x) < q.r + 8 && Math.abs(y - q.y) < q.r * 1.4 + 8) {
+                        burst(q.x, q.y, 60);
+                        pkts.splice(i, 1);
+                        caught++;
+                        pktEl.textContent = caught;
+                        return;
+                    }
+                }
+                burst(x, y);
+            }
+
+            cv.addEventListener('pointerdown', function (e) {
+                var r = cv.getBoundingClientRect();
+                hit(e.clientX - r.left, e.clientY - r.top);
+            });
+            box.querySelector('[data-act="auto"]').addEventListener('click', function () {
+                auto = !auto;
+                this.textContent = auto ? '\u505C\u4E0B' : '\u81EA\u52A8\u653E';
+            });
+            box.querySelector('[data-act="clear"]').addEventListener('click', function () {
+                parts.length = 0; pkts.length = 0;
+                booms = 0; caught = 0;
+                boomEl.textContent = '0'; pktEl.textContent = '0';
+            });
+
+            resize();
+            window.addEventListener('resize', resize);
+            raf = requestAnimationFrame(frame);
+            /* 开场先放一个，让人知道能点 */
+            setTimeout(function () { burst(W * 0.5, H * 0.42, 54); }, 320);
+
+            return function () {
+                if (raf) cancelAnimationFrame(raf);
+                window.removeEventListener('resize', resize);
+            };
+        }
+    };
+
+    /* ============================================================
+       🌙 护眼 · 作息提醒
+       不是装饰，是真提醒：显示当前时间、你已看了多久，
+       到点给一句该歇歇了。用 performance 计时，切走不算。
+       ============================================================ */
+    var EYE = {
+        mount: function (box) {
+            var START = Date.now();
+            var LIMIT_KEY = 'nb_eye_limit';
+            var limit = 45;                       /* 默认 45 分钟提醒一次 */
+            try {
+                var lv = parseInt(localStorage.getItem(LIMIT_KEY) || '', 10);
+                if (lv >= 15 && lv <= 180) limit = lv;
+            } catch (e) {}
+
+            box.innerHTML =
+                '<div class="nb-eye">' +
+                  '<div>' +
+                    '<div class="nb-eye-clock" data-clock>--:--</div>' +
+                    '<div class="nb-eye-date" data-date></div>' +
+                  '</div>' +
+                  '<div class="nb-eye-info">' +
+                    '<div class="row"><span class="k">\u5DF2\u770B</span>' +
+                      '<span class="v" data-watch>0 \u5206\u949F</span></div>' +
+                    '<div class="row"><span class="k">\u63D0\u9192\u95F4\u9694</span>' +
+                      '<span class="v" data-limit>' + limit + ' \u5206\u949F</span></div>' +
+                    '<div class="row"><span class="k">\u5EFA\u8BAE</span>' +
+                      '<span class="v" data-advice>\u6B63\u5E38</span></div>' +
+                    '<div class="nb-eye-tip" data-tip></div>' +
+                    '<div class="nb-eye-btns">' +
+                      '<button class="nb-eye-btn" data-act="15">15\u5206</button>' +
+                      '<button class="nb-eye-btn" data-act="45">45\u5206</button>' +
+                      '<button class="nb-eye-btn" data-act="90">90\u5206</button>' +
+                      '<button class="nb-eye-btn" data-act="reset">\u91CD\u8BA1</button>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>';
+
+            var clockEl = box.querySelector('[data-clock]');
+            var dateEl = box.querySelector('[data-date]');
+            var watchEl = box.querySelector('[data-watch]');
+            var limitEl = box.querySelector('[data-limit]');
+            var adviceEl = box.querySelector('[data-advice]');
+            var tipEl = box.querySelector('[data-tip]');
+
+            var WEEK = ['\u65E5', '\u4E00', '\u4E8C', '\u4E09', '\u56DB', '\u4E94', '\u516D'];
+
+            function two(n) { return (n < 10 ? '0' : '') + n; }
+
+            function render() {
+                var d = new Date();
+                clockEl.textContent = two(d.getHours()) + ':' + two(d.getMinutes()) +
+                                      ':' + two(d.getSeconds());
+                dateEl.textContent = d.getFullYear() + ' \u5E74 ' + (d.getMonth() + 1) + ' \u6708 ' +
+                                     d.getDate() + ' \u65E5 \u00B7 \u5468' + WEEK[d.getDay()];
+
+                var mins = Math.floor((Date.now() - START) / 60000);
+                watchEl.textContent = mins + ' \u5206\u949F';
+
+                var h = d.getHours();
+                var late = (h >= 23 || h < 6);
+                var over = mins >= limit;
+
+                if (over) {
+                    adviceEl.textContent = '\u8BE5\u6B47\u4E86';
+                    tipEl.className = 'nb-eye-tip warn';
+                    tipEl.textContent = '\u4F60\u5DF2\u7ECF\u770B\u4E86 ' + mins +
+                        ' \u5206\u949F\u3002\u8D77\u8EAB\u8D70\u4E24\u6B65\u3001\u770B\u770B\u7A97\u5916\u8FDC\u5904\u5427 \u2014\u2014 ' +
+                        '\u773C\u775B\u6BD4\u7AD9\u91CC\u7684\u4EFB\u4F55\u4E1C\u897F\u90FD\u91CD\u8981\u3002';
+                } else if (late) {
+                    adviceEl.textContent = '\u8BE5\u7761\u4E86';
+                    tipEl.className = 'nb-eye-tip warn';
+                    tipEl.textContent = '\u8FD9\u4E2A\u70B9\u8FD8\u5728\u5237\u7AD9\u2026\u2026' +
+                        '\u660E\u5929\u7684\u4F60\u4F1A\u611F\u8C22\u73B0\u5728\u53BB\u7761\u7684\u4F60\u3002';
+                } else {
+                    adviceEl.textContent = '\u6B63\u5E38';
+                    tipEl.className = 'nb-eye-tip';
+                    tipEl.textContent = '\u8FD9\u4E2A\u4E3B\u9898\u628A\u5BF9\u6BD4\u5EA6\u538B\u5230\u4E86\u6700\u4F4E\u3001' +
+                        '\u5173\u6389\u4E86\u53D1\u5149\u548C\u6E10\u53D8\uff0c\u665A\u4E0A\u770B\u4E0D\u523A\u773C\u3002' +
+                        '\u6BCF ' + limit + ' \u5206\u949F\u63D0\u9192\u4E00\u6B21\u3002';
+                }
+            }
+
+            box.querySelectorAll('[data-act]').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var a = b.dataset.act;
+                    if (a === 'reset') { START = Date.now(); }
+                    else {
+                        limit = parseInt(a, 10);
+                        limitEl.textContent = limit + ' \u5206\u949F';
+                        try { localStorage.setItem(LIMIT_KEY, String(limit)); } catch (e) {}
+                    }
+                    render();
+                });
+            });
+
+            render();
+            var t = setInterval(render, 1000);
+            return function () { clearInterval(t); };
+        }
+    };
+
+    /* ============================================================
        模块表 + 挂载
        ============================================================ */
     var MODULES = {
@@ -616,6 +916,14 @@
         ink: {
             head: '\uD83D\uDD8C\uFE0F \u6C34\u58A8\u5C71\u6C34 <i>\u00B7 \u9010\u7B14\u63CF\u51FA</i>',
             mount: function (box) { return INK.mount(box); }
+        },
+        spring: {
+            head: '\uD83E\uDDE8 \u70B9\u97AD\u70AE <i>\u00B7 \u70B9\u54EA\u513F\u70B8\u54EA\u513F</i>',
+            mount: function (box) { return FIRE.mount(box); }
+        },
+        eyecare: {
+            head: '\uD83C\uDF19 \u4F5C\u606F\u63D0\u9192 <i>\u00B7 \u770B\u4E45\u4E86\u8BE5\u6B47歇</i>',
+            mount: function (box) { return EYE.mount(box); }
         },
         midautumn: {
             head: '\uD83E\uDD5E \u6708\u76F8\u76C8\u4E8F <i>\u00B7 \u6309\u5F53\u5929\u65E5\u671F\u7B97</i>',
