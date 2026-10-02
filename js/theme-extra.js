@@ -37,6 +37,13 @@
         '.nb-snk-side b{color:#ffec27;font-size:1.5rem;display:block;letter-spacing:1px;}',
         '.nb-snk-side .hi{color:#ff77a8;}',
         '.nb-snk-btns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}',
+        '.nb-snk-spd{display:flex;gap:6px;margin-top:16px;flex-wrap:wrap;}',
+        '.nb-snk-spd button{padding:6px 11px;border-radius:0;cursor:pointer;font-family:inherit;',
+        '  font-size:.7rem;letter-spacing:1px;background:#24263a;color:#8b8fa3;',
+        '  border:3px solid #3a3f5c;transition:none;}',
+        '.nb-snk-spd button:hover{color:#ffec27;}',
+        '.nb-snk-spd button.on{background:#29adff;border-color:#8bd4ff;color:#04121a;}',
+        '.nb-snk-spd .lb{width:100%;color:#8b8fa3;font-size:.7rem;margin-bottom:2px;}',
         '.nb-snk-btn{padding:8px 14px;border-radius:0;cursor:pointer;font-family:inherit;',
         '  font-size:.74rem;letter-spacing:1px;background:#ff004d;color:#fff1e8;',
         '  border:3px solid #ff77a8;box-shadow:3px 3px 0 rgba(0,0,0,.5);transition:none;}',
@@ -149,6 +156,15 @@
             var W = this.COLS * this.CELL;
             var H = this.ROWS * this.CELL;
 
+            /* 难度：数值是一步多少毫秒，越大越慢 */
+            var SPEEDS = {
+                easy:   { ms: 200, name: '\u6162\u901F' },
+                normal: { ms: 150, name: '\u666E\u901A' },
+                fast:   { ms: 105, name: '\u5FEB\u901F' },
+                insane: { ms: 70,  name: '\u75AF\u72C2' }
+            };
+            var SPD_KEY = 'nb_snake_speed';
+
             box.innerHTML =
                 '<div class="nb-snk">' +
                   '<div><canvas width="' + W + '" height="' + H + '"></canvas>' +
@@ -167,6 +183,9 @@
                       '<button class="nb-snk-btn" data-act="start">\u5F00\u59CB</button>' +
                       '<button class="nb-snk-btn alt" data-act="pause">\u6682\u505C</button>' +
                     '</div>' +
+                    '<div class="nb-snk-spd" data-spd>' +
+                      '<span class="lb">\u96BE\u5EA6</span>' +
+                    '</div>' +
                     '<div style="margin-top:12px;color:#8b8fa3">' +
                       '\u65B9\u5411\u952E / WASD \u63A7\u5236<br>' +
                       '\u624B\u673A\u4E0A\u7528\u4E0B\u9762\u7684\u65B9\u5411\u952E'
@@ -179,6 +198,35 @@
             var scoreEl = box.querySelector('[data-score]');
             var bestEl = box.querySelector('[data-best]');
             var stateEl = box.querySelector('[data-state]');
+
+            /* ---------- 难度 ---------- */
+            var spdBar = box.querySelector('[data-spd]');
+            var speed = 'easy';                 /* 默认慢速，站长说原来太快 */
+            try {
+                var sv = localStorage.getItem(SPD_KEY);
+                if (sv && SPEEDS[sv]) speed = sv;
+            } catch (e) {}
+
+            Object.keys(SPEEDS).forEach(function (k) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.dataset.spd = k;
+                b.textContent = SPEEDS[k].name;
+                if (k === speed) b.classList.add('on');
+                b.addEventListener('click', function () {
+                    speed = k;
+                    try { localStorage.setItem(SPD_KEY, k); } catch (e) {}
+                    spdBar.querySelectorAll('button').forEach(function (x) {
+                        x.classList.toggle('on', x.dataset.spd === k);
+                    });
+                    /* 正在跑就按新速度重开定时器，立即生效 */
+                    if (running) {
+                        if (timer) clearInterval(timer);
+                        timer = setInterval(step, SPEEDS[speed].ms);
+                    }
+                });
+                spdBar.appendChild(b);
+            });
 
             var KEY = 'nb_snake_best';
             var best = 0;
@@ -293,7 +341,7 @@
                 running = true;
                 stateEl.textContent = '\u8FDB\u884C\u4E2D';
                 if (timer) clearInterval(timer);
-                timer = setInterval(step, 130);
+                timer = setInterval(step, SPEEDS[speed].ms);   /* 按当前难度跑 */
                 draw();
             }
             function pause() {
