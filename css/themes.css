@@ -1404,3 +1404,73 @@ html[theme] .no { color: var(--brand) !important; }
 html[theme] .about-text b,
 html[theme] .about-text strong { color: var(--ink) !important; }
 
+/* ============================================================
+   股票页（stock-Beta.html）主题适配
+   ------------------------------------------------------------
+   这一页的图表容器和小控件大量写死了白色 / #eef2f8。
+   在护眼、墨韵这类浅色主题下，纯白会从米色里"跳"出来；
+   在赛博朋克、像素这类深色主题下更糟 —— 白底配亮字几乎看不清。
+   统一改用主题变量。
+   ============================================================ */
+
+/* ---- 图表容器：纯白 → 卡片色 ---- */
+html[theme] .canvas-container,
+html[theme] .history-chart-container,
+html[theme] .histogram-container,
+html[theme] .mini-pie-container,
+html[theme] .slider-container,
+html[theme] .my-company-card {
+    background: var(--card) !important;
+    border-color: var(--card-border) !important;
+}
+
+/* ---- 小控件：浅灰 → 一层极淡的罩，深浅主题都成立 ---- */
+html[theme] .balance-card,
+html[theme] .company-btn,
+html[theme] .update-badge,
+html[theme] .btn-group,
+html[theme] .slider-label,
+html[theme] .range-value,
+html[theme] .reset-btn,
+html[theme] .toggle-table-btn,
+html[theme] .stat-card,
+html[theme] .stat-value {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+
+/* ---- 表头 ---- */
+html[theme] th {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+}
+html[theme] td {
+    border-color: var(--line) !important;
+    color: var(--ink-soft) !important;
+}
+
+/* ---- 导航里的登录按钮（原来是半透明白）---- */
+html[theme] .nav-auth {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border: 1px solid var(--card-border) !important;
+}
+html[theme] .nav-auth.primary {
+    background: var(--brand) !important;
+    color: #fff !important;
+}
+
+/* ---- 图表里 canvas 自己的底色也要跟 ---- */
+html[theme] .canvas-container canvas,
+html[theme] .history-chart-container canvas,
+html[theme] .histogram-container canvas,
+html[theme] .mini-pie-container canvas {
+    background: transparent !important;
+}
+
+/* ---- 卡片里的输入框 / 下拉 ---- */
+html[theme] .slider-container input[type="range"] {
+    accent-color: var(--brand) !important;
+}
