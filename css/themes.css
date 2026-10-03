@@ -1543,3 +1543,98 @@ html[theme="eyecare"] {
     --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
 }
 }
+
+/* ============================================================
+   全站主题适配：审计扫出来的漏网元素
+   ------------------------------------------------------------
+   办法同上：写脚本在护眼主题下渲染每个页面，扫「背景亮度 > 232
+   且接近中性色」的元素。29 个页面里 22 个干净，剩下这几个是漏的。
+   ============================================================ */
+
+/* ---- 评论页：排序按钮 ---- */
+html[theme] .sort-btn,
+html[theme] a.sort-btn,
+html[theme] button.sort-btn {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] .sort-btn.active,
+html[theme] .sort-btn.on {
+    background: var(--brand) !important;
+    color: #fff !important;
+}
+
+/* ---- 反馈页：下拉框 ---- */
+html[theme] .rc-select,
+html[theme] select.rc-select {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] .rc-select option {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+}
+
+/* ---- 消息页：全部已读按钮 ---- */
+html[theme] .btn-read-all {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+
+/* ---- 分享页：筛选按钮 ---- */
+html[theme] .filter-btn {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] .filter-btn.active,
+html[theme] .filter-btn.on {
+    background: var(--brand) !important;
+    color: #fff !important;
+}
+
+/* ---- 视频页 / 首页：缩略图占位 ---- */
+html[theme] .thumb {
+    background: rgba(127, 127, 127, .12) !important;
+    border-color: var(--card-border) !important;
+}
+
+/* ---- 首页的番茄钟面板 ----
+   它的样式是 fourier/pomodoro 那个脚本动态注入的，
+   里面把背景写死成 #fdfbf6（怕被别的规则盖住，还加了 !important）。
+   主题下得跟着走，所以这里用同等权重、靠后生效来覆盖。 */
+html[theme] #nbPomoBox .nb-pomo-panel,
+html[theme] .nb-pomo-panel {
+    background: var(--card) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-panel .time,
+html[theme] #nbPomoBox .nb-pomo-panel .nb-pomo-side .ph {
+    color: var(--ink) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-panel .rd,
+html[theme] #nbPomoBox .nb-pomo-panel .nb-pomo-tip,
+html[theme] #nbPomoBox .nb-pomo-head .t {
+    color: var(--ink-soft) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-cfg input {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-cfg .reset {
+    background: rgba(127, 127, 127, .16) !important;
+    color: var(--ink-soft) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-btns button {
+    background: var(--brand) !important;
+    color: #fff !important;
+}
+html[theme] #nbPomoBox .nb-pomo-btns button.gh {
+    background: rgba(127, 127, 127, .12) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
