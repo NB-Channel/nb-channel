@@ -581,19 +581,25 @@
 
             /* 齿轮 */
             if (state.showGear) {
-                /* 1000 个齿轮的话，每帧画 1000 个圈 + 齿会拖慢。
-                   只画振幅最大的前 220 个 —— 后面的半径都很小，
-                   画出来在屏幕上也叠成一团，看不出区别。 */
-                var drawN = Math.min(comps.length, 220);
-                /* 超过 120 个就不画齿了，太密会把画布糊住 */
+                /* 全局最要紧的一处：
+                   笔尖位置必须把【所有】齿轮都累加进去 —— 那只是几十万次
+                   乘加，很便宜，而且细节全靠那些小半径的高频分量；
+                   真正贵的是画圈和画齿，那个才限制数量。
+
+                   之前两者写在同一个循环里被 drawN 一起卡住，
+                   于是 10000 个齿轮只有前 220 个起作用，细节全丢。 */
+                var drawN = Math.min(comps.length, 220);   /* 只管画不画圈 */
                 var drawTeeth = comps.length <= 120;
 
-                for (var i = 0; i < drawN; i++) {
+                for (var i = 0; i < comps.length; i++) {
                     var c = comps[i];
                     var r = c.amp * c.scale;
                     var ang = c.phase + c.freq * state.t;
                     var nx = x + r * Math.cos(ang);
                     var ny = y + r * Math.sin(ang);
+                    var showThis = i < drawN;
+
+                    if (showThis) {
 
                     /* 转到屏幕坐标再画 */
                     var sp = toScreen(x, y);
@@ -631,7 +637,9 @@
                     ctx.strokeStyle = 'rgba(127,230,255,.5)';
                     ctx.lineWidth = 1;
                     ctx.stroke();
+                    }   /* if (showThis) */
 
+                    /* 模型坐标推进 —— 画不画圈都要推进 */
                     x = nx; y = ny;
                 }
             } else {
@@ -660,7 +668,7 @@
                 jmp = isJump(Math.hypot(x - lastP[0], y - lastP[1]));
             }
             state.path.push([x, y, jmp]);
-            if (state.path.length > 2600) state.path.shift();
+            if (state.path.length > 4000) state.path.shift();
 
             if (state.showPath && state.path.length > 1) {
                 ctx.beginPath();
