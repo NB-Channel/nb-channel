@@ -374,8 +374,8 @@
                     'style="width:110px;accent-color:#00e5ff" title="2 的幂：1024 ~ 65536">' +
                   '<span style="opacity:.45">│</span>' +
                   '齿轮数 <b data-gn style="color:#00e5ff;font-family:ui-monospace,monospace;' +
-                    'min-width:42px;text-align:right">50</b>' +
-                  '<input type="range" min="10" max="10000" step="10" value="50" data-gears ' +
+                    'min-width:44px;text-align:right">5000</b>' +
+                  '<input type="range" min="10" max="10000" step="10" value="5000" data-gears ' +
                     'style="width:140px;accent-color:#00e5ff">' +
                 '</span>' +
               '</div>' +
@@ -454,7 +454,7 @@
         /* 齿轮上限。采样点 32768（2 的幂，FFT 要求），
            能分出 32768 个独立频率，所以 10000 这个上限是真的能填满的。
            32768 点 FFT 约 16ms，拖动滑块也不会卡。 */
-        var GEARM = { cur: 50, min: 10, max: 10000 };
+        var GEARM = { cur: 5000, min: 10, max: 10000 };
 
         /* 采样点数（重采样目标）。必须是 2 的幂 —— FFT 的要求。
            范围 1024 ~ 65536，默认 32768。
@@ -561,7 +561,11 @@
            量完清空轨迹，动画照样从头画。 */
         function prerun() {
             var W = state.W || 900, H = state.H || 440;
-            var S = 4096;   /* 采样密一点，包围盒量的才准 */
+            /* 采样次数跟着齿轮数走：齿轮多的时候每轮开销是
+               「采样次数 × 齿轮数」，都拉满就是两千万次，初次渲染会卡。
+               包围盒只要轮廓大致准就够，1024 次足矣。 */
+            var S = state.comps.length > 800 ? 1024
+                  : state.comps.length > 200 ? 2048 : 4096;
             var minX = Infinity, maxX = -Infinity;
             var minY = Infinity, maxY = -Infinity;
 
