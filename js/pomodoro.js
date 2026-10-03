@@ -135,6 +135,16 @@
         '  border:1px solid rgba(107,90,62,.4);}',
         '.nb-pomo-btns button.gh:hover{background:rgba(107,90,62,.12);}',
         '.nb-pomo-tip{margin-top:10px;font-size:.68rem;color:#8b8375;line-height:1.7;}',
+        /* 内嵌模式（首页那块）：不要浮动定位，面板常开 */
+        '#nbPomoBox.nb-pomo-inline{position:relative;right:auto;bottom:auto;z-index:1;}',
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-ball{display:none !important;}',
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-panel{position:relative;right:auto;',
+        '  bottom:auto;width:auto;max-width:420px;display:block !important;',
+        '  animation:none;padding:22px 22px 18px;}',
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-ring{width:118px;height:118px;}',
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-ring svg{width:118px;height:118px;}',
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-ring .time{font-size:1.7rem;}',
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-side .ph{font-size:1.05rem;}',
         '@media(max-width:520px){',
         '  #nbPomoBox{right:16px;bottom:76px;}',
         '  .nb-pomo-panel{width:calc(100vw - 32px);right:0;}',
@@ -152,6 +162,10 @@
         if (document.getElementById(BOX_ID)) return;
         if (!isEyecare()) return;
 
+        /* 页面上如果给了内嵌容器（首页就有），就渲染到那儿去，
+           这种情况下不再建右下角的悬浮球，免得两处重复。 */
+        var inlineHost = document.getElementById('nbPomoInline');
+
         if (!document.getElementById(CSS_ID)) {
             var st = document.createElement('style');
             st.id = CSS_ID;
@@ -161,6 +175,7 @@
 
         var box = document.createElement('div');
         box.id = BOX_ID;
+        if (inlineHost) box.className = 'nb-pomo-inline';
         box.innerHTML =
             '<div class="nb-pomo-panel" data-panel>' +
               '<div class="nb-pomo-head">' +
@@ -194,7 +209,13 @@
               '<span>🍅</span><span class="mini" data-mini></span>' +
             '</button>';
 
-        document.body.appendChild(box);
+        (inlineHost || document.body).appendChild(box);
+        /* 内嵌模式：点面板外不收起了，它本来就是页面的一部分 */
+        if (inlineHost) {
+            var ball0 = box.querySelector('[data-ball]');
+            if (ball0) ball0.style.display = 'none';
+            panel.classList.add('open');
+        }
 
         var panel = box.querySelector('[data-panel]');
         var ringEl = box.querySelector('[data-ring]');
@@ -290,10 +311,12 @@
             if (!document.hidden) render();
         });
 
-        /* 点在面板外收起 */
-        document.addEventListener('click', function (e) {
-            if (!box.contains(e.target)) panel.classList.remove('open');
-        });
+        /* 点在面板外收起（内嵌模式不收起） */
+        if (!inlineHost) {
+            document.addEventListener('click', function (e) {
+                if (!box.contains(e.target)) panel.classList.remove('open');
+            });
+        }
     }
 
     function destroy() {
@@ -314,4 +337,11 @@
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
+    /* 给外面调：首页那边挂上内嵌容器后会喊一声，这里重建一次 */
+    window.NBPomo = {
+        rebuild: function () { destroy(); build(); },
+        KEY: KEY,
+        DUR: DUR
+    };
+
 })();
