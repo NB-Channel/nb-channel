@@ -588,6 +588,7 @@
                         H / 2 + (my - xf.cy) * xf.s];
             }
             var x = 0, y = 0;      /* 模型坐标，从原点起算 */
+                var lastDrawn = null;  /* 最后一个画出来的圈的屏幕坐标 */
 
             /* 齿轮 */
             if (state.showGear) {
@@ -651,6 +652,12 @@
 
                     /* 模型坐标推进 —— 画不画圈都要推进 */
                     x = nx; y = ny;
+
+                    /* 记下最后一个画出来的圈的屏幕位置，
+                       循环结束后从这里拉条虚线到笔尖。齿轮链有 5000 个
+                       但只画前 220 个圈，笔尖在链的最末端，中间那段空着，
+                       看着就像笔尖跟齿轮脱开了。 */
+                    if (i === drawN - 1) { lastDrawn = [sp[0], sp[1]]; }
                 }
             } else {
                 for (var j = 0; j < comps.length; j++) {
@@ -664,10 +671,30 @@
             /* 笔尖（转到屏幕坐标） */
             var tp = toScreen(x, y);
             x = tp[0]; y = tp[1];
+
+            /* 从最后一个画出的圈拉条虚线到笔尖，补上省略掉的那几千个齿轮 */
+            if (lastDrawn && (Math.abs(lastDrawn[0] - x) > 3 ||
+                              Math.abs(lastDrawn[1] - y) > 3)) {
+                ctx.save();
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(lastDrawn[0], lastDrawn[1]);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = 'rgba(127,230,255,.35)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+            }
+
             ctx.beginPath();
-            ctx.arc(x, y, 4, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffd85e';
+            ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
             ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x, y, 7, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,.4)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
 
             /* 轨迹 */
             /* 记轨迹。相邻两点距离突然变大 = 笔尖在区域之间跳，
@@ -681,17 +708,24 @@
             if (state.path.length > 4000) state.path.shift();
 
             if (state.showPath && state.path.length > 1) {
-                ctx.beginPath();
-                ctx.moveTo(state.path[0][0], state.path[0][1]);
-                for (var p = 1; p < state.path.length; p++) {
-                    var q2 = state.path[p];
-                    if (q2[2]) ctx.moveTo(q2[0], q2[1]);   /* 断点：另起一笔 */
-                    else ctx.lineTo(q2[0], q2[1]);
-                }
-                ctx.strokeStyle = 'rgba(255,216,94,.9)';
-                ctx.lineWidth = 1.7;
+                /* 轨迹按彩虹渐变色上色：色相沿着轨迹长度走一圈。
+                   原来是写死的黄色，站长要求用 RGB。 */
+                ctx.lineWidth = 1.9;
                 ctx.lineJoin = 'round';
-                ctx.stroke();
+                ctx.lineCap = 'round';
+                var N2 = state.path.length;
+                for (var p = 1; p < N2; p++) {
+                    var q2 = state.path[p];
+                    if (q2[2]) continue;                  /* 断点：这段不画 */
+                    var prev = state.path[p - 1];
+                    /* 色相按在轨迹里的进度取，加 180 让起点落在青蓝而不是正红 */
+                    var hue = Math.round((p / N2) * 360 + 180) % 360;
+                    ctx.beginPath();
+                    ctx.moveTo(prev[0], prev[1]);
+                    ctx.lineTo(q2[0], q2[1]);
+                    ctx.strokeStyle = 'hsl(' + hue + ',92%,62%)';
+                    ctx.stroke();
+                }
             }
 
             hudEl.innerHTML =
