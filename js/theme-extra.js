@@ -989,12 +989,7 @@
         ink: {
             head: '\uD83D\uDD8C\uFE0F \u6C34\u58A8\u5C71\u6C34 <i>\u00B7 \u9010\u7B14\u63CF\u51FA</i>',
             mount: function (box) { return INK.mount(box); }
-        },
-        eyecare: {
-            head: '\uD83C\uDF19 \u4F5C\u606F\u63D0\u9192 <i>\u00B7 \u770B\u4E45\u4E86\u8BE5\u6B47歇</i>',
-            mount: function (box) { return EYE.mount(box); }
-        },
-    };
+        } };
 
     var cleanup = null;
 
