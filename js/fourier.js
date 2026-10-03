@@ -27,94 +27,134 @@
     function pointsFromText(text, target) {
         target = target || 480;
 
-        /* 先用一个临时 canvas 画出文字，量一下实际占多大 */
+        /* ---------- 1. 把字画出来 ---------- */
         var probe = document.createElement('canvas');
         probe.width = 900;
         probe.height = 320;
         var pc = probe.getContext('2d');
+        var FONT = 'system-ui,-apple-system,"Microsoft YaHei",sans-serif';
         var size = 220;
-        pc.fillStyle = '#000';
+        pc.font = '900 ' + size + 'px ' + FONT;
         pc.textAlign = 'center';
         pc.textBaseline = 'middle';
-        pc.font = '900 ' + size + 'px system-ui,-apple-system,"Microsoft YaHei",sans-serif';
         var w = pc.measureText(text).width;
-        /* 太长就缩字号，保证能放进画布 */
         if (w > probe.width - 60) {
             size = Math.floor(size * (probe.width - 60) / w);
-            pc.font = '900 ' + size + 'px system-ui,-apple-system,"Microsoft YaHei",sans-serif';
-            w = pc.measureText(text).width;
         }
         pc.clearRect(0, 0, probe.width, probe.height);
+        pc.font = '900 ' + size + 'px ' + FONT;
         pc.fillStyle = '#000';
         pc.fillText(text, probe.width / 2, probe.height / 2);
 
-        var img = pc.getImageData(0, 0, probe.width, probe.height).data;
         var W = probe.width, H = probe.height;
-
-        /* 把有墨的像素记下来，同时算重心 */
+        var img = pc.getImageData(0, 0, W, H).data;
         var solid = new Uint8Array(W * H);
-        var cx = 0, cy = 0, n = 0;
-        for (var y = 0; y < H; y++) {
-            for (var x = 0; x < W; x++) {
-                if (img[(y * W + x) * 4 + 3] > 128) {
-                    solid[y * W + x] = 1;
-                    cx += x; cy += y; n++;
+        for (var i = 0; i < W * H; i++) {
+            if (img[i * 4 + 3] > 128) solid[i] = 1;
+        }
+
+        /* ---------- 2. 连通域：把实心像素分组 ---------- */
+        var label = new Int32Array(W * H).fill(-1);
+        var comps = [];
+        var stack = [];
+        for (var p0 = 0; p0 < W * H; p0++) {
+            if (!solid[p0] || label[p0] >= 0) continue;
+            var id = comps.length;
+            var cells = [];
+            stack.length = 0;
+            stack.push(p0);
+            label[p0] = id;
+            while (stack.length) {
+                var q = stack.pop();
+                cells.push(q);
+                var qx = q % W, qy = (q - qx) / W;
+                /* 四邻足够，八邻会把斜对角连成一片 */
+                for (var d = 0; d < 4; d++) {
+                    var nx = qx + (d === 0 ? 1 : d === 1 ? -1 : 0);
+                    var ny = qy + (d === 2 ? 1 : d === 3 ? -1 : 0);
+                    if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+                    var r = ny * W + nx;
+                    if (solid[r] && label[r] < 0) { label[r] = id; stack.push(r); }
                 }
             }
+            /* 太小的当作噪点扔掉 */
+            if (cells.length >= 24) comps.push(cells);
+            else comps.forEach(function () {});
         }
-        if (!n) return null;
-        cx /= n; cy /= n;
+        if (!comps.length) return null;
 
-        /* 只留边界像素：四邻里有一个是空的，就算边界 */
-        var edge = [];
-        for (var y2 = 1; y2 < H - 1; y2++) {
-            for (var x2 = 1; x2 < W - 1; x2++) {
-                var i2 = y2 * W + x2;
-                if (!solid[i2]) continue;
-                if (!solid[i2 - 1] || !solid[i2 + 1] ||
-                    !solid[i2 - W] || !solid[i2 + W]) {
-                    edge.push([x2 - cx, y2 - cy]);      /* 以重心为原点 */
+        /* ---------- 3. 每个连通域单独描外轮廓 ----------
+           Moore 邻域追踪：从最左上的像素起步，沿边界顺时针走一圈。 */
+        function traceContour(cells, labelId) {
+            /* 找起始点：该域里最上面那一行、最左边的像素 */
+            var start = cells[0];
+            cells.forEach(function (c) {
+                var cy = (c / W) | 0, sy = (start / W) | 0;
+                if (cy < sy || (cy === sy && c < start)) start = c;
+            });
+
+            var dirs = [[1, 0], [1, 1], [0, 1], [-1, 1],
+                        [-1, 0], [-1, -1], [0, -1], [1, -1]];
+            var pts = [];
+            var cx = start % W, cy = (start / W) | 0;
+            var sx = cx, sy = cy;
+            var dir = 6;                     /* 从"上"开始找 */
+            var guard = 0, maxSteps = cells.length * 8 + 400;
+
+            do {
+                pts.push([cx, cy]);
+                var found = false;
+                /* 从上一方向的下一个开始，顺时针找一个属于本域的像素 */
+                for (var k = 0; k < 8; k++) {
+                    var nd = (dir + 6 + k) % 8;   /* 回退一格再顺时针扫 */
+                    var nx = cx + dirs[nd][0], ny = cy + dirs[nd][1];
+                    if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+                    if (label[ny * W + nx] === labelId) {
+                        dir = nd;
+                        cx = nx; cy = ny;
+                        found = true;
+                        break;
+                    }
                 }
-            }
-        }
-        if (edge.length < 8) return null;
+                if (!found) break;
+                if (++guard > maxSteps) break;
+            } while (!(cx === sx && cy === sy) || pts.length < 4);
 
-        /* 最近邻串成一条链，从离重心最远的点起步（那样起点稳定） */
-        var start = 0, far = -1;
-        for (var i = 0; i < edge.length; i++) {
-            var d = edge[i][0] * edge[i][0] + edge[i][1] * edge[i][1];
-            if (d > far) { far = d; start = i; }
-        }
-        var used = new Uint8Array(edge.length);
-        var order = [start];
-        used[start] = 1;
-        var cur = start;
-        var GRID = 24;                              /* 分桶加速找邻居 */
-        for (var step = 1; step < edge.length; step++) {
-            var best = -1, bestD = Infinity;
-            var bx = edge[cur][0], by = edge[cur][1];
-            for (var j = 0; j < edge.length; j++) {
-                if (used[j]) continue;
-                var dx = edge[j][0] - bx, dy = edge[j][1] - by;
-                var dd = dx * dx + dy * dy;
-                if (dd < bestD) { bestD = dd; best = j; }
-                /* 足够近就收，省时间 */
-                if (bestD < GRID) break;
-            }
-            if (best < 0) break;
-            used[best] = 1;
-            order.push(best);
-            cur = best;
+            return pts;
         }
 
-        /* 均匀重采样到 target 个点 */
-        var pts = [];
-        var m = order.length;
-        for (var k = 0; k < target; k++) {
-            var p = edge[order[Math.floor(k * m / target) % m]];
-            pts.push([p[0], p[1]]);
+        /* 各域的轮廓 + 重心，按 x 排序（从左到右） */
+        var groups = [];
+        comps.forEach(function (cells) {
+            var pts = traceContour(cells, label[cells[0]]);
+            if (pts.length < 12) return;
+            var mx = 0, my = 0;
+            pts.forEach(function (p) { mx += p[0]; my += p[1]; });
+            mx /= pts.length; my /= pts.length;
+            groups.push({ pts: pts, mx: mx, my: my, n: cells.length });
+        });
+        if (!groups.length) return null;
+
+        groups.sort(function (a, b) { return a.mx - b.mx; });
+
+        /* ---------- 4. 拼成一条序列并均匀重采样 ----------
+           域与域之间必然有跳跃，但跳跃次数现在【等于域数】，
+           不再像最近邻串链那样在区域之间反复乱跳。 */
+        var all = [];
+        groups.forEach(function (g) { all = all.concat(g.pts); });
+
+        /* 去掉整体重心偏移，再缩放居中 */
+        var cxAll = 0, cyAll = 0;
+        all.forEach(function (p) { cxAll += p[0]; cyAll += p[1]; });
+        cxAll /= all.length; cyAll /= all.length;
+        var rel = all.map(function (p) { return [p[0] - cxAll, p[1] - cyAll]; });
+
+        var out = [];
+        var m = rel.length;
+        for (var k2 = 0; k2 < target; k2++) {
+            out.push(rel[Math.floor(k2 * m / target) % m]);
         }
-        return pts;
+        return out;
     }
 
     /* ============================================================
@@ -174,18 +214,24 @@
         '  background:rgba(255,255,255,.06);color:#9fb6d4;',
         '  border:1px solid rgba(255,255,255,.14);}',
         '.nb-ft-preset:hover{background:rgba(0,229,255,.16);color:#dff3ff;}',
-        '.nb-ft-gears{margin-top:18px;display:grid;gap:8px;',
-        '  grid-template-columns:repeat(auto-fill,minmax(232px,1fr));}',
-        '.nb-ft-gear{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:9px;',
+        /* 50 个齿轮，网格排密一点，不然面板拉得老长 */
+        '.nb-ft-gears{margin-top:18px;display:grid;gap:6px;',
+        '  grid-template-columns:repeat(auto-fill,minmax(178px,1fr));',
+        '  max-height:340px;overflow-y:auto;padding-right:4px;}',
+        '.nb-ft-gears::-webkit-scrollbar{width:8px;}',
+        '.nb-ft-gears::-webkit-scrollbar-thumb{background:rgba(0,229,255,.3);',
+        '  border-radius:4px;}',
+        '.nb-ft-gears::-webkit-scrollbar-track{background:rgba(255,255,255,.05);}',
+        '.nb-ft-gear{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:8px;',
         '  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);',
-        '  font-size:.72rem;color:#9fb6d4;}',
+        '  font-size:.68rem;color:#9fb6d4;}',
         '.nb-ft-gear.on{border-color:rgba(0,229,255,.42);background:rgba(0,229,255,.08);}',
-        '.nb-ft-gear .sw{width:30px;height:17px;border-radius:9px;cursor:pointer;flex:0 0 auto;',
+        '.nb-ft-gear .sw{width:26px;height:15px;border-radius:8px;cursor:pointer;flex:0 0 auto;',
         '  background:rgba(255,255,255,.16);position:relative;transition:background .2s;}',
-        '.nb-ft-gear .sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;',
+        '.nb-ft-gear .sw::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;',
         '  border-radius:50%;background:#8fa8c8;transition:transform .2s,background .2s;}',
         '.nb-ft-gear.on .sw{background:rgba(0,229,255,.45);}',
-        '.nb-ft-gear.on .sw::after{transform:translateX(13px);background:#00e5ff;}',
+        '.nb-ft-gear.on .sw::after{transform:translateX(11px);background:#00e5ff;}',
         '.nb-ft-gear .lb{flex:1;min-width:0;line-height:1.5;}',
         '.nb-ft-gear .lb b{color:#dff3ff;font-family:ui-monospace,monospace;}',
         '.nb-ft-gear .lb i{font-style:normal;color:#7fe6ff;}',
@@ -216,20 +262,33 @@
                 '<button class="nb-ft-btn on" data-act="play">暂停</button>' +
                 '<button class="nb-ft-btn on" data-act="showgear">显示齿轮</button>' +
                 '<button class="nb-ft-btn on" data-act="showpath">显示轨迹</button>' +
+                '<span style="display:flex;align-items:center;gap:9px;font-size:.72rem;' +
+                  'color:#7f93b0;letter-spacing:1px;margin-left:auto">' +
+                  '齿轮数 <b data-gn style="color:#00e5ff;font-family:ui-monospace,monospace;' +
+                    'min-width:30px;text-align:right">50</b>' +
+                  '<input type="range" min="10" max="400" step="5" value="50" data-gears ' +
+                    'style="width:170px;accent-color:#00e5ff">' +
+                '</span>' +
               '</div>' +
               '<div class="nb-ft-tools">' +
                 '<span style="font-size:.72rem;color:#7f93b0;letter-spacing:1px">预设</span>' +
-                '<button class="nb-ft-preset" data-preset="NB频道">NB频道</button>' +
-                '<button class="nb-ft-preset" data-preset="NB-CHANNEL">NB-CHANNEL</button>' +
-                '<button class="nb-ft-preset" data-preset="NoBook">NoBook</button>' +
+                '<button class="nb-ft-preset" data-preset="N">N</button>' +
+                '<button class="nb-ft-preset" data-preset="B">B</button>' +
                 '<button class="nb-ft-preset" data-preset="π">π</button>' +
                 '<button class="nb-ft-preset" data-preset="∞">∞</button>' +
+                '<button class="nb-ft-preset" data-preset="★">★</button>' +
+                '<button class="nb-ft-preset" data-preset="NB频道">NB频道</button>' +
+                '<button class="nb-ft-preset" data-preset="NB-CHANNEL">NB-CHANNEL</button>' +
               '</div>' +
               '<div class="nb-ft-gears" data-gears></div>' +
               '<div class="nb-ft-tip">' +
                 '每个齿轮 = 一个频率分量：<b>半径</b>是它的振幅，<b>齿数</b>是它的频率' +
                 '（转一圈咬合几次）。所有齿轮首尾串起来，最外那个的笔尖就画出你输的字。' +
-                '最多取 10 个齿轮，按振幅从大到小排 —— 前面的定大体形状，后面的补细节。' +
+                '齿轮按振幅从大到小排 —— 前面的定大体形状，后面的补细节。' +
+                '<b>单个字母</b>（N、B、π）50 个就够；' +
+                '<b>整个单词或汉字</b>是多个互不相连的笔画块，块与块之间要跳跃，' +
+                '跳跃的能量摊在所有频率上，得把齿轮拉到 200~400 才收得住。' +
+                '画的时候区域之间会自动断开，不会拉出多余的直线。' +
               '</div>' +
             '</div>';
 
@@ -238,6 +297,28 @@
         var hudEl = host.querySelector('[data-hud]');
         var gearsEl = host.querySelector('[data-gears]');
         var textEl = host.querySelector('[data-text]');
+
+        /* 自适应断笔：维护最近若干步的平均步长，
+           只有明显超出（5 倍）才认为是区域之间的跳跃。
+           固定像素阈值不行 —— 300 个齿轮时笔尖跑得飞快，
+           正常笔画的距离也会超过阈值，把字切碎。 */
+        var stepAvg = { sum: 0, n: 0, buf: [] };
+        function isJump(d) {
+            var K = 24;
+            if (stepAvg.buf.length >= 8) {
+                var avg = stepAvg.sum / stepAvg.n;
+                if (avg > 0.5 && d > avg * 5) return true;
+            }
+            stepAvg.buf.push(d);
+            stepAvg.sum += d;
+            stepAvg.n++;
+            if (stepAvg.buf.length > K) {
+                stepAvg.sum -= stepAvg.buf.shift();
+                stepAvg.n--;
+            }
+            return false;
+        }
+        function resetSteps() { stepAvg = { sum: 0, n: 0, buf: [] }; }
 
         var state = {
             playing: true,
@@ -252,7 +333,12 @@
         };
 
         var DPR = Math.min(window.devicePixelRatio || 1, 2);
-        var MAXG = 10;       /* 最多 10 个齿轮 */
+        /* 齿轮数量可调。
+           单个字母（一条闭合曲线）50 个就画得很准；
+           多个字母/汉字是多个互不相连的区域，区域之间要"跳跃"，
+           跳跃的能量摊在所有频率上，得几百个分量才收得住。
+           所以做成滑块，默认 50，最多 400。 */
+        var GEARM = { cur: 50, min: 10, max: 400 };
 
         /* ---------- 尺寸 ---------- */
         function resize() {
@@ -274,7 +360,7 @@
             state.pts = pts;
             var all = dft(pts);
             /* 取振幅最大的前 10 个（跳过 freq=0 之外的直流项也别丢，它定中心） */
-            var picked = all.slice(0, MAXG);
+            var picked = all.slice(0, GEARM.cur);
 
             /* 缩放系数：让整体铺满画布 */
             var maxAmp = 0;
@@ -294,9 +380,20 @@
                 };
             });
 
-            /* 生成齿轮调节面板 */
+            /* 生成齿轮调节面板。几百个齿轮全渲染会卡，
+               所以只列前 60 个，剩下的在 HUD 里报个数。 */
             gearsEl.innerHTML = '';
-            state.comps.forEach(function (c) {
+            var SHOWMAX = 60;
+            var shown = state.comps.slice(0, SHOWMAX);
+            if (state.comps.length > SHOWMAX) {
+                var note = document.createElement('div');
+                note.style.cssText = 'grid-column:1/-1;font-size:.7rem;color:#7f93b0;' +
+                    'padding:6px 2px;line-height:1.7';
+                note.textContent = '只列出振幅最大的前 ' + SHOWMAX + ' 个，' +
+                    '另外 ' + (state.comps.length - SHOWMAX) + ' 个也在参与绘制（影响很小）';
+                gearsEl.appendChild(note);
+            }
+            shown.forEach(function (c) {
                 var row = document.createElement('div');
                 row.className = 'nb-ft-gear on';
                 row.innerHTML =
@@ -325,11 +422,13 @@
                要盯着看 9 秒才出现字 */
             state.path = [];
             state.t = 0;
+            resetSteps();
             prerun();
         }
 
         /* 不开动画，纯算一遍把 path 填满 */
         function prerun() {
+            resetSteps();
             var steps = 420;
             for (var n = 0; n < steps; n++) {
                 state.t = n / steps * 2 * Math.PI;
@@ -340,7 +439,12 @@
                     x += c.amp * c.scale * Math.cos(a);
                     y += c.amp * c.scale * Math.sin(a);
                 });
-                state.path.push([x, y]);
+                var jp = false;
+                if (state.path.length) {
+                    var lp = state.path[state.path.length - 1];
+                    jp = isJump(Math.hypot(x - lp[0], y - lp[1]));
+                }
+                state.path.push([x, y, jp]);
             }
             state.t = 0;
         }
@@ -371,15 +475,17 @@
                     /* 圈 */
                     ctx.beginPath();
                     ctx.arc(x, y, r, 0, Math.PI * 2);
-                    ctx.strokeStyle = 'rgba(0,229,255,' + (0.34 - i * 0.026) + ')';
+                    ctx.strokeStyle = 'rgba(0,229,255,' + Math.max(0.035, 0.3 - i * 0.004) + ')';
                     ctx.lineWidth = 1;
                     ctx.stroke();
 
                     /* 齿：齿数就是这个分量的频率 —— 沿圆周点 n 个短齿 */
+                    /* 齿数等于频率，但一个小圆上画几十个齿会糊成一片，
+                       所以齿数封顶 48，而且半径小于 12 干脆不画齿。 */
                     var teeth = Math.min(Math.abs(c.freq), 48);
-                    if (teeth >= 2 && r > 6) {
+                    if (teeth >= 2 && r > 12) {
                         var tl = Math.min(7, r * 0.22);
-                        ctx.strokeStyle = 'rgba(0,229,255,' + (0.5 - i * 0.04) + ')';
+                        ctx.strokeStyle = 'rgba(0,229,255,' + Math.max(0.07, 0.45 - i * 0.008) + ')';
                         ctx.lineWidth = 1.2;
                         ctx.beginPath();
                         for (var k = 0; k < teeth; k++) {
@@ -417,26 +523,42 @@
             ctx.fill();
 
             /* 轨迹 */
-            state.path.push([x, y]);
-            if (state.path.length > 1400) state.path.shift();
+            /* 记轨迹。相邻两点距离突然变大 = 笔尖在区域之间跳，
+               标个 jump，画的时候断开，不然会拉出一条横贯的直线。 */
+            var jmp = false;
+            if (state.path.length) {
+                var lastP = state.path[state.path.length - 1];
+                jmp = isJump(Math.hypot(x - lastP[0], y - lastP[1]));
+            }
+            state.path.push([x, y, jmp]);
+            if (state.path.length > 2600) state.path.shift();
 
             if (state.showPath && state.path.length > 1) {
                 ctx.beginPath();
                 ctx.moveTo(state.path[0][0], state.path[0][1]);
                 for (var p = 1; p < state.path.length; p++) {
-                    ctx.lineTo(state.path[p][0], state.path[p][1]);
+                    var q2 = state.path[p];
+                    if (q2[2]) ctx.moveTo(q2[0], q2[1]);   /* 断点：另起一笔 */
+                    else ctx.lineTo(q2[0], q2[1]);
                 }
-                ctx.strokeStyle = 'rgba(255,216,94,.85)';
-                ctx.lineWidth = 1.6;
+                ctx.strokeStyle = 'rgba(255,216,94,.9)';
+                ctx.lineWidth = 1.7;
+                ctx.lineJoin = 'round';
                 ctx.stroke();
             }
 
             hudEl.innerHTML =
                 '齿轮 <b>' + comps.length + '</b> / ' + state.comps.length +
-                '<br>齿数 <b>' + comps.map(function (c) {
-                    /* freq = 0 是直流分量（整体平移），没有齿，单列出来 */
-                    return c.freq === 0 ? '直流' : Math.abs(c.freq);
-                }).join(' · ') + '</b>' +
+                '<br>齿数 <b>' + (function () {
+                    /* freq = 0 是直流分量（整体平移），没有齿，单列出来。
+                       50 个齿轮的话这一串会撑爆，只列前 12 个。 */
+                    var arr = comps.map(function (c) {
+                        return c.freq === 0 ? '直流' : Math.abs(c.freq);
+                    });
+                    var head = arr.slice(0, 12).join(' · ');
+                    return arr.length > 12 ? head + ' … (共 ' + arr.length + ' 个)'
+                                           : head;
+                })() + '</b>' +
                 '<br>采样点 <b>' + (state.pts ? state.pts.length : 0) + '</b>';
         }
 
@@ -477,6 +599,20 @@
                 rebuild();
             });
         });
+        var gearSlider = host.querySelector('[data-gears]');
+        var gnEl = host.querySelector('[data-gn]');
+        var gearDeb = null;
+        gearSlider.addEventListener('input', function () {
+            GEARM.cur = parseInt(gearSlider.value, 10);
+            gnEl.textContent = GEARM.cur;
+            /* 拖动时别每一像素都重算 DFT —— 那有 480 个点 × 几百个频率，很重 */
+            clearTimeout(gearDeb);
+            gearDeb = setTimeout(function () {
+                state.path = [];
+                rebuild();
+            }, 260);
+        });
+
         var deb = null;
         textEl.addEventListener('input', function () {
             clearTimeout(deb);
