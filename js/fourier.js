@@ -25,15 +25,17 @@
        1. 从文字取轮廓点
        ============================================================ */
     function pointsFromText(text, target) {
-        target = target || 480;
+        target = target || 32768;
 
         /* ---------- 1. 把字画出来 ---------- */
+        /* 画布要够大 —— 边界像素越多，能支撑的采样点就越多，
+           齿轮数上限也就越高。 */
         var probe = document.createElement('canvas');
-        probe.width = 900;
-        probe.height = 320;
+        probe.width = 2400;
+        probe.height = 820;
         var pc = probe.getContext('2d');
         var FONT = 'system-ui,-apple-system,"Microsoft YaHei",sans-serif';
-        var size = 220;
+        var size = 580;
         pc.font = '900 ' + size + 'px ' + FONT;
         pc.textAlign = 'center';
         pc.textBaseline = 'middle';
@@ -149,10 +151,19 @@
         cxAll /= all.length; cyAll /= all.length;
         var rel = all.map(function (p) { return [p[0] - cxAll, p[1] - cyAll]; });
 
+        /* 重采样。用线性插值而不是直接取整 —— 目标点数比轮廓点多的时候，
+           直接取整会产生大量重复点，FFT 出来的高频是假的。 */
         var out = [];
         var m = rel.length;
         for (var k2 = 0; k2 < target; k2++) {
-            out.push(rel[Math.floor(k2 * m / target) % m]);
+            var fp = k2 * m / target;
+            var i0 = Math.floor(fp) % m;
+            var i1 = (i0 + 1) % m;
+            var fr = fp - Math.floor(fp);
+            out.push([
+                rel[i0][0] + (rel[i1][0] - rel[i0][0]) * fr,
+                rel[i0][1] + (rel[i1][1] - rel[i0][1]) * fr
+            ]);
         }
         return out;
     }
@@ -162,25 +173,68 @@
           返回按振幅从大到小排好的分量：
           { freq, amp, phase, re, im }
        ============================================================ */
+    /* 快速傅里叶变换（迭代版 radix-2 Cooley-Tukey）。
+       朴素 DFT 是 O(N²)，8192 个点要 6700 万次运算，慢得不能看；
+       FFT 是 O(N log N)，同样的点数只要十几万次。
+
+       输入复数序列（实部 re、虚部 im，长度必须是 2 的幂），
+       就地变换。约定和之前一致：结果要除以 N 做归一化。 */
+    function fft(re, im) {
+        var n = re.length;
+
+        /* 位反转置换 */
+        for (var i = 1, j = 0; i < n; i++) {
+            var bit = n >> 1;
+            for (; j & bit; bit >>= 1) j ^= bit;
+            j ^= bit;
+            if (i < j) {
+                var tr = re[i]; re[i] = re[j]; re[j] = tr;
+                var ti = im[i]; im[i] = im[j]; im[j] = ti;
+            }
+        }
+
+        /* 蝶形运算 */
+        for (var len = 2; len <= n; len <<= 1) {
+            var half = len >> 1;
+            var ang = -2 * Math.PI / len;
+            var wr = Math.cos(ang), wi = Math.sin(ang);
+            for (var st = 0; st < n; st += len) {
+                var cr = 1, ci = 0;
+                for (var k = 0; k < half; k++) {
+                    var p = st + k, q = p + half;
+                    var xr = re[q] * cr - im[q] * ci;
+                    var xi = re[q] * ci + im[q] * cr;
+                    re[q] = re[p] - xr; im[q] = im[p] - xi;
+                    re[p] += xr;        im[p] += xi;
+                    var ncr = cr * wr - ci * wi;
+                    ci = cr * wi + ci * wr;
+                    cr = ncr;
+                }
+            }
+        }
+    }
+
+    /* 返回按振幅从大到小排好的分量：{ freq, amp, phase, re, im } */
     function dft(pts) {
         var N = pts.length;
+        var re = new Float64Array(N);
+        var im = new Float64Array(N);
+        for (var i = 0; i < N; i++) { re[i] = pts[i][0]; im[i] = pts[i][1]; }
+
+        fft(re, im);
+
         var out = [];
-        /* 频率范围 -N/2 ~ N/2，正负都要（负频率表示反向旋转） */
-        for (var f = -Math.floor(N / 2); f <= Math.floor(N / 2); f++) {
-            var re = 0, im = 0;
-            for (var i = 0; i < N; i++) {
-                var t = 2 * Math.PI * f * i / N;
-                var c = Math.cos(t), s = Math.sin(t);
-                re += pts[i][0] * c + pts[i][1] * s;
-                im += -pts[i][0] * s + pts[i][1] * c;
-            }
-            re /= N; im /= N;
+        var half = N >> 1;
+        for (var f = 0; f < N; f++) {
+            /* FFT 输出里，索引大于 N/2 的部分对应负频率 */
+            var freq = f <= half ? f : f - N;
+            var r = re[f] / N, m = im[f] / N;
             out.push({
-                freq: f,
-                re: re,
-                im: im,
-                amp: Math.hypot(re, im),
-                phase: Math.atan2(im, re)
+                freq: freq,
+                re: r,
+                im: m,
+                amp: Math.hypot(r, m),
+                phase: Math.atan2(m, r)
             });
         }
         out.sort(function (a, b) { return b.amp - a.amp; });
@@ -266,7 +320,7 @@
                   'color:#7f93b0;letter-spacing:1px;margin-left:auto">' +
                   '齿轮数 <b data-gn style="color:#00e5ff;font-family:ui-monospace,monospace;' +
                     'min-width:30px;text-align:right">50</b>' +
-                  '<input type="range" min="10" max="1000" step="5" value="50" data-gears ' +
+                  '<input type="range" min="10" max="10000" step="10" value="50" data-gears ' +
                     'style="width:170px;accent-color:#00e5ff">' +
                 '</span>' +
               '</div>' +
@@ -342,7 +396,10 @@
            多个字母/汉字是多个互不相连的区域，区域之间要"跳跃"，
            跳跃的能量摊在所有频率上，得几百个分量才收得住。
            所以做成滑块，默认 50，最多 400。 */
-        var GEARM = { cur: 50, min: 10, max: 1000 };
+        /* 齿轮上限。采样点 32768（2 的幂，FFT 要求），
+           能分出 32768 个独立频率，所以 10000 这个上限是真的能填满的。
+           32768 点 FFT 约 16ms，拖动滑块也不会卡。 */
+        var GEARM = { cur: 50, min: 10, max: 10000 };
 
         /* ---------- 尺寸 ---------- */
         function resize() {
@@ -359,7 +416,7 @@
         function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
 
         function rebuild() {
-            var pts = pointsFromText(state.text || 'NB频道', 480);
+            var pts = pointsFromText(state.text || 'NB频道', 32768);
             if (!pts) { hudEl.textContent = '取不到轮廓，换点内容试试'; return; }
             state.pts = pts;
             var all = dft(pts);
@@ -442,7 +499,7 @@
            量完清空轨迹，动画照样从头画。 */
         function prerun() {
             var W = state.W || 900, H = state.H || 440;
-            var S = 1440;
+            var S = 4096;   /* 采样密一点，包围盒量的才准 */
             var minX = Infinity, maxX = -Infinity;
             var minY = Infinity, maxY = -Infinity;
 
@@ -617,7 +674,8 @@
                     return arr.length > 12 ? head + ' … (共 ' + arr.length + ' 个)'
                                            : head;
                 })() + '</b>' +
-                '<br>采样点 <b>' + (state.pts ? state.pts.length : 0) + '</b>';
+                '<br>采样点 <b>' + (state.pts ? state.pts.length : 0) + '</b>' +
+                ' · FFT';
         }
 
         /* ---------- 主循环 ---------- */
