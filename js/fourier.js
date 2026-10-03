@@ -542,10 +542,15 @@
                 var PAD = 0.92;
                 var sc = Math.min((W * PAD) / (maxX - minX), (H * PAD) / (maxY - minY));
                 if (!isFinite(sc) || sc <= 0) sc = 1;
+                /* 中心取【轨迹包围盒中心】和【齿轮链起点(原点)】的中点。
+                   只用包围盒中心的话，齿轮会聚在一边、笔尖飘在另一边 ——
+                   因为 t=0 时所有齿轮同向叠加，笔尖在离原点最远处，
+                   转起来之后各分量互相抵消才回到图形内部。
+                   取中点两边都能兼顾。 */
                 state.xf = {
                     s: sc,
-                    cx: (minX + maxX) / 2,
-                    cy: (minY + maxY) / 2
+                    cx: ((minX + maxX) / 2) * 0.5,
+                    cy: ((minY + maxY) / 2) * 0.5
                 };
             } else {
                 state.xf = { s: 1, cx: 0, cy: 0 };
@@ -592,6 +597,10 @@
 
             /* 齿轮 */
             if (state.showGear) {
+                /* 画圈数量。多画一些，齿轮才能一直铺到笔尖附近 ——
+                   原来只画 220 个，而笔尖在 5000 个齿轮的最末端，
+                   中间几千个的位移没画出来，看着就像笔尖飘在外面。
+                   900 个够铺过去，再多画布就糊了。剩余部分用虚线补。 */
                 /* 全局最要紧的一处：
                    笔尖位置必须把【所有】齿轮都累加进去 —— 那只是几十万次
                    乘加，很便宜，而且细节全靠那些小半径的高频分量；
@@ -599,7 +608,7 @@
 
                    之前两者写在同一个循环里被 drawN 一起卡住，
                    于是 10000 个齿轮只有前 220 个起作用，细节全丢。 */
-                var drawN = Math.min(comps.length, 220);   /* 只管画不画圈 */
+                var drawN = Math.min(comps.length, 400);   /* 只管画不画圈 */
                 var drawTeeth = comps.length <= 120;
 
                 for (var i = 0; i < comps.length; i++) {
@@ -676,11 +685,11 @@
             if (lastDrawn && (Math.abs(lastDrawn[0] - x) > 3 ||
                               Math.abs(lastDrawn[1] - y) > 3)) {
                 ctx.save();
-                ctx.setLineDash([4, 4]);
+                ctx.setLineDash([3, 4]);
                 ctx.beginPath();
                 ctx.moveTo(lastDrawn[0], lastDrawn[1]);
                 ctx.lineTo(x, y);
-                ctx.strokeStyle = 'rgba(127,230,255,.35)';
+                ctx.strokeStyle = 'rgba(127,230,255,.5)';
                 ctx.lineWidth = 1;
                 ctx.stroke();
                 ctx.restore();
