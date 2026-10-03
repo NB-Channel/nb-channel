@@ -79,10 +79,16 @@
 
     /* ---------- 样式 ---------- */
     var CSS = [
-        '#nbPomoBox{position:fixed;right:20px;bottom:20px;z-index:9998;',
+        /* bottom 要避开页面右下角的「回到顶部」按钮：
+           它是 fixed; right:26px; bottom:26px; 46x46，
+           也就是占到 72px 高。所以这里从 88px 起，
+           正好压在它上面，中间留 16px 空隙。
+           移动端它变成 right:18px; bottom:18px; 42x42（占 60px），
+           对应挪到 76px。 */
+        '#nbPomoBox{position:fixed;right:24px;bottom:88px;z-index:9998;',
         '  font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;}',
         /* 悬浮小球 */
-        '.nb-pomo-ball{width:54px;height:54px;border-radius:50%;cursor:pointer;',
+        '.nb-pomo-ball{width:52px;height:52px;border-radius:50%;cursor:pointer;',
         '  border:none;padding:0;font-size:24px;line-height:1;',
         '  background:radial-gradient(circle at 34% 30%,#ff8b7a,#c0392b 70%);',
         '  box-shadow:0 6px 20px -6px rgba(140,47,35,.7),0 2px 6px rgba(0,0,0,.25);',
@@ -94,10 +100,12 @@
         '  background:#3a3630;color:#f4f0e6;font-size:10px;font-weight:700;',
         '  padding:1px 5px;border-radius:8px;letter-spacing:.5px;}',
         /* 展开的面板 */
+        /* 面板要给实底：护眼主题那边的规则会覆盖背景类属性，
+           不加 !important 会变半透明，后面的正文透上来很糊 */
         '.nb-pomo-panel{position:absolute;right:0;bottom:68px;width:250px;',
-        '  background:#faf7f0;border:1px solid rgba(58,54,48,.18);border-radius:14px;',
-        '  box-shadow:0 20px 48px -20px rgba(40,34,26,.5);padding:18px 18px 14px;',
-        '  display:none;}',
+        '  background:#fdfbf6 !important;border:1px solid rgba(58,54,48,.2) !important;',
+        '  border-radius:14px;box-shadow:0 20px 48px -20px rgba(40,34,26,.55);',
+        '  padding:18px 18px 14px;display:none;}',
         '.nb-pomo-panel.open{display:block;animation:nbPomoIn .18s ease-out;}',
         '@keyframes nbPomoIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}',
         '.nb-pomo-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}',
@@ -113,9 +121,9 @@
         '  transition:stroke-dashoffset .95s linear,stroke .35s;}',
         '.nb-pomo-ring.rest .br{stroke:#7a8a55;}',
         '.nb-pomo-ring .time{position:absolute;inset:0;display:flex;align-items:center;',
-        '  justify-content:center;font-size:1.32rem;font-weight:300;color:#3a3630;',
+        '  justify-content:center;font-size:1.32rem;font-weight:300;color:#2e2a24 !important;',
         '  font-variant-numeric:tabular-nums;letter-spacing:1px;}',
-        '.nb-pomo-side .ph{font-size:.92rem;font-weight:800;color:#3a3630;letter-spacing:2px;}',
+        '.nb-pomo-side .ph{font-size:.92rem;font-weight:800;color:#2e2a24 !important;letter-spacing:2px;}',
         '.nb-pomo-side .rd{margin-top:8px;font-size:.72rem;color:#7a7266;line-height:1.8;}',
         '.nb-pomo-side .rd b{color:#8c2f23;}',
         '.nb-pomo-btns{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;}',
@@ -128,8 +136,8 @@
         '.nb-pomo-btns button.gh:hover{background:rgba(107,90,62,.12);}',
         '.nb-pomo-tip{margin-top:10px;font-size:.68rem;color:#8b8375;line-height:1.7;}',
         '@media(max-width:520px){',
-        '  #nbPomoBox{right:12px;bottom:12px;}',
-        '  .nb-pomo-panel{width:calc(100vw - 24px);right:0;}',
+        '  #nbPomoBox{right:16px;bottom:76px;}',
+        '  .nb-pomo-panel{width:calc(100vw - 32px);right:0;}',
         '}',
         '@media(prefers-reduced-motion:reduce){',
         '  .nb-pomo-panel.open{animation:none;}',
