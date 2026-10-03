@@ -330,7 +330,10 @@
             pts: null,
             t: 0,
             path: [],
-            W: 0, H: 0
+            W: 0, H: 0,
+            /* 绘制变换：把模型坐标映射到画布。prerun 量完包围盒后填好，
+               一次到位，不用迭代改振幅。 */
+            xf: { s: 1, cx: 0, cy: 0 }
         };
 
         var DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -433,95 +436,57 @@
             prerun();
         }
 
-        /* 不开动画，纯算一遍把 path 填满。
-           算完顺便按【实际轨迹的包围盒】把缩放系数调准 ——
-           原来按最大振幅缩放，但区域之间的跳跃会让笔尖跑得更远，
-           字就被裁在画布外面了（站长说的「展示不全」）。 */
+        /* prerun：真的跑一圈，把每个时刻的笔尖位置记下来，
+           量【这些点】的包围盒（不是"所有齿轮各自能达到的最远处"——
+           那个范围大得多，会让字被算得很小）。
+           量完清空轨迹，动画照样从头画。 */
         function prerun() {
-            resetSteps();
-            var steps = 420;
-            for (var n = 0; n < steps; n++) {
-                state.t = n / steps * 2 * Math.PI;
-                var x = (state.W || 900) / 2, y = (state.H || 440) / 2;
-                state.comps.forEach(function (c) {
-                    if (!c.on) return;
-                    var a = c.phase + c.freq * state.t;
-                    x += c.amp * c.scale * Math.cos(a);
-                    y += c.amp * c.scale * Math.sin(a);
-                });
-                var jp = false;
-                if (state.path.length) {
-                    var lp = state.path[state.path.length - 1];
-                    jp = isJump(Math.hypot(x - lp[0], y - lp[1]));
-                }
-                state.path.push([x, y, jp]);
-            }
-            state.t = 0;
-
-            /* 按包围盒修正缩放 */
-            fitToBox();
-            /* 缩放变了，轨迹要重算一遍 */
-            state.path = [];
-            for (var n2 = 0; n2 < steps; n2++) {
-                state.t = n2 / steps * 2 * Math.PI;
-                var x2 = (state.W || 900) / 2;
-                var y2 = (state.H || 440) / 2;
-                state.comps.forEach(function (c) {
-                    if (!c.on) return;
-                    var a = c.phase + c.freq * state.t;
-                    x2 += c.amp * c.scale * Math.cos(a);
-                    y2 += c.amp * c.scale * Math.sin(a);
-                });
-                var jp2 = false;
-                if (state.path.length) {
-                    var lp2 = state.path[state.path.length - 1];
-                    jp2 = isJump(Math.hypot(x2 - lp2[0], y2 - lp2[1]));
-                }
-                state.path.push([x2, y2, jp2]);
-            }
-            state.t = 0;
-        }
-
-        /* 量一遍当前齿轮能画到多大，把整体缩放调到刚好装进画布 */
-        function fitToBox() {
-            var comps = state.comps;
-            if (!comps.length) return;
             var W = state.W || 900, H = state.H || 440;
-            var need = 0;
-            /* 最坏情况是所有齿轮同向叠加，但那样太保守（字会很小）。
-               实际是均匀采样一圈，量真实范围更准。 */
-            var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            var S = 360;
+            var S = 1440;
+            var minX = Infinity, maxX = -Infinity;
+            var minY = Infinity, maxY = -Infinity;
+
             for (var n = 0; n < S; n++) {
                 var t = n / S * 2 * Math.PI;
-                var px = 0, py = 0;
-                comps.forEach(function (c) {
-                    if (!c.on) return;
-                    var a = c.phase + c.freq * t;
-                    px += c.amp * c.scale * Math.cos(a);
-                    py += c.amp * c.scale * Math.sin(a);
-                });
-                if (px < minX) minX = px;
-                if (px > maxX) maxX = px;
-                if (py < minY) minY = py;
-                if (py > maxY) maxY = py;
+                var x = 0, y = 0;
+                /* 沿齿轮链累加 —— 这才是笔尖真正的位置 */
+                for (var i = 0; i < state.comps.length; i++) {
+                    var c = state.comps[i];
+                    if (!c.on) continue;
+                    var ang = c.phase + c.freq * t;
+                    x += c.amp * c.scale * Math.cos(ang);
+                    y += c.amp * c.scale * Math.sin(ang);
+                }
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
             }
-            if (!isFinite(minX)) return;
-            need = Math.max(maxX - minX, maxY - minY);
-            if (need <= 0) return;
-            var want = Math.min(W, H) * 0.78;
-            var k = want / need;
-            /* 缩放系数一次别动太多，避免来回震荡 */
-            if (k > 1.34) k = 1.34;
-            if (k < 0.74) k = 0.74;
-            if (Math.abs(k - 1) < 0.02) return;
-            comps.forEach(function (c) { c.amp *= k; });
-            /* 面板上显示的半径也跟着更新 */
-            var rows = gearsEl.querySelectorAll('.nb-ft-gear');
-            for (var i = 0; i < rows.length && i < comps.length; i++) {
-                var span = rows[i].querySelector('[data-amp]');
-                if (span) span.textContent = Math.round(comps[i].amp * comps[i].scale);
+
+            if (isFinite(minX) && maxX > minX && maxY > minY) {
+                var PAD = 0.92;
+                var sc = Math.min((W * PAD) / (maxX - minX), (H * PAD) / (maxY - minY));
+                if (!isFinite(sc) || sc <= 0) sc = 1;
+                state.xf = {
+                    s: sc,
+                    cx: (minX + maxX) / 2,
+                    cy: (minY + maxY) / 2
+                };
+            } else {
+                state.xf = { s: 1, cx: 0, cy: 0 };
             }
+
+            window.__ftXf = {
+                s: state.xf.s, cx: state.xf.cx, cy: state.xf.cy,
+                W: W, H: H,
+                modelW: maxX - minX, modelH: maxY - minY,
+                nComp: state.comps.length
+            };
+
+            /* 清空轨迹、时间归零 —— 让动画从头画 */
+            state.path = [];
+            state.t = 0;
+            resetSteps();
         }
 
         /* ---------- 画一帧 ---------- */
@@ -535,8 +500,13 @@
             var comps = state.comps.filter(function (c) { return c.on; });
             if (!comps.length) return;
 
-            var cx = W / 2, cy = H / 2;
-            var x = cx, y = cy;
+            /* 模型坐标 → 画布坐标 */
+            var xf = state.xf;
+            function toScreen(mx, my) {
+                return [W / 2 + (mx - xf.cx) * xf.s,
+                        H / 2 + (my - xf.cy) * xf.s];
+            }
+            var x = 0, y = 0;      /* 模型坐标，从原点起算 */
 
             /* 齿轮 */
             if (state.showGear) {
@@ -554,9 +524,12 @@
                     var nx = x + r * Math.cos(ang);
                     var ny = y + r * Math.sin(ang);
 
-                    /* 圈 */
+                    /* 转到屏幕坐标再画 */
+                    var sp = toScreen(x, y);
+                    var sr = r * xf.s;
+
                     ctx.beginPath();
-                    ctx.arc(x, y, r, 0, Math.PI * 2);
+                    ctx.arc(sp[0], sp[1], sr, 0, Math.PI * 2);
                     ctx.strokeStyle = 'rgba(0,229,255,' + Math.max(0.03, 0.3 - i * 0.0022) + ')';
                     ctx.lineWidth = 1;
                     ctx.stroke();
@@ -565,24 +538,25 @@
                     /* 齿数等于频率，但一个小圆上画几十个齿会糊成一片，
                        所以齿数封顶 48，而且半径小于 12 干脆不画齿。 */
                     var teeth = Math.min(Math.abs(c.freq), 48);
-                    if (drawTeeth && teeth >= 2 && r > 12) {
-                        var tl = Math.min(7, r * 0.22);
+                    if (drawTeeth && teeth >= 2 && sr > 12) {
+                        var tl = Math.min(7, sr * 0.22);
                         ctx.strokeStyle = 'rgba(0,229,255,' + Math.max(0.07, 0.45 - i * 0.008) + ')';
                         ctx.lineWidth = 1.2;
                         ctx.beginPath();
                         for (var k = 0; k < teeth; k++) {
                             var ta = ang + k * 2 * Math.PI / teeth;
                             var ca = Math.cos(ta), sa = Math.sin(ta);
-                            ctx.moveTo(x + ca * (r - tl), y + sa * (r - tl));
-                            ctx.lineTo(x + ca * (r + tl * 0.35), y + sa * (r + tl * 0.35));
+                            ctx.moveTo(sp[0] + ca * (sr - tl), sp[1] + sa * (sr - tl));
+                            ctx.lineTo(sp[0] + ca * (sr + tl * 0.35), sp[1] + sa * (sr + tl * 0.35));
                         }
                         ctx.stroke();
                     }
 
                     /* 半径连线 */
+                    var np = toScreen(nx, ny);
                     ctx.beginPath();
-                    ctx.moveTo(x, y);
-                    ctx.lineTo(nx, ny);
+                    ctx.moveTo(sp[0], sp[1]);
+                    ctx.lineTo(np[0], np[1]);
                     ctx.strokeStyle = 'rgba(127,230,255,.5)';
                     ctx.lineWidth = 1;
                     ctx.stroke();
@@ -598,7 +572,9 @@
                 }
             }
 
-            /* 笔尖 */
+            /* 笔尖（转到屏幕坐标） */
+            var tp = toScreen(x, y);
+            x = tp[0]; y = tp[1];
             ctx.beginPath();
             ctx.arc(x, y, 4, 0, Math.PI * 2);
             ctx.fillStyle = '#ffd85e';
