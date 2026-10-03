@@ -357,7 +357,7 @@
               '</div>' +
               '<div class="nb-ft-tools">' +
                 '<input type="text" maxlength="14" data-text placeholder="输入文字，中英文都行">' +
-                '<button class="nb-ft-btn on" data-act="play">暂停</button>' +
+                '<button class="nb-ft-btn" data-act="play">开始</button>' +
                 '<button class="nb-ft-btn on" data-act="showgear">显示齿轮</button>' +
                 '<button class="nb-ft-btn on" data-act="showpath">显示轨迹</button>' +
                 '<span style="display:flex;align-items:center;gap:8px;font-size:.72rem;' +
@@ -430,7 +430,9 @@
         function resetSteps() { stepAvg = { sum: 0, n: 0, buf: [] }; }
 
         var state = {
-            playing: true,
+            /* 默认暂停：打开就是一张空白画布，只显示齿轮的初始位置，
+               看不到字。点「开始」才开始一笔一笔描出来。 */
+            playing: false,
             showGear: true,
             showPath: true,
             text: 'NB频道',
@@ -505,8 +507,8 @@
                 };
             });
 
-            /* 先空转一圈把轨迹攒出来，否则刚切过来画布是空的，
-               要盯着看 9 秒才出现字 */
+            /* 轨迹清空、时间归零 —— 画布保持空白，
+               只显示齿轮的初始位置，等用户点「开始」再画。 */
             state.path = [];
             state.t = 0;
             resetSteps();
@@ -736,6 +738,16 @@
             this.textContent = state.playing ? '暂停' : '继续';
             this.classList.toggle('on', state.playing);
         });
+
+        /* 「重置」也顺手把播放停掉，回到空白状态 */
+        var _resetBtn = host.querySelector('[data-act="reset"]');
+        if (_resetBtn) {
+            _resetBtn.addEventListener('click', function () {
+                var pb = host.querySelector('[data-act="play"]');
+                state.playing = false;
+                if (pb) { pb.textContent = '开始'; pb.classList.remove('on'); }
+            });
+        }
         host.querySelector('[data-act="showgear"]').addEventListener('click', function () {
             state.showGear = !state.showGear;
             this.classList.toggle('on', state.showGear);
