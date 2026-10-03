@@ -502,7 +502,7 @@
             /* 轨迹清空、时间归零 —— 画布保持空白，
                只显示齿轮的初始位置，等用户点「开始」再画。 */
             state.path = [];
-            state.t = 0;
+            state.t = state.t0 || 0;
             resetSteps();
             prerun();
         }
@@ -521,6 +521,7 @@
             var minX = Infinity, maxX = -Infinity;
             var minY = Infinity, maxY = -Infinity;
 
+            var bestT = 0, bestD = Infinity;
             for (var n = 0; n < S; n++) {
                 var t = n / S * 2 * Math.PI;
                 var x = 0, y = 0;
@@ -536,22 +537,26 @@
                 if (x > maxX) maxX = x;
                 if (y < minY) minY = y;
                 if (y > maxY) maxY = y;
+                /* 顺便找离中心最近的采样点，用它当动画的起始角度 */
+                var dOrg = x * x + y * y;
+                if (dOrg < bestD) { bestD = dOrg; bestT = t; }
             }
 
             if (isFinite(minX) && maxX > minX && maxY > minY) {
                 var PAD = 0.92;
                 var sc = Math.min((W * PAD) / (maxX - minX), (H * PAD) / (maxY - minY));
                 if (!isFinite(sc) || sc <= 0) sc = 1;
-                /* 中心取【轨迹包围盒中心】和【齿轮链起点(原点)】的中点。
-                   只用包围盒中心的话，齿轮会聚在一边、笔尖飘在另一边 ——
-                   因为 t=0 时所有齿轮同向叠加，笔尖在离原点最远处，
-                   转起来之后各分量互相抵消才回到图形内部。
-                   取中点两边都能兼顾。 */
+                /* 中心用【轨迹包围盒中心】，让画出来的字居中。
+                   另外顺便找一下：一圈里笔尖离中心最近的那个角度是哪个 ——
+                   用它当初始相位，这样暂停时笔尖落在齿轮云中间，
+                   而不是被推到曲线最外端（t=0 时所有分量同向叠加，
+                   位移最大，笔尖必然在最远处）。 */
                 state.xf = {
                     s: sc,
-                    cx: ((minX + maxX) / 2) * 0.5,
-                    cy: ((minY + maxY) / 2) * 0.5
+                    cx: (minX + maxX) / 2,
+                    cy: (minY + maxY) / 2
                 };
+                state.t0 = bestT;   /* 动画起始角度 */
             } else {
                 state.xf = { s: 1, cx: 0, cy: 0 };
             }
