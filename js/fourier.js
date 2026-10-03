@@ -57,89 +57,137 @@
             if (img[i * 4 + 3] > 128) solid[i] = 1;
         }
 
-        /* ---------- 2. 连通域：把实心像素分组 ---------- */
+        /* ---------- 2. 边界像素 + 连通域 ----------
+           先把「自己是实心、四邻有一个是空」的像素挑出来当边界。
+           然后【在边界掩码上】做连通域 —— 外轮廓和内孔的边界
+           在这个掩码里本来就是分开的两组像素，所以「B」里面的洞
+           会各自成为一组，不会再被漏掉。
+           （之前在实心掩码上分组，「B」内外连着算一个域，
+              Moore 追踪只走外圈，里面的孔就丢了。） */
+        var isEdge = new Uint8Array(W * H);
+        var edgeCount = 0;
+        for (var y1 = 0; y1 < H; y1++) {
+            for (var x1 = 0; x1 < W; x1++) {
+                var ii = y1 * W + x1;
+                if (!solid[ii]) continue;
+                var l = x1 > 0 ? solid[ii - 1] : 0;
+                var r = x1 < W - 1 ? solid[ii + 1] : 0;
+                var u = y1 > 0 ? solid[ii - W] : 0;
+                var d = y1 < H - 1 ? solid[ii + W] : 0;
+                if (!l || !r || !u || !d) { isEdge[ii] = 1; edgeCount++; }
+            }
+        }
+        if (edgeCount < 12) return null;
+
         var label = new Int32Array(W * H).fill(-1);
         var comps = [];
         var stack = [];
         for (var p0 = 0; p0 < W * H; p0++) {
-            if (!solid[p0] || label[p0] >= 0) continue;
+            if (!isEdge[p0] || label[p0] >= 0) continue;
             var id = comps.length;
             var cells = [];
             stack.length = 0;
             stack.push(p0);
             label[p0] = id;
+            /* 八邻域连通：边界可能是斜着连的 */
             while (stack.length) {
                 var q = stack.pop();
                 cells.push(q);
                 var qx = q % W, qy = (q - qx) / W;
-                /* 四邻足够，八邻会把斜对角连成一片 */
-                for (var d = 0; d < 4; d++) {
-                    var nx = qx + (d === 0 ? 1 : d === 1 ? -1 : 0);
-                    var ny = qy + (d === 2 ? 1 : d === 3 ? -1 : 0);
-                    if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-                    var r = ny * W + nx;
-                    if (solid[r] && label[r] < 0) { label[r] = id; stack.push(r); }
+                for (var dx = -1; dx <= 1; dx++) {
+                    for (var dy = -1; dy <= 1; dy++) {
+                        if (!dx && !dy) continue;
+                        var nx = qx + dx, ny = qy + dy;
+                        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+                        var rr = ny * W + nx;
+                        if (isEdge[rr] && label[rr] < 0) { label[rr] = id; stack.push(rr); }
+                    }
                 }
             }
-            /* 太小的当作噪点扔掉 */
-            if (cells.length >= 24) comps.push(cells);
-            else comps.forEach(function () {});
+            /* 阈值从 24 降到 8 —— 字里的小笔画（比如「首」里那根横线）
+               本来就不大，滤太狠会丢掉。 */
+            if (cells.length >= 8) comps.push({ cells: cells, id: id });
         }
         if (!comps.length) return null;
 
-        /* ---------- 3. 每个连通域单独描外轮廓 ----------
-           Moore 邻域追踪：从最左上的像素起步，沿边界顺时针走一圈。 */
-        function traceContour(cells, labelId) {
-            /* 找起始点：该域里最上面那一行、最左边的像素 */
-            var start = cells[0];
-            cells.forEach(function (c) {
-                var cy = (c / W) | 0, sy = (start / W) | 0;
-                if (cy < sy || (cy === sy && c < start)) start = c;
-            });
+        /* ---------- 3. 每组内部最近邻串链 ----------
+           用空间网格加速：把点按格子分桶，找邻居时只查周围几格，
+           否则每组几千个点做 O(n²) 会卡住。 */
+        function chain(cells) {
+            var n = cells.length;
+            if (n < 4) return null;
 
-            var dirs = [[1, 0], [1, 1], [0, 1], [-1, 1],
-                        [-1, 0], [-1, -1], [0, -1], [1, -1]];
-            var pts = [];
-            var cx = start % W, cy = (start / W) | 0;
-            var sx = cx, sy = cy;
-            var dir = 6;                     /* 从"上"开始找 */
-            var guard = 0, maxSteps = cells.length * 8 + 400;
+            var GX = 8;                                  /* 格子边长 */
+            var grid = {};
+            for (var i = 0; i < n; i++) {
+                var px = cells[i] % W, py = (cells[i] / W) | 0;
+                var key = ((px / GX) | 0) + ',' + ((py / GX) | 0);
+                (grid[key] || (grid[key] = [])).push(i);
+            }
+            var pts = new Array(n);
+            for (var j = 0; j < n; j++) {
+                pts[j] = [cells[j] % W, (cells[j] / W) | 0];
+            }
 
-            do {
-                pts.push([cx, cy]);
-                var found = false;
-                /* 从上一方向的下一个开始，顺时针找一个属于本域的像素 */
-                for (var k = 0; k < 8; k++) {
-                    var nd = (dir + 6 + k) % 8;   /* 回退一格再顺时针扫 */
-                    var nx = cx + dirs[nd][0], ny = cy + dirs[nd][1];
-                    if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-                    if (label[ny * W + nx] === labelId) {
-                        dir = nd;
-                        cx = nx; cy = ny;
-                        found = true;
-                        break;
+            var used = new Uint8Array(n);
+            /* 起点取最左上的点，稳定 */
+            var start = 0;
+            for (var k = 1; k < n; k++) {
+                if (pts[k][1] < pts[start][1] ||
+                    (pts[k][1] === pts[start][1] && pts[k][0] < pts[start][0])) start = k;
+            }
+            var order = [start];
+            used[start] = 1;
+            var cur = start;
+
+            for (var step = 1; step < n; step++) {
+                var cx = pts[cur][0], cy = pts[cur][1];
+                var best = -1, bestD = Infinity;
+                /* 一圈一圈往外找，找到就停 */
+                for (var ring = 1; ring <= 10 && best < 0; ring++) {
+                    var gx0 = ((cx - GX * ring) / GX) | 0;
+                    var gx1 = ((cx + GX * ring) / GX) | 0;
+                    var gy0 = ((cy - GX * ring) / GX) | 0;
+                    var gy1 = ((cy + GX * ring) / GX) | 0;
+                    for (var gx = gx0; gx <= gx1; gx++) {
+                        for (var gy = gy0; gy <= gy1; gy++) {
+                            /* 只看这一圈，里面的上一轮已经查过 */
+                            if (ring > 1 && gx > gx0 && gx < gx1 && gy > gy0 && gy < gy1) continue;
+                            var bucket = grid[gx + ',' + gy];
+                            if (!bucket) continue;
+                            for (var t = 0; t < bucket.length; t++) {
+                                var m = bucket[t];
+                                if (used[m]) continue;
+                                var ddx = pts[m][0] - cx, ddy = pts[m][1] - cy;
+                                var dd = ddx * ddx + ddy * ddy;
+                                if (dd < bestD) { bestD = dd; best = m; }
+                            }
+                        }
                     }
                 }
-                if (!found) break;
-                if (++guard > maxSteps) break;
-            } while (!(cx === sx && cy === sy) || pts.length < 4);
-
-            return pts;
+                if (best < 0) break;
+                used[best] = 1;
+                order.push(best);
+                cur = best;
+            }
+            if (order.length < 4) return null;
+            return order.map(function (o) { return pts[o]; });
         }
 
-        /* 各域的轮廓 + 重心，按 x 排序（从左到右） */
         var groups = [];
-        comps.forEach(function (cells) {
-            var pts = traceContour(cells, label[cells[0]]);
-            if (pts.length < 12) return;
+        comps.forEach(function (cp) {
+            var pts = chain(cp.cells);
+            if (!pts || pts.length < 4) return;
             var mx = 0, my = 0;
             pts.forEach(function (p) { mx += p[0]; my += p[1]; });
             mx /= pts.length; my /= pts.length;
-            groups.push({ pts: pts, mx: mx, my: my, n: cells.length });
+            groups.push({ pts: pts, mx: mx, my: my, n: cp.cells.length });
         });
         if (!groups.length) return null;
 
-        groups.sort(function (a, b) { return a.mx - b.mx; });
+        /* 小的排前面、大的排后面？不 —— 按从左到右排，
+           这样笔画顺序跟写字方向大体一致。 */
+        groups.sort(function (p, q) { return p.mx - q.mx; });
 
         /* ---------- 4. 拼成一条序列并均匀重采样 ----------
            域与域之间必然有跳跃，但跳跃次数现在【等于域数】，
