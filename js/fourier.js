@@ -319,27 +319,13 @@
         '  border:1px solid rgba(255,255,255,.14);}',
         '.nb-ft-preset:hover{background:rgba(0,229,255,.16);color:#dff3ff;}',
         /* 50 个齿轮，网格排密一点，不然面板拉得老长 */
-        '.nb-ft-gears{margin-top:18px;display:grid;gap:6px;',
         '  grid-template-columns:repeat(auto-fill,minmax(178px,1fr));',
         '  max-height:340px;overflow-y:auto;padding-right:4px;}',
-        '.nb-ft-gears::-webkit-scrollbar{width:8px;}',
-        '.nb-ft-gears::-webkit-scrollbar-thumb{background:rgba(0,229,255,.3);',
         '  border-radius:4px;}',
-        '.nb-ft-gears::-webkit-scrollbar-track{background:rgba(255,255,255,.05);}',
-        '.nb-ft-gear{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:8px;',
         '  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);',
         '  font-size:.68rem;color:#9fb6d4;}',
-        '.nb-ft-gear.on{border-color:rgba(0,229,255,.42);background:rgba(0,229,255,.08);}',
-        '.nb-ft-gear .sw{width:26px;height:15px;border-radius:8px;cursor:pointer;flex:0 0 auto;',
         '  background:rgba(255,255,255,.16);position:relative;transition:background .2s;}',
-        '.nb-ft-gear .sw::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;',
         '  border-radius:50%;background:#8fa8c8;transition:transform .2s,background .2s;}',
-        '.nb-ft-gear.on .sw{background:rgba(0,229,255,.45);}',
-        '.nb-ft-gear.on .sw::after{transform:translateX(11px);background:#00e5ff;}',
-        '.nb-ft-gear .lb{flex:1;min-width:0;line-height:1.5;}',
-        '.nb-ft-gear .lb b{color:#dff3ff;font-family:ui-monospace,monospace;}',
-        '.nb-ft-gear .lb i{font-style:normal;color:#7fe6ff;}',
-        '.nb-ft-gear input[type=range]{width:100%;accent-color:#00e5ff;margin-top:3px;}',
         '.nb-ft-tip{margin-top:14px;font-size:.72rem;line-height:1.9;color:#7f93b0;}',
         '@media(max-width:820px){.nb-ft-stage canvas{height:320px;}}'
     ].join('\n');
@@ -389,8 +375,7 @@
                 '<button class="nb-ft-preset" data-preset="NB频道">NB频道</button>' +
                 '<button class="nb-ft-preset" data-preset="NB-CHANNEL">NB-CHANNEL</button>' +
               '</div>' +
-              '<div class="nb-ft-gears" data-gears></div>' +
-              '<div class="nb-ft-tip">' +
+                            '<div class="nb-ft-tip">' +
                 '每个齿轮 = 一个频率分量：<b>半径</b>是它的振幅，<b>齿数</b>是它的频率' +
                 '（转一圈咬合几次）。所有齿轮首尾串起来，最外那个的笔尖就画出你输的字。' +
                 '齿轮按振幅从大到小排 —— 前面的定大体形状，后面的补细节。' +
@@ -405,7 +390,7 @@
         var cv = host.querySelector('canvas');
         var ctx = cv.getContext('2d');
         var hudEl = host.querySelector('[data-hud]');
-        var gearsEl = host.querySelector('[data-gears]');
+        /* 齿轮调节面板已去掉，这里不再需要 gearsEl */
         var textEl = host.querySelector('[data-text]');
 
         /* 自适应断笔：维护最近若干步的平均步长，
@@ -440,6 +425,7 @@
             t: 0,
             path: [],
             W: 0, H: 0,
+            fftMs: 0,          /* 上次 FFT 耗时，HUD 里显示 */
             /* 绘制变换：把模型坐标映射到画布。prerun 量完包围盒后填好，
                一次到位，不用迭代改振幅。 */
             xf: { s: 1, cx: 0, cy: 0 }
@@ -481,7 +467,9 @@
             state.pts = pts;
             var t0 = (window.performance || Date).now();
             var all = dft(pts);
-            var ld = (window.performance || Date).now() - t0;
+            /* 挂到 state 上 —— 原来这是个局部变量，
+               HUD 在 draw() 里读它读不到，一直报 ld is not defined */
+            state.fftMs = (window.performance || Date).now() - t0;
             /* 取振幅最大的前 10 个（跳过 freq=0 之外的直流项也别丢，它定中心） */
             var picked = all.slice(0, GEARM.cur);
 
@@ -501,50 +489,6 @@
                     on: true,
                     idx: i
                 };
-            });
-
-            /* 生成齿轮调节面板。几百个齿轮全渲染会卡，
-               所以只列前 60 个，剩下的在 HUD 里报个数。 */
-            gearsEl.innerHTML = '';
-            var SHOWMAX = 60;
-            var shown = state.comps.slice(0, SHOWMAX);
-            if (state.comps.length > SHOWMAX) {
-                var note = document.createElement('div');
-                note.style.cssText = 'grid-column:1/-1;font-size:.7rem;color:#7f93b0;' +
-                    'padding:6px 2px;line-height:1.7';
-                note.textContent = '只列出振幅最大的前 ' + SHOWMAX + ' 个，' +
-                    '另外 ' + (state.comps.length - SHOWMAX) + ' 个也在参与绘制（影响很小）';
-                gearsEl.appendChild(note);
-            }
-            shown.forEach(function (c) {
-                var row = document.createElement('div');
-                row.className = 'nb-ft-gear on';
-                row.innerHTML =
-                    '<span class="sw"></span>' +
-                    '<span class="lb">' +
-                      (c.freq === 0
-                        ? '直流 <b>0</b><i>（重心平移）</i>'
-                        : '齿数 <b>' + Math.abs(c.freq) + '</b>' +
-                          (c.freq < 0 ? '<i>（反转）</i>' : '')) +
-                      ' · 半径 <i data-amp>' + Math.round(c.amp) + '</i>' +
-                      '<input type="range" min="0" max="200" value="100" data-s>' +
-                    '</span>';
-                row.querySelector('.sw').addEventListener('click', function () {
-                    c.on = !c.on;
-                    row.classList.toggle('on', c.on);
-                });
-                var sl = row.querySelector('[data-s]');
-                sl.addEventListener('input', function () {
-                    c.scale = parseInt(sl.value, 10) / 100;
-                    row.querySelector('[data-amp]').textContent = Math.round(c.amp * c.scale);
-                });
-                /* 松手后按新的包围盒重新适配一次，别让图形跑出画布 */
-                sl.addEventListener('change', function () {
-                    state.path = [];
-                    resetSteps();
-                    prerun();
-                });
-                gearsEl.appendChild(row);
             });
 
             /* 先空转一圈把轨迹攒出来，否则刚切过来画布是空的，
@@ -755,7 +699,7 @@
                                            : head;
                 })() + '</b>' +
                 '<br>采样点 <b>' + (state.pts ? state.pts.length : 0) + '</b>' +
-                ' · FFT ' + Math.round(ld) + 'ms';
+                ' · FFT ' + Math.round(state.fftMs) + 'ms';
         }
 
         /* ---------- 主循环 ---------- */
