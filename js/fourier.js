@@ -266,7 +266,7 @@
                   'color:#7f93b0;letter-spacing:1px;margin-left:auto">' +
                   '齿轮数 <b data-gn style="color:#00e5ff;font-family:ui-monospace,monospace;' +
                     'min-width:30px;text-align:right">50</b>' +
-                  '<input type="range" min="10" max="400" step="5" value="50" data-gears ' +
+                  '<input type="range" min="10" max="1000" step="5" value="50" data-gears ' +
                     'style="width:170px;accent-color:#00e5ff">' +
                 '</span>' +
               '</div>' +
@@ -287,7 +287,8 @@
                 '齿轮按振幅从大到小排 —— 前面的定大体形状，后面的补细节。' +
                 '<b>单个字母</b>（N、B、π）50 个就够；' +
                 '<b>整个单词或汉字</b>是多个互不相连的笔画块，块与块之间要跳跃，' +
-                '跳跃的能量摊在所有频率上，得把齿轮拉到 200~400 才收得住。' +
+                '跳跃的能量摊在所有频率上，得把齿轮拉到 300 以上才收得住' +
+                '（最多 1000，再多画面变化就不明显了）。' +
                 '画的时候区域之间会自动断开，不会拉出多余的直线。' +
               '</div>' +
             '</div>';
@@ -338,7 +339,7 @@
            多个字母/汉字是多个互不相连的区域，区域之间要"跳跃"，
            跳跃的能量摊在所有频率上，得几百个分量才收得住。
            所以做成滑块，默认 50，最多 400。 */
-        var GEARM = { cur: 50, min: 10, max: 400 };
+        var GEARM = { cur: 50, min: 10, max: 1000 };
 
         /* ---------- 尺寸 ---------- */
         function resize() {
@@ -539,7 +540,14 @@
 
             /* 齿轮 */
             if (state.showGear) {
-                for (var i = 0; i < comps.length; i++) {
+                /* 1000 个齿轮的话，每帧画 1000 个圈 + 齿会拖慢。
+                   只画振幅最大的前 220 个 —— 后面的半径都很小，
+                   画出来在屏幕上也叠成一团，看不出区别。 */
+                var drawN = Math.min(comps.length, 220);
+                /* 超过 120 个就不画齿了，太密会把画布糊住 */
+                var drawTeeth = comps.length <= 120;
+
+                for (var i = 0; i < drawN; i++) {
                     var c = comps[i];
                     var r = c.amp * c.scale;
                     var ang = c.phase + c.freq * state.t;
@@ -549,7 +557,7 @@
                     /* 圈 */
                     ctx.beginPath();
                     ctx.arc(x, y, r, 0, Math.PI * 2);
-                    ctx.strokeStyle = 'rgba(0,229,255,' + Math.max(0.035, 0.3 - i * 0.004) + ')';
+                    ctx.strokeStyle = 'rgba(0,229,255,' + Math.max(0.03, 0.3 - i * 0.0022) + ')';
                     ctx.lineWidth = 1;
                     ctx.stroke();
 
@@ -557,7 +565,7 @@
                     /* 齿数等于频率，但一个小圆上画几十个齿会糊成一片，
                        所以齿数封顶 48，而且半径小于 12 干脆不画齿。 */
                     var teeth = Math.min(Math.abs(c.freq), 48);
-                    if (teeth >= 2 && r > 12) {
+                    if (drawTeeth && teeth >= 2 && r > 12) {
                         var tl = Math.min(7, r * 0.22);
                         ctx.strokeStyle = 'rgba(0,229,255,' + Math.max(0.07, 0.45 - i * 0.008) + ')';
                         ctx.lineWidth = 1.2;
@@ -684,7 +692,7 @@
             gearDeb = setTimeout(function () {
                 state.path = [];
                 rebuild();
-            }, 260);
+            }, 420);
         });
 
         var deb = null;
