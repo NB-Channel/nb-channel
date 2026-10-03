@@ -602,10 +602,11 @@
                 nComp: state.comps.length
             };
 
-            /* 清空轨迹、时间归零 —— 让动画从头画 */
-            state.path = [];
-            state.t = 0;
-            resetSteps();
+            /* 注意：这里【不要】清 state.path。
+               原来在这清，结果 pretun 因为 ResizeObserver 之类的原因被
+               反复调用时，轨迹每帧都被清掉，永远攒不起来 ——
+               表现就是屏幕上只剩笔尖附近一丁点。
+               清空交给 rebuild()，它只在换图案/换齿轮数时跑。 */
         }
 
         /* ---------- 画一帧 ---------- */
@@ -613,7 +614,12 @@
             var W = state.W, H = state.H;
             if (!W || !H) return;
 
-            ctx.fillStyle = 'rgba(8,13,24,.34)';        /* 拖尾 */
+            /* 完全不透明清屏。
+               原来这里用 rgba(8,13,24,.34) 做拖尾，结果轨迹每个点大约
+               10 帧后就淡没了 —— 60fps 下才 0.17 秒，而一圈是 9 秒，
+               屏幕上永远只有最后一小段，图形拼不完整。
+               轨迹本来就每帧从 state.path 重描，不需要靠残留维持。 */
+            ctx.fillStyle = '#080d18';
             ctx.fillRect(0, 0, W, H);
 
             var comps = state.comps.filter(function (c) { return c.on; });
