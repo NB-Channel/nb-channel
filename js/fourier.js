@@ -327,15 +327,7 @@
         '  background:rgba(255,255,255,.16);position:relative;transition:background .2s;}',
         '  border-radius:50%;background:#8fa8c8;transition:transform .2s,background .2s;}',
         '.nb-ft-tip{margin-top:14px;font-size:.72rem;line-height:1.9;color:#7f93b0;}',
-        '@media(max-width:820px){.nb-ft-stage canvas{height:320px;}}',
-        /* 代码面板的语法高亮配色。
-           代码本身由 tech-showcase.js 渲染，但样式是全局的，
-           在这里注入 head 一样生效。 */
-        '.nb-cm{color:#6b7f99 !important;font-style:italic;}',
-        '.nb-st{color:#8fd97a !important;}',
-        '.nb-nu{color:#f0a35e !important;}',
-        '.nb-kw{color:#c98bdb !important;font-weight:600;}',
-        '.nb-fn{color:#5fc9f8 !important;}'
+        '@media(max-width:820px){.nb-ft-stage canvas{height:320px;}}'
     ].join('\n');
 
     /* ============================================================
@@ -873,5 +865,35 @@
         };
     }
 
-    window.NBFourier = { mount: mount, pointsFromText: pointsFromText, dft: dft };
+    /* ============================================================
+       代码面板的语法高亮配色
+       ------------------------------------------------------------
+       必须在脚本加载时就注入，不能等 mount()。
+       因为代码面板是 tech-showcase.js 渲染的，首屏它先把代码画好了，
+       那时候 fourier 的样式还没进 head，代码就是单色的 ——
+       表现就是「刚打开没颜色，切一下 tab 才有」。
+       ============================================================ */
+    var HL_CSS = [
+        '.nb-cm{color:#6b7f99 !important;font-style:italic;}',
+        '.nb-st{color:#8fd97a !important;}',
+        '.nb-nu{color:#f0a35e !important;}',
+        '.nb-kw{color:#c98bdb !important;font-weight:600;}',
+        '.nb-fn{color:#5fc9f8 !important;}'
+    ].join('\n');
+
+    function injectHlCss() {
+        if (document.getElementById('nbHlCss')) return;
+        var st = document.createElement('style');
+        st.id = 'nbHlCss';
+        st.textContent = HL_CSS;
+        (document.head || document.documentElement).appendChild(st);
+    }
+    injectHlCss();
+
+    window.NBFourier = {
+        mount: mount,
+        pointsFromText: pointsFromText,
+        dft: dft,
+        injectHlCss: injectHlCss
+    };
 })();
