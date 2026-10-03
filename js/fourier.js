@@ -28,14 +28,16 @@
         target = target || 32768;
 
         /* ---------- 1. 把字画出来 ---------- */
-        /* 画布要够大 —— 边界像素越多，能支撑的采样点就越多，
-           齿轮数上限也就越高。 */
+        /* 画布要够大 —— 边界像素越多，能支撑的采样点就越多。
+           跟着采样点数走：轮廓像素不够时，多出来的点只能靠插值凑，
+           FFT 出来的高频是假的。 */
+        var pw = Math.min(4000, Math.max(1200, Math.round(Math.sqrt(target) * 15)));
         var probe = document.createElement('canvas');
-        probe.width = 2400;
-        probe.height = 820;
+        probe.width = pw;
+        probe.height = Math.round(pw * 0.34);
         var pc = probe.getContext('2d');
         var FONT = 'system-ui,-apple-system,"Microsoft YaHei",sans-serif';
-        var size = 580;
+        var size = Math.round(probe.height * 0.72);
         pc.font = '900 ' + size + 'px ' + FONT;
         pc.textAlign = 'center';
         pc.textBaseline = 'middle';
@@ -316,12 +318,17 @@
                 '<button class="nb-ft-btn on" data-act="play">暂停</button>' +
                 '<button class="nb-ft-btn on" data-act="showgear">显示齿轮</button>' +
                 '<button class="nb-ft-btn on" data-act="showpath">显示轨迹</button>' +
-                '<span style="display:flex;align-items:center;gap:9px;font-size:.72rem;' +
-                  'color:#7f93b0;letter-spacing:1px;margin-left:auto">' +
+                '<span style="display:flex;align-items:center;gap:8px;font-size:.72rem;' +
+                  'color:#7f93b0;letter-spacing:1px;margin-left:auto;flex-wrap:wrap">' +
+                  '采样点 <b data-sn style="color:#00e5ff;font-family:ui-monospace,monospace;' +
+                    'min-width:50px;text-align:right">32768</b>' +
+                  '<input type="range" min="10" max="16" step="1" value="15" data-samp ' +
+                    'style="width:110px;accent-color:#00e5ff" title="2 的幂：1024 ~ 65536">' +
+                  '<span style="opacity:.45">│</span>' +
                   '齿轮数 <b data-gn style="color:#00e5ff;font-family:ui-monospace,monospace;' +
-                    'min-width:30px;text-align:right">50</b>' +
+                    'min-width:42px;text-align:right">50</b>' +
                   '<input type="range" min="10" max="10000" step="10" value="50" data-gears ' +
-                    'style="width:170px;accent-color:#00e5ff">' +
+                    'style="width:140px;accent-color:#00e5ff">' +
                 '</span>' +
               '</div>' +
               '<div class="nb-ft-tools">' +
@@ -401,6 +408,11 @@
            32768 点 FFT 约 16ms，拖动滑块也不会卡。 */
         var GEARM = { cur: 50, min: 10, max: 10000 };
 
+        /* 采样点数（重采样目标）。必须是 2 的幂 —— FFT 的要求。
+           范围 1024 ~ 65536，默认 32768。
+           齿轮数不能超过采样点的一半（奈奎斯特），下面做了联动。 */
+        var SAMPLEN = { cur: 32768, min: 1024, max: 65536 };
+
         /* ---------- 尺寸 ---------- */
         function resize() {
             var r = cv.getBoundingClientRect();
@@ -416,10 +428,12 @@
         function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
 
         function rebuild() {
-            var pts = pointsFromText(state.text || 'NB频道', 32768);
+            var pts = pointsFromText(state.text || 'NB频道', SAMPLEN.cur);
             if (!pts) { hudEl.textContent = '取不到轮廓，换点内容试试'; return; }
             state.pts = pts;
+            var t0 = (window.performance || Date).now();
             var all = dft(pts);
+            var ld = (window.performance || Date).now() - t0;
             /* 取振幅最大的前 10 个（跳过 freq=0 之外的直流项也别丢，它定中心） */
             var picked = all.slice(0, GEARM.cur);
 
@@ -675,7 +689,7 @@
                                            : head;
                 })() + '</b>' +
                 '<br>采样点 <b>' + (state.pts ? state.pts.length : 0) + '</b>' +
-                ' · FFT';
+                ' · FFT ' + Math.round(ld) + 'ms';
         }
 
         /* ---------- 主循环 ---------- */
@@ -717,6 +731,29 @@
         });
         var gearSlider = host.querySelector('[data-gears]');
         var gnEl = host.querySelector('[data-gn]');
+        var sampSlider = host.querySelector('[data-samp]');
+        var snEl = host.querySelector('[data-sn]');
+        var sampDeb = null;
+
+        /* 采样点滑块：滑的是 2 的幂的指数（10 → 1024，16 → 65536）。
+           改了要重新取轮廓 + 重算 FFT，比较重，防抖给长一点。 */
+        sampSlider.addEventListener('input', function () {
+            SAMPLEN.cur = Math.pow(2, parseInt(sampSlider.value, 10));
+            snEl.textContent = SAMPLEN.cur;
+            /* 奈奎斯特：齿轮数不能超过采样点的一半 */
+            var cap = Math.floor(SAMPLEN.cur / 2);
+            gearSlider.max = Math.min(GEARM.max, cap);
+            if (GEARM.cur > cap) {
+                GEARM.cur = cap;
+                gearSlider.value = cap;
+                gnEl.textContent = cap;
+            }
+            clearTimeout(sampDeb);
+            sampDeb = setTimeout(function () {
+                state.path = [];
+                rebuild();
+            }, 650);
+        });
         var gearDeb = null;
         gearSlider.addEventListener('input', function () {
             GEARM.cur = parseInt(gearSlider.value, 10);
