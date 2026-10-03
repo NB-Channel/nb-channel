@@ -415,6 +415,12 @@
                     c.scale = parseInt(sl.value, 10) / 100;
                     row.querySelector('[data-amp]').textContent = Math.round(c.amp * c.scale);
                 });
+                /* 松手后按新的包围盒重新适配一次，别让图形跑出画布 */
+                sl.addEventListener('change', function () {
+                    state.path = [];
+                    resetSteps();
+                    prerun();
+                });
                 gearsEl.appendChild(row);
             });
 
@@ -426,7 +432,10 @@
             prerun();
         }
 
-        /* 不开动画，纯算一遍把 path 填满 */
+        /* 不开动画，纯算一遍把 path 填满。
+           算完顺便按【实际轨迹的包围盒】把缩放系数调准 ——
+           原来按最大振幅缩放，但区域之间的跳跃会让笔尖跑得更远，
+           字就被裁在画布外面了（站长说的「展示不全」）。 */
         function prerun() {
             resetSteps();
             var steps = 420;
@@ -447,6 +456,71 @@
                 state.path.push([x, y, jp]);
             }
             state.t = 0;
+
+            /* 按包围盒修正缩放 */
+            fitToBox();
+            /* 缩放变了，轨迹要重算一遍 */
+            state.path = [];
+            for (var n2 = 0; n2 < steps; n2++) {
+                state.t = n2 / steps * 2 * Math.PI;
+                var x2 = (state.W || 900) / 2;
+                var y2 = (state.H || 440) / 2;
+                state.comps.forEach(function (c) {
+                    if (!c.on) return;
+                    var a = c.phase + c.freq * state.t;
+                    x2 += c.amp * c.scale * Math.cos(a);
+                    y2 += c.amp * c.scale * Math.sin(a);
+                });
+                var jp2 = false;
+                if (state.path.length) {
+                    var lp2 = state.path[state.path.length - 1];
+                    jp2 = isJump(Math.hypot(x2 - lp2[0], y2 - lp2[1]));
+                }
+                state.path.push([x2, y2, jp2]);
+            }
+            state.t = 0;
+        }
+
+        /* 量一遍当前齿轮能画到多大，把整体缩放调到刚好装进画布 */
+        function fitToBox() {
+            var comps = state.comps;
+            if (!comps.length) return;
+            var W = state.W || 900, H = state.H || 440;
+            var need = 0;
+            /* 最坏情况是所有齿轮同向叠加，但那样太保守（字会很小）。
+               实际是均匀采样一圈，量真实范围更准。 */
+            var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            var S = 360;
+            for (var n = 0; n < S; n++) {
+                var t = n / S * 2 * Math.PI;
+                var px = 0, py = 0;
+                comps.forEach(function (c) {
+                    if (!c.on) return;
+                    var a = c.phase + c.freq * t;
+                    px += c.amp * c.scale * Math.cos(a);
+                    py += c.amp * c.scale * Math.sin(a);
+                });
+                if (px < minX) minX = px;
+                if (px > maxX) maxX = px;
+                if (py < minY) minY = py;
+                if (py > maxY) maxY = py;
+            }
+            if (!isFinite(minX)) return;
+            need = Math.max(maxX - minX, maxY - minY);
+            if (need <= 0) return;
+            var want = Math.min(W, H) * 0.78;
+            var k = want / need;
+            /* 缩放系数一次别动太多，避免来回震荡 */
+            if (k > 1.34) k = 1.34;
+            if (k < 0.74) k = 0.74;
+            if (Math.abs(k - 1) < 0.02) return;
+            comps.forEach(function (c) { c.amp *= k; });
+            /* 面板上显示的半径也跟着更新 */
+            var rows = gearsEl.querySelectorAll('.nb-ft-gear');
+            for (var i = 0; i < rows.length && i < comps.length; i++) {
+                var span = rows[i].querySelector('[data-amp]');
+                if (span) span.textContent = Math.round(comps[i].amp * comps[i].scale);
+            }
         }
 
         /* ---------- 画一帧 ---------- */
@@ -627,14 +701,57 @@
             window.__ftR = setTimeout(function () { resize(); rebuild(); }, 220);
         });
 
-        /* ---------- 启动 ---------- */
+        /* ---------- 启动 ----------
+           注意：这个模块挂在展示区的 tab 里，如果当前不是这个 tab，
+           容器是 display:none，getBoundingClientRect 量出来是 0×0，
+           画布尺寸就是 0，什么都画不出来（站长说的「刚打开不显示，
+           切走再切回来才有」就是这个）。
+           所以用 ResizeObserver 盯着，一出现真实尺寸就重建。 */
         textEl.value = state.text;
-        /* 等布局稳定再量尺寸 */
-        setTimeout(function () {
+
+        var booted = false;
+        function boot() {
+            var r = cv.getBoundingClientRect();
+            if (r.width < 40 || r.height < 40) return false;   /* 还没尺寸 */
             resize();
             rebuild();
             if (!raf) raf = requestAnimationFrame(loop);
-        }, 60);
+            booted = true;
+            return true;
+        }
+
+        setTimeout(boot, 60);
+
+        if (window.ResizeObserver) {
+            var ro = new ResizeObserver(function () {
+                /* 尺寸变了就重来一次：从隐藏变可见、或者窗口缩放都走这里 */
+                var r = cv.getBoundingClientRect();
+                if (r.width < 40 || r.height < 40) return;
+                if (!booted) { boot(); return; }
+                if (Math.abs(r.width - state.W) > 2 || Math.abs(r.height - state.H) > 2) {
+                    clearTimeout(window.__ftR2);
+                    window.__ftR2 = setTimeout(function () {
+                        resize();
+                        rebuild();
+                    }, 160);
+                }
+            });
+            ro.observe(cv);
+        } else {
+            /* 老浏览器退回到轮询 */
+            var tries = 0;
+            var iv = setInterval(function () {
+                if (boot() || ++tries > 40) clearInterval(iv);
+            }, 200);
+        }
+
+        /* 再兜一层：有些情况下 ResizeObserver 也不会触发
+           （比如容器一直是 0 高），那就每隔一会儿试一次，试到有尺寸为止。 */
+        var late = 0;
+        var lateIv = setInterval(function () {
+            if (booted || ++late > 60) { clearInterval(lateIv); return; }
+            boot();
+        }, 250);
 
         return function () {
             if (raf) cancelAnimationFrame(raf);
