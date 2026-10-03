@@ -119,18 +119,33 @@
         if (choice && choice !== 'default' && BY_ID[choice] && available(choice)) {
             real = choice;
         }
+        /* 先记下当前是不是深色模式，再摘掉 dark 类。
+           摘掉是因为它的选择器权重（html.dark body）会压住主题底色；
+           但深色这个状态本身要留下来 —— 浅色主题（墨韵、护眼）靠它
+           切到自己的深色变体（themes.css 里的 html[theme=x][data-dark]）。 */
+        var wasDark = el.classList.contains('dark') ||
+            (window.matchMedia &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches);
+
         if (real === 'default') {
             el.removeAttribute(ATTR);
         } else {
             el.setAttribute(ATTR, real);
-            /* 页面上原本用 html.dark 表示深色模式，它的选择器权重
-               （html.dark body）比我们的（html[theme=x] body）高一级，
-               会把主题的底色压住。所以切到任何非默认主题时把 dark 摘掉，
-               由主题自己决定深浅。 */
             el.classList.remove('dark');
         }
+        if (wasDark) el.setAttribute('data-dark', '1');
+        else el.removeAttribute('data-dark');
         el.setAttribute('data-theme-resolved', real);
     }
+
+    /* 系统深色偏好变化时也跟着更新 data-dark，
+       这样用户改系统设置不用刷新页面 */
+    try {
+        var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+        if (mq && mq.addEventListener) {
+            mq.addEventListener('change', function () { apply(readChoice()); });
+        }
+    } catch (e) {}
 
     /* ---------- 对外接口 ---------- */
     var API = {

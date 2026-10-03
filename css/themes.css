@@ -1474,3 +1474,72 @@ html[theme] .mini-pie-container canvas {
 html[theme] .slider-container input[type="range"] {
     accent-color: var(--brand) !important;
 }
+
+/* ============================================================
+   浅色主题的深色变体
+   ------------------------------------------------------------
+   墨韵和护眼本身是浅色，之前没有深色版 —— 一开深色模式，
+   theme.js 又会把 html.dark 摘掉，等于深色开关在主题下完全失效。
+
+   这里给这两个主题各生成一套深色变量：
+   色相和饱和度保留，只把亮度翻过来（米色变深棕、墨色变浅灰），
+   所以还是同一个调子，只是明暗反了。
+
+   两种触发方式都支持：
+     · html[theme="x"][data-dark]        —— 网站自己的深色开关
+     · @media (prefers-color-scheme: dark) —— 系统深色
+   ============================================================ */
+
+html[theme="ink"][data-dark] {
+    --bg: #352d18;
+    --ink: #c5c0b8;
+    --ink-soft: #b4aca0;
+    --ink-faint: #958d80;
+    --line: rgba(255, 255, 255, .16);
+    --brand: #d36051;
+    --brand-deep: #db7466;
+    --card: #312710;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
+}
+@media (prefers-color-scheme: dark) {
+html[theme="ink"] {
+    --bg: #352d18;
+    --ink: #c5c0b8;
+    --ink-soft: #b4aca0;
+    --ink-faint: #958d80;
+    --line: rgba(255, 255, 255, .16);
+    --brand: #d36051;
+    --brand-deep: #db7466;
+    --card: #312710;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
+}
+}
+
+html[theme="eyecare"][data-dark] {
+    --bg: #4c4432;
+    --ink: #b3ada3;
+    --ink-soft: #a59d91;
+    --ink-faint: #8c8375;
+    --line: rgba(255, 255, 255, .16);
+    --brand: #b19b78;
+    --brand-deep: #bba988;
+    --card: #453c29;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
+}
+@media (prefers-color-scheme: dark) {
+html[theme="eyecare"] {
+    --bg: #4c4432;
+    --ink: #b3ada3;
+    --ink-soft: #a59d91;
+    --ink-faint: #8c8375;
+    --line: rgba(255, 255, 255, .16);
+    --brand: #b19b78;
+    --brand-deep: #bba988;
+    --card: #453c29;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
+}
+}
