@@ -149,12 +149,16 @@
         '.nb-pomo-btns button.gh:hover{background:rgba(107,90,62,.12);}',
         '.nb-pomo-tip{margin-top:10px;font-size:.68rem;color:#8b8375;line-height:1.7;}',
         /* 内嵌模式（首页那块）：整行拉宽，横向排布 */
-        '#nbPomoBox.nb-pomo-inline{position:relative;right:auto;bottom:auto;z-index:1;',
-        '  width:100%;}',
-        '#nbPomoBox.nb-pomo-inline .nb-pomo-ball{display:none !important;}',
-        '#nbPomoBox.nb-pomo-inline .nb-pomo-panel{position:relative;right:auto;',
-        '  bottom:auto;width:100%;max-width:none;display:block !important;',
-        '  animation:none;padding:26px 30px 22px;}',
+        /* 内嵌模式下小球要显示，但那个浮动面板不能冒出来
+           （内容已经在内嵌那块里了，再来一个就重复） */
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-panel{',
+        '  position:relative;right:auto;bottom:auto;width:100%;max-width:none;',
+        '  display:block !important;animation:none;}',
+        '#nbPomoBox.nb-pomo-inline{position:relative;right:auto;bottom:auto;',
+        '  width:100%;display:block;}',
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-ball{',
+        '  position:fixed;right:24px;bottom:88px;z-index:9998;}',
+        '#nbPomoBox.nb-pomo-inline .nb-pomo-panel{padding:26px 30px 22px;}',
         '#nbPomoBox.nb-pomo-inline .nb-pomo-ring{width:126px;height:126px;}',
         '#nbPomoBox.nb-pomo-inline .nb-pomo-ring svg{width:126px;height:126px;}',
         '#nbPomoBox.nb-pomo-inline .nb-pomo-ring .time{font-size:1.85rem;}',
@@ -277,17 +281,26 @@
         var toggleBtn = box.querySelector('[data-act="toggle"]');
         var ballEl = box.querySelector('[data-ball]');
 
-        /* 内嵌模式：小球藏起来、面板常开（它本来就是页面的一部分）。
+        /* 内嵌模式：内嵌那块面板常开（它本来就是页面的一部分）。
            注意这段必须放在上面那批 querySelector 之后 ——
            之前写在了 appendChild 后面，panel 还是 undefined，
-           一调 classList 就抛错，后面的 render() 全没执行。 */
+           一调 classList 就抛错，后面的 render() 全没执行。
+
+           小球在首页【也保留】：站长说右下角那个更顺手，
+           在别的页面用惯了，回首页反而找不到。
+           点它的行为在下面分两种处理。 */
         if (inlineHost) {
-            if (ballEl) ballEl.style.display = 'none';
             panel.classList.add('open');
         }
 
-        /* 点小球：展开 / 收起 */
+        /* 点小球：
+             首页（有内嵌面板）→ 平滑滚到内嵌那块，不另开浮层
+             别的页面         → 照旧展开 / 收起浮动面板  */
         ballEl.addEventListener('click', function () {
+            if (inlineHost) {
+                inlineHost.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
             panel.classList.toggle('open');
         });
         box.querySelector('[data-close]').addEventListener('click', function () {
