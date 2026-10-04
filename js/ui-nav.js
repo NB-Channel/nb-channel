@@ -399,7 +399,7 @@
         }, 3000);
     }
 
-    var MAIN_HREFS = ['index.html', 'videos.html', 'about.html', 'changelog.html', 'product.html', 'APP.html'];
+    var MAIN_HREFS = ['index.html', 'videos.html', 'about.html', 'rules.html', 'changelog.html', 'product.html', 'APP.html'];
 
     // 从现有导航 DOM 收集链接 → 渲染新版导航并替换
     // 页面已有静态 .top-nav(单文件新UI)时跳过;有 .nav-container 时替换;都没有时用标准模板生成
@@ -420,6 +420,7 @@
             // 标准导航模板（与 gen_new.ps1 的 New-NavHtml 一致）
             var S = [
                 ['index.html', '首页'], ['videos.html', '视频'], ['about.html', '关于'],
+                ['rules.html', '用户守则'],
                 ['changelog.html', '更新日志'], ['product.html', '我的产品'], ['APP.html', '软件/APP下载']
             ];
             var F = [
@@ -688,6 +689,7 @@
                 item('index.html', '首页') +
                 item('videos.html', '视频') +
                 item('about.html', '关于') +
+                item('rules.html', '用户守则') +
                 item('changelog.html', '更新日志') +
                 item('product.html', '我的产品') +
                 item('APP.html', '软件/APP') +

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" href="data:,">
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NB频道官网 - 用户守则</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ui-new.css">
+    <link rel="stylesheet" href="css/classic.css">
+    <!-- 官网模式皮肤(仅html.beta选择器生效;静态加载避免样式闪跳) -->
+    <link rel="stylesheet" href="css/beta.css?v=20260846" id="uiBetaCss">
+    <style>
+        /* ===== 用户守则页专用样式 =====
+           颜色一律走 CSS 变量, 这样 新潮 / 经典 / 官网(beta) 三套 UI
+           以及日间 / 夜间两套配色都不用单独写一份。 */
+        .rules-content { line-height: 1.9; }
+        .rules-content h3 {
+            margin: 34px 0 14px;
+            padding-left: 12px;
+            border-left: 5px solid var(--status-border);
+            color: var(--status-border);
+            font-size: 1.3rem;
+            line-height: 1.5;
+        }
+        .rules-content h3:first-of-type { margin-top: 8px; }
+        .rules-content h4 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+        .rules-content p { margin-bottom: 14px; }
+        .rules-content ul, .rules-content ol {
+            margin: 0 0 14px 24px;
+            padding: 0;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background: none !important;
+        }
+        .rules-content li { margin-bottom: 7px; }
+        .rules-content ul ul, .rules-content ol ul { margin: 8px 0 0 22px; }
+        .rules-content strong { color: var(--status-border); }
+
+        .rules-lead {
+            margin: 0 0 26px;
+            padding: 16px 20px;
+            border: 1px solid var(--status-border);
+            border-left: 6px solid var(--status-border);
+            border-radius: 10px;
+            background: var(--status-bg);
+            color: var(--status-text);
+            font-size: 1.05rem;
+            line-height: 1.85;
+        }
+        .rules-lead strong { color: inherit; }
+
+        .rules-cat {
+            margin: 0 0 16px;
+            padding: 14px 18px 4px;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+        }
+        .rules-cat:last-child { margin-bottom: 6px; }
+
+        .rules-table-wrap {
+            margin: 4px 0 20px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+        }
+        table.rules-table {
+            width: 100%;
+            min-width: 420px;
+            margin: 0;
+            border: none;
+            border-radius: 0;
+            border-collapse: collapse;
+            font-size: 1rem;
+        }
+        table.rules-table th, table.rules-table td {
+            padding: 11px 14px;
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid var(--card-border);
+        }
+        table.rules-table th {
+            background: var(--status-bg);
+            color: var(--status-text);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        table.rules-table td { color: var(--about-text); }
+        table.rules-table td:first-child {
+            color: var(--status-text);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        table.rules-table tbody tr:last-child td { border-bottom: none; }
+
+        @media (max-width: 640px) {
+            .rules-content h3 { font-size: 1.15rem; margin-top: 26px; }
+            .rules-cat { padding: 12px 14px 2px; }
+            .rules-lead { font-size: 1rem; padding: 14px 16px; }
+            /* 手机上让表格自己压缩换行, 不要撑出横向滚动 */
+            table.rules-table { min-width: 0; font-size: 0.95rem; }
+            table.rules-table th, table.rules-table td { padding: 9px 10px; }
+        }
+    </style>
+</head>
+<body>
+    <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
+    <div class="container">
+        <h1>📺 NB频道官网</h1>
+        <div class="author-info" id="authorInfo">UP主：NB搞事局（原NB实验室-作死）</div>
+
+        <!-- 导航栏（两行布局） -->
+        <nav class="top-nav"><a class="nav-logo" href="index.html">NB频道</a><div class="nav-menu"><a href="index.html" class="nav-btn">首页</a><a href="videos.html" class="nav-btn">视频</a><a href="about.html" class="nav-btn">关于</a><a href="rules.html" class="nav-btn active">用户守则</a><a href="changelog.html" class="nav-btn">更新日志</a><a href="product.html" class="nav-btn">我的产品</a><a href="APP.html" class="nav-btn">软件/APP下载</a></div><div class="nav-right"><button id="profileBtn" class="profile-btn">个人中心</button><button id="authButton" class="auth-btn">登录/注册</button></div></nav>
+    <div class="quick-nav"><span style="font-size:0.85rem; color:var(--count-text);">快捷入口：</span><a href="comments-beta.html" class="nav-btn">💬 评论区</a><a href="Virtual stock.html" class="nav-btn">📈 NB虚拟股票</a><a href="chat.html" class="nav-btn">👥 好友</a><a href="product_share.html" class="nav-btn">🛍️ 作品分享</a><a href="messages.html" class="nav-btn">🔔 消息</a><a href="tools.html" class="nav-btn">🔬 化学工具</a><a href="titles.html" class="nav-btn">🏅 称号</a><a href="bank.html" class="nav-btn">🏦 NB银行</a><a href="shop.html" class="nav-btn">🛍️ NB商店</a><a href="backpack.html" class="nav-btn">🎒 背包</a></div>
+
+<div class="hero">
+    <div class="hero-badges">
+        <span class="hero-badge">必读</span>
+        <span class="hero-badge">5 条底线</span>
+        <span class="hero-badge">说人话版</span>
+    </div>
+    <h1>NB频道官网 - 用户守则</h1>
+    <div class="hero-sub">NB频道 · 虚拟公司 · 官网</div>
+    <div class="hero-btns">
+        <a class="hero-btn" href="index.html">回首页</a>
+        <a class="hero-btn" href="comments-beta.html">进评论区</a>
+        <a class="hero-btn ghost" href="Beta/feedback-Beta.html">反馈 / 举报</a>
+        <a class="hero-btn ghost" href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">B站关注</a>
+    </div>
+</div>
+</div>
+
+
+
+        <!-- 用户守则内容 -->
+        <div class="about-content rules-content">
+            <p class="rules-lead">简单说：<strong>别骂人、别造谣、别盗号、别刷币、别刷屏。</strong>做到这五条，你在站上会玩得很舒服。</p>
+
+            <h3>一、这个站是什么</h3>
+            <ol>
+                <li>NB频道是一个个人兴趣项目，由 UP主 <strong>NB搞事局</strong> 一个人维护 —— 不是公司，也不是商业产品。</li>
+                <li>站上的虚拟公司、NB币、股票、称号、道具都是<strong>游戏数据</strong>，没有现实价值。</li>
+                <li><strong>注册账号即表示你已经读过并同意这份守则。</strong></li>
+            </ol>
+
+            <h3>二、不能做的事</h3>
+
+            <div class="rules-cat">
+                <h4>🚫 骂人和攻击</h4>
+                <ul>
+                    <li>辱骂、人身攻击、诅咒他人及其家人</li>
+                    <li>地域歧视、性别歧视、外貌歧视</li>
+                    <li>恶意挑衅、反复骚扰同一个人</li>
+                </ul>
+            </div>
+
+            <div class="rules-cat">
+                <h4>🚫 造谣和冒充</h4>
+                <ul>
+                    <li>编造关于站方或其他用户的不实信息</li>
+                    <li>冒充站长、管理员或其他用户发言</li>
+                    <li><strong>假借站方名义发布任何政治、违法言论</strong> —— 这条最严重</li>
+                </ul>
+            </div>
+
+            <div class="rules-cat">
+                <h4>🚫 刷屏</h4>
+                <ul>
+                    <li>短时间内连续发送大量内容</li>
+                    <li>重复发送同样的内容</li>
+                    <li>用无意义字符灌水</li>
+                </ul>
+            </div>
+
+            <div class="rules-cat">
+                <h4>🚫 盗号和账号交易</h4>
+                <ul>
+                    <li>盗取、尝试盗取他人账号</li>
+                    <li>买卖、赠送、借用账号</li>
+                    <li>用别人的账号登录</li>
+                </ul>
+            </div>
+
+            <div class="rules-cat">
+                <h4>🚫 刷游戏资产</h4>
+                <ul>
+                    <li>利用漏洞、bug 获取 NB币 或其他虚拟资产</li>
+                    <li>发现漏洞不上报，反而反复利用</li>
+                    <li>注册大量小号互相配合牟利</li>
+                    <li>用多个账号规避交易限额</li>
+                </ul>
+            </div>
+
+            <div class="rules-cat">
+                <h4>🚫 违法和不良内容</h4>
+                <ul>
+                    <li>涉政、涉黄、涉暴、涉恐内容</li>
+                    <li>宣传违法违规行为</li>
+                    <li>诈骗、赌博、传销</li>
+                </ul>
+            </div>
+
+            <div class="rules-cat">
+                <h4>🚫 广告</h4>
+                <ul>
+                    <li>未经允许推广其他网站、群聊、产品</li>
+                    <li>拉人、刷邀请</li>
+                </ul>
+            </div>
+
+            <h3>三、违规怎么处理</h3>
+            <p>按情节轻重分四档：</p>
+            <div class="rules-table-wrap">
+                <table class="rules-table">
+                    <thead>
+                        <tr><th>档位</th><th>处理</th><th>适用</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>①</td><td>警告</td><td>删掉内容，私信提醒</td></tr>
+                        <tr><td>②</td><td>限制功能</td><td>一定时间内不能评论 / 交易</td></tr>
+                        <tr><td>③</td><td>封禁账号</td><td>不能再登录</td></tr>
+                        <tr><td>④</td><td>封禁 IP</td><td>该网络下无法注册和发言</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p><strong>直接封号的情形</strong>（不警告）：</p>
+            <ul>
+                <li>盗号</li>
+                <li>刷游戏资产</li>
+                <li>冒充站方发布违法或政治言论</li>
+                <li>严重的人身攻击或威胁</li>
+            </ul>
+            <p>处理结果会在「小黑屋」页面公示（<a href="Beta/ban-Beta.html">Beta/ban-Beta.html</a>）。</p>
+
+            <h3>四、账号安全</h3>
+            <ol>
+                <li>密码不要告诉任何人，<strong>包括自称管理员的人</strong>。</li>
+                <li><strong>站方永远不会向你索要密码。</strong></li>
+                <li>不要点陌生人发的链接。</li>
+                <li>发现账号被盗，立刻改密码，并通过下面的邮箱联系站长。</li>
+                <li>账号支持邮箱验证码登录，建议绑定常用邮箱。</li>
+            </ol>
+
+            <h3>五、虚拟资产说明</h3>
+            <ol>
+                <li>NB币、公司股份、称号、道具都是<strong>站内虚拟数据</strong>。</li>
+                <li><strong>不提供任何提现、兑换现金的服务。</strong></li>
+                <li>站方可能因为以下原因<strong>调整</strong>虚拟资产：
+                    <ul>
+                        <li>修复漏洞时回收异常所得</li>
+                        <li>回档、数据迁移、规则调整</li>
+                        <li>平衡性调整</li>
+                    </ul>
+                </li>
+                <li>上述调整<strong>不构成对任何人的承诺或赔偿义务</strong>。</li>
+                <li><strong>不要用真实货币购买站内虚拟物品</strong> —— 一旦发生纠纷，站方无法处理。</li>
+            </ol>
+
+            <h3>六、隐私</h3>
+            <div class="rules-cat">
+                <h4>我们记录什么</h4>
+                <ul>
+                    <li>注册邮箱</li>
+                    <li>登录和发帖时的 IP</li>
+                    <li>站内操作记录（交易、评论、转账等）</li>
+                </ul>
+            </div>
+            <div class="rules-cat">
+                <h4>用来做什么</h4>
+                <ul>
+                    <li>账号安全（判断是否被盗）</li>
+                    <li>处理违规（取证）</li>
+                    <li>修复 bug</li>
+                </ul>
+            </div>
+            <div class="rules-cat">
+                <h4>不会做什么</h4>
+                <ul>
+                    <li>不会卖给第三方</li>
+                    <li>不会用于广告推送</li>
+                    <li>不会公开你的邮箱</li>
+                </ul>
+            </div>
+
+            <h3>七、免责</h3>
+            <ol>
+                <li>这是个人项目，<strong>不保证永久可用、不保证不出故障</strong>。</li>
+                <li>数据可能因为故障或维护丢失，重要内容请自己备份。</li>
+                <li>站内用户发布的内容不代表站方立场。</li>
+                <li>因不可抗力（服务器故障、域名问题等）造成的损失，站方不承担责任。</li>
+            </ol>
+
+            <h3>八、联系方式</h3>
+            <ul>
+                <li>邮箱：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a></li>
+                <li>反馈页：<a href="Beta/feedback-Beta.html">Beta/feedback-Beta.html</a></li>
+                <li>有疑问、要举报、觉得被误判 —— 都可以发邮件。</li>
+            </ul>
+
+            <p style="margin-top:30px; text-align:right;">感谢您的支持————NB频道</p>
+        </div>
+
+        <!-- 建站统计区域 -->
+        <div class="site-stats" id="siteStats"></div>
+        <div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
+    © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
+    如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a><br>
+    制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
+    托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a>
+<div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div></div>
+    </div>
+
+    <!-- 右下角固定按钮：夜间模式 + 回到顶部 -->
+    <div class="fixed-buttons">
+        <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+        <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+    </div>
+
+    <script id="uiBootGuard">
+(function () {
+    try {
+        // 经典模式(可选):localStorage nb_classic=1 时加 classic 类(第一帧前生效,零闪跳)
+        var m = localStorage.getItem('nb_ui_mode');
+        try { var qp = new URLSearchParams(location.search).get('ui'); if (qp === 'new' || qp === 'classic' || qp === 'beta') m = qp; } catch (e) {}
+        if (m === 'classic' || (m !== 'beta' && localStorage.getItem('nb_classic') === '1')) document.documentElement.classList.add('classic');
+        else if (m === 'beta') document.documentElement.classList.add('beta');
+        // 纯新UI:隐藏 body,等待 ui-nav.js 注入完成后解除(首帧即完整新UI,零闪跳)
+        document.documentElement.classList.add('ui-boot-new');
+        var st = document.createElement('style');
+        st.id = 'uiBootHide';
+        st.textContent = 'html.ui-boot-new body{visibility:hidden}';
+        document.head.appendChild(st);
+        setTimeout(function () {
+            document.documentElement.classList.remove('ui-boot-new');
+            var s = document.getElementById('uiBootHide');
+            if (s) s.remove();
+        }, 3500);
+    } catch (e) {}
+})();
+</script><script src="js/common.js?v=20260845"></script>
+    <script src="js/ui-nav.js?v=20260848"></script>
+    <script>
+        AUTHOR_NAME = 'NB搞事局';
+        document.getElementById('authorInfo').innerText = `UP主：${AUTHOR_NAME}`;
+        initTheme();
+        updateSiteStats();
+        if (typeof initShareButton === 'function') {
+            initShareButton();
+        }
+    </script>
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261001-C6F9D1F626AC
+   官方域名 nb-channel.top （github. / netlify. / cloudflare. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDAxLUM2RjlEMUY2MjZBQw";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="js/science-tips.js?v=22"></script>
+</body>
+</html>
