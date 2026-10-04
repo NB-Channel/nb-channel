@@ -25,19 +25,10 @@
 
 
 -- ============================================================
--- 第 0 步：先查现有用户里有多少用了临时邮箱
+-- 第 0 步：查现有用户里谁用了临时邮箱（只查不改）
 -- ------------------------------------------------------------
--- 如果结果里有正常用户，先把他们排除掉，或者提醒他们换邮箱
--- ============================================================
-SELECT p.id, p.username, p.email,
-       lower(split_part(p.email, '@', 2)) AS 域名,
-       p.created_at
-  FROM public.profiles p
- WHERE lower(split_part(p.email, '@', 2)) IN (
-       SELECT d FROM unnest(ARRAY[
-
--- ============================================================
--- 第 0 步：查现有用户里谁用了临时邮箱（导入【之前】跑）
+-- ⚠️ 先跑 domain_block_register_only_20261004.sql 再跑本脚本！
+--    否则用临时邮箱的老账号会被永久锁死（登不进 → 换不了邮箱）。
 -- ============================================================
 SELECT p.id, p.username, p.email,
        lower(split_part(p.email, '@', 2)) AS 域名, p.created_at
@@ -45,8 +36,10 @@ SELECT p.id, p.username, p.email,
  WHERE lower(split_part(p.email, '@', 2)) ~
        '(ozsaip|tanpony|yzcalo|mailinator|guerrillamail|10minutemail|yopmail|sharklasers)'
  ORDER BY p.created_at DESC;
--- 记下结果。导入后这些人的邮箱验证码登录会被挡 ——
--- 如果是正常玩家，先提醒他们换常用邮箱。
+-- 这些就是受影响的账号。跑完 domain_block_register_only 之后，
+-- 他们的【登录不受影响】，只是不能再用这个邮箱注册新号。
+-- 想提醒的话请【私信本人】，别公开发公告列名单 ——
+-- 那等于告诉所有人「这几个号的收件箱是公开的」，反而招来盗号。
 
 
 -- ============================================================
