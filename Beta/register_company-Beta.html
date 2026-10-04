@@ -73,7 +73,7 @@
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="注册你的 NB虚拟公司——初始市值 20000,可选择提交认证审核,通过后在评论区显示已认证蓝标,并开始股票交易。">
+<meta name="description" content="注册你的 NB虚拟公司——自己出资建公司资金池(最低 20000 NB币),你会获得等量股份(股价 1.00),可选择提交认证审核。">
 <meta name="theme-color" content="#0f172a">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
 <title>注册虚拟公司 - NB频道官网</title>
@@ -1060,14 +1060,14 @@ html { -webkit-text-size-adjust: 100%; }
         <div class="hero-copy">
             <span class="hero-eyebrow">COMPANY · 注册公司</span>
             <h1>注册<span class="light">虚拟公司</span></h1>
-            <p class="vhero-sub">拥有自己的公司,开启 NB虚拟股票之旅——初始市值 20000,还可提交认证审核,通过后在评论区显示「已认证」</p>
+            <p class="vhero-sub">拥有自己的公司,开启 NB虚拟股票之旅——自己出资建公司资金池(最低 20000 NB币),股价 1.00,还可提交认证审核</p>
             <div class="vhero-actions">
                 <a class="hero-link" href="#rcCard">填写注册 ↓</a>
                 <a class="hero-link" href="stock-Beta.html">行情页 ↗</a>
             </div>
         </div>
         <div class="pd-stats">
-            <div class="pd-row"><span class="k">初始市值</span><b>20,000 NB币</b></div>
+            <div class="pd-row"><span class="k">初始出资</span><b>最低 20,000 NB币</b></div>
             <div class="pd-row"><span class="k">注册费用</span><b>免费</b></div>
             <div class="pd-row"><span class="k">认证审核</span><b>管理员人工审核</b></div>
             <div class="pd-row"><span class="k">名称规则</span><b>中文/字母/数字 ≤20字</b></div>
@@ -1102,24 +1102,20 @@ html { -webkit-text-size-adjust: 100%; }
             <div class="rc-owner" id="ownerName">加载中…</div>
         </div>
         <div class="rc-field-wrap">
-            <label>注册方式</label>
-            <div class="rc-plan" id="rcPlan">
-                <button type="button" class="on" data-plan="free">🆓 免费注册<small>初始市值 20000 NB币</small></button>
-                <button type="button" data-plan="paid">💎 付费注册<small>花钱提高初始市值</small></button>
+            <label for="capitalAmount">出资额（建公司资金池）</label>
+            <div class="rc-input-row">
+                <span class="rc-ic">💰</span>
+                <input type="number" id="capitalAmount" class="rc-field" min="20000" step="1000" value="20000" placeholder="最低 20000 NB币">
             </div>
-            <div class="rc-pay" id="rcPay">
-                <div class="rc-input-row">
-                    <span class="rc-ic">💰</span>
-                    <input type="number" id="payAmount" class="rc-field" min="0" step="1000" placeholder="额外投入的 NB币(如 100000)">
-                </div>
-                <div class="rc-quick">
-                    <button type="button" data-add="10000">+1万</button>
-                    <button type="button" data-add="50000">+5万</button>
-                    <button type="button" data-add="100000">+10万</button>
-                    <button type="button" data-add="500000">+50万</button>
-                    <button type="button" data-add="0">清零</button>
-                </div>
-                <div class="rc-hint" id="rcPayHint"></div>
+            <div class="rc-quick">
+                <button type="button" data-add="0">最低 2万</button>
+                <button type="button" data-add="30000">+3万</button>
+                <button type="button" data-add="80000">+8万</button>
+                <button type="button" data-add="180000">+18万</button>
+            </div>
+            <div class="rc-hint" id="capitalHint" style="opacity:.85;">
+                这笔钱会作为公司的<b>初始资金池</b>（从你的 NB币余额里扣），你会获得<b>等量股份</b>（价格 1.00）。
+                最低 20000 NB币起。
             </div>
         </div>
         <label class="rc-check">
@@ -1379,11 +1375,14 @@ html { -webkit-text-size-adjust: 100%; }
         } catch (e) { toLogin(); }
     }
 
-    // ===== 注册方式:免费 / 付费提升初始市值 =====
-    var currentPlan = 'free';
+    // ===== 注册：必须自己出钱建初始资金池（AMM 做市池模型） =====
+    // 池子现金 = 出资额，池子股份 = 出资额 → 股价 1.00；
+    // 总股本 = 2 × 出资额，其中一半（= 出资额）作为创始股给注册者。
+    var MIN_CAPITAL = 20000;
     var myBalance = null;
 
     function fmtMoney(n) { try { return Number(n).toLocaleString('zh-CN'); } catch (e) { return n; } }
+    function capitalInput() { return document.getElementById('capitalAmount'); }
 
     function loadMyBalance() {
         if (!currentUser) return;
@@ -1394,47 +1393,37 @@ html { -webkit-text-size-adjust: 100%; }
             if (d && typeof d === 'object' && d.ok === false) return;
             myBalance = (d && typeof d === 'object') ? (d.balance != null ? d.balance : d.nb_balance) : d;
             if (myBalance == null || isNaN(Number(myBalance))) myBalance = null;
-            updatePayHint();
+            updateCapitalHint();
         }).catch(function () {});
     }
 
-    function updatePayHint() {
-        var hint = document.getElementById('rcPayHint');
+    function updateCapitalHint() {
+        var hint = document.getElementById('capitalHint');
         if (!hint) return;
-        var v = Math.floor(Number(document.getElementById('payAmount').value || 0));
-        if (v < 0 || isNaN(v)) v = 0;
+        var v = Math.floor(Number(capitalInput().value || 0));
+        if (isNaN(v) || v < 0) v = 0;
         var bal = (myBalance == null) ? '—' : fmtMoney(myBalance);
         var lack = (myBalance != null && v > myBalance)
-            ? '<br><span style="color:#ef4444;">NB币不足(还差 ' + fmtMoney(v - myBalance) + ')</span>' : '';
-        hint.innerHTML = '你的 NB币余额:<b>' + bal + '</b><br>注册后公司市值:<b>' + fmtMoney(20000 + v) +
-            '</b> NB币(基础 20000' + (v > 0 ? ' + 你的 ' + fmtMoney(v) : '') + ')' + lack +
-            '<br><span style="opacity:.8;">按 1:1 兑换,单次最多 1000 万;付费部分会从 NB币余额中扣除。</span>';
+            ? '<br><span style="color:#ef4444;">NB币不足（还差 ' + fmtMoney(v - myBalance) + '）</span>' : '';
+        var low = (v > 0 && v < MIN_CAPITAL)
+            ? '<br><span style="color:#ef4444;">出资额不能低于 ' + fmtMoney(MIN_CAPITAL) + ' NB币</span>' : '';
+        hint.innerHTML = '这笔钱会成为公司的<b>初始资金池</b>，你获得<b>等量股份</b>（价格 1.00）。' +
+            '<br>你的 NB币余额:<b>' + bal + '</b>；本次将扣除:<b>' + fmtMoney(v) + '</b> NB币' +
+            '<br>公司资金池:<b>' + fmtMoney(v) + '</b> · 你拿到:<b>' + fmtMoney(v) + '</b> 张 · 总股本:<b>'
+            + fmtMoney(v * 2) + '</b> 张（剩下的股份留在池子里供别人买入）' + lack + low;
     }
 
-    (function bindPlan() {
-        var wrap = document.getElementById('rcPlan');
-        if (!wrap) return;
-        wrap.querySelectorAll('button').forEach(function (b) {
-            b.addEventListener('click', function () {
-                wrap.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
-                b.classList.add('on');
-                currentPlan = b.dataset.plan;
-                document.getElementById('rcPay').classList.toggle('show', currentPlan === 'paid');
-                updatePayHint();
-            });
-        });
+    (function bindCapital() {
         document.querySelectorAll('.rc-quick button').forEach(function (b) {
             b.addEventListener('click', function () {
                 var add = Number(b.dataset.add || 0);
-                var el = document.getElementById('payAmount');
-                var cur = Math.floor(Number(el.value || 0));
-                if (isNaN(cur) || cur < 0) cur = 0;
-                el.value = add === 0 ? '' : (cur + add);
-                updatePayHint();
+                var el = capitalInput();
+                el.value = MIN_CAPITAL + add;
+                updateCapitalHint();
             });
         });
-        var payEl = document.getElementById('payAmount');
-        if (payEl) payEl.addEventListener('input', updatePayHint);
+        var el = capitalInput();
+        if (el) el.addEventListener('input', updateCapitalHint);
     })();
 
     function registerCompany() {
@@ -1443,54 +1432,52 @@ html { -webkit-text-size-adjust: 100%; }
         var needVerify = document.getElementById('needVerify').checked;
         var errorDiv = document.getElementById('errorMsg');
         var btn = document.getElementById('submitBtn');
-        var paid = 0;
-        if (currentPlan === 'paid') {
-            paid = Math.floor(Number(document.getElementById('payAmount').value || 0));
-            if (isNaN(paid) || paid < 0) paid = 0;
-            if (paid > 10000000) { errorDiv.innerText = '单次提升不能超过 1000 万 NB币'; return; }
-            if (myBalance != null && paid > myBalance) { errorDiv.innerText = 'NB币不足(需要 ' + fmtMoney(paid) + ',当前 ' + fmtMoney(myBalance) + ')'; return; }
+        var capital = Math.floor(Number(capitalInput().value || 0));
+        if (isNaN(capital)) capital = 0;
+        if (capital < MIN_CAPITAL) {
+            errorDiv.innerText = '出资额不能低于 ' + fmtMoney(MIN_CAPITAL) + ' NB币（这笔钱是公司的初始资金池）';
+            return;
+        }
+        if (capital > 100000000) { errorDiv.innerText = '单次出资不能超过 1 亿 NB币'; return; }
+        if (myBalance != null && capital > myBalance) {
+            errorDiv.innerText = 'NB币不足（需要 ' + fmtMoney(capital) + '，当前 ' + fmtMoney(myBalance) + '）';
+            return;
         }
         errorDiv.innerText = '';
         if (!name) { errorDiv.innerText = '请填写公司名称'; return; }
         if (name.length > 20) { errorDiv.innerText = '公司名称不能超过20字'; return; }
+
         btn.disabled = true; btn.textContent = '提交中…';
-        supabaseClient.rpc('register_company', { p_user_id: currentUser.id, p_company_name: name, p_need_verify: needVerify , p_session: localStorage.getItem('nb_session')})
+        // 新版注册接口：出资额走 p_fund，会话令牌走 p_session（和站内其它写操作一致）
+        // 失败原因有七八种（余额不足 / 低于 20000 / 超 1 亿 / 重名 / 违禁词 / 登录过期），
+        // 后端 message 全都覆盖了，直接展示，不自己拼文案。
+        supabaseClient.rpc('register_company_funded', {
+            p_user_id: currentUser.id,
+            p_session: localStorage.getItem('nb_session'),
+            p_company_name: name,
+            p_need_verify: needVerify,
+            p_fund: capital
+        })
             .then(function (res) {
-                if (res.error) { errorDiv.innerText = '注册失败:' + res.error.message; btn.disabled = false; btn.textContent = '提交注册'; return; }
-                if (!res.data.success) { errorDiv.innerText = res.data.message || '注册失败'; btn.disabled = false; btn.textContent = '提交注册'; return; }
-                if (!paid) {
-                    showToast(res.data.need_verify
-                        ? '📨 公司注册申请已提交,请等待管理员审核;通过后即可开始股票交易'
-                        : '🎉 公司注册成功!初始市值 20000 NB币');
-                    setTimeout(function () { window.location.href = 'stock-Beta.html'; }, 1600);
-                    return;
+                if (!res || res.error) {
+                    errorDiv.innerText = ((res && res.error && res.error.message) || '未知错误');
+                    btn.disabled = false; btn.textContent = '提交注册'; return;
                 }
-                // 付费:注册完立刻用 NB币提升市值
-                btn.textContent = '提升市值中…';
-                supabaseClient.from('user_companies').select('id').eq('user_id', currentUser.id).limit(1)
-                    .then(function (cr) {
-                        var cid = cr && cr.data && cr.data[0] && cr.data[0].id;
-                        if (!cid) { errorDiv.innerText = '公司已注册,但未找到公司信息,请到股票页面重试'; btn.disabled = false; btn.textContent = '提交注册'; return; }
-                        supabaseClient.rpc('upgrade_company_value', {
-                            p_user_id: currentUser.id, p_session: localStorage.getItem('nb_session'),
-                            p_company_id: cid, p_amount: paid
-                        }).then(function (ur) {
-                            var d = ur && ur.data;
-                            if (ur.error || !d || !d.ok) {
-                                errorDiv.innerText = '公司已注册(初始市值 20000),但提升市值失败:' + ((d && d.message) || (ur.error && ur.error.message) || '未知错误');
-                                btn.disabled = false; btn.textContent = '提交注册';
-                                return;
-                            }
-                            showToast('💎 公司注册成功!市值 ' + fmtMoney(d.market_value) + ' NB币(花费 ' + fmtMoney(paid) + ' NB币)');
-                            setTimeout(function () { window.location.href = 'stock-Beta.html'; }, 1800);
-                        }).catch(function (e) {
-                            errorDiv.innerText = '公司已注册,但提升市值失败:' + (e.message || e);
-                            btn.disabled = false; btn.textContent = '提交注册';
-                        });
-                    })
-                    .catch(function (e) { errorDiv.innerText = '公司已注册,但读取公司信息失败:' + (e.message || e); btn.disabled = false; btn.textContent = '提交注册'; });
+                if (!res.data || res.data.success === false) {
+                    errorDiv.innerText = (res.data && res.data.message) || '注册失败';
+                    btn.disabled = false; btn.textContent = '提交注册'; return;
+                }
+                var d = res.data;
+                // 后端 message 最准确（含实际到账股份数），优先用它
+                var tip = d.message || ('🎉 公司注册成功！资金池 ' + fmtMoney(capital) + ' NB币');
+                if (needVerify && d.need_verify) tip = '📨 注册申请已提交，请等待管理员审核；' + tip;
+                showToast(tip);
+                setTimeout(function () { window.location.href = 'stock-Beta.html'; }, 1900);
             })
-            .catch(function (e) { errorDiv.innerText = '注册失败:' + (e.message || e); btn.disabled = false; btn.textContent = '提交注册'; });
+            .catch(function (e) {
+                errorDiv.innerText = '注册失败:' + (e && e.message ? e.message : e);
+                btn.disabled = false; btn.textContent = '提交注册';
+            });
     }
     document.getElementById('submitBtn').addEventListener('click', registerCompany);
     document.getElementById('companyName').addEventListener('keydown', function (e) { if (e.key === 'Enter') registerCompany(); });
