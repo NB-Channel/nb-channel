@@ -1,56 +1,40 @@
 -- ============================================================
--- 新功能：创始人增资
+-- 修复：增资报 "argument list must have even number of elements"
 -- ============================================================
 --
--- 【为什么加】
--- AMM 模型下，公司市值只能靠【别人买入】推高。
--- 创始人自己：不能买自己公司（防操纵）、注资功能已取消、分红只会让股价跌。
--- 结果创始人对自己的公司完全使不上劲，只能干等。
+-- 原因：jsonb_build_object 要求参数【键值成对】。我在三个地方写成了
 --
--- 【增资是什么】
---   创始人往自己公司的资金池里打钱，但【不获得任何股份】。
+--     jsonb_build_object('success', false,
+--         format('...', ...));
+--         ↑ 少了 'message' 这个键，变成 3 个参数（奇数）
 --
---   池子现金变多、池子股份不变 → 股价上涨 → 全体股东一起受益。
+-- 三处分别是：
+--     1. 单次增资超过上限
+--     2. 余额不足
+--     3. 增资后 7 天内不能卖（在 _orig_sell_stock 里）
 --
---   钱进了池子就是公司的，不会凭空消失（池子是封闭的）。
---   创始人想拿回来只有两条路：分红（全体股东一起分）或清算（按持股比例分）。
---
--- 【和旧版「注资」的区别】
---   旧版注资会【增加 market_value】，而 market_value 是个虚数，
---   配合破产能套现 —— 那是造币。
---   新版增资是往真实的池子里放钱，池子是封闭的，不造币。
---
--- 【风险：先抬价再套现】
---   创始人可以投一笔钱拉高价格，吸引别人跟风买，然后卖掉自己的创始人股份。
---   算过一笔（公司池子 2 万，创始人持一半）：
---       增资 100 万 + 注册 2 万 = 投入 102 万
---       没人跟风 → 卖股份拿回 48.45 万      亏 53.5 万
---       有人跟风买 100 万 → 拿回 127.5 万    赚 25.5 万
---   所以这不是无风险套利，他得赌有人跟。
---
---   为了防"当天拉高当天砸盘"，加一条：
---       【增资后 7 天内，创始人不能卖自己公司的股份】
---   ⚠️ 这条防不了耐心的人（等 7 天再卖）。要彻底防住只能禁止增资，
---      但那又回到"创始人使不上劲"的老问题。属于产品取舍。
+-- 修法：补上 'message' 键，然后重建这两个函数。
 --
 -- 在 Supabase SQL Editor 执行。
 -- ============================================================
 
 
 -- ============================================================
--- 第一步：加字段
+-- 先备份（万一要回滚）
 -- ============================================================
-ALTER TABLE public.user_companies
-    ADD COLUMN IF NOT EXISTS last_injection_at timestamptz,      -- 上次增资时间
-    ADD COLUMN IF NOT EXISTS total_injected    numeric NOT NULL DEFAULT 0;  -- 累计增资额
+CREATE TABLE IF NOT EXISTS public._func_backup_inject_20261003 AS
+SELECT p.proname AS 函数名, pg_get_functiondef(p.oid) AS 定义, now() AS 备份时间
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+ WHERE n.nspname = 'public'
+   AND p.proname IN ('inject_company_capital', '_orig_sell_stock');
 
-COMMENT ON COLUMN public.user_companies.last_injection_at IS '上次增资时间（用于 7 天锁定）';
-COMMENT ON COLUMN public.user_companies.total_injected    IS '创始人累计增资额（不含注册出资）';
+SELECT 函数名, length(定义) AS 定义长度 FROM public._func_backup_inject_20261003;
 
 
 -- ============================================================
--- 第二步：增资函数
+-- 重建两个函数（已修好）
 -- ============================================================
+
 CREATE OR REPLACE FUNCTION public.inject_company_capital(
     p_user_id    uuid,
     p_session    text,
@@ -150,16 +134,7 @@ BEGIN
 END
 $fn$;
 
-GRANT EXECUTE ON FUNCTION public.inject_company_capital(uuid, text, bigint, numeric)
-    TO anon, authenticated;
 
-
--- ============================================================
--- 第三步：卖出时检查 7 天锁定
--- ------------------------------------------------------------
--- 需要重写 _orig_sell_stock（AMM 版），在开头加一道检查。
--- 其余逻辑跟 amm_part1 里那版一字不差。
--- ============================================================
 CREATE OR REPLACE FUNCTION public._orig_sell_stock(
     p_user_id uuid, p_company_id bigint, p_amount numeric,
     p_use_discount boolean DEFAULT false)
@@ -277,74 +252,23 @@ BEGIN
 END
 $fn$;
 
-
 -- ============================================================
--- 第四步：查我的增资记录（前端展示用）
+-- 验收
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.get_my_injections(p_user_id uuid)
-RETURNS TABLE(
-    company_id   bigint,
-    company_name text,
-    cash         numeric,
-    price_after  numeric,
-    created_at   timestamptz,
-    lock_until   timestamptz,
-    locked       boolean
-)
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO 'public'
-AS $fn$
-BEGIN
-    RETURN QUERY
-    SELECT t.company_id, c.company_name, t.cash, t.price_after, t.created_at,
-           c.last_injection_at + interval '7 days',
-           (c.last_injection_at IS NOT NULL
-            AND c.last_injection_at > now() - interval '7 days')
-      FROM public.stock_trades t
-      JOIN public.user_companies c ON c.id = t.company_id
-     WHERE t.user_id = p_user_id AND t.side = 'inject'
-     ORDER BY t.created_at DESC LIMIT 50;
-END
-$fn$;
-
-GRANT EXECUTE ON FUNCTION public.get_my_injections(uuid) TO anon, authenticated;
-
-
--- ============================================================
--- 第五步：验收
--- ============================================================
--- 5.1 字段加上了
-SELECT column_name, data_type
-  FROM information_schema.columns
- WHERE table_schema='public' AND table_name='user_companies'
-   AND column_name IN ('last_injection_at','total_injected');
-
--- 5.2 三个函数都在
+-- 1. 两个函数都在
 SELECT p.proname AS 函数, length(pg_get_functiondef(p.oid)) AS 长度
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
- WHERE n.nspname='public'
-   AND p.proname IN ('inject_company_capital','_orig_sell_stock','get_my_injections')
+ WHERE n.nspname = 'public'
+   AND p.proname IN ('inject_company_capital', '_orig_sell_stock')
  ORDER BY 1;
 
--- 5.3 试算：拿你自己的公司试一笔小额（把 uuid 换成你的）
+-- 2. 确认没有奇数参数的 jsonb_build_object 了（这个查不出来，
+--    但可以直接试调一次）
 -- SELECT public.inject_company_capital(
---     '22b036dd-6d4d-4b2e-ad9f-5a36dfa2d86c'::uuid,
---     '你的-session-token', 1, 1000);
+--     '你的-uuid'::uuid, '你的-session', 公司id, 1000);
 
 
 -- ============================================================
 -- 回滚
 -- ============================================================
--- DROP FUNCTION IF EXISTS public.inject_company_capital(uuid,text,bigint,numeric);
--- ALTER TABLE public.user_companies DROP COLUMN IF EXISTS last_injection_at;
--- ALTER TABLE public.user_companies DROP COLUMN IF EXISTS total_injected;
--- _orig_sell_stock 从 amm_part1_schema_functions_20261003.sql 里取原版重跑
-
-
--- ============================================================
--- 待办：前端按钮
--- ------------------------------------------------------------
--- 两个股票页要加一个「💰 增资」按钮（仅创始人可见）：
---     点开 → 输入金额（最低 1000）→ 显示「股价会从 X 涨到 Y」
---     → 调 inject_company_capital
--- 并在锁定期间隐藏或禁用「卖出」按钮，提示还剩几天。
--- ============================================================
+-- SELECT 定义 FROM public._func_backup_inject_20261003;
