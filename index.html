@@ -191,6 +191,111 @@
     </style>
 </head>
 <body>
+<!-- NB-LOAN-ALERT -->
+<div id="nbLoanAlert" style="display:none"></div>
+<script>
+(function () {
+  'use strict';
+
+  var BANK_URL = 'bank.html';
+
+  function getSupa() {
+    if (window.supabaseClient && typeof window.supabaseClient.rpc === 'function')
+      return window.supabaseClient;
+    if (window.sb && typeof window.sb.rpc === 'function') return window.sb;
+    if (window.supabase && typeof window.supabase.rpc === 'function') return window.supabase;
+    for (var k in window) {
+      try {
+        var v = window[k];
+        if (v && typeof v.rpc === 'function' && typeof v.from === 'function') return v;
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function myId() {
+    try {
+      var u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+      return (u && (u.id || u.user_id)) || null;
+    } catch (e) { return null; }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function fmt(n) {
+    n = Number(n) || 0;
+    if (n >= 1e8) return (n / 1e8).toFixed(2) + ' 亿';
+    if (n >= 1e4) return (n / 1e4).toFixed(2) + ' 万';
+    return String(Math.round(n));
+  }
+
+  function render(items) {
+    var box = document.getElementById('nbLoanAlert');
+    if (!box || !items || !items.length) return;
+
+    var urgent = items.some(function (it) { return Number(it.days_left) <= 0; });
+    var bg = urgent
+      ? 'linear-gradient(90deg,#b91c1c,#dc2626)'
+      : 'linear-gradient(90deg,#b45309,#d97706)';
+
+    var rows = items.map(function (it) {
+      var days = Number(it.days_left) || 0;
+      var tail = days > 0
+        ? '还有 <b>' + days + '</b> 天宽限，逾期满 3 天将自动从<b>存款</b>和<b>余额</b>中扣除。'
+        : '<b>宽限期已过，随时会被强制扣款。</b>';
+      return '<div style="margin-top:4px">'
+           + '<b>' + esc(it.kind) + '</b> 已逾期 <b>' + esc(it.overdue_days) + '</b> 天，'
+           + '应还 <b>' + fmt(it.owed) + '</b> NB币（本金 ' + fmt(it.principal)
+           + ' + 利息 ' + fmt(it.interest) + '）。'
+           + tail
+           + '</div>';
+    }).join('');
+
+    box.setAttribute('style',
+      'position:relative;z-index:9999;padding:13px 46px 13px 20px;'
+      + 'background:' + bg + ';color:#fff;font-size:.9rem;line-height:1.75;'
+      + 'box-shadow:0 3px 14px rgba(0,0,0,.22);'
+      + 'font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;');
+    box.innerHTML =
+        '<div style="font-weight:800;font-size:.98rem;letter-spacing:1px">'
+      + (urgent ? '🚨 贷款逾期提醒' : '⚠️ 贷款逾期提醒')
+      + '</div>'
+      + rows
+      + '<a href="' + BANK_URL + '" style="display:inline-block;margin-top:9px;'
+      + 'padding:5px 16px;border-radius:999px;background:rgba(255,255,255,.22);'
+      + 'color:#fff;text-decoration:none;font-size:.84rem;font-weight:700;'
+      + 'border:1px solid rgba(255,255,255,.4)">去银行还款 →</a>'
+      + '<span id="nbLoanAlertX" style="position:absolute;top:9px;right:14px;'
+      + 'cursor:pointer;font-size:1.1rem;opacity:.75;line-height:1">×</span>';
+
+    var x = document.getElementById('nbLoanAlertX');
+    if (x) x.onclick = function () { box.style.display = 'none'; };
+  }
+
+  function check() {
+    var sb = getSupa();
+    var uid = myId();
+    if (!sb || !uid) return;
+    sb.rpc('get_my_loan_alert', { p_user_id: uid }).then(function (r) {
+      var d = r && r.data;
+      if (d && d.has_alert && d.items && d.items.length) render(d.items);
+    }).catch(function (e) {
+      console.warn('[loan-alert] 查询失败', e);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(check, 900); });
+  } else {
+    setTimeout(check, 900);
+  }
+})();
+</script>
+
 <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
 <div class="container">
     <!-- 右上角按钮区域（增加个人中心） -->
