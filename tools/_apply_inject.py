@@ -73,6 +73,14 @@ INJECT_JS = u"""    // =========================================================
         return v.toLocaleString('en-US');
     }
 
+    // 一条增资记录的金额：get_my_injections 的字段叫 cash，
+    // inject_company_capital 的返回值叫 amount —— 两个都认。
+    function injectRecAmount(rec) {
+        if (!rec) return 0;
+        const v = (rec.amount === null || rec.amount === undefined) ? rec.cash : rec.amount;
+        return Number(v) || 0;
+    }
+
     // 有效锁定期：以 locked=true 且 lock_until 还没到为准（时间字段取不到时退回 locked 字段）
     function injectionLockInfo(rec) {
         if (!rec) return { locked: false, until: null, days: 0 };
@@ -100,6 +108,13 @@ INJECT_JS = u"""    // =========================================================
     function isSellLocked(companyId) {
         if (companyId === null || companyId === undefined) return { locked: false, until: null, days: 0 };
         return injectRegistry[String(companyId)] || { locked: false, until: null, days: 0 };
+    }
+
+    // 表格里那行红字（卖出被锁定时显示）
+    function lockNoteHtml(companyId) {
+        const info = isSellLocked(companyId);
+        if (!info.locked) return '';
+        return '<div style="color:#f44336; font-size:0.7rem; line-height:1.5;">\U0001F512 ' + escapeHtml(lockTip(info)) + '</div>';
     }
 
     // 拉我的增资记录 + 重建锁定表。失败只 console.warn，绝不影响主流程。
@@ -328,24 +343,25 @@ INJECT_JS = u"""    // =========================================================
                 ? (d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') +
                    ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'))
                 : '\u2014';
-            const amt = Number(r.amount) || 0;
+            const amt = injectRecAmount(r);
             // 累计到这一条为止，这家公司一共增资了多少
             let cum = 0;
             for (let j = 0; j <= i; j++) {
-                if (String(asc[j].company_id) === String(r.company_id)) cum += Number(asc[j].amount) || 0;
+                if (String(asc[j].company_id) === String(r.company_id)) cum += injectRecAmount(asc[j]);
             }
             const isMine = !!(myCompany && Number(myCompany.id) === Number(r.company_id));
             const poolShares = isMine ? (Number(myCompany.pool_shares) || 0) : 0;
             const poolCashNow = isMine ? (Number(myCompany.pool_cash) || 0) : 0;
             let priceTxt;
-            if (isMine && poolShares > 0 && poolCashNow >= 0) {
+            if (isMine && poolShares > 0 && poolCashNow >= 0 && cum > 0) {
                 // 现在池子现金 - 这条之后的增资额 = 这一条刚结束时的池子现金
                 let after = 0;
                 for (let j = i + 1; j < asc.length; j++) {
-                    if (String(asc[j].company_id) === String(r.company_id)) after += Number(asc[j].amount) || 0;
+                    if (String(asc[j].company_id) === String(r.company_id)) after += injectRecAmount(asc[j]);
                 }
                 priceTxt = formatPrice(safeDiv(Math.max(0, poolCashNow - after), poolShares));
             } else {
+                // 池子股数取不到（不是自己的公司）→ 退回后端记录的成交后价格
                 priceTxt = formatPrice(Number(r.price_after) || 0);
             }
             const info = injectionLockInfo(r);
@@ -560,10 +576,18 @@ def build_pairs(variant):
         // 卖出：数量超过持股只提示，后端 LEAST(份额, 持仓) 会自动截断成全部卖出
         if (mode === 'sell' && tradeState.myShares > 0 && amount > tradeState.myShares + 1e-9) {
 """
-        a_hold_sell = u"""                   <button class="trade-btn sell" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`
+        a_hold_sell = u"""            const trading = isTradingHours();
+            const tradeBtns = trading
+                ? `<button class="trade-btn buy" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
+                   <button class="trade-btn sell" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`
                 : '<span style="color:var(--count-text); font-size:0.75rem;">\U0001F634 休市</span>';
 """
-        a_hold_sell_new = u"""                   ${hLock.locked
+        a_hold_sell_new = u"""            const trading = isTradingHours();
+            // 增资锁定期内：卖出按钮变灰 + 不可点
+            const hLock = isSellLocked(h.company_id);
+            const tradeBtns = trading
+                ? `<button class="trade-btn buy" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
+                   ${hLock.locked
                         ? `<button class="trade-btn sell locked" data-locked="1" title="${escapeHtml(lockTip(hLock))}" style="background:#9e9e9e; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:not-allowed; font-size:0.75rem;">\U0001F512 锁定</button>`
                         : `<button class="trade-btn sell" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`}`
                 : '<span style="color:var(--count-text); font-size:0.75rem;">\U0001F634 休市</span>';
@@ -577,10 +601,22 @@ def build_pairs(variant):
                 <td>${tradeBtns}${lockNote}</td>
             </tr>`;
 """
-        a_hold_bind = u"""                const mode = btn.classList.contains('buy') ? 'buy' : 'sell';
+        a_hold_bind = u"""        list.querySelectorAll('.trade-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const companyId = parseInt(btn.dataset.id);
+                const companyName = btn.dataset.name;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const mode = btn.classList.contains('buy') ? 'buy' : 'sell';
                 showTradeDialog(companyId, companyName, price, mode);
 """
-        a_hold_bind_new = u"""                if (btn.getAttribute('data-locked') === '1') {
+        a_hold_bind_new = u"""        list.querySelectorAll('.trade-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const companyId = parseInt(btn.dataset.id);
+                const companyName = btn.dataset.name;
+                const price = parseFloat(btn.dataset.price) || 0;
+                if (btn.getAttribute('data-locked') === '1') {
                     const lk = isSellLocked(companyId);
                     await showMessage('暂不能卖出', '增资后 7 天内不能卖出（' + (lk.days > 0 ? '还剩 ' + lk.days + ' 天' : '锁定期未结束') + '）。');
                     return;
@@ -601,14 +637,26 @@ def build_pairs(variant):
                 <td>${tradeBtns}${lockNote}</td>
             </tr>`;
 """
-        a_dt_bind = u"""                const mode = btn.classList.contains('buy') ? 'buy' : 'sell';
+        a_dt_bind = u"""        document.querySelectorAll('.trade-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const companyId = parseInt(btn.dataset.id);
+                const companyName = btn.dataset.name;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const mode = btn.classList.contains('buy') ? 'buy' : 'sell';
                 showTradeDialog(companyId, companyName, price, mode);
             };
         });
 
         // \u2705 独立绑定股票名称点击事件
 """
-        a_dt_bind_new = u"""                if (btn.getAttribute('data-locked') === '1') {
+        a_dt_bind_new = u"""        document.querySelectorAll('.trade-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const companyId = parseInt(btn.dataset.id);
+                const companyName = btn.dataset.name;
+                const price = parseFloat(btn.dataset.price) || 0;
+                if (btn.getAttribute('data-locked') === '1') {
                     const lk = isSellLocked(companyId);
                     await showMessage('暂不能卖出', '增资后 7 天内不能卖出（' + (lk.days > 0 ? '还剩 ' + lk.days + ' 天' : '锁定期未结束') + '）。');
                     return;
@@ -633,14 +681,13 @@ def build_pairs(variant):
         }
     }
 """
+        # 根目录的关闭回调只有一行（整段原样保留，只在后面追加增资弹窗的绑定）
         a_endbind = u"""    document.getElementById('tradeCloseBtn')?.addEventListener('click', () => {
         document.getElementById('tradeModal').style.display = 'none';
     });
 """
-        a_endbind_new = u"""    document.getElementById('tradeCloseBtn')?.addEventListener('click', () => {
-        document.getElementById('tradeModal').style.display = 'none';
-    });
-    document.getElementById('injectOkBtn')?.addEventListener('click', runInject);
+        a_endbind_new = a_endbind
+        a_inject_binds = u"""    document.getElementById('injectOkBtn')?.addEventListener('click', runInject);
     document.getElementById('injectCancelBtn')?.addEventListener('click', closeInjectDialog);
     document.getElementById('injectModal')?.addEventListener('click', (e) => {
         if (e.target && e.target.id === 'injectModal') closeInjectDialog();
@@ -717,10 +764,18 @@ def build_pairs(variant):
         // 卖出：数量超过持股只提示，后端 LEAST(份额, 持仓) 会自动截断成全部卖出
         if (mode === 'sell' && tradeState.myShares > 0 && amount > tradeState.myShares + 1e-9) {
 """
-        a_hold_sell = u"""                   <button class="trade-btn sell" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`
+        a_hold_sell = u"""            const trading = isTradingHours();
+            const tradeBtns = trading
+                ? `<button class="trade-btn buy" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
+                   <button class="trade-btn sell" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`
                 : '<span style="color:var(--count-text); font-size:0.75rem;">\U0001F634 休市</span>';
 """
-        a_hold_sell_new = u"""                   ${hLock.locked
+        a_hold_sell_new = u"""            const trading = isTradingHours();
+            // 增资锁定期内：卖出按钮变灰 + 不可点
+            const hLock = isSellLocked(h.company_id);
+            const tradeBtns = trading
+                ? `<button class="trade-btn buy" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
+                   ${hLock.locked
                         ? `<button class="trade-btn sell locked" data-locked="1" title="${escapeHtml(lockTip(hLock))}" style="background:#9e9e9e; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:not-allowed; font-size:0.75rem;">\U0001F512 锁定</button>`
                         : `<button class="trade-btn sell" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`}`
                 : '<span style="color:var(--count-text); font-size:0.75rem;">\U0001F634 休市</span>';
@@ -734,10 +789,22 @@ def build_pairs(variant):
                 <td>${tradeBtns}${lockNote}</td>
             </tr>`;
 """
-        a_hold_bind = u"""                const mode = btn.classList.contains('buy') ? 'buy' : 'sell';
+        a_hold_bind = u"""        list.querySelectorAll('.trade-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const companyId = parseInt(btn.dataset.id);
+                const companyName = btn.dataset.name;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const mode = btn.classList.contains('buy') ? 'buy' : 'sell';
                 showTradeDialog(companyId, companyName, price, mode);
 """
-        a_hold_bind_new = u"""                if (btn.getAttribute('data-locked') === '1') {
+        a_hold_bind_new = u"""        list.querySelectorAll('.trade-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const companyId = parseInt(btn.dataset.id);
+                const companyName = btn.dataset.name;
+                const price = parseFloat(btn.dataset.price) || 0;
+                if (btn.getAttribute('data-locked') === '1') {
                     const lk = isSellLocked(companyId);
                     await showMessage('暂不能卖出', '增资后 7 天内不能卖出（' + (lk.days > 0 ? '还剩 ' + lk.days + ' 天' : '锁定期未结束') + '）。');
                     return;
@@ -758,14 +825,26 @@ def build_pairs(variant):
                 <td>${tradeBtns}${lockNote}</td>
             </tr>`;
 """
-        a_dt_bind = u"""                const mode = btn.classList.contains('buy') ? 'buy' : 'sell';
+        a_dt_bind = u"""        document.querySelectorAll('.trade-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const companyId = parseInt(btn.dataset.id);
+                const companyName = btn.dataset.name;
+                const price = parseFloat(btn.dataset.price) || 0;
+                const mode = btn.classList.contains('buy') ? 'buy' : 'sell';
                 showTradeDialog(companyId, companyName, price, mode);
             };
         });
 
         // \u2705 独立绑定股票名称点击事件
 """
-        a_dt_bind_new = u"""                if (btn.getAttribute('data-locked') === '1') {
+        a_dt_bind_new = u"""        document.querySelectorAll('.trade-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const companyId = parseInt(btn.dataset.id);
+                const companyName = btn.dataset.name;
+                const price = parseFloat(btn.dataset.price) || 0;
+                if (btn.getAttribute('data-locked') === '1') {
                     const lk = isSellLocked(companyId);
                     await showMessage('暂不能卖出', '增资后 7 天内不能卖出（' + (lk.days > 0 ? '还剩 ' + lk.days + ' 天' : '锁定期未结束') + '）。');
                     return;
@@ -790,11 +869,14 @@ def build_pairs(variant):
         }
     }
 """
+        # Beta 的关闭回调里多一行 tradeState = null;，anchor 必须带上它
         a_endbind = u"""    document.getElementById('tradeCloseBtn')?.addEventListener('click', () => {
         document.getElementById('tradeModal').style.display = 'none';
+        tradeState = null;
     });
 """
-        a_endbind_new = a_endbind + u"""    document.getElementById('injectOkBtn')?.addEventListener('click', runInject);
+        a_endbind_new = a_endbind
+        a_inject_binds = u"""    document.getElementById('injectOkBtn')?.addEventListener('click', runInject);
     document.getElementById('injectCancelBtn')?.addEventListener('click', closeInjectDialog);
     document.getElementById('injectModal')?.addEventListener('click', (e) => {
         if (e.target && e.target.id === 'injectModal') closeInjectDialog();
@@ -828,46 +910,64 @@ def build_pairs(variant):
 
 """ + INJECT_JS))
 
-    pairs = [
-        (a_css, a_css_new),                       # 增资样式
-        (a_holdings, a_holdings + RECORDS_SECTION),   # 增资记录区块
-    ] + common + [
-        (a_modal, modal + a_modal),               # 增资弹窗
-        (a_init, a_init_new),                     # 页面加载时拉一次锁定期
-        (a_record_hook, a_record_hook_new),       # 刷新时同步增资记录
-        (a_cap_hint_html, a_cap_hint_html_new),   # 交易弹窗加锁定期红字行
-        (a_cap, a_cap_new),                       # 计算 sellLock
-        (a_bind, a_bind_new),                     # 卖出按钮置灰
-        (a_exec, a_exec_new),                     # 提交前兜底拦截
-        (a_dt_lock, a_dt_lock),                   # 占位（稍后合并进 a_dt_sell）
-    ]
-    # 行情表：锁定期内卖出按钮换成灰色「锁定」
-    pairs = [p for p in pairs if p[0] != p[1]]
-    a_dt_sell_new = u"""                       ${itemLock.locked
-                        ? `<button class="trade-btn sell locked" data-locked="1" title="${escapeHtml(lockTip(itemLock))}" style="background:#9e9e9e; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:not-allowed; font-size:0.75rem;">\U0001F512 锁定</button>`
-                        : `<button class="trade-btn sell" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`}`
+    # 行情表：一行里要插两处 —— 先在行首算好变量，再把卖出按钮换成灰色「锁定」。
+    a_dt_head = u"""            const reportBtn = (item.id && item.id !== 'undefined' && !isNaN(item.id))
+                ? `<button class="report-company-btn" data-company-id="${item.id}" data-company-name="${escapeHtml(item.name)}" style="background:none; border:none; color:#ff6b6b; cursor:pointer; font-size:0.7rem;">\U0001F6A8 举报公司</button>`
+                : '';
+            const trading = isTradingHours();
+            const tradeBtns = currentUserId
+                ? (trading
+                    ? `<button class="trade-btn buy" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
+                       <button class="trade-btn sell" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`
 """
-    # 把 a_dt_lock 的插入并进 a_dt_sell 的替换里（一次替换两个相邻片段）
-    pairs = [(o, n) for (o, n) in pairs]
-    # 找到 a_dt_sell 在 pairs 里的位置，替换为「先插变量，再换按钮」的组合
-    for idx, (o, n) in enumerate(pairs):
-        if o == a_dt_sell:
-            pairs[idx] = (o, a_dt_sell_new)
-            break
-    else:
-        raise SystemExit('a_dt_sell not scheduled')
-    # a_dt_lock 需要单独插在 reportBtn/trading 之前 —— 放到 a_dt_sell 之前处理
-    for idx, (o, n) in enumerate(pairs):
-        if o == a_dt_sell_new:
-            pairs.insert(idx, (a_dt_lock, a_dt_lock))
-            break
+    # 卖出按钮本体（不带行首缩进，方便在 a_dt_head 里定位；替换时再补回缩进）
+    a_dt_sell = u"""<button class="trade-btn sell" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`
+"""
+    if a_dt_sell not in a_dt_head:
+        raise SystemExit('a_dt_sell 不在 a_dt_head 里')
+    # 先在行首插入两个变量，再单独把卖出按钮换掉（两处独立替换，互不干扰）
+    a_dt_head_new = (u"""            const itemLock = isSellLocked(item.id);
+            const lockNote = lockNoteHtml(item.id);
+""" + a_dt_head)
+    a_dt_sell_new = (u'${itemLock.locked\n'
+                     + u'                        ? `<button class="trade-btn sell locked" data-locked="1" title="${escapeHtml(lockTip(itemLock))}" style="background:#9e9e9e; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:not-allowed; font-size:0.75rem;">\U0001F512 锁定</button>`\n'
+                     + u'                        : `' + a_dt_sell + u'}`\n')
 
-    return path, pairs
+    # 两个源文件都是 CRLF：统一按「LF 版」写 anchor，比对/插入时再转成 CRLF，
+    # 这样既不用在几十个 anchor 里手写 \r\n，也能保证原有行尾风格不变。
+    def to_lf(t):
+        return t.replace(u'\r\n', u'\n')
+
+    def to_crlf(t):
+        return t.replace(u'\r\n', u'\n').replace(u'\n', u'\r\n')
+
+    pairs = [
+        (to_lf(a_css), to_lf(a_css_new)),                           # 增资样式
+        (to_lf(a_holdings), to_lf(a_holdings + RECORDS_SECTION)),   # 增资记录区块
+    ] + [(to_lf(o), to_lf(n)) for (o, n) in common] + [
+        (to_lf(a_modal), to_lf(modal + a_modal)),                   # 增资弹窗
+        (to_lf(a_init), to_lf(a_init_new)),                         # 页面加载时拉一次锁定期
+        (to_lf(a_record_hook), to_lf(a_record_hook_new)),           # 刷新时同步增资记录
+        (to_lf(a_hold_sell), to_lf(a_hold_sell_new)),               # 持仓表：锁定按钮 + 红字说明
+        (to_lf(a_hold_row), to_lf(a_hold_row_new)),                 # 持仓表：把红字说明放进单元格
+        (to_lf(a_dt_head), to_lf(a_dt_head_new)),                   # 行情表：行首加锁定变量
+        (to_lf(a_dt_sell), to_lf(a_dt_sell_new)),                   # 行情表：卖出按钮换成「锁定」
+        (to_lf(a_dt_row), to_lf(a_dt_row_new)),                     # 行情表：把红字说明放进单元格
+        (to_lf(a_cap_hint_html), to_lf(a_cap_hint_html_new)),       # 交易弹窗加锁定期红字行
+        (to_lf(a_cap), to_lf(a_cap_new)),                           # 计算 sellLock
+        (to_lf(a_bind), to_lf(a_bind_new)),                         # 卖出按钮置灰
+        (to_lf(a_exec), to_lf(a_exec_new)),                         # 提交前兜底拦截
+        (to_lf(a_hold_bind), to_lf(a_hold_bind_new)),               # 持仓表卖出按钮事件：锁定提示
+        (to_lf(a_dt_bind), to_lf(a_dt_bind_new)),                   # 行情表卖出按钮事件：锁定提示
+        (to_lf(a_endbind), to_lf(a_endbind_new + a_inject_binds)),   # 增资弹窗按钮事件
+    ]
+    return path, [(o, n) for (o, n) in pairs if o != n]
 
 
 def apply(path, pairs):
+    # 按 LF 读入比对（anchor 都是 LF 版），落盘前再换回 CRLF
     with io.open(path, 'r', encoding='utf-8', newline='') as f:
-        s = f.read()
+        s = f.read().replace(u'\r\n', u'\n')
     for i, (old, new) in enumerate(pairs):
         if old == new:
             continue
@@ -875,14 +975,37 @@ def apply(path, pairs):
         if n != 1:
             raise SystemExit(u'[FAIL] %s 第 %d 个替换命中 %d 次（应为 1 次）:\n%r' % (path, i + 1, n, old[:200]))
         s = s.replace(old, new, 1)
-    data = s.encode('utf-8')          # 先 encode 再落盘
+    data = s.replace(u'\n', u'\r\n').encode('utf-8')   # 先 encode 再落盘
     with open(path, 'wb') as f:
         f.write(data)
     return len(data)
 
 
+def dry_run(path, pairs):
+    with io.open(path, 'r', encoding='utf-8', newline='') as f:
+        s = f.read().replace(u'\r\n', u'\n')
+    bad = []
+    for i, (old, new) in enumerate(pairs):
+        if old == new:
+            continue
+        c = s.count(old)
+        if c != 1:
+            bad.append((i + 1, c, old))
+    return bad
+
+
 if __name__ == '__main__':
-    import json
-    for v in ('root', 'beta'):
-        p, prs = build_pairs(v)
-        print('%-5s %s  (%d replacements)' % (v, p, len(prs)))
+    import sys as _sys
+    _sys.stdout = io.TextIOWrapper(_sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if len(_sys.argv) > 1 and _sys.argv[1] == 'apply':
+        for v in ('root', 'beta'):
+            p, prs = build_pairs(v)
+            n = apply(p, prs)
+            print('%-5s %s  %d bytes written' % (v, p, n))
+    else:
+        for v in ('root', 'beta'):
+            p, prs = build_pairs(v)
+            bad = dry_run(p, prs)
+            print('%-5s %s  (%d replacements, %d bad anchors)' % (v, p, len(prs), len(bad)))
+            for (i, c, old) in bad:
+                print('   [FAIL %2d] match=%d  %r' % (i, c, old[:170]))

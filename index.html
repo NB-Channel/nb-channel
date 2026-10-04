@@ -233,22 +233,46 @@
     return String(Math.round(n));
   }
 
+  /* 三种状态：即将到期（蓝） / 宽限期内（橙） / 已超期（红） */
+  var STYLE = {
+    upcoming: { bg: 'linear-gradient(90deg,#1d4ed8,#2563eb)', icon: '\uD83D\uDCE2',          // 📢
+                title: '贷款即将到期' },
+    grace:    { bg: 'linear-gradient(90deg,#b45309,#d97706)', icon: '\u26A0\uFE0F',          // ⚠️
+                title: '贷款逾期提醒' },
+    overdue:  { bg: 'linear-gradient(90deg,#b91c1c,#dc2626)', icon: '\U0001F6A8',             // 🚨
+                title: '贷款逾期提醒' }
+  };
+
   function render(items) {
     var box = document.getElementById('nbLoanAlert');
     if (!box || !items || !items.length) return;
 
-    var urgent = items.some(function (it) { return Number(it.days_left) <= 0; });
-    var bg = urgent
-      ? 'linear-gradient(90deg,#b91c1c,#dc2626)'
-      : 'linear-gradient(90deg,#b45309,#d97706)';
+    /* 取最严重的那一条决定整体配色 */
+    var worst = 'upcoming';
+    items.forEach(function (it) {
+      var s = it.status || (Number(it.days_left) <= 0 ? 'overdue' : 'grace');
+      if (s === 'overdue') worst = 'overdue';
+      else if (s === 'grace' && worst !== 'overdue') worst = 'grace';
+    });
+    var st = STYLE[worst] || STYLE.grace;
 
     var rows = items.map(function (it) {
-      var days = Number(it.days_left) || 0;
-      var tail = days > 0
-        ? '还有 <b>' + days + '</b> 天宽限，逾期满 3 天将自动从<b>存款</b>和<b>余额</b>中扣除。'
-        : '<b>宽限期已过，随时会被强制扣款。</b>';
+      var status = it.status || (Number(it.days_left) <= 0 ? 'overdue' : 'grace');
+      var tail;
+      if (status === 'upcoming') {
+        tail = '到期余额不足会自动从<b>活期存款</b>扣除，存款不够才会扣余额。';
+      } else if (status === 'grace') {
+        tail = '还有 <b>' + (it.days_left != null ? it.days_left : 0) + '</b> 天宽限，'
+             + '逾期满 3 天将自动从<b>活期存款</b>和<b>余额</b>中扣除（定期存款不动）。';
+      } else {
+        tail = '<b>宽限期已过，随时会被强制扣款。</b>';
+      }
+      var head = status === 'upcoming'
+        ? '还有 <b>' + esc(it.due_in_days != null ? it.due_in_days : 0) + '</b> 天到期'
+        : '已逾期 <b>' + esc(it.overdue_days) + '</b> 天';
+
       return '<div style="margin-top:4px">'
-           + '<b>' + esc(it.kind) + '</b> 已逾期 <b>' + esc(it.overdue_days) + '</b> 天，'
+           + '<b>' + esc(it.kind) + '</b> ' + head + '，'
            + '应还 <b>' + fmt(it.owed) + '</b> NB币（本金 ' + fmt(it.principal)
            + ' + 利息 ' + fmt(it.interest) + '）。'
            + tail
@@ -257,20 +281,20 @@
 
     box.setAttribute('style',
       'position:relative;z-index:9999;padding:13px 46px 13px 20px;'
-      + 'background:' + bg + ';color:#fff;font-size:.9rem;line-height:1.75;'
+      + 'background:' + st.bg + ';color:#fff;font-size:.9rem;line-height:1.75;'
       + 'box-shadow:0 3px 14px rgba(0,0,0,.22);'
       + 'font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;');
     box.innerHTML =
         '<div style="font-weight:800;font-size:.98rem;letter-spacing:1px">'
-      + (urgent ? '🚨 贷款逾期提醒' : '⚠️ 贷款逾期提醒')
+      + st.icon + ' ' + st.title
       + '</div>'
       + rows
       + '<a href="' + BANK_URL + '" style="display:inline-block;margin-top:9px;'
       + 'padding:5px 16px;border-radius:999px;background:rgba(255,255,255,.22);'
       + 'color:#fff;text-decoration:none;font-size:.84rem;font-weight:700;'
-      + 'border:1px solid rgba(255,255,255,.4)">去银行还款 →</a>'
+      + 'border:1px solid rgba(255,255,255,.4)">去银行还款 \u2192</a>'
       + '<span id="nbLoanAlertX" style="position:absolute;top:9px;right:14px;'
-      + 'cursor:pointer;font-size:1.1rem;opacity:.75;line-height:1">×</span>';
+      + 'cursor:pointer;font-size:1.1rem;opacity:.75;line-height:1">\u00D7</span>';
 
     var x = document.getElementById('nbLoanAlertX');
     if (x) x.onclick = function () { box.style.display = 'none'; };
@@ -295,6 +319,7 @@
   }
 })();
 </script>
+
 
 <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
 <div class="container">
