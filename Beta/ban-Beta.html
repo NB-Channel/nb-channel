@@ -1069,6 +1069,7 @@ html { -webkit-text-size-adjust: 100%; }
         <a href="index-Beta.html">首页</a>
         <a href="videos-Beta.html">视频</a>
         <a href="about-Beta.html">关于</a>
+        <a href="rules-Beta.html">用户守则</a>
         <a href="changelog-Beta.html">更新日志</a>
         <a href="product-Beta.html">我的产品</a>
         <a href="APP-Beta.html">软件/APP</a>
@@ -1203,6 +1204,23 @@ html { -webkit-text-size-adjust: 100%; }
             <li><b>违规行为</b>注册后数分钟内即在评论区刷屏辱骂,与已封禁的「小NB官号」为同一人,系换号复犯</li>
             <li><b>处理结果</b>账号已永久封禁,全部违规评论清除,其使用的网络来源与一次性临时邮箱域名均已列入黑名单</li>
             <li><b>补充说明</b>本站注册需邮箱验证,用临时邮箱规避验证同样会被识别并拦截;换号复犯一律从重处理</li>
+        </ul>
+    </div>
+
+    <!-- 重大案例:小NB3(冒充站方发布分裂国家言论) -->
+    <div class="bn-case">
+        <div class="bn-case-head">
+            <span class="bn-case-ico">🚫</span>
+            <div>
+                <div class="bn-case-name">小NB3</div>
+                <div class="bn-case-date">公示日期 2026-10-04</div>
+            </div>
+            <span class="bn-case-tag">已永久封禁</span>
+        </div>
+        <ul class="bn-case-list">
+            <li><b>违规行为</b>在评论区连续刷屏辱骂，并<b>冒用本站名义编造、散布分裂国家的言论</b>，严重损害本站声誉</li>
+            <li><b>处理结果</b>账号已永久封禁，全部违规评论清除，其使用的网络来源与一次性临时邮箱域名均已列入黑名单</li>
+            <li><b>严正声明</b><b>本站是个人兴趣项目，与任何政治立场无关。</b>上述言论均为该账号凭空捏造，本站从未发表、也绝不会发表此类言论。任何人冒用本站名义发布政治或违法内容，一律永久封禁并完整留存证据</li>
         </ul>
     </div>
 
@@ -1458,7 +1476,7 @@ function avatarHtml(u) {
     return '<span class="bn-ava bn-ava-txt">' + esc(c) + '</span>';
 }
 // 已在"重大案例"里单独公示的账号,名单里不再重复
-var EXCLUDE_NAMES = ['小NB官号', '小NB2'];
+var EXCLUDE_NAMES = ['小NB官号', '小NB2', '小NB3'];
 function renderEmpty() {
     document.getElementById('bnCount').innerText = '';
     document.getElementById('bnBody').innerHTML =
