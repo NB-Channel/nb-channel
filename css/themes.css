@@ -1638,3 +1638,78 @@ html[theme] #nbPomoBox .nb-pomo-btns button.gh {
     color: var(--ink) !important;
     border-color: var(--card-border) !important;
 }
+
+
+/* ============================================================
+   旧变量名 → 新变量名 映射
+   ------------------------------------------------------------
+   站内不少页面用的是这套旧名字：
+       --card-bg / --bg-color / --text-color / --count-bg / --count-text
+       --card-border / --status-border
+       --nav-btn-bg / --nav-btn-text / --nav-btn-hover-bg / --nav-btn-hover-text
+
+   它们只在页面自己的 :root 里定义过（固定浅色），
+   而主题包只管 --bg / --card / --ink 这一套新名字。
+   于是换深色主题时：--ink 变浅了，--card-bg 还是白的
+   → 白底 + 浅字 = 弹窗、抽屉、提示框里的字看不见。
+
+   这里做一次映射，让旧名字跟着新名字走。
+   用 html[theme] 选择器：属性选择器优先级 (0,1,1) 高于 :root 的 (0,1,0)，
+   稳定覆盖页面自己的定义，不受加载顺序影响。
+   ============================================================ */
+
+html[theme],
+html.dark {
+    /* ---- 底色与文字 ---- */
+    --card-bg:      var(--card);
+    --bg-color:     var(--bg);
+    --text-color:   var(--ink);
+    --count-text:   var(--ink-faint);
+    --card-border:  var(--line);
+    --status-border: var(--brand);
+
+    /* ---- 浅色块（标签、徽章、统计卡）----
+       先给一个中性兜底值，再用 color-mix 融合主题文字色。
+       不支持 color-mix 的浏览器会忽略第二条，保留兜底值。 */
+    --count-bg:        rgba(127, 127, 127, .10);
+    --count-bg:        color-mix(in srgb, var(--ink) 9%, transparent);
+
+    /* ---- 小按钮（弹窗里的取消、次要操作）---- */
+    --nav-btn-bg:        rgba(127, 127, 127, .12);
+    --nav-btn-bg:        color-mix(in srgb, var(--ink) 11%, transparent);
+    --nav-btn-text:      var(--ink);
+    --nav-btn-hover-bg:  var(--brand);
+    --nav-btn-hover-text: #ffffff;
+}
+
+/* 上面那套映射之后，弹窗 / 抽屉 / 提示框只要背景走 --card-bg
+   就自动跟着主题了。但有几处写死了白色底或深色底，单独收一下。 */
+
+html[theme] .custom-modal .modal-content,
+html.dark    .custom-modal .modal-content {
+    background: var(--card);
+    color: var(--ink);
+}
+
+html[theme] .custom-modal .modal-content button,
+html.dark    .custom-modal .modal-content button {
+    color: #fff;
+}
+
+html[theme] .custom-modal .modal-content button.cancel,
+html.dark    .custom-modal .modal-content button.cancel {
+    color: var(--ink);
+}
+
+/* 弹窗遮罩：深色主题下稍微加深一点，别让底下的内容透出来干扰 */
+html[theme] .custom-modal,
+html.dark    .custom-modal {
+    background: rgba(0, 0, 0, .58);
+}
+
+/* 抽屉（移动端菜单）：原本写了固定白色 */
+html[theme] .drawer,
+html.dark    .drawer {
+    background: var(--card);
+    color: var(--ink);
+}

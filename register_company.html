@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -106,6 +106,39 @@
             font-size: 0.85rem;
             margin-top: 8px;
         }
+        /* 出资额快捷按钮 + 说明（颜色全部走主题变量，新潮/经典两套皮肤通用） */
+        .quick-amounts {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .quick-amounts button {
+            flex: 1;
+            min-width: 72px;
+            width: auto;
+            padding: 8px 6px;
+            border-radius: 999px;
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: var(--text-color);
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .quick-amounts button:hover {
+            border-color: var(--status-border);
+            color: var(--status-border);
+            filter: none;
+        }
+        .capital-hint {
+            margin-top: 10px;
+            font-size: 0.78rem;
+            line-height: 1.75;
+            color: var(--count-text);
+        }
+        .capital-hint b { color: var(--status-border); font-weight: 700; }
+        .capital-hint .warn { color: #ff6b6b; }
         .back-link {
             text-align: center;
             margin-top: 20px;
@@ -128,6 +161,20 @@
         <div class="form-group">
             <label>公司所有人</label>
             <div class="readonly-field" id="ownerName">加载中...</div>
+        </div>
+        <div class="form-group">
+            <label for="capitalAmount">出资额（建公司资金池）</label>
+            <input type="number" id="capitalAmount" min="20000" step="1000" value="20000" placeholder="最低 20000 NB币">
+            <div class="quick-amounts">
+                <button type="button" data-add="0">最低 2万</button>
+                <button type="button" data-add="30000">5万</button>
+                <button type="button" data-add="80000">10万</button>
+                <button type="button" data-add="180000">20万</button>
+            </div>
+            <div class="capital-hint" id="capitalHint">
+                这笔钱会作为公司的<b>初始资金池</b>。你会获得<b>等量股份</b>（股价 1.00），另一半留在池子里供别人购买。
+                最低 20000 NB币起。
+            </div>
         </div>
         <div class="checkbox-group">
             <input type="checkbox" id="needVerify">
@@ -185,45 +232,134 @@
         }
     }
 
+    // 会话令牌：本站统一存在 localStorage 的 nb_session（和股票页、银行页等完全一致）。
+    // 站内那段「会话令牌自动注入」补丁只覆盖固定的 RPC 名单，register_company_funded
+    // 不在名单里，所以这里必须显式传 p_session。
+    function getSessionToken() {
+        try { return localStorage.getItem('nb_session'); } catch (e) { return null; }
+    }
+
+    // ===== 出资额：建公司初始资金池的金额 =====
+    // 池子现金 = 出资额、池子股份 = 出资额 → 股价 1.00，总股本 = 2 × 出资额，
+    // 创始人拿一半（= 出资额张），另一半留在池子里供别人买入。
+    var MIN_CAPITAL = 20000;
+    var MAX_CAPITAL = 100000000;   // 1 亿，和后端一致
+    var myBalance = null;
+
+    function capitalInput() { return document.getElementById('capitalAmount'); }
+    function fmtMoney(n) { try { return Number(n).toLocaleString('zh-CN'); } catch (e) { return n; } }
+
+    function currentCapital() {
+        var v = Math.floor(Number(capitalInput().value || 0));
+        return isNaN(v) ? 0 : v;
+    }
+
+    // 余额：沿用站内 get_my_balance RPC（返回 {ok, balance}）
+    function loadMyBalance() {
+        if (!currentUser) return;
+        supabaseClient.rpc('get_my_balance', {
+            p_user_id: currentUser.id, p_session: getSessionToken()
+        }).then(function (res) {
+            var d = res && res.data;
+            if (d && typeof d === 'object' && d.ok === false) return;
+            myBalance = (d && typeof d === 'object') ? (d.balance != null ? d.balance : d.nb_balance) : d;
+            if (myBalance == null || isNaN(Number(myBalance))) myBalance = null;
+            updateCapitalHint();
+        }).catch(function () {});
+    }
+
+    function updateCapitalHint() {
+        var hint = document.getElementById('capitalHint');
+        if (!hint) return;
+        var v = currentCapital();
+        var bal = (myBalance == null) ? '—' : fmtMoney(myBalance);
+        var lack = (myBalance != null && v > myBalance)
+            ? '<br><span class="warn">NB币不足（还差 ' + fmtMoney(v - myBalance) + '）</span>' : '';
+        var low = (v > 0 && v < MIN_CAPITAL)
+            ? '<br><span class="warn">出资额不能低于 ' + fmtMoney(MIN_CAPITAL) + ' NB币</span>' : '';
+        hint.innerHTML =
+            '这笔钱会作为公司的<b>初始资金池</b>。你会获得<b>等量股份</b>（股价 1.00），另一半留在池子里供别人购买。' +
+            '<br>你的 NB币余额:<b>' + bal + '</b>；本次将扣除:<b>' + fmtMoney(v) + '</b> NB币' +
+            '<br>公司资金池:<b>' + fmtMoney(v) + '</b> · 你拿到:<b>' + fmtMoney(v) + '</b> 张 · 总股本:<b>'
+            + fmtMoney(v * 2) + '</b> 张' + lack + low;
+    }
+
+    (function bindCapital() {
+        document.querySelectorAll('.quick-amounts button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var add = Number(b.dataset.add || 0);
+                var el = capitalInput();
+                if (!el) return;
+                el.value = MIN_CAPITAL + add;
+                updateCapitalHint();
+            });
+        });
+        var el = capitalInput();
+        if (el) el.addEventListener('input', updateCapitalHint);
+    })();
+
     async function registerCompany() {
+        if (!currentUser) return;
         const companyName = document.getElementById('companyName').value.trim();
         const needVerify = document.getElementById('needVerify').checked;
         const errorDiv = document.getElementById('errorMsg');
+        const btn = document.getElementById('submitBtn');
+        const capital = currentCapital();
         errorDiv.innerText = '';
 
-        if (!companyName) {
-            errorDiv.innerText = '请填写公司名称';
+        // 本地只挡最基本的几种，其余（重名 / 违禁词 / 登录过期 / 余额不足…）都由后端 message 给出
+        if (!companyName) { errorDiv.innerText = '请填写公司名称'; return; }
+        if (companyName.length > 20) { errorDiv.innerText = '公司名称不能超过20字'; return; }
+        if (capital < MIN_CAPITAL) {
+            errorDiv.innerText = '出资额不能低于 ' + fmtMoney(MIN_CAPITAL) + ' NB币（这笔钱是公司的初始资金池）';
             return;
         }
-        if (companyName.length > 20) {
-            errorDiv.innerText = '公司名称不能超过20字';
+        if (capital > MAX_CAPITAL) { errorDiv.innerText = '单次出资不能超过 1 亿 NB币'; return; }
+        if (myBalance != null && capital > myBalance) {
+            errorDiv.innerText = 'NB币不足（需要 ' + fmtMoney(capital) + '，当前 ' + fmtMoney(myBalance) + '）';
             return;
         }
 
-        // 调用 RPC register_company
-        const { data, error } = await supabaseClient.rpc('register_company', {
-            p_user_id: currentUser.id,
-            p_company_name: companyName,
-            p_need_verify: needVerify
-        , p_session: localStorage.getItem('nb_session')});
-        if (error) {
-            errorDiv.innerText = '注册失败：' + error.message;
-            return;
+        btn.disabled = true; btn.textContent = '提交中…';
+        // 新版注册接口：出资额走 p_fund，会话令牌走 p_session。
+        // 失败原因有七八种（余额不足 / 低于 20000 / 超 1 亿 / 重名 / 违禁词 / 已注册过 / 登录过期），
+        // 后端 message 全都覆盖了，直接展示，不自己拼文案。
+        try {
+            const { data, error } = await supabaseClient.rpc('register_company_funded', {
+                p_user_id: currentUser.id,
+                p_session: getSessionToken(),
+                p_company_name: companyName,
+                p_need_verify: needVerify,
+                p_fund: capital
+            });
+            if (error) {
+                errorDiv.innerText = error.message || '注册失败';
+                btn.disabled = false; btn.textContent = '提交注册';
+                return;
+            }
+            if (!data || data.success === false) {
+                errorDiv.innerText = (data && data.message) || '注册失败';
+                btn.disabled = false; btn.textContent = '提交注册';
+                return;
+            }
+            // 后端 message 最准确（含实际到账股份数），优先用它
+            let tip = data.message || ('🎉 公司注册成功！资金池 ' + fmtMoney(capital) + ' NB币');
+            if (needVerify && data.need_verify) tip = '📨 注册申请已提交，请等待管理员审核。\n' + tip;
+            alert(tip);
+            window.location.href = uiHref('Virtual stock.html');
+        } catch (e) {
+            errorDiv.innerText = '注册失败：' + ((e && e.message) ? e.message : e);
+            btn.disabled = false; btn.textContent = '提交注册';
         }
-        if (!data.success) {
-            errorDiv.innerText = data.message;
-            return;
-        }
-        if (data.need_verify) {
-            alert('公司注册申请已提交，请等待管理员审核。\n审核通过后您将获得虚拟公司并开始股票交易。');
-        } else {
-            alert('公司注册成功！');
-        }
-        window.location.href = uiHref('Virtual stock.html');
     }
 
-    loadCurrentUser();
+    (async function boot() {
+        await loadCurrentUser();
+        setTimeout(loadMyBalance, 600);
+    })();
     document.getElementById('submitBtn').addEventListener('click', registerCompany);
+    document.getElementById('companyName').addEventListener('keydown', function (e) { if (e.key === 'Enter') registerCompany(); });
+    document.getElementById('capitalAmount').addEventListener('keydown', function (e) { if (e.key === 'Enter') registerCompany(); });
 </script>
 
 <script>
