@@ -108,7 +108,33 @@
             table.rules-table { min-width: 0; font-size: 0.95rem; }
             table.rules-table th, table.rules-table td { padding: 9px 10px; }
         }
-    </style>
+    
+        /* 用户守则：红色警告块（用 color-mix 混主题色，深浅皮肤都适配） */
+        .rules-warn {
+            margin: 0 0 26px;
+            padding: 18px 22px;
+            border: 1px solid color-mix(in srgb, #e5484d 55%, var(--card-border));
+            border-left: 6px solid #e5484d;
+            border-radius: 10px;
+            background: color-mix(in srgb, #e5484d 8%, var(--status-bg));
+            color: var(--status-text);
+            font-size: 1rem;
+            line-height: 1.85;
+        }
+        .rules-warn .rw-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #c62a2f;
+            margin-bottom: 10px;
+        }
+        html.dark .rules-warn .rw-title { color: #ff8b8f; }
+        .rules-warn p { margin: 0 0 10px; }
+        .rules-warn ul { margin: 6px 0 10px; padding-left: 22px; }
+        .rules-warn li { margin-bottom: 4px; }
+        .rules-warn strong { color: #c62a2f; }
+        html.dark .rules-warn strong { color: #ff8b8f; }
+
+</style>
 </head>
 <body>
     <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
@@ -142,6 +168,20 @@
         <!-- 用户守则内容 -->
         <div class="about-content rules-content">
             <p class="rules-lead">简单说：<strong>别骂人、别造谣、别盗号、别刷币、别刷屏。</strong>做到这五条，你在站上会玩得很舒服。</p>
+
+
+            <div class="rules-warn">
+                <div class="rw-title">⚠️ 最重要的一条：绝对不要用「临时邮箱」注册</div>
+                <p>像 10minutemail、temp-mail、mailinator 这类一次性邮箱，<strong>收件箱是公开的</strong> —— 任何人打开那个网站、输入你的邮箱地址，就能看到发给你的所有邮件，<strong>包括登录验证码</strong>。</p>
+                <p><strong>也就是说：用临时邮箱注册，等于你的账号没有密码。</strong>任何人只要知道你的邮箱地址，就能在一分钟内登进你的账号。</p>
+                <p>后果包括但不限于：</p>
+                <ul>
+                    <li>号被登走，NB币、股份、公司被搬空</li>
+                    <li>有人用你的号发违规内容，最后被处理的是<strong>你</strong></li>
+                    <li>有人用你的号冒充别人，账也算在<strong>你</strong>头上</li>
+                </ul>
+                <p><strong>请用 QQ邮箱 / 163邮箱 / Outlook / Gmail 这类常用邮箱注册。</strong>已经用临时邮箱注册的，请马上去个人中心换成常用邮箱 —— 换完之后别人就再也进不来了。</p>
+            </div>
 
             <h3>一、这个站是什么</h3>
             <ol>
@@ -246,7 +286,7 @@
                 <li><strong>站方永远不会向你索要密码。</strong></li>
                 <li>不要点陌生人发的链接。</li>
                 <li>发现账号被盗，立刻改密码，并通过下面的邮箱联系站长。</li>
-                <li>账号支持邮箱验证码登录，建议绑定常用邮箱。</li>
+                <li><strong>⚠️ 不要用临时邮箱注册。</strong>临时邮箱的收件箱是公开的 —— 任何人输入你的邮箱地址就能看到你的验证码，等于你的账号没有密码。详见页面顶部的红框。</li>
             </ol>
 
             <h3>五、虚拟资产说明</h3>

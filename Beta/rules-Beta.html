@@ -832,7 +832,32 @@ table.rules-table tbody tr:last-child td { border-bottom: none; }
       .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
       html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
       @media (max-width:900px){.nav-scan{display:flex}}
-    </style>
+    
+    /* 用户守则：红色警告块（变量全走主题，7 套主题通用） */
+    .rules-warn {
+        background: color-mix(in srgb, #e5484d 9%, var(--card));
+        border: 1px solid color-mix(in srgb, #e5484d 42%, var(--line));
+        border-left: 6px solid #e5484d;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-1);
+        padding: 22px 28px;
+        margin-bottom: 34px;
+        font-size: 1.02rem;
+        line-height: 1.9;
+        color: var(--ink);
+    }
+    .rules-warn .rw-title {
+        font-size: 1.14rem;
+        font-weight: 700;
+        color: #e5484d;
+        margin-bottom: 12px;
+    }
+    .rules-warn p { margin: 0 0 10px; }
+    .rules-warn ul { margin: 6px 0 10px; padding-left: 22px; }
+    .rules-warn li { margin-bottom: 5px; }
+    .rules-warn strong { color: #e5484d; }
+
+</style>
     <script>/* 扫码入口只在 APP 里显示。旧版 APP 也显示 —— 点进去 scan-Beta.html 会提示他更新 */
     (function(){try{if(!/NBChannelApp/i.test(navigator.userAgent||"")){var b=document.getElementById("navScanBtn");if(b)b.style.display="none";}}catch(e){}})();</script>
 
@@ -897,6 +922,19 @@ table.rules-table tbody tr:last-child td { border-bottom: none; }
     <div class="rules-lead reveal">
         简单说：<b>别骂人、别造谣、别盗号、别刷币、别刷屏。</b>做到这五条，你在站上会玩得很舒服。
     </div>
+
+            <div class="rules-warn">
+                <div class="rw-title">⚠️ 最重要的一条：绝对不要用「临时邮箱」注册</div>
+                <p>像 10minutemail、temp-mail、mailinator 这类一次性邮箱，<strong>收件箱是公开的</strong> —— 任何人打开那个网站、输入你的邮箱地址，就能看到发给你的所有邮件，<strong>包括登录验证码</strong>。</p>
+                <p><strong>也就是说：用临时邮箱注册，等于你的账号没有密码。</strong>任何人只要知道你的邮箱地址，就能在一分钟内登进你的账号。</p>
+                <p>后果包括但不限于：</p>
+                <ul>
+                    <li>号被登走，NB币、股份、公司被搬空</li>
+                    <li>有人用你的号发违规内容，最后被处理的是<strong>你</strong></li>
+                    <li>有人用你的号冒充别人，账也算在<strong>你</strong>头上</li>
+                </ul>
+                <p><strong>请用 QQ邮箱 / 163邮箱 / Outlook / Gmail 这类常用邮箱注册。</strong>已经用临时邮箱注册的，请马上去个人中心换成常用邮箱 —— 换完之后别人就再也进不来了。</p>
+            </div>
 
     <div class="rules-grid">
 
@@ -1010,7 +1048,7 @@ table.rules-table tbody tr:last-child td { border-bottom: none; }
                 <li><strong>站方永远不会向你索要密码。</strong></li>
                 <li>不要点陌生人发的链接。</li>
                 <li>发现账号被盗，立刻改密码，并通过下面的邮箱联系站长。</li>
-                <li>账号支持邮箱验证码登录，建议绑定常用邮箱。</li>
+                <li><strong>⚠️ 不要用临时邮箱注册。</strong>临时邮箱的收件箱是公开的 —— 任何人输入你的邮箱地址就能看到你的验证码，等于你的账号没有密码。详见页面顶部的红框。</li>
             </ol>
         </section>
 
