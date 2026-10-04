@@ -1,42 +1,4 @@
-# 本地运行时文件（不提交）
-pythonanywhere/uploads/
-*.log
-*.tmp
 
-# 系统文件
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# 环境变量与密钥（保险起见，永远不提交）
-.env
-*.env
-*.pem
-*.key
-# 服务器本地密钥文件(app.py 会读取其中的 API_KEY；只存在于 PythonAnywhere 上)
-secrets_local.py
-pythonanywhere/secrets_local.py
-
-# 生成器临时脚本（本地用）
-gen_new.ps1
-
-# 签名密钥不入库（改用 GitHub Secrets: ANDROID_KEYSTORE_BASE64）
-app/keystore/
-*.keystore
-*.jks
-
-# Python 编译产物不该入库（之前 py_compile 误提交过两个 .pyc）
-__pycache__/
-*.pyc
-*.pyo
-# 临时提交信息文件（提交后即删，不该进仓库）
-_c*.txt
-
-# 我用的临时文件（提交信息草稿等），不该进仓库
-_*.txt
-!_redirects
-!_headers
-
-# AMM �İ�ʱ�ı��ر��ݣ�����⣩
+*.injectbak
+*.bak
 *.ammbak
-
