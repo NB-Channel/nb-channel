@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <script>
+    /* ===== 跨子域名登录态同步（github. / netlify. 之间互通）=====
+       localStorage 是按 origin 隔离的，两个子域名各存各的，所以要借 Cookie 中转。
+       Cookie 设 Domain=.nb-channel.top，所有子域名都能读到。
+
+       这里不改页面原本的任何代码 —— 而是劫持 localStorage 的读写：
+         · 页面登录时 setItem('nb_session', ...)  → 顺手写一份到 Cookie
+         · 页面登出时 removeItem('nb_session')    → 顺手把 Cookie 清掉
+         · 页面加载时 Cookie 有、本地没有          → 自动注入进 localStorage
+       所以那 57 处登录/登出代码一行都不用动。
+
+       ⚠️ 这意味着 *.nb-channel.top 下任何一个子域名都能读到这个令牌，
+          包括 product-storage 那个 Workers。将来新增子域名前先想清楚这件事。 */
+    (function () {
+        try {
+            var KEY_S = 'nb_session', KEY_U = 'nb_user';
+            var DOMAIN = '.nb-channel.top';
+            var MAXAGE = 30 * 86400;
+
+            // 只在 .nb-channel.top 域下才启用（本地开文件、或别的域名访问时保持原样）
+            if (location.hostname.indexOf('nb-channel.top') < 0) return;
+
+            function readCookie(n) {
+                var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]*)'));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+            function writeCookie(n, v) {
+                document.cookie = n + '=' + encodeURIComponent(v) + ';path=/;domain=' + DOMAIN +
+                                  ';max-age=' + MAXAGE + ';SameSite=Lax' +
+                                  (location.protocol === 'https:' ? ';Secure' : '');
+            }
+            function dropCookie(n) {
+                document.cookie = n + '=;path=/;domain=' + DOMAIN + ';max-age=0;SameSite=Lax' +
+                                  (location.protocol === 'https:' ? ';Secure' : '');
+            }
+
+            // ---- ① 页面加载时双向对齐 ----
+            [KEY_S, KEY_U].forEach(function (k) {
+                var c = readCookie(k), l = null;
+                try { l = localStorage.getItem(k); } catch (e) {}
+                if (l) {
+                    if (l !== c) writeCookie(k, l);            // 本地有 → 同步出去
+                } else if (c) {
+                    try { localStorage.setItem(k, c); } catch (e) {}   // 本地没有 → 采用 Cookie
+                }
+            });
+
+            // ---- ② 劫持写入：登录时同步到 Cookie ----
+            var _set = localStorage.setItem;
+            localStorage.setItem = function (k, v) {
+                try { if ((k === KEY_S || k === KEY_U) && v) writeCookie(k, v); } catch (e) {}
+                return _set.call(localStorage, k, v);
+            };
+
+            // ---- ③ 劫持删除：登出时同步清 Cookie ----
+            var _rm = localStorage.removeItem;
+            localStorage.removeItem = function (k) {
+                try { if (k === KEY_S || k === KEY_U) dropCookie(k); } catch (e) {}
+                return _rm.call(localStorage, k);
+            };
+
+            // ---- ④ 万一有人用 clear() ----
+            var _cl = localStorage.clear;
+            localStorage.clear = function () {
+                try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+                return _cl.call(localStorage);
+            };
+        } catch (e) {}
+    })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
+
+    <script>
+    (function () {
+        try {
+            var tt = localStorage.getItem('theme');
+            if (tt === 'dark' || (!tt && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script>
+
+    
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/images/app-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NB频道">
+<meta name="application-name" content="NB频道">
+<!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
+<link rel="stylesheet" href="../css/themes.css?v=34">
+<script src="../js/theme.js?v=9"></script>
+<title>股票系统改版说明 - NB频道</title>
+<style>
+/* ===== 变量兜底 ===== */
+:root{
+    --bg:#f7f8fa; --card:#ffffff; --card-border:#e8eaee;
+    --ink:#1a1d23; --ink-soft:#42485a; --ink-faint:#8b93a3;
+    --line:#e2e6ee; --brand:#6366f1; --brand-deep:#4f46e5;
+    --shadow-1:0 2px 12px -4px rgba(20,30,60,.10);
+    --count-bg:rgba(127,127,127,.07);
+}
+
+/* ===== 导航样式（从 stock-Beta.html 的 style 块里抽取）===== */
+html.dark .nav{background: rgba(10,16,31,.72); border-bottom-color: rgba(148,163,184,.12);}
+html.dark .nav.scrolled{background: rgba(10,16,31,.9);}
+html.dark .logo-img{filter: brightness(1.4) saturate(1.15);}
+.nav-logo{display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; letter-spacing: .3px; margin-left: 12px;}
+.logo-img{display: block; height: 32px; width: auto;}
+.logo-text{color: var(--ink);}
+.nav-menu{display: flex; gap: 2px;}
+.nav-menu a{position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); white-space: nowrap; transition: color .3s ease;}
+.nav-menu a:hover{color: var(--ink);}
+.nav-menu a.active{color: var(--brand); font-weight: 600;}
+.nav-menu a::after{content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);}
+.nav-menu a:hover::after{transform: scaleX(1);}
+.nav-menu a.active::after{transform: scaleX(1);}
+.nav-menu a.nav-api{color: var(--brand); font-weight: 600; font-size: .86rem;}
+.nav-right-group{display: flex; align-items: center; gap: 10px;}
+.nav-auth-group{display: flex; gap: 8px; align-items: center;}
+.nav-clock{display: flex; flex-direction: column; align-items: flex-end;
+    margin-right: 8px; flex-shrink: 0; user-select: none; line-height: 1.35;}
+.nav-clock .nc-time{font-size: 15.5px; font-weight: 800; letter-spacing: 1.5px; color: var(--ink); font-variant-numeric: tabular-nums;}
+.nav-clock .nc-row{display: flex; align-items: baseline; gap: 6px; font-style: normal;}
+.nav-clock .nc-date{font-size: 10.5px; font-weight: 600; letter-spacing: .4px; color: var(--ink-soft); font-variant-numeric: tabular-nums;}
+.nav-clock .nc-label{font-size: 8.5px; font-weight: 600; letter-spacing: 2px; color: var(--ink-faint);}
+.nav-auth{padding: 8px 18px; border-radius: 999px;
+    background: rgba(255,255,255,.6); color: var(--ink);
+    border: 1px solid var(--line);
+    font-size: .88rem; font-weight: 600; cursor: pointer;
+    transition: all .25s ease; white-space: nowrap;}
+.nav-auth:hover{background: #fff; border-color: rgba(59,130,246,.4);}
+.nav-auth.primary{background: linear-gradient(135deg, var(--brand), #6366f1);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 8px 20px -8px rgba(59,130,246,.5);}
+.nav-auth.primary:hover{background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff;}
+html.dark .nav-auth{background: rgba(255,255,255,.05); color: var(--ink); border-color: rgba(148,163,184,.25);}
+html.dark .nav-auth:hover{background: rgba(255,255,255,.1); border-color: rgba(59,130,246,.5);}
+.nav-burger{display: none; width: 38px; height: 38px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: .95rem; cursor: pointer; color: var(--ink);
+    align-items: center; justify-content: center;}
+.nav-menu{display: none;}
+.nav-burger{display: flex;}
+.nav-clock, .nav-auth-group{display: none;}
+.nav{padding: 0 20px;}
+.nav-more-btn{position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); background: none; border: none; cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+    transition: color .3s ease;}
+.nav-more-btn::after{content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);}
+.nav-more-btn:hover{color: var(--ink);}
+.nav-more-btn:hover::after{transform: scaleX(1);}
+.nav-more.open .nav-more-btn{color: var(--ink);}
+.nav-more.open .nav-more-btn::after{transform: scaleX(1);}
+.nav-more-btn.active{color: var(--brand); font-weight: 600;}
+.nav-more-btn.active::after{transform: scaleX(1);}
+.nav-more-panel{display: none; position: absolute; top: calc(100% + 12px); right: 0;
+    min-width: 178px; padding: 8px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 18px 44px -20px rgba(15,23,42,.42);
+    z-index: 300;}
+.nav-more.open .nav-more-panel{display: block;}
+.nav-more-panel a{display: block; padding: 9px 12px; border-radius: 9px;
+    font-size: .88rem; color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+    transition: background .18s ease, color .18s ease;}
+.nav-more-panel a:hover{background: rgba(59,130,246,.1); color: var(--brand);}
+html.dark .nav-more-panel{background: #0f1a30; border-color: rgba(148,163,184,.22);}
+html.dark .nav-more-panel a:hover{background: rgba(59,130,246,.2); color: #fff;}
+.nav{padding: 0 12px; gap: 6px;}
+.nav-logo{flex: 0 0 auto; margin-left: 0;}
+.nav-menu{display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: flex-start;
+        gap: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+        /* 右侧渐隐,提示还能往右滑 */
+        -webkit-mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+        mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);}
+.nav-menu::-webkit-scrollbar{display: none;}
+.nav-menu  a, .nav-menu .nav-more-btn{padding: 9px 11px; font-size: .86rem; letter-spacing: .2px;}
+.nav-menu  a::after, .nav-menu .nav-more-btn::after{left: 11px; right: 11px;}
+.nav-right-group{flex: 0 0 auto; gap: 6px;}
+.nav-burger{flex: 0 0 auto;}
+.nav-menu  a, .nav-menu .nav-more-btn{padding: 9px 9px; font-size: .82rem;}
+.nav-logo .logo-img{height: 28px;}
+.nav{padding-top: env(safe-area-inset-top, 0);}
+.nav-more-panel{max-height: 70vh; overflow-y: auto;}
+.nav-more{display: none !important;}
+.nav-more-panel{display: none !important;}
+.nav-more-panel{max-width: calc(100vw - 24px);}
+.nav-scan{display:none;width:42px;height:42px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.7);border:1px solid var(--line,#e2e8f0);color:var(--ink,#0f172a);align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.nav-scan svg{width:21px;height:21px;display:block}
+.nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
+html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
+.nav-scan{display:flex}
+/* ===== 正文样式 ===== */
+.nbhelp{max-width:880px;margin:0 auto;padding:26px 18px 90px;
+    font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    line-height:1.85;font-size:15.5px;color:var(--ink)}
+.nbhelp *{box-sizing:border-box}
+.nbhelp .hd{background:var(--card);border:1px solid var(--card-border);
+    border-radius:20px;padding:32px 30px;margin-bottom:22px;box-shadow:var(--shadow-1)}
+.nbhelp .hd h1{margin:0 0 10px;font-size:1.8rem;line-height:1.35;color:var(--ink)}
+.nbhelp .hd .meta{color:var(--ink-faint);font-size:.86rem}
+.nbhelp .hd .lead{margin-top:16px;padding:14px 18px;border-radius:12px;
+    background:var(--count-bg);border-left:3px solid var(--brand);
+    color:var(--ink-soft);font-size:.94rem}
+.nbhelp section{background:var(--card);border:1px solid var(--card-border);
+    border-radius:18px;padding:26px 28px;margin-bottom:18px;box-shadow:var(--shadow-1)}
+.nbhelp section>h2{margin:0 0 16px;font-size:1.22rem;color:var(--ink);
+    display:flex;align-items:center;gap:10px}
+.nbhelp section>h2 .n{flex:0 0 auto;width:28px;height:28px;border-radius:9px;
+    background:var(--brand);color:#fff;font-size:.82rem;
+    display:flex;align-items:center;justify-content:center;font-weight:700}
+.nbhelp section>h3{margin:22px 0 10px;font-size:1.02rem;color:var(--ink);
+    padding-left:11px;border-left:3px solid var(--brand)}
+.nbhelp p{margin:10px 0;color:var(--ink-soft)}
+.nbhelp strong{color:var(--ink);font-weight:700}
+.nbhelp .tw{overflow-x:auto;margin:14px 0;border-radius:12px;border:1px solid var(--card-border)}
+.nbhelp table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:430px}
+.nbhelp th,.nbhelp td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--card-border)}
+.nbhelp th{background:var(--count-bg);color:var(--ink);font-weight:700;font-size:.86rem}
+.nbhelp td{color:var(--ink-soft)}
+.nbhelp tr:last-child td{border-bottom:none}
+.nbhelp td strong,.nbhelp td b{color:var(--ink)}
+.nbhelp .bad{color:#e05252;font-weight:600}
+.nbhelp .good{color:#2fa96b;font-weight:600}
+.nbhelp pre{background:var(--count-bg);border:1px solid var(--card-border);
+    border-radius:12px;padding:16px 18px;overflow-x:auto;margin:14px 0;
+    font-family:ui-monospace,Consolas,monospace;font-size:.85rem;
+    line-height:1.75;color:var(--ink-soft);white-space:pre-wrap}
+.nbhelp pre b{color:var(--ink);font-weight:700}
+.nbhelp .tip{border-radius:13px;padding:15px 18px;margin:16px 0;
+    border-left:3px solid var(--brand);background:var(--count-bg);
+    font-size:.92rem;color:var(--ink-soft)}
+.nbhelp .tip.warn{border-left-color:#e8a33d}
+.nbhelp .tip.key{border-left-color:#2fa96b}
+.nbhelp .tip .t{display:block;font-weight:700;color:var(--ink);margin-bottom:5px}
+.nbhelp details{border:1px solid var(--card-border);border-radius:13px;
+    margin:10px 0;overflow:hidden;background:var(--count-bg)}
+.nbhelp details[open]{background:var(--card)}
+.nbhelp summary{padding:14px 18px;cursor:pointer;font-weight:600;color:var(--ink);
+    font-size:.94rem;list-style:none;display:flex;align-items:center;gap:10px}
+.nbhelp summary::-webkit-details-marker{display:none}
+.nbhelp summary::before{content:"+";flex:0 0 auto;width:20px;height:20px;border-radius:6px;
+    background:var(--brand);color:#fff;font-size:.8rem;
+    display:flex;align-items:center;justify-content:center;font-weight:700}
+.nbhelp details[open] summary::before{content:"\2212"}
+.nbhelp details .body{padding:0 18px 16px 48px;font-size:.92rem;color:var(--ink-soft)}
+.nbhelp details .body p:first-child{margin-top:0}
+.nbhelp .end{text-align:center;padding:30px 20px;margin-top:26px;border-radius:18px;
+    border:1px dashed var(--line);color:var(--ink-faint);font-size:.9rem}
+.nbhelp .end .big{display:block;font-size:1.05rem;color:var(--ink);
+    margin-bottom:10px;line-height:1.9}
+.nbhelp .back{display:inline-flex;align-items:center;gap:7px;margin-bottom:18px;
+    color:var(--brand);text-decoration:none;font-size:.9rem;font-weight:600}
+.nbhelp .back:hover{text-decoration:underline}
+@media(max-width:640px){
+    .nbhelp{padding:14px 12px 70px;font-size:15px}
+    .nbhelp .hd{padding:24px 20px;border-radius:16px}
+    .nbhelp .hd h1{font-size:1.4rem}
+    .nbhelp section{padding:20px 17px;border-radius:15px}
+    .nbhelp section>h2{font-size:1.08rem}
+    .nbhelp details .body{padding-left:18px}
+}
+</style>
+</head>
+<body>
+<nav class="nav">
+    <a class="nav-logo" href="index-Beta.html"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"></a>
+    <div class="nav-menu">
+        <a href="index-Beta.html">首页</a>
+        <a href="videos-Beta.html">视频</a>
+        <a href="about-Beta.html">关于</a>
+        <a href="changelog-Beta.html">更新日志</a>
+        <a href="product-Beta.html">我的产品</a>
+        <a href="APP-Beta.html">软件/APP</a>
+        <a href="index-Beta.html#friends">友商</a>
+        <a class="nav-api" href="/api-sdk/" target="_blank" rel="noopener noreferrer" title="NB频道 API 文档">API<i>↗</i></a>
+        <div class="nav-more">
+            <button class="nav-more-btn" type="button">更多功能 ▾</button>
+            <div class="nav-more-panel">
+                <a href="stock-Beta.html">📈 虚拟股票</a>
+                <a href="messages-Beta.html">🔔 消息中心</a>
+                <a href="chat-Beta.html">👥 好友 / 私信</a>
+                <a href="bank-Beta.html">🏦 NB银行</a>
+                <a href="shop-Beta.html">🛍️ NB商店</a>
+                <a href="backpack-Beta.html">🎒 我的背包</a>
+                <a href="titles-Beta.html">🏅 称号大全</a>
+                <a href="achievements-Beta.html">🏆 成就墙</a>
+                <a href="lottery-Beta.html">📅 签到 · 转盘</a>
+                <a href="lottery_records-Beta.html">🎰 抽奖记录</a>
+                <a href="tools-Beta.html">🔧 工具</a>
+                <a href="product_share-Beta.html">📦 作品分享</a>
+                <a href="comments-Beta.html">💬 评论区</a>
+                <a href="ban-Beta.html">🚫 小黑屋</a>
+                <a href="feedback-Beta.html">🐞 漏洞/建议反馈</a>
+                <a href="vote-Beta.html">🗳️ 投票中心</a>
+            </div>
+        </div>
+    </div>
+    <div class="nav-right-group">
+        <div class="nav-clock" id="navClock" title="北京时间（UTC+8）">
+            <span class="nc-time" id="bjTime">--:--:--</span>
+            <span class="nc-row"><i class="nc-date" id="bjDate">----.--.--</i><em class="nc-label">北京时间</em></span>
+        </div>
+        <button class="theme-btn" id="themeBtn" aria-label="切换夜间模式">🌙</button>
+        <div class="nav-auth-group" id="betaAuthGroup">
+            <a class="nav-auth" id="betaProfileBtn" href="#">👤 个人中心</a>
+            <a class="nav-auth primary" id="betaAuthBtn" href="#">登录 / 注册</a>
+        </div>
+    </div>
+    <button class="nav-burger" id="navBurger" aria-label="打开菜单">☰</button>
+    <!-- 扫码:手机端右上角,在汉堡(☰)的右边。只在 APP 里显示 —— 网页端调不动摄像头。
+         整段自包含(自带样式/脚本),不依赖本页既有的 CSS 变量和导航结构。 -->
+    <a class="nav-scan" id="navScanBtn" href="scan-Beta.html" aria-label="扫一扫" title="扫一扫"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5V6a3 3 0 0 1 3-3h2.5"/><path d="M15.5 3H18a3 3 0 0 1 3 3v2.5"/><path d="M21 15.5V18a3 3 0 0 1-3 3h-2.5"/><path d="M8.5 21H6a3 3 0 0 1-3-3v-2.5"/><path d="M3.2 12h17.6"/></svg></a>
+    <style>
+      .nav-scan{display:none;width:42px;height:42px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.7);border:1px solid var(--line,#e2e8f0);color:var(--ink,#0f172a);align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent}
+      .nav-scan svg{width:21px;height:21px;display:block}
+      .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
+      html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
+      @media (max-width:900px){.nav-scan{display:flex}}
+    </style>
+    <script>/* 扫码入口只在 APP 里显示。旧版 APP 也显示 —— 点进去 scan-Beta.html 会提示他更新 */
+    (function(){try{if(!/NBChannelApp/i.test(navigator.userAgent||"")){var b=document.getElementById("navScanBtn");if(b)b.style.display="none";}}catch(e){}})();</script>
+
+</nav>
+<div class="nbhelp">
+<a class="back" href="stock-Beta.html">&larr; 返回虚拟股票</a>
+<div class="hd">
+    <h1>虚拟股票系统改版说明</h1>
+    <div class="meta">2026 年 10 月更新 &middot; 从「注资托底」改为「做市池」模型</div>
+    <div class="lead">
+        这次改动比较大，核心只有一个目标：<strong>让系统里的钱不多不少。</strong><br>
+        你投进去的每一分钱，要么还在你手里，要么还在公司池子里 —— 系统不再凭空印钱。
+    </div>
+</div>
+
+<section><h2><span class="n">1</span>为什么要改</h2>
+<p>旧版有三个「造币口」，经济系统被刷坏了：</p>
+<div class="tw"><table>
+<tr><th>问题</th><th>后果</th></tr>
+<tr><td>买入时钱消失、卖出时钱凭空出现</td><td>系统的货币总量被买卖行为左右</td></tr>
+<tr><td>「注资」让所有股东一起白赚</td><td class="bad">等于凭空印钱分给大家</td></tr>
+<tr><td>破产时老板拿走全部市值，股东持仓作废</td><td class="bad">又印一次</td></tr>
+</table></div>
+<p>有人利用这三条反复操作，刷出了天量 NB币。新版把这三个口子全部堵上。</p>
+</section>
+
+<section><h2><span class="n">2</span>新版是什么模型</h2>
+<p>每家公司有一个<strong>资金池</strong>，池子里装两样东西：</p>
+<pre><b>资金池现金</b>    公司账上的钱
+<b>资金池股份</b>    可供买卖的股份
+
+<b>股价 = 池子现金 ÷ 池子股份</b></pre>
+<p>买卖都是跟<strong>池子</strong>成交 —— 不需要等别人挂单，池子永远是你的对手盘，随时能买卖。</p>
+<h3>交易怎么影响价格</h3>
+<pre>买入 1000 NB币：
+    池子现金 +1000
+    池子股份 −（按公式算出的数量）
+    → 现金多了、股份少了 → <b>股价自动上涨</b>
+
+卖出 100 张：
+    池子股份 +100
+    池子现金 −（按公式算出的数量）
+    → 股份多了、现金少了 → <b>股价自动下跌</b></pre>
+<p>买的人多价格自然涨，卖的人多价格自然跌。<strong>不再需要系统「随机波动」。</strong></p>
+<h3>为什么这样就不造币了</h3>
+<div class="tip key"><span class="t">池子是个封闭的箱子</span>
+你买入 → 你的钱进箱子，你拿走股份<br>
+你卖出 → 你的股份进箱子，你拿走钱<br><br>
+箱子里的钱总共就那么多。<strong>你能套现的上限，就是箱子里有多少现金。</strong>
+股份再多，箱子没钱也换不出钱来。</div>
+</section>
+
+<section><h2><span class="n">3</span>和你有关的六个变化</h2>
+<h3>① 注册公司要出钱了</h3>
+<div class="tw"><table>
+<tr><th></th><th>旧版</th><th>新版</th></tr>
+<tr><td>初始市值</td><td>白送 20000</td><td><b>你自己出资建池子</b></td></tr>
+</table></div>
+<pre>你出 <b>C 币</b>建公司：
+    池子现金   = C
+    池子股份   = C 张        →  股价 = <b>1.00</b>
+    总股本     = 2C 张
+    你（创始人）得 C 张       →  价值 C，<b>正好是你出的钱</b>
+    池子留     = C 张        →  供别人买</pre>
+<p>最低出资 <strong>20000 NB币</strong>。</p>
+
+<h3>② 买入：钱真的进池子了</h3>
+<p>旧版买入时钱是「消失」的（既不进公司也不给别人）。新版钱<strong>真的进池子</strong>，成为公司的钱。</p>
+<div class="tip"><span class="t">所以买入会推高股价</span>这是特性，不是 bug。</div>
+
+<h3>③ 卖出：输入的是「张数」不是「金额」</h3>
+<p>旧版你输入「卖多少钱」，新版你输入「卖多少张股份」。</p>
+<p>因为新版里卖出的钱取决于池子状态，事先不知道确切金额，只能先定张数、再算能拿多少。页面上会实时显示预览。</p>
+
+<h3>④「注资」没有了</h3>
+<p>旧版「注资」= 给自己公司加钱让市值涨。新版取消了，因为<strong>注资会让所有股东一起白赚 —— 那是造币</strong>。</p>
+<div class="tip warn"><span class="t">那创始人怎么给公司加钱？</span>
+加不了。公司资金池只能靠<strong>别人买入</strong>增长。<br>
+这跟真实市场一致：上市公司也不能自己买自己的股票来撑股价，那叫操纵。</div>
+
+<h3>⑤「提取公司价值」没有了，改用「分红」</h3>
+<div class="tw"><table>
+<tr><th></th><th>旧版「提取」</th><th>新版「分红」</th></tr>
+<tr><td>谁能拿</td><td>只有老板</td><td><b>全体股东按持股比例</b></td></tr>
+<tr><td>效果</td><td>市值减少，老板拿钱</td><td>池子钱减少，股价自动下跌</td></tr>
+</table></div>
+<p>分红要从池子里拿钱，所以<strong>股价会同步下跌</strong> —— 这叫「除息」，是真实市场的规则。你拿到现金，但手里的股票同时贬值，<strong>总资产不变</strong>。</p>
+
+<h3>⑥「破产」改成「清算」</h3>
+<div class="tw"><table>
+<tr><th></th><th>旧版</th><th>新版</th></tr>
+<tr><td>池子里的钱给谁</td><td class="bad">老板独吞</td><td class="good">按持股比例分给所有股东</td></tr>
+</table></div>
+<p>跟真实市场一致：破产清算时，还完债后剩余资产按持股比例分给股东。</p>
+</section>
+
+<section><h2><span class="n">4</span>怎么玩：三个策略</h2>
+<h3>策略一：自己做一家公司（创始人）</h3>
+<pre>① 出 20000 建公司 → 你得到 20000 张（股价 1.00）
+② 等别人来买 → 他们把钱放进池子，股价上涨 → 你的股份增值
+③ 想拿钱 → 发起「分红」，从池子里取钱，全体股东一起分
+④ 不想做了 → 「清算」，池子里的钱按持股比例分给所有股东</pre>
+<div class="tip"><span class="t">关键理解</span>
+股价上涨靠的是<strong>别人买入</strong>，不是你自己注资。
+所以你要做的不是「往里砸钱」，而是<strong>让公司值得被买</strong>。</div>
+
+<h3>策略二：买入别人的公司（投资人）</h3>
+<pre>① 看中一家公司 → 买入（钱进池子，你拿到股份）
+② 公司被更多人看好 → 股价涨 → 你的股份增值
+③ 卖出 → 从池子里把钱换回来
+④ 持有期间如果创始人分红 → 你也能分到</pre>
+<div class="tip"><span class="t">关键理解</span>
+你赚的钱来自<strong>后来买入的人</strong>，不是系统给的。
+所以你要判断的是「这家公司会不会有人愿意出更高的价买」。</div>
+
+<h3>策略三：自动抄底</h3>
+<p>设置规则：某公司股价跌破 X 时，自动买入 Y 币。</p>
+<div class="tw"><table>
+<tr><th>可设参数</th><th>说明</th></tr>
+<tr><td>目标股价</td><td>跌到这个数以下就买</td></tr>
+<tr><td>每次买入金额</td><td>10 ~ 100000</td></tr>
+<tr><td>每日上限</td><td>默认 50000</td></tr>
+</table></div>
+<div class="tip warn"><span class="t">注意</span>只能盯<strong>别人的公司</strong> —— 不能对自己的公司设自动买入。</div>
+</section>
+
+<section><h2><span class="n">5</span>关于滑点（必须理解的一件事）</h2>
+<p>买入金额越大，成交均价越高。这个差价叫<strong>滑点</strong>。</p>
+<pre>某公司池子：现金 20000，股份 20000  →  股价 1.00
+
+你买 <b>100 币</b>：
+    均价 1.005      滑点 +0.5%      （几乎没感觉）
+
+你买 <b>1000 币</b>：
+    均价 1.05       滑点 +5%        （能感觉到）
+
+你买 <b>5000 币</b>：
+    均价 1.32       滑点 +32%       （很痛）</pre>
+<p>为什么？因为你买入时把池子里的现金加多了、股份拿走了，价格自然被你自己推高了。</p>
+<div class="tip key"><span class="t">所以要这样操作</span>
+小池子公司：小额买入，别一次砸太多<br>
+大池子公司：可以承受较大的单笔买入<br>
+页面上会实时显示滑点，超过 5% 会标红提醒</div>
+<p>卖出同理 —— <strong>卖得越多，均价越低</strong>。</p>
+</section>
+
+<section><h2><span class="n">6</span>常见问题</h2>
+<details><summary>我的公司市值怎么缩水了？</summary><div class="body">
+<p>旧版的「市值」是个虚数（注册白送 2 万 + 注资撑起来的，很多从来没兑现过）。新版按<strong>真实资金</strong>重算，所以数字会变小。</p>
+<p><strong>你的股份张数没变，价值也没变</strong>，只是口径改了。</p></div></details>
+
+<details><summary>我的持仓怎么变成「张数」了？</summary><div class="body">
+<p>旧版记录的是「本金」，新版记录的是「持有多少张股份」。</p>
+<p><strong>数值上你的持仓价值不变</strong> —— 原来「持仓价值 3 万」，现在就是「持股 3 万张 × 股价 1.00」。</p></div></details>
+
+<details><summary>为什么不能买自己的公司？</summary><div class="body">
+<p>防止操纵。如果允许，创始人可以自己大额买入拉高价格，吸引别人跟风后砸盘。</p>
+<p>真实市场也不允许 —— 那叫市场操纵。</p></div></details>
+
+<details><summary>公司资金池的钱我能拿出来吗？</summary><div class="body">
+<p>能，但只有两个途径：<strong>分红</strong>（全体股东一起分）或<strong>清算</strong>（按持股比例分）。</p>
+<p><strong>不能一个人独吞。</strong></p></div></details>
+
+<details><summary>股价会自己波动吗？</summary><div class="body">
+<p>不会了。旧版有「随机波动」和「公司税」在改市值，新版价格<strong>完全由交易决定</strong>。</p>
+<p>唯一还会影响价格的是<strong>公司税</strong> —— 每天从池子里扣一笔，扣完股价自动下跌。</p></div></details>
+
+<details><summary>散户能不能玩？</summary><div class="body">
+<p>能。池子小的公司，几百币就能买。</p>
+<p><strong>但要注意滑点 —— 小池子公司别一次买太多。</strong></p></div></details>
+
+<details><summary>怎么知道我赚了还是亏了？</summary><div class="body">
+<p>页面上「我的持仓」会显示：持股张数 / 成本均价 / 现价 / 浮动盈亏。</p>
+<p><strong>浮动盈亏 = 当前价值 − 你的累计投入成本。</strong></p></div></details>
+
+<details><summary>公司税是怎么收的？</summary><div class="body">
+<p>每天从资金池里扣一次，按池子大小分档：</p>
+<div class="tw"><table>
+<tr><th>池子现金</th><th>税率</th></tr>
+<tr><td>小于 100 万</td><td>0.2%</td></tr>
+<tr><td>100 万 ~ 2000 万</td><td>0.5%</td></tr>
+<tr><td>2000 万 ~ 5000 万</td><td>1.0%</td></tr>
+<tr><td>5000 万以上</td><td>2.0%</td></tr>
+<tr><td>占全站 40% 以上</td><td>额外 +5%（垄断税）</td></tr>
+</table></div>
+<p>池子小于 30 万的公司不收税。</p></div></details>
+</section>
+
+<div class="end">
+    <span class="big">
+        旧版是「充值推高市值，然后想办法把市值换成钱」。<br>
+        新版是「用真钱买股份，从后来的人手里赚钱」。
+    </span>
+    系统不再印钱，你赚的每一分都是别人亏的 —— 这才是股票。<br><br>
+    有问题在评论区问，或者在个人中心反馈。
+</div>
+</div>
+</body>
+</html>
