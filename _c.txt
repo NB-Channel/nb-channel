@@ -1,0 +1,50 @@
+feat(stock): 加「增资」功能（两套 UI）+ 清掉排查过程留下的脚手架
+
+【增资功能】
+新模型下创始人对自己公司完全使不上劲：不能买自己公司（防操纵）、
+旧的注资取消了、分红只会让股价跌。所以加了「增资」——
+往自己公司的资金池打钱，不拿股份，股价上涨、全体股东受益。
+
+改动（Virtual stock.html 和 Beta/stock-Beta.html 各一份）：
+  · 「💰 增资」按钮，仅创始人可见，跟分红放一起
+  · 增资弹窗：输入金额 + 实时算「增资后股价」+ 两句必须知道的警告
+      「增资不会给你股份，钱进了公司只能靠分红或清算拿回」
+      「增资后 7 天内不能卖出该公司股份」
+  · 锁定期内该公司的「卖出」按钮变灰，提示还剩几天
+  · 增资记录列表（数据源 get_my_injections）
+
+后端接口 inject_company_capital / get_my_injections 和 7 天锁定检查
+在上一批 SQL（sql/inject_capital_20261003.sql）里已经建好。
+
+自测：增资按钮 / 弹窗 / 锁定 / 记录四个部分都在；
+      两页 <script> 标签 13/13 和 21/21 配对；
+      含 inject 的三段内联脚本 node --check 全通过；
+      headless 截图确认页面正常渲染。
+
+【清理】
+这个任务过程中 AI 留下了一堆脚手架，全部清掉：
+  tools/_apply_inject.py        59,509   改页面的脚本
+  tools/_inj_late.js            16,935   自测脚本
+  tools/_inj_selftest.html      14,421
+  tools/_inj_early.js            5,091
+  tools/_make_selftest.py        2,579
+  tools/_brace.py                2,135
+  tools/_check_inline.py         1,879
+  tools/_check_before_after.py   1,513
+  tools/_dbg.py                    674
+  _injtest_beta.html           262,158   造的测试页
+  _injtest_root.html           199,591
+共 11 个文件、约 566 KB。
+
+保留 tools/scan_bad_names.mjs 和 tools/security_check.mjs —— 那两个是
+9 月就有的正经工具，不是这次留下的。
+
+备份文件（*.ammbak / *.injectbak）从 git 取消跟踪，本地保留。
+
+.gitignore 补了规则防止以后再堆：
+    *.ammbak  *.injectbak  *.bak  tools/_*  _*.html  _injtest_*.html
+
+【我犯的错，记一下】
+提交前我用了 git add -A，把分身【正在改的】Virtual stock.html 一起
+提交了（那个文件当时已经改完，页面没坏，但历史里多了一次中间状态）。
+以后在有人正在改文件时，提交要指定具体路径，不用 -A。

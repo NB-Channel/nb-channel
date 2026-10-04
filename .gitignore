@@ -2,3 +2,8 @@
 *.injectbak
 *.bak
 *.ammbak
+
+# 临时脚手架（AI 排查/自测用，不入库）
+tools/_*
+_*.html
+_injtest_*.html
