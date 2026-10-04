@@ -36,3 +36,7 @@ _c*.txt
 _*.txt
 !_redirects
 !_headers
+
+# AMM 改版时的本地备份（不入库）
+*.ammbak
+

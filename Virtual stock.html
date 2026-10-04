@@ -1925,19 +1925,29 @@
         const quickRow = document.getElementById('tradeQuickRow');
         if (quickRow) {
             quickRow.innerHTML = '';
+            // 买入的「全部」要留出手续费（5%），否则一点就被余额校验挡回来
+            const maxBuy = Math.floor((Number(balance) || 0) / 1.05);
             const picks = (mode === 'buy')
-                ? [1000, 5000, 10000, Math.max(1000, Math.floor(balance || 0))]
+                ? [
+                    { v: 1000, label: formatValue(1000) },
+                    { v: 5000, label: formatValue(5000) },
+                    { v: 10000, label: formatValue(10000) },
+                    { v: maxBuy, label: '全部' }
+                ]
                 : (myShares > 0
-                    ? [myShares * 0.25, myShares * 0.5, myShares * 0.75, myShares]
+                    ? [0.25, 0.5, 0.75, 1].map((k, i) => ({
+                        v: myShares * k,
+                        label: i === 3 ? '全部' : Number((myShares * k).toFixed(2)).toFixed(2) + ' 张'
+                    }))
                     : []);
-            picks.forEach(v => {
-                const n = mode === 'buy' ? Math.floor(v) : Number(v.toFixed(2));
+            picks.forEach(p => {
+                const n = mode === 'buy' ? Math.floor(p.v) : Number(p.v.toFixed(2));
                 if (!(n > 0)) return;
                 const b = document.createElement('button');
                 b.type = 'button';
                 b.className = 'company-btn';
                 b.style.cssText = 'margin:0; padding:3px 12px; font-size:0.75rem;';
-                b.textContent = mode === 'buy' ? formatValue(n) : (n === Number(myShares.toFixed(2)) ? '全部' : n.toFixed(2) + ' 张');
+                b.textContent = p.label;
                 b.onclick = () => {
                     amountInput.value = String(n);
                     updateTradePreview(true);
