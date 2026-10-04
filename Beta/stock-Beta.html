@@ -921,6 +921,140 @@ html { -webkit-text-size-adjust: 100%; }
 <!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
 <link rel="stylesheet" href="../css/themes.css?v=35">
 <script src="../js/theme.js?v=9"></script>
+<style id="nbNewbieGuideCss">
+/* ============================================================
+   NB-STOCK-NEWBIE-GUIDE — 新手三步面板（可折叠）
+   颜色全部走本页 CSS 变量（Beta 主题包 / 新潮 / 经典 三套皮肤都能看）
+   ============================================================ */
+#nbNewbieGuide {
+  margin: 0 0 18px;
+  border: 1px solid var(--card-border, #e5e9ef);
+  border-radius: 18px;
+  background: var(--card-bg, #fff);
+  overflow: hidden;
+}
+#nbNewbieGuide .nbg-head {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; box-sizing: border-box;
+  margin: 0; padding: 11px 15px;
+  border: 0; border-radius: 0;
+  -webkit-appearance: none; appearance: none;
+  background: var(--count-bg, #eef2f8);
+  color: var(--text-color, #1a1d23);
+  font-family: inherit; font-size: .95rem; font-weight: 800;
+  line-height: 1.5; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .18s ease;
+}
+#nbNewbieGuide .nbg-head:hover { color: var(--status-border, #00a1d6); }
+#nbNewbieGuide .nbg-head-sub { font-size: .78rem; font-weight: 600; color: var(--count-text, #666); }
+#nbNewbieGuide .nbg-caret {
+  margin-left: auto; flex: none;
+  font-size: .8rem; line-height: 1;
+  color: var(--count-text, #666);
+  transition: transform .2s ease;
+}
+#nbNewbieGuide.collapsed .nbg-caret { transform: rotate(-90deg); }
+#nbNewbieGuide .nbg-body { padding: 14px 15px 6px; text-align: left; }
+#nbNewbieGuide.collapsed .nbg-body { display: none; }
+
+#nbNewbieGuide .nbg-step { margin-bottom: 14px; }
+#nbNewbieGuide .nbg-step:last-child { margin-bottom: 8px; }
+#nbNewbieGuide .nbg-step-title {
+  display: flex; align-items: center; gap: 7px;
+  margin: 0 0 9px;
+  font-size: .88rem; font-weight: 800; line-height: 1.5;
+  color: var(--status-border, #00a1d6);
+}
+#nbNewbieGuide .nbg-step-title::before {
+  content: ''; flex: none;
+  width: 4px; height: 14px; border-radius: 2px;
+  background: var(--status-border, #00a1d6);
+}
+#nbNewbieGuide .nbg-formula {
+  margin: 0 0 9px; padding: 9px 12px;
+  border: 1px dashed var(--card-border, #e5e9ef); border-radius: 12px;
+  background: var(--count-bg, #eef2f8);
+  color: var(--text-color, #1a1d23);
+  font-size: .9rem; font-weight: 800; line-height: 1.65;
+  text-align: center; overflow-wrap: anywhere;
+}
+#nbNewbieGuide .nbg-text {
+  margin: 0 0 6px;
+  font-size: .85rem; line-height: 1.85;
+  color: var(--count-text, #666);
+}
+#nbNewbieGuide .nbg-map { margin: 0 0 8px; padding: 0; list-style: none; }
+#nbNewbieGuide .nbg-map li {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px;
+  padding: 5px 0;
+  font-size: .85rem; line-height: 1.7;
+  border-bottom: 1px solid var(--card-border, #e5e9ef);
+}
+#nbNewbieGuide .nbg-map li:last-child { border-bottom: 0; }
+#nbNewbieGuide .nbg-k { color: var(--text-color, #1a1d23); }
+#nbNewbieGuide .nbg-a { flex: none; color: var(--count-text, #666); }
+#nbNewbieGuide .nbg-v { color: var(--status-border, #00a1d6); font-weight: 700; }
+#nbNewbieGuide .nbg-ops { margin: 0; padding: 0; list-style: none; }
+#nbNewbieGuide .nbg-ops li {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 6px 0;
+  font-size: .85rem; line-height: 1.78;
+  color: var(--count-text, #666);
+}
+#nbNewbieGuide .nbg-ops li + li { border-top: 1px solid var(--card-border, #e5e9ef); }
+#nbNewbieGuide .nbg-op-name {
+  flex: none; min-width: 5.4em;
+  color: var(--text-color, #1a1d23); font-weight: 800; white-space: nowrap;
+}
+#nbNewbieGuide .nbg-ops em { font-style: normal; font-weight: 800; color: var(--status-border, #00a1d6); }
+#nbNewbieGuide .nbg-mark { flex: none; font-weight: 800; }
+#nbNewbieGuide .nbg-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--count-bg, #eef2f8);
+  color: var(--status-border, #00a1d6);
+  font-size: .74rem; font-weight: 800; white-space: nowrap;
+}
+#nbNewbieGuide .nbg-op-warn {
+  margin-top: 2px; padding: 6px 9px; border-radius: 10px;
+  background: var(--count-bg, #eef2f8);
+}
+@media (max-width: 680px) {
+  #nbNewbieGuide { border-radius: 14px; }
+  #nbNewbieGuide .nbg-head { padding: 10px 12px; font-size: .9rem; }
+  #nbNewbieGuide .nbg-head-sub { display: none; }
+  #nbNewbieGuide .nbg-body { padding: 12px 12px 4px; }
+  #nbNewbieGuide .nbg-formula { font-size: .84rem; padding: 8px 10px; }
+  #nbNewbieGuide .nbg-op-name { min-width: 4.9em; }
+  #nbNewbieGuide .nbg-map li,
+  #nbNewbieGuide .nbg-ops li { font-size: .82rem; }
+}
+
+/* ============================================================
+   NB-STOCK-NEWBIE-GUIDE — 按钮白话说明
+   （桌面鼠标悬停看 title，手机上看这几行小字）
+   ============================================================ */
+.nb-btn-legend {
+  flex: 1 1 100%; width: 100%; margin-top: 8px;
+  font-size: .78rem; line-height: 1.85;
+  color: var(--count-text, #666);
+  overflow-wrap: anywhere;
+}
+.nb-trade-hint {
+  margin: 9px 0 2px;
+  font-size: .78rem; line-height: 1.85;
+  color: var(--count-text, #666);
+  overflow-wrap: anywhere;
+}
+.nb-trade-hint b { color: var(--text-color, #1a1d23); }
+.nb-more-warn {
+  margin-top: 6px; padding: 7px 9px; border-radius: 10px;
+  background: var(--count-bg, #eef2f8);
+  color: var(--text-color, #1a1d23);
+  font-weight: 800;
+}
+</style>
 </head>
 <body>
 <nav class="nav">
@@ -1066,8 +1200,75 @@ html { -webkit-text-size-adjust: 100%; }
             <h2 style="margin: 0; color: var(--status-border);">📊 虚拟股票行情</h2>
             <!-- 「注资 / 支持虚拟公司」已取消（AMM 下想加仓直接买入）；
                  这个入口现在是「自动抄底」：盯别人的公司，跌到目标价自动买入 -->
-            <button id="openSupportDialogBtn" class="company-btn">🎯 自动抄底</button>
+            <button id="openSupportDialogBtn" class="company-btn" title="设个目标价，别人的公司跌到那个价就自动帮你买">🎯 自动抄底</button>
         </div>
+
+<!-- NB-STOCK-NEWBIE-GUIDE：新手三步面板（默认展开；收起后状态记在 localStorage） -->
+<div id="nbNewbieGuide">
+  <button type="button" id="nbNewbieGuideHead" class="nbg-head" aria-expanded="true" aria-controls="nbNewbieGuideBody">
+    <span aria-hidden="true">📖</span>
+    <span>新手三步</span>
+    <span class="nbg-head-sub">第一次来先看这里</span>
+    <span class="nbg-caret" aria-hidden="true">▾</span>
+  </button>
+  <div class="nbg-body" id="nbNewbieGuideBody">
+
+    <section class="nbg-step">
+      <h3 class="nbg-step-title">第一步 · 看懂股价是什么</h3>
+      <p class="nbg-formula">股价 = 公司资金池里的现金 ÷ 池子里的股份</p>
+      <p class="nbg-text">把公司想成一个存钱罐：</p>
+      <ul class="nbg-map">
+        <li><span class="nbg-k">罐里有多少钱</span><span class="nbg-a" aria-hidden="true">→</span><span class="nbg-v">池子现金</span></li>
+        <li><span class="nbg-k">罐上贴了多少张纸条</span><span class="nbg-a" aria-hidden="true">→</span><span class="nbg-v">池子股份</span></li>
+        <li><span class="nbg-k">一张纸条值多少钱</span><span class="nbg-a" aria-hidden="true">→</span><span class="nbg-v">股价 = 罐里的钱 ÷ 纸条数</span></li>
+      </ul>
+      <p class="nbg-text">你手里也拿着一些纸条（你的持股）。纸条值多少钱，取决于罐里有多少钱、总共贴了多少张。</p>
+    </section>
+
+    <section class="nbg-step">
+      <h3 class="nbg-step-title">第二步 · 每个按钮分别干什么</h3>
+      <ul class="nbg-ops">
+        <li><b class="nbg-op-name">💰 买入</b><span>花钱买<em>别人的</em>公司，等涨了卖掉能赚</span></li>
+        <li><b class="nbg-op-name">💸 卖出</b><span>把手里的股份换回现金（输入的是<em>张数</em>不是金额）</span></li>
+        <li><b class="nbg-op-name">💎 分红</b><span>把<em>自己</em>公司的钱拿出来分给股东（只有创始人能点）</span></li>
+        <li class="nbg-op-warn"><b class="nbg-op-name">💰 增资</b><span>给<em>自己</em>公司加钱，但不拿股份 —— 一般是白花，别乱点</span></li>
+        <li><b class="nbg-op-name">🧹 清算</b><span>公司不做了，池子里的钱按持股比例分给所有人（只有创始人能点）</span></li>
+      </ul>
+    </section>
+
+    <section class="nbg-step">
+      <h3 class="nbg-step-title">第三步 · 怎么赚钱</h3>
+      <ul class="nbg-ops">
+        <li><span class="nbg-mark" aria-hidden="true">✅</span><span>别人买你的公司 <span class="nbg-a">→</span> 你手里的股份自动增值<b class="nbg-tag">主要收入来源</b></span></li>
+        <li><span class="nbg-mark" aria-hidden="true">✅</span><span>你买别人的公司 <span class="nbg-a">→</span> 等它涨了卖出去</span></li>
+        <li><span class="nbg-mark" aria-hidden="true">❌</span><span>自己给自己增资 <span class="nbg-a">→</span> 纯付出，不赚钱，只是让公司看起来更值钱</span></li>
+      </ul>
+    </section>
+
+  </div>
+</div>
+<script>
+/* NB-STOCK-NEWBIE-GUIDE：折叠状态记忆（默认展开；收起后下次打开仍然收起） */
+(function () {
+  var KEY = 'nb_stock_guide_collapsed';
+  var box = document.getElementById('nbNewbieGuide');
+  var head = document.getElementById('nbNewbieGuideHead');
+  if (!box || !head) return;
+  function apply(collapsed) {
+    if (collapsed) { box.classList.add('collapsed'); }
+    else { box.classList.remove('collapsed'); }
+    head.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  apply(saved === '1');
+  head.addEventListener('click', function () {
+    var next = !box.classList.contains('collapsed');
+    apply(next);
+    try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
+  });
+})();
+</script>
 
         <div class="sub" style="color: var(--count-text); margin-bottom: 16px;">
             <span>📈 股票/概念指数 动态追踪</span>
@@ -1214,8 +1415,13 @@ html { -webkit-text-size-adjust: 100%; }
             <div id="tradeAmountPreview" style="color:var(--count-text); text-align:center;">输入数量后显示成交预览…</div>
         </div>
         <div style="display:flex; gap:10px; margin-top:8px;">
-            <button id="tradeBuyBtn" style="flex:1; background:#f44336;">📈 买入</button>
-            <button id="tradeSellBtn" style="flex:1; background:#4caf50;">📉 卖出</button>
+            <button id="tradeBuyBtn" style="flex:1; background:#f44336;" title="花钱买别人的公司。买得越多，均价越高（这叫滑点）">📈 买入</button>
+            <button id="tradeSellBtn" style="flex:1; background:#4caf50;" title="把手里的股份换回现金。输入张数，不是金额">📉 卖出</button>
+        </div>
+
+        <div class="nb-trade-hint">
+            💡 <b>买入</b>＝花钱买<u>别人</u>的公司，买得越多均价越高（滑点）。<b>卖出</b>＝把股份换回现金，输入的是<b>张数</b>不是金额。<br>
+            💡 滑点 = 你这一笔把价格推高/压低的幅度。金额相对于资金池越大，滑点越明显。小额买入几乎没感觉，一下砸太多会很痛。
         </div>
         <div style="text-align:center; margin-top:10px;">
             <button id="tradeCloseBtn" class="cancel">关闭</button>
@@ -1246,6 +1452,7 @@ html { -webkit-text-size-adjust: 100%; }
             <div style="display:flex; justify-content:space-between; gap:8px;"><span>你的余额</span><strong style="font-family:monospace;"><span id="injectBalance">-</span> NB币</strong></div>
         </div>
         <div class="inject-warn">
+            <div class="nb-more-warn">⚠️ 增资不会给你股份。如果你手上没有这家公司的股份，千万别增资 —— 那等于白送钱给其他股东。</div>
             <div>⚠️ 增资不会获得任何股份，钱会变成公司的资金。你能拿回来只有两个途径：分红（全体股东一起分）或清算（按持股比例分）。</div>
             <div>⚠️ 增资后 7 天内，你不能卖出这家公司的股份。</div>
         </div>
@@ -2102,10 +2309,11 @@ html { -webkit-text-size-adjust: 100%; }
             </div>
             <div>
                 ${actionButtons}
-                <button id="injectBtn" class="company-btn inject-btn" title="💰 给公司资金池打钱：股价上涨（全体股东受益），不获得任何股份；增资后 7 天内不能卖出">💰 增资</button>
-                <button id="dividendBtn" class="company-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;">💸 分红</button>
-                <button id="bankruptBtn" class="company-btn danger-btn">🧹 清算公司</button>
+                <button id="injectBtn" class="company-btn inject-btn" title="⚠️ 增资不会给你股份。如果你手上没有这家公司的股份，千万别增资 —— 那等于白送钱给其他股东。">💰 增资</button>
+                <button id="dividendBtn" class="company-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;" title="从自己公司的资金池里拿钱分给所有股东。池子里的钱少了，股价会跌（这叫除息）">💸 分红</button>
+                <button id="bankruptBtn" class="company-btn danger-btn" title="公司不做了。资金池里的钱按持股比例分给所有股东">🧹 清算公司</button>
             </div>
+            <div class="nb-btn-legend">💡 <b>增资</b>不给你股份，钱进了公司就出不来（手上没有这家公司的股份就别点）· <b>分红</b>从公司资金池拿钱分给全体股东，池子钱少了股价会跌（除息）· <b>清算</b>公司不做了，资金池按持股比例分给所有股东</div>
         `;
 
         document.getElementById('bankruptBtn')?.addEventListener('click', bankruptCompany);
@@ -2837,10 +3045,10 @@ html { -webkit-text-size-adjust: 100%; }
             const trading = isTradingHours();
             const tradeBtns = currentUserId
                 ? (trading
-                    ? `<button class="trade-btn buy" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
+                    ? `<button class="trade-btn buy" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" title="花钱买别人的公司。买得越多，均价越高（这叫滑点）" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
                        ${itemLock.locked
                         ? `<button class="trade-btn sell locked" data-locked="1" title="${escapeHtml(lockTip(itemLock))}" style="background:#9e9e9e; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:not-allowed; font-size:0.75rem;">🔒 锁定</button>`
-                        : `<button class="trade-btn sell" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`
+                        : `<button class="trade-btn sell" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-price="${item.price}" title="把手里的股份换回现金。输入张数，不是金额" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`
 }`
                     : '<span style="color:var(--count-text); font-size:0.75rem;">😴 休市</span>')
                 : '<span style="color:var(--count-text); font-size:0.75rem;">登录后可交易</span>';
@@ -3060,7 +3268,7 @@ html { -webkit-text-size-adjust: 100%; }
         sellBtn.disabled = !!sellLocked;
         sellBtn.style.opacity = sellLocked ? '.5' : '';
         sellBtn.style.cursor = sellLocked ? 'not-allowed' : 'pointer';
-        sellBtn.title = sellLocked ? lockTip(sellLock) : '';
+        sellBtn.title = sellLocked ? lockTip(sellLock) : '把手里的股份换回现金。输入张数，不是金额';
         amountInput.oninput = onTradeInput;
         if (discountCheck) discountCheck.onchange = () => updateTradePreview(true);
 
@@ -3353,10 +3561,10 @@ html { -webkit-text-size-adjust: 100%; }
             // 增资锁定期内：卖出按钮变灰 + 不可点
             const hLock = isSellLocked(h.company_id);
             const tradeBtns = trading
-                ? `<button class="trade-btn buy" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
+                ? `<button class="trade-btn buy" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" title="花钱买别人的公司。买得越多，均价越高（这叫滑点）" style="background:#f44336; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem; margin-right:4px;">买入</button>
                    ${hLock.locked
                         ? `<button class="trade-btn sell locked" data-locked="1" title="${escapeHtml(lockTip(hLock))}" style="background:#9e9e9e; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:not-allowed; font-size:0.75rem;">🔒 锁定</button>`
-                        : `<button class="trade-btn sell" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`}`
+                        : `<button class="trade-btn sell" data-id="${h.company_id}" data-name="${escapeHtml(h.company_name)}" data-price="${curPrice}" title="把手里的股份换回现金。输入张数，不是金额" style="background:#4caf50; color:white; border:none; border-radius:20px; padding:3px 12px; cursor:pointer; font-size:0.75rem;">卖出</button>`}`
                 : '<span style="color:var(--count-text); font-size:0.75rem;">😴 休市</span>';
             const lockNote = lockNoteHtml(h.company_id);
             html += `<tr>
