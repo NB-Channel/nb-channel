@@ -2426,7 +2426,9 @@ html { -webkit-text-size-adjust: 100%; }
             const mineHtml = item.myShares > 0
                 ? `<span style="font-family:monospace;">${item.myShares.toFixed(2)}</span> <span style="color:var(--count-text); font-size:0.72rem;">/ ${formatLarge(item.myValue)}</span>`
                 : '<span style="color:var(--count-text); font-size:0.75rem;">—</span>';
-            const verifiedTag = item.verified ? ' <span title="已认证" style="color:#3b82f6;">✔</span>' : '';
+            const verifiedTag = item.verified
+                ? ' <img src="https://s41.ax1x.com/2026/04/05/peNSL5t.png" title="已认证" alt="已认证" style="width:16px;height:16px;vertical-align:-3px;margin-left:3px;">'
+                : '';
             html += `<tr>
                 <td><a href="#" class="stock-link" data-id="${item.id}" data-name="${escapeHtml(item.name)}">${escapeHtml(item.name)}</a>${verifiedTag}<br>${reportBtn}</td>
                 <td style="font-family:monospace; font-weight:700; color:#00a1d6;">${formatPrice(item.price)}</td>
