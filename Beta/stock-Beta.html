@@ -3444,5 +3444,137 @@ html { -webkit-text-size-adjust: 100%; }
 </script>
 <script defer src="../js/science-tips.js?v=23"></script>
 <script src="../js/pomodoro.js?v=7" defer></script>
+<!-- NB-STOCK-MAINTENANCE-BANNER -->
+<style id="nbStockMaintCss">
+  #nbStockMaintBar {
+    position: sticky; top: 0; z-index: 9990;
+    display: none;
+    padding: 14px 22px;
+    background: linear-gradient(90deg, #b45309, #d97706);
+    color: #fff; font-size: .92rem; line-height: 1.75;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  }
+  #nbStockMaintBar.on { display: block; }
+  #nbStockMaintBar b { font-size: 1rem; letter-spacing: 1px; }
+  #nbStockMaintBar .sub { opacity: .92; font-size: .84rem; margin-top: 3px; }
+  /* 被禁用的按钮 */
+  .nb-maint-off {
+    opacity: .45 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    filter: grayscale(.6);
+  }
+  /* 页面顶部整体降饱和一点点，暗示"暂不可用" */
+  body.nb-maint #tradeModal { pointer-events: none; }
+</style>
+<div id="nbStockMaintBar">
+  <b>🛠 股票系统升级中</b>
+  <div class="sub" id="nbStockMaintNotice">
+    正在重构为新的交易模型，你的持仓和资金都不会受影响。请稍后再来。
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+
+  /* 找 supabase client —— 页面里已经有全局的了，名字试几种 */
+  function getSupa() {
+    if (window.supabaseClient) return window.supabaseClient;
+    if (window.sb) return window.sb;
+    if (window.supabase && typeof window.supabase.from === 'function') return window.supabase;
+    if (window._supabase) return window._supabase;
+    /* 有些页面把 client 挂在别的变量上，再兜一层 */
+    for (var k in window) {
+      try {
+        var v = window[k];
+        if (v && typeof v.from === 'function' && typeof v.rpc === 'function') return v;
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function myId() {
+    try {
+      var raw = localStorage.getItem('nb_user');
+      if (!raw) return null;
+      var u = JSON.parse(raw);
+      return (u && (u.id || u.user_id)) || null;
+    } catch (e) { return null; }
+  }
+
+  function lockButtons() {
+    /* 交易弹窗里的买卖、以及外面的建公司/破产按钮 */
+    var sel = [
+      '#tradeBuyBtn', '#tradeSellBtn',
+      '.trade-btn.buy', '.trade-btn.sell',
+      '[data-act="buy"]', '[data-act="sell"]',
+      '#createCompanyBtn', '#bankruptBtn',
+      '[onclick*="createCompany"]', '[onclick*="bankruptCompany"]',
+      '[onclick*="executeTrade"]', '[onclick*="supportCompany"]'
+    ];
+    var n = 0;
+    sel.forEach(function (q) {
+      document.querySelectorAll(q).forEach(function (el) {
+        el.classList.add('nb-maint-off');
+        el.setAttribute('disabled', 'disabled');
+        el.setAttribute('title', '股票系统升级中');
+        n++;
+      });
+    });
+    return n;
+  }
+
+  function show(notice) {
+    var bar = document.getElementById('nbStockMaintBar');
+    if (notice) {
+      var el = document.getElementById('nbStockMaintNotice');
+      if (el) el.textContent = notice;
+    }
+    if (bar) bar.classList.add('on');
+    document.body.classList.add('nb-maint');
+    lockButtons();
+    /* 页面是动态渲染的，按钮可能后出来，隔一会儿再锁一次 */
+    var tries = 0;
+    var iv = setInterval(function () {
+      lockButtons();
+      if (++tries > 20) clearInterval(iv);
+    }, 500);
+  }
+
+  function check() {
+    var sb = getSupa();
+    if (!sb) { console.warn('[maint] 找不到 supabase client，跳过维护检查'); return; }
+    sb.from('stock_settings').select('key,value')
+      .in('key', ['maintenance', 'maintenance_notice'])
+      .then(function (r) {
+        var rows = (r && r.data) || [];
+        var map = {};
+        rows.forEach(function (x) { map[x.key] = x.value; });
+        if (map.maintenance !== '1') return;          // 没开维护
+
+        var uid = myId();
+        if (!uid) { show(map.maintenance_notice); return; }   // 没登录 → 挡
+
+        sb.from('stock_whitelist').select('user_id').eq('user_id', uid)
+          .then(function (w) {
+            var inList = w && w.data && w.data.length > 0;
+            if (!inList) show(map.maintenance_notice); // 不在白名单 → 挡
+          })
+          .catch(function () { show(map.maintenance_notice); });
+      })
+      .catch(function (e) {
+        /* 查询失败就别挡人，宁可少显示横幅也别把页面搞挂 */
+        console.warn('[maint] 查询失败，按非维护处理', e);
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(check, 600); });
+  } else {
+    setTimeout(check, 600);
+  }
+})();
+</script>
+
 </body>
 </html>
