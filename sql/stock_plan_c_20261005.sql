@@ -398,12 +398,22 @@ SELECT
   FROM public.user_companies c
  WHERE c.pool_shares > 0;
 
+-- ⚠️ 上一版这个查询写得有歧义：它对两个函数都套用了同样的两个判断，
+--    于是 extract_company_value 会在「公司税」那列显示 ❌ —— 那是假警报，
+--    它本来就没有发税的功能。这次按函数名分别判断。
 SELECT
     p.proname AS 函数,
-    CASE WHEN pg_get_functiondef(p.oid) LIKE '%发放_合计%'
-         THEN '✅ 税已改成再分配' ELSE '❌ 还是只收不发' END AS 公司税,
-    CASE WHEN pg_get_functiondef(p.oid) LIKE '%最多只能提%'
-         THEN '✅ 按持股比例限死' ELSE '—' END AS 提取公司价值
+    CASE p.proname
+      WHEN 'collect_company_tax' THEN
+        CASE WHEN pg_get_functiondef(p.oid) LIKE '%发放_合计%'
+             THEN '✅ 已改成再分配（收上来发给中小公司）'
+             ELSE '❌ 还是只收不发（收上来直接销毁）' END
+      WHEN 'extract_company_value' THEN
+        CASE WHEN pg_get_functiondef(p.oid) LIKE '%最多只能提%'
+             THEN '✅ 已按持股比例限死'
+             ELSE '❌ 没找到持股比例限制' END
+      ELSE '—'
+    END AS 状态
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid = p.pronamespace
  WHERE n.nspname = 'public'
