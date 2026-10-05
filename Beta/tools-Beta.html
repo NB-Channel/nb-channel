@@ -2639,11 +2639,80 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     ];
   }
 
-  function draw() {
+  /* ============ 函数图像：曲线从左到右扫出来 ============ */
+  var PLOT_ANIM_MS = 700;   /* 扫完一条曲线用多久 */
+  var plotRaf = null;       /* 当前动画的句柄，重画时先取消 */
+
+  function draw(opt) {
+    /* draw 会被直接当事件处理器用（click / change / setTimeout），
+       那些情况下 opt 是 Event 对象或 undefined，取 .instant 都是 falsy —— 正好等于"要动画"。 */
+    var instant = !!(opt && opt.instant);
+
     readView();
+
+    /* ---------- ① 解析公式、建图例（只做一次，动画期间不重复解析） ---------- */
+    curves = [];
+    var rows = document.querySelectorAll('#fnList .mt-fnrow');
+    var lines = [];
+    Array.prototype.forEach.call(rows, function (r) {
+      var lhs = r.querySelector('.lhs').value || 'y';
+      var rhs = r.querySelector('.rhs').value.trim();
+      if (rhs) lines.push({ lhs: lhs, rhs: rhs });
+    });
+    var errs = [], ci = 0;
+    legend.innerHTML = '';
+    lines.forEach(function (item) {
+      var fn;
+      try { fn = compile(item.rhs); }
+      catch (e) { errs.push(item.lhs + ' = ' + item.rhs + ' —— ' + e.message); return; }
+      if (!fn) return;
+      var color = COLORS[ci % COLORS.length]; ci++;
+
+      curves.push({ src: item.lhs + ' = ' + item.rhs, fn: fn, color: color });
+
+      var s = document.createElement('span');
+      s.innerHTML = '<i style="background:' + color + '"></i>' + item.lhs + ' = ' + item.rhs;
+      legend.appendChild(s);
+    });
+
+    if (errs.length) {
+      plotMsg.style.display = 'block';
+      plotMsg.innerHTML = '<span class="mt-err">这几行没能解析：</span>\n' + errs.join('\n');
+    } else {
+      plotMsg.style.display = 'none';
+    }
+
+    /* ---------- ② 画 ---------- */
+    if (plotRaf) { cancelAnimationFrame(plotRaf); plotRaf = null; }
+
+    /* 系统里开了"减少动态效果"就跳过动画 */
+    var reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+    if (instant || reduce || !curves.length) { plotFrame(1); return; }
+
+    var t0 = 0;
+    plotFrame(0);                                  /* 先把底和坐标轴画出来，曲线是空的 */
+    function tick(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / PLOT_ANIM_MS);
+      plotFrame(1 - Math.pow(1 - p, 3));           /* 缓出：开头快、收尾慢 */
+      if (p < 1) { plotRaf = requestAnimationFrame(tick); }
+      else { plotRaf = null; }
+    }
+    plotRaf = requestAnimationFrame(tick);
+  }
+
+  /* 画一帧 —— progress 0~1，曲线只画到横坐标的 progress 处 */
+  function plotFrame(progress) {
     var W = canvas.clientWidth, H = canvas.clientHeight;
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = W * dpr; canvas.height = H * dpr;
+
+    /* canvas 尺寸只在真变了才重设 —— 每帧重设比 clearRect 慢 */
+    var wantW = Math.round(W * dpr), wantH = Math.round(H * dpr);
+    if (canvas.width !== wantW || canvas.height !== wantH) {
+      canvas.width = wantW; canvas.height = wantH;
+    }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     /* 底 */
@@ -2694,32 +2763,17 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
       ctx.fillText(+(i * sy).toFixed(4), Math.min(W - 6, Math.max(30, ox[0] - 8)), p + 4);
     }
 
-    /* 曲线 */
-    curves = [];
-    var rows = document.querySelectorAll('#fnList .mt-fnrow');
-    var lines = [];
-    Array.prototype.forEach.call(rows, function (r) {
-      var lhs = r.querySelector('.lhs').value || 'y';
-      var rhs = r.querySelector('.rhs').value.trim();
-      if (rhs) lines.push({ lhs: lhs, rhs: rhs });
-    });
-    var errs = [], ci = 0;
-    legend.innerHTML = '';
-    lines.forEach(function (item) {
-      var fn;
-      try { fn = compile(item.rhs); }
-      catch (e) { errs.push(item.lhs + ' = ' + item.rhs + ' —— ' + e.message); return; }
-      if (!fn) return;
-      var color = COLORS[ci % COLORS.length]; ci++;
-
-      ctx.strokeStyle = color;
+    /* 曲线：只画到 limitX 为止，progress=1 时就是整条 */
+    var limitX = W * progress;
+    curves.forEach(function (c) {
+      ctx.strokeStyle = c.color;
       ctx.lineWidth = 2;
       ctx.beginPath();
       var started = false, prevY = null;
-      for (var px = 0; px <= W; px++) {
+      for (var px = 0; px <= limitX; px++) {
         var x = view.xmin + (px / W) * (view.xmax - view.xmin);
         var y;
-        try { y = fn(x); } catch (e) { y = NaN; }
+        try { y = c.fn(x); } catch (e) { y = NaN; }
         if (typeof y !== 'number' || !isFinite(y)) { started = false; prevY = null; continue; }
         var py = H - (y - view.ymin) / (view.ymax - view.ymin) * H;
         /* 断点跳变（如 tan、1/x）不要连成竖线 */
@@ -2729,19 +2783,7 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
         prevY = py;
       }
       ctx.stroke();
-      curves.push({ src: item.lhs + ' = ' + item.rhs, fn: fn, color: color });
-
-      var s = document.createElement('span');
-      s.innerHTML = '<i style="background:' + color + '"></i>' + item.lhs + ' = ' + item.rhs;
-      legend.appendChild(s);
     });
-
-    if (errs.length) {
-      plotMsg.style.display = 'block';
-      plotMsg.innerHTML = '<span class="mt-err">这几行没能解析：</span>\n' + errs.join('\n');
-    } else {
-      plotMsg.style.display = 'none';
-    }
   }
 
   /* 鼠标读坐标 */
@@ -2797,7 +2839,7 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
       if (fnList.querySelectorAll('.mt-fnrow').length <= 1) return;   /* 至少留一行 */
       row.remove();
       paintDots();
-      draw();
+      draw({ instant: true });
     });
     fnList.appendChild(row);
     paintDots();
@@ -2821,7 +2863,7 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     var r = addRow('', '');                    /* 名字按行号自动挑 */
     r.querySelector('.rhs').focus();
     paintDots();
-    draw();
+    draw({ instant: true });
   });
   if (draw && !window.__mtDraw) window.__mtDraw = draw;
 
@@ -2840,7 +2882,7 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
       draw();
     });
   });
-  window.addEventListener('resize', function () { clearTimeout(window.__mtR); window.__mtR = setTimeout(draw, 200); });
+  window.addEventListener('resize', function () { clearTimeout(window.__mtR); window.__mtR = setTimeout(function () { draw({ instant: true }); }, 200); });
 
   /* ============================================================
      ② 加解密
