@@ -1269,6 +1269,9 @@ html { -webkit-text-size-adjust: 100%; }
         <li><span class="nbg-k">一张纸条值多少钱</span><span class="nbg-a" aria-hidden="true">→</span><span class="nbg-v">股价</span></li>
       </ul>
       <p class="nbg-text">你手里的股票就是那些纸条。</p>
+      <p class="nbg-formula" style="margin-top:10px;">公司总值（市值）= 股价 × 公司总共多少股</p>
+      <p class="nbg-text"><b>这才是大家互相比较的东西</b> —— 行情表、走势图、排行榜全都按公司总值从大到小排。
+      想让自己的公司排前面，就得让公司总值涨上去。</p>
     </section>
 
     <section class="nbg-step">
@@ -1391,10 +1394,10 @@ html { -webkit-text-size-adjust: 100%; }
             </div>
             <table class="data-table">
                 <thead>
-                   <tr><th>虚拟股票名称</th><th>股价</th><th>公司的钱</th><th>归属用户</th><th>我的持股</th><th>涨跌幅</th><th>操作</th></tr>
+                   <tr><th>虚拟股票名称</th><th>公司总值</th><th>股价</th><th>公司的钱</th><th>归属用户</th><th>我的持股</th><th>涨跌幅</th><th>操作</th></tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="7">加载中...</td></tr>
+                    <tr><td colspan="8">加载中...</td></tr>
                 </tbody>
             </table>
             <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
@@ -3078,7 +3081,7 @@ html { -webkit-text-size-adjust: 100%; }
     function updateDataTable() {
         const tbody = document.getElementById('tableBody');
         if (!sortedCombined.length) {
-            tbody.innerHTML = '<tr><td colspan="7">暂无数据</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8">暂无数据</td></tr>';
             return;
         }
         
@@ -3117,8 +3120,9 @@ html { -webkit-text-size-adjust: 100%; }
                 : '';
             html += `<tr>
                 <td><a href="#" class="stock-link" data-id="${item.id}" data-name="${escapeHtml(item.name)}">${escapeHtml(item.name)}</a>${verifiedTag}<br>${reportBtn}</td>
+                <td style="font-family:monospace; font-weight:700; color:#f59e0b;" title="公司总共值多少钱 = 股价 × 总股数。行情表就是按这一列从大到小排的">${formatLarge(item.value)}</td>
                 <td style="font-family:monospace; font-weight:700; color:#00a1d6;">${formatPrice(item.price)}</td>
-                <td style="font-family:monospace;">${formatLarge(item.poolCash)}</td>
+                <td style="font-family:monospace;" title="公司账上真有的钱（公司总值里属于公司的部分）">${formatLarge(item.poolCash)}</td>
                 <td>${escapeHtml(item.owner || '未知')}</td>
                 <td>${mineHtml}</td>
                 <td>${changeHtml}</td>
