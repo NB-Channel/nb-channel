@@ -302,7 +302,7 @@
 
     <hr>
 
-    <h2>🤖 我的自动支持规则</h2>
+    <h2>🤖 我的自动抄底规则</h2>
     <div id="autoRulesContainer" style="overflow-x:auto;">
         <div class="loading">加载中...</div>
     </div>
@@ -310,6 +310,7 @@
     <hr>
 
     <h2>💖 谁在支持我的公司</h2>
+        <p style="font-size:.82rem;color:var(--count-text);margin:4px 0 10px;">设了抄底规则的人 —— 你公司股价跌到他们的目标价，他们就会自动买入，<b>钱进你的公司</b>。</p>
     <div id="supportersContainer" style="overflow-x:auto;">
         <div class="loading">加载中...</div>
     </div>
@@ -323,9 +324,10 @@
 <!-- 修改规则的模态框 -->
 <div id="editRuleModal" class="custom-modal" style="display:none;">
     <div class="modal-content">
-        <h3>修改自动支持规则</h3>
-        <input type="number" id="editThreshold" placeholder="市值低于 (阈值)" style="width:100%; padding:8px; margin:10px 0; border-radius:30px;">
-        <input type="number" id="editAmount" placeholder="每次自动支持金额 (≤2000)" style="width:100%; padding:8px; margin:10px 0; border-radius:30px;">
+        <h3>修改自动抄底规则</h3>
+        <input type="number" id="editPrice" step="0.0001" placeholder="目标股价（跌到这个价以下就买）" style="width:100%; padding:8px; margin:10px 0; border-radius:30px;">
+        <input type="number" id="editAmount" placeholder="每次买入金额（10 ~ 100000）" style="width:100%; padding:8px; margin:10px 0; border-radius:30px;">
+        <input type="number" id="editDaily" placeholder="每天最多花多少（默认 50000）" style="width:100%; padding:8px; margin:10px 0; border-radius:30px;">
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button id="saveEditBtn" style="flex:1;">保存</button>
             <button id="closeEditBtn" style="flex:1; background:#6c757d;">取消</button>
@@ -396,7 +398,7 @@
         return myCompany;
     }
 
-    // 谁在支持我的公司（主动设置了自动支持规则的用户）
+    // 谁在支持我的公司（对本公司设了自动抄底规则的用户 —— 跌到目标价他们会自动买入）
     async function loadSupporters() {
         const container = document.getElementById('supportersContainer');
         if (!myCompany) {
@@ -407,8 +409,9 @@
             .from('support_rules')
             .select(`
                 id,
-                threshold,
+                price_target,
                 amount,
+                enabled,
                 user_id,
                 supporter:profiles!support_rules_user_id_fkey (username)
             `)
@@ -418,21 +421,23 @@
             return;
         }
         if (!data || data.length === 0) {
-            container.innerHTML = '<div class="no-data">暂无人支持您的公司，快去邀请好友设置自动支持吧！</div>';
+            container.innerHTML = '<div class="no-data">还没有人对你的公司设抄底规则。<br>别人设了之后，你公司股价跌到他们的目标价，他们就会自动买入 —— <b>钱进你的公司</b>。</div>';
             return;
         }
         let html = `<table class="data-table">
                         <thead>
-                            <tr><th>支持者</th><th>触发阈值(市值&lt;)</th><th>每次支持金额</th><th>状态</th></tr>
+                            <tr><th>支持者</th><th>目标股价</th><th>每次买入</th><th>状态</th></tr>
                         </thead>
                         <tbody>`;
         for (const rule of data) {
             const supporterName = rule.supporter?.username || '匿名用户';
             html += `<tr>
                         <td>${escapeHtml(supporterName)}</td>
-                        <td>${rule.threshold}</td>
+                        <td>${rule.price_target != null ? rule.price_target : '—'}</td>
                         <td>${rule.amount}</td>
-                        <td><span style="color:#4caf50;">✓ 激活中</span></td>
+                        <td>${rule.enabled === false
+                             ? '<span style="color:#999;">已暂停</span>'
+                             : '<span style="color:#4caf50;">✓ 生效中</span>'}</td>
                      </tr>`;
         }
         html += '</tbody></table>';
@@ -949,10 +954,10 @@
         return;
     }
     
-    // 第一步：查询用户的自动支持规则
+    // 第一步：查询用户的自动抄底规则
     const { data: rules, error: rulesError } = await supabaseClient
         .from('support_rules')
-        .select('id, threshold, amount, company_id')
+        .select('id, price_target, amount, daily_limit, enabled, company_id')
         .eq('user_id', currentUser.id);
         
     if (rulesError) {
@@ -961,7 +966,7 @@
     }
     
     if (!rules || rules.length === 0) {
-        container.innerHTML = '<div class="no-data">暂无自动支持规则，<a href="Virtual stock.html" style="color:var(--status-border);">前往股票页面</a> 设置。</div>';
+        container.innerHTML = '<div class="no-data">暂无自动抄底规则，<a href="Virtual stock.html" style="color:var(--status-border);">前往股票页面</a> 设置。</div>';
         return;
     }
     
@@ -989,7 +994,7 @@
     // 生成表格 HTML
     let html = `<table class="data-table">
                     <thead>
-                        <tr><th>公司名称</th><th>触发阈值(市值&lt;)</th><th>每次支持金额</th><th>操作</th></tr>
+                        <tr><th>公司名称</th><th>目标股价</th><th>每次买入</th><th>每天上限</th><th>状态</th><th>操作</th></tr>
                     </thead>
                     <tbody>`;
     
@@ -997,10 +1002,14 @@
         const companyName = companyMap.get(rule.company_id) || '未知公司';
         html += `<tr data-rule-id="${rule.id}">
                     <td>${escapeHtml(companyName)}</td>
-                    <td>${rule.threshold}</td>
+                    <td>${rule.price_target != null ? rule.price_target : '—'}</td>
                     <td>${rule.amount}</td>
+                    <td>${rule.daily_limit != null ? rule.daily_limit : '—'}</td>
+                    <td>${rule.enabled === false
+                         ? '<span style="color:#999;">已暂停</span>'
+                         : '<span style="color:#4caf50;">✓ 生效中</span>'}</td>
                     <td class="rule-actions">
-                        <button class="edit-rule" data-id="${rule.id}" data-threshold="${rule.threshold}" data-amount="${rule.amount}" data-company-id="${rule.company_id}">✏️ 修改</button>
+                        <button class="edit-rule" data-id="${rule.id}" data-price="${rule.price_target}" data-amount="${rule.amount}" data-daily="${rule.daily_limit}" data-company-id="${rule.company_id}">✏️ 修改</button>
                         <button class="delete-rule" data-id="${rule.id}">🗑️ 取消</button>
                     </td>
                  </tr>`;
@@ -1013,7 +1022,7 @@
     document.querySelectorAll('.delete-rule').forEach(btn => {
         btn.addEventListener('click', async () => {
             const ruleId = parseInt(btn.dataset.id);
-            const confirmed = await showConfirm('确认取消', '确定要取消此自动支持规则吗？');
+            const confirmed = await showConfirm('确认取消', '确定要取消这条自动抄底规则吗？');
             if (confirmed) {
                 const { data: delRes, error } = await supabaseClient.rpc('delete_support_rule', {
                     p_user_id: currentUser.id, p_session: localStorage.getItem('nb_session'), p_rule_id: ruleId
@@ -1021,7 +1030,7 @@
                 if (error || !delRes || !delRes.ok) {
                     await showMessage('删除失败', (delRes && delRes.message) || (error && error.message) || '删除失败');
                 } else {
-                    await showMessage('成功', '已取消自动支持规则');
+                    await showMessage('成功', '已取消自动抄底规则');
                     await loadAutoRules();  // 重新加载
                 }
             }
@@ -1032,10 +1041,11 @@
     document.querySelectorAll('.edit-rule').forEach(btn => {
         btn.addEventListener('click', () => {
             const ruleId = parseInt(btn.dataset.id);
-            const oldThreshold = parseInt(btn.dataset.threshold);
-            const oldAmount = parseInt(btn.dataset.amount);
+            const oldPrice = parseFloat(btn.dataset.price);
+            const oldAmount = parseFloat(btn.dataset.amount);
+            const oldDaily = parseFloat(btn.dataset.daily);
             const companyId = parseInt(btn.dataset.companyId);
-            showEditModal(ruleId, companyId, oldThreshold, oldAmount);
+            showEditModal(ruleId, companyId, oldPrice, oldAmount, oldDaily);
         });
     });
 }
@@ -1064,27 +1074,32 @@
         });
     }
 
-    function showEditModal(ruleId, companyId, oldThreshold, oldAmount) {
+    function showEditModal(ruleId, companyId, oldPrice, oldAmount, oldDaily) {
     const modal = document.getElementById('editRuleModal');
-    const thresholdInput = document.getElementById('editThreshold');
+    const priceInput = document.getElementById('editPrice');
     const amountInput = document.getElementById('editAmount');
-    thresholdInput.value = oldThreshold;
+    const dailyInput = document.getElementById('editDaily');
+    priceInput.value = (oldPrice != null && !isNaN(oldPrice)) ? oldPrice : '';
     amountInput.value = oldAmount;
+    dailyInput.value = (oldDaily != null && !isNaN(oldDaily)) ? oldDaily : '';
     modal.style.display = 'flex';
     
     const saveHandler = async () => {
-        const newThreshold = parseInt(thresholdInput.value);
-        const newAmount = parseInt(amountInput.value);
-        if (isNaN(newThreshold) || isNaN(newAmount) || newAmount <= 0) {
-            await showMessage('提示', '请输入有效的阈值和金额');
+        const newPrice = parseFloat(priceInput.value);
+        const newAmount = Math.floor(parseFloat(amountInput.value));
+        const newDailyRaw = parseFloat(dailyInput.value);
+        const newDaily = isNaN(newDailyRaw) ? null : Math.floor(newDailyRaw);
+
+        if (isNaN(newPrice) || newPrice <= 0) {
+            await showMessage('提示', '目标股价要大于 0');
             return;
         }
-        if (newThreshold < 0) {
-            await showMessage('提示', '阈值不能为负数');
+        if (isNaN(newAmount) || newAmount < 10 || newAmount > 100000) {
+            await showMessage('提示', '每次买入金额要在 10 ~ 100000 NB币之间');
             return;
         }
-        if (newAmount > 2000) {
-            await showMessage('提示', '自动支持金额不能超过2000 NB币');
+        if (newDaily !== null && newDaily < newAmount) {
+            await showMessage('提示', '每天上限不能小于每次买入金额');
             return;
         }
         // 原子更新（直接 UPDATE，不再"先删后插"，避免中间态丢数据）
@@ -1092,8 +1107,9 @@
             p_user_id: currentUser.id,
             p_session: localStorage.getItem('nb_session'),
             p_rule_id: ruleId,
-            p_threshold: newThreshold,
-            p_amount: newAmount
+            p_price_target: newPrice,
+            p_amount: newAmount,
+            p_daily_limit: newDaily
         });
         if (updError || !updRes || !updRes.ok) {
             await showMessage('修改失败', (updRes && updRes.message) || (updError && updError.message) || '修改失败');
