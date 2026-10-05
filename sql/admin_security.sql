@@ -1,5 +1,25 @@
 -- ============================================================
--- NB频道 - 安全加固（管理后台鉴权）
+-- ⚠️⚠️ 这个文件【已被取代，不要再跑】⚠️⚠️
+--
+--   本文件里的 admin_create_session(p_pwd, p_ip) 有一个漏洞：
+--   登录限频是按【前端传进来的 p_ip】数的，攻击者每次换一个假 IP
+--   就能无限次试密码：
+--       POST /rest/v1/rpc/admin_create_session {"p_pwd":"123456","p_ip":"1.1.1.1"}
+--       POST /rest/v1/rpc/admin_create_session {"p_pwd":"admin", "p_ip":"1.1.1.2"}
+--
+--   正确的版本在 sql/fix_admin_login_2fa.sql，它做了两件事：
+--     ① 服务端自己从 PostgREST 请求头读真实 IP，彻底不看 p_ip
+--     ② 登录加了邮箱二次验证（密码对了还要填邮箱收到的 6 位码）
+--   新版签名：admin_create_session(p_pwd text, p_code text, p_ip text DEFAULT NULL)
+--
+--   ⚠️ 重跑本文件会把那两个修复覆盖掉，管理后台重新变回脆弱状态。
+--
+--   保留本文件只是为了查历史（比如想看最早的会话表结构）。
+--   下面第 1、2 节（建表 admin_sessions / admin_login_attempts）是幂等的，
+--   重复执行无害；第 3 节之后请一律用 fix_admin_login_2fa.sql。
+--
+-- ============================================================
+-- NB频道 - 安全加固（管理后台鉴权）【历史版本】
 -- 在 Supabase 后台 SQL Editor 中执行本文件
 -- 功能：
 --   1) 管理后台改用"服务端会话 token"鉴权（30分钟有效），不再信任前端 sessionStorage
