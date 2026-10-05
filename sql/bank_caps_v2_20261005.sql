@@ -106,7 +106,7 @@ DECLARE
         '(UPDATE\s+public\.profiles\s+SET\s+nb_balance\s*=\s*nb_balance\s*-\s*p_amount)';
     v_check CONSTANT text :=
         E'-- ⭐ 单账号存款总额上限 10 亿（活期 + 定期一起算）\n'
-     || E'    --    这个函数原来【一个额度限制都没有】，是全站最大的一个口子\n'
+     || E' /* 上限 */'
      || E'    IF (SELECT COALESCE(deposit,0) + COALESCE(fixed7,0) + COALESCE(fixed30,0)\n'
      || E'          FROM public.bank_accounts WHERE user_id = p_user_id) + p_amount > 1000000000 THEN\n'
      || E'        RETURN jsonb_build_object(''success'', false, ''message'',\n'
@@ -225,7 +225,7 @@ BEGIN
 
         v_new := regexp_replace(v_src,
             'v_acc\.credit_score\s*\*\s*(1500|1000|500)',
-            E'LEAST(v_acc.credit_score * \\1, 100000000)   -- ⭐ 绝对上限 1 亿', 'g');
+            E'LEAST(v_acc.credit_score * \\1, 100000000) /* 绝对上限 1 亿 */', 'g');
 
         IF v_new <> v_src THEN
             EXECUTE v_new;
@@ -272,21 +272,21 @@ BEGIN
         -- 活期 0.1%
         v_new := regexp_replace(v_new,
             'floor\s*\(\s*v_acc\.deposit\s*\*\s*0\.001\s*\)',
-            E'floor(LEAST(v_acc.deposit, 1000000000) * 0.001)   -- ⭐ 利息基数封顶 10 亿');
+            E'floor(LEAST(v_acc.deposit, 1000000000) * 0.001) /* 利息基数封顶 10 亿 */');
         IF v_new <> v_src THEN v_n := v_n + 1; END IF;
         v_src := v_new;
 
         -- 定期 7 天 2%
         v_new := regexp_replace(v_new,
             'floor\s*\(\s*v_acc\.fixed7\s*\*\s*0\.02\s*\)',
-            E'floor(LEAST(v_acc.fixed7, 1000000000) * 0.02)     -- ⭐ 利息基数封顶 10 亿');
+            E'floor(LEAST(v_acc.fixed7, 1000000000) * 0.02) /* 利息基数封顶 10 亿 */');
         IF v_new <> v_src THEN v_n := v_n + 1; END IF;
         v_src := v_new;
 
         -- 定期 30 天 10%
         v_new := regexp_replace(v_new,
             'floor\s*\(\s*v_acc\.fixed30\s*\*\s*0\.10\s*\)',
-            E'floor(LEAST(v_acc.fixed30, 1000000000) * 0.10)    -- ⭐ 利息基数封顶 10 亿');
+            E'floor(LEAST(v_acc.fixed30, 1000000000) * 0.10) /* 利息基数封顶 10 亿 */');
         IF v_new <> v_src THEN v_n := v_n + 1; END IF;
 
         IF v_n = 0 THEN
