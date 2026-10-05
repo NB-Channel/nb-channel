@@ -1,0 +1,43 @@
+chore(edgeone): 加 edgeone.json —— 准备接入腾讯云 EdgeOne Pages
+
+【为什么换】
+Netlify 免费版（新版 credit 计划）每月 300 credits，一次生产部署 15 credits，
+也就是【一个月最多 20 次部署】。本站有定时自动提交，20 次很容易用光 ——
+netlify.nb-channel.top 已经停在 2026-09-27 的 V0.9.7 没再动过。
+
+EdgeOne Pages 免费版：
+    · 500 次构建/月（Netlify 的 25 倍）
+    · 超额不中断服务（官方原话："用量超限也会优先保障您的业务稳定"）
+    · 网站加速流量与请求【不限量】
+    · 亚洲 2500+ 节点，国内访问快
+    · 自定义域名 + 自动 SSL
+站长域名在 DNSPod 注册（腾讯家的），腾讯云账号已实名认证，条件齐了。
+
+【这个文件写什么】
+纯静态站，没有构建步骤，所以只固化两件事：
+    outputDirectory = "."    发布整个仓库根目录（Beta/、download/、videos/ 都在根下）
+    headers                   缓存策略
+
+缓存策略的思路：HTML 短缓存（改了要立刻生效），静态资源长缓存
+（站点本来就给 css/js 带了 ?v=35 这种版本号，长缓存是安全的）。
+    /*           300 秒     默认（HTML 走这条）
+    /css/*       7 天
+    /js/*        7 天
+    /images/*    7 天
+    /download/*  10 分钟
+    /videos/*    1 天
+
+【故意没写的】
+    buildCommand / installCommand —— 没有构建步骤，留空即可
+    redirects / rewrites         —— 本站不需要
+    ⚠️ 没写 Pretty URLs 相关的配置，因为不确定 EdgeOne 有没有 Netlify 那个
+       "把 /Beta/index-Beta.html 改写成 /beta/index-beta" 的处理。
+       部署完必须实测这一条（Linux 文件系统大小写敏感，改小写就会 404）。
+       如果真有问题，我再补配置。
+
+【部署后要测的】
+1. /Beta/index-Beta.html 能不能打开（大小写 / Pretty URLs）
+2. /Virtual stock.html 能不能打开（文件名带空格）
+3. 中文文件名能不能访问（比如 /Beta/股票改版说明.md 这种）
+4. CSS/JS 有没有正常加载、主题切换正不正常
+5. 缓存头对不对（看响应头里的 Cache-Control）
