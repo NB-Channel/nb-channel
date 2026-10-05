@@ -1008,7 +1008,26 @@ html { -webkit-text-size-adjust: 100%; }
       .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
       html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
       @media (max-width:900px){.nav-scan{display:flex}}
-    </style>
+    
+    /* 注册页：临时邮箱警告（新增） */
+    .lg-warn {
+        font-size: .82rem; line-height: 1.75;
+        background: color-mix(in srgb, #e5484d 8%, var(--card));
+        border: 1px solid color-mix(in srgb, #e5484d 38%, var(--line));
+        border-left: 4px solid #e5484d;
+        border-radius: 12px;
+        padding: 10px 14px;
+        margin: 0 0 14px;
+        color: var(--ink-soft);
+        word-break: break-word;
+    }
+    .lg-warn .lg-warn-t {
+        display: block; font-weight: 700; font-size: .86rem;
+        color: #e5484d; margin-bottom: 4px;
+    }
+    .lg-warn b { color: #e5484d; font-weight: 700; }
+
+</style>
     <script>/* 扫码入口只在 APP 里显示。旧版 APP 也显示 —— 点进去 scan-Beta.html 会提示他更新 */
     (function(){try{if(!/NBChannelApp/i.test(navigator.userAgent||"")){var b=document.getElementById("navScanBtn");if(b)b.style.display="none";}}catch(e){}})();</script>
 
@@ -1135,6 +1154,10 @@ html { -webkit-text-size-adjust: 100%; }
             <div class="lg-field-wrap">
                 <span class="lg-ic">📧</span>
                 <input type="text" id="regEmail" class="lg-field" placeholder="你的邮箱(用于登录验证)" maxlength="80" autocomplete="email">
+            </div>
+            <div class="lg-warn">
+                <span class="lg-warn-t">⚠️ 别用「临时邮箱」注册</span>
+                10minutemail、temp-mail 这类一次性邮箱，收件箱是<b>公开的</b> —— 任何人输入你的邮箱地址，就能看到发给你的验证码，<b>等于账号没有密码</b>。请用 QQ邮箱 / 163 / Outlook / Gmail 注册。已经用临时邮箱注册的，去个人中心换成常用邮箱（不影响任何资产，只是把门锁上）。
             </div>
             <div class="lg-row">
                 <button type="button" class="lg-btn mini" id="regSend">发送验证码</button>
