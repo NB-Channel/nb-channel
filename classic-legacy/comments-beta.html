@@ -1127,7 +1127,7 @@
                     const { data, error } = await supabaseClient.rpc('update_comment', {
                         p_user_id: currentUser.id,
                         p_comment_id: parseInt(commentId),
-                        p_content: newContent
+                        p_content: newContent, p_session: localStorage.getItem('nb_session')
                     });
                     if (error) { showMessage('错误', error.message); return; }
                     if (!data.success) { showMessage('提示', data.message); return; }

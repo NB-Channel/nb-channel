@@ -1597,7 +1597,7 @@
             // 持仓盈亏汇总（若列表为空则主动查询一次，确保显示）
             let holdings = window.myHoldingsList;
             if (!holdings || !holdings.length) {
-                const { data: hd } = await supabaseClient.rpc('get_my_holdings', { p_user_id: currentUserId });
+                const { data: hd } = await supabaseClient.rpc('get_my_holdings', { p_user_id: currentUserId, p_session: localStorage.getItem('nb_session') });
                 if (hd) holdings = hd;
             }
             if (holdings && holdings.length) {
@@ -1629,9 +1629,7 @@
             if (section) section.style.display = 'none';
             return;
         }
-        const { data, error } = await supabaseClient.rpc('get_my_holdings', {
-            p_user_id: currentUserId
-        });
+        const { data, error } = await supabaseClient.rpc('get_my_holdings', { p_user_id: currentUserId, p_session: localStorage.getItem('nb_session') });
         window.myHoldingsList = (error || !data) ? [] : data;
 
         if (window.myHoldingsList.length === 0) {

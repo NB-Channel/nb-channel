@@ -203,13 +203,26 @@ SELECT
  WHERE n.nspname = 'public' AND p.prokind = 'f'
    AND (p.proname LIKE '\_orig\_%' OR p.proname LIKE '%\_orig\_%');
 
--- 3.3 ⭐ 最要紧的一项：正规入口还都能用吗
---     这一列应该全是「✅ 可调」。如果有 ❌，立刻执行末尾的回滚语句。
+-- 3.3 ⭐ 最要紧的一项：逐个判断每行是「预期内」还是「要回滚」
+--
+--     ⚠️ 上一版这里只看「能不能调」，把【成功锁掉的旧版】也标成了「要回滚」，
+--        结果四个正确的操作看起来像出错。现在按参数里有没有 p_session 分开判断：
+--
+--          没有 p_session 的（旧版）→ 应该【锁住】，锁住了才算 ✅
+--          带  p_session 的（正规版）→ 应该【能调】，锁住才是 ❌
 SELECT
     p.proname                                 AS 函数,
     pg_get_function_identity_arguments(p.oid) AS 参数,
-    CASE WHEN has_function_privilege('anon', p.oid, 'EXECUTE')
-              THEN '✅ 可调（正常）' ELSE '❌ 调不了了（要回滚）' END AS anon
+    CASE
+      WHEN position('p_session' in pg_get_function_identity_arguments(p.oid)) = 0
+        THEN CASE WHEN has_function_privilege('anon', p.oid, 'EXECUTE')
+                       OR has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                  THEN '❌ 旧版还开着（该锁没锁）'
+                  ELSE '✅ 旧版已锁（预期内）' END
+      ELSE CASE WHEN has_function_privilege('anon', p.oid, 'EXECUTE')
+                  THEN '✅ 可调（正常）'
+                  ELSE '❌ 正规版被锁了，要回滚' END
+    END                                       AS 判断
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
  WHERE n.nspname = 'public' AND p.prokind = 'f'
    AND p.proname IN ('buy_stock','sell_stock','bankrupt_company','bank_deposit',

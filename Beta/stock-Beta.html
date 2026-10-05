@@ -3669,9 +3669,7 @@ html { -webkit-text-size-adjust: 100%; }
         try {
             const r1 = await supabaseClient.rpc('get_my_holdings', { p_user_id: currentUserId, p_session: tok });
             if (!r1.error && r1.data) return r1.data;
-            const r2 = await supabaseClient.rpc('get_my_holdings', { p_user_id: currentUserId });
-            if (!r2.error && r2.data) return r2.data;
-            console.warn('get_my_holdings 调用失败：', (r1.error && r1.error.message) || (r2.error && r2.error.message));
+            console.warn('get_my_holdings 调用失败：', r1.error && r1.error.message);
             return [];
         } catch (e) { console.warn('get_my_holdings 异常', e); return []; }
     }
