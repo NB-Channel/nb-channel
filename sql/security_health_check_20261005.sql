@@ -141,9 +141,9 @@ SELECT 10, '⑩ 银行：存款/贷款/利息上限',
        (SELECT count(*)::text || ' / 6 道闸'
           FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'public'
-           AND p.proname IN ('_orig_bank_deposit','_orig_bank_fixed_deposit','bank_deposit',
-                             'bank_fixed_deposit','_orig_bank_loan','_orig_get_bank_account',
-                             'bank_loan','bank_daily_settle')
+           AND p.proname IN ('_orig_bank_deposit','_orig_bank_fixed_deposit',
+                             '_orig_bank_loan','_orig_bank_credit_loan',
+                             '_orig_get_bank_account','bank_daily_settle')
            AND (pg_get_functiondef(p.oid) LIKE '%存款总额上限%'
              OR pg_get_functiondef(p.oid) LIKE '%绝对上限%'
              OR pg_get_functiondef(p.oid) LIKE '%利息基数封顶%'
@@ -151,13 +151,13 @@ SELECT 10, '⑩ 银行：存款/贷款/利息上限',
        CASE WHEN (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                    WHERE n.nspname = 'public'
                      AND p.proname IN ('_orig_bank_deposit','_orig_bank_fixed_deposit',
-                                       '_orig_bank_loan','_orig_get_bank_account',
-                                       'bank_daily_settle')
+                                       '_orig_bank_loan','_orig_bank_credit_loan',
+                                       '_orig_get_bank_account','bank_daily_settle')
                      AND (pg_get_functiondef(p.oid) LIKE '%存款总额上限%'
                        OR pg_get_functiondef(p.oid) LIKE '%绝对上限%'
                        OR pg_get_functiondef(p.oid) LIKE '%利息基数封顶%'
-                       OR pg_get_functiondef(p.oid) LIKE '%display_cap%')) >= 5
-            THEN '✅ 已装好' ELSE '❌ 有缺失' END
+                       OR pg_get_functiondef(p.oid) LIKE '%display_cap%')) = 6
+            THEN '✅ 6 道闸全装好' ELSE '❌ 有缺失' END
 
 UNION ALL
 
