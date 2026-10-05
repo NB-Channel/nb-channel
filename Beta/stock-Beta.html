@@ -1477,8 +1477,8 @@ html { -webkit-text-size-adjust: 100%; }
         </div>
 
         <div class="nb-trade-hint">
-            💡 <b>买入</b>＝花钱买<u>别人</u>的公司，你买得越多，均价就越贵。<b>卖出</b>＝把股份换回现金，输入的是<b>张数</b>不是金额。<br>
-            💡 价格影响 = 你这一笔把股价推高（卖出是压低）的幅度。你的钱相对于公司账上的钱越多，影响就越大。买一点点几乎没感觉，一下砸太多钱会很亏。
+            💡 买得越多，均价越贵 —— 因为你的买入会把股价推高。<br>
+            💡 卖出输入的是<b>张数</b>，不是金额。
         </div>
         <div style="text-align:center; margin-top:10px;">
             <button id="tradeCloseBtn" class="cancel">关闭</button>
@@ -3413,11 +3413,32 @@ html { -webkit-text-size-adjust: 100%; }
               `<span style="font-family:monospace; text-align:right; ${color ? 'color:' + color + ';' : ''}">${value}</span>` +
             `</div>` + (tip ? `<div style="font-size:0.76rem; color:#f44336; text-align:right; margin:-1px 0 4px;">${tip}</div>` : '');
 
+        /* ===== 大字横幅：这一笔会把股价推到哪 ===== */
+        const before = Number(p.price_before) || 0;
+        const after = Number(p.price_after) || 0;
+        const up = after >= before;
+        const deltaPct = before > 0 ? ((after - before) / before * 100) : 0;
+        const hlColor = up ? '#f44336' : '#4caf50';
+        const hlBg = up ? 'rgba(244,67,54,.10)' : 'rgba(76,175,80,.10)';
+        const hlBorder = up ? 'rgba(244,67,54,.35)' : 'rgba(76,175,80,.35)';
+        const banner =
+            `<div style="margin:4px 0 10px; padding:10px 12px; border-radius:12px; text-align:center;` +
+            ` background:${hlBg}; border:1px solid ${hlBorder};">` +
+              `<div style="font-size:0.78rem; color:var(--count-text); margin-bottom:3px;">` +
+                (mode === 'buy' ? '你买完之后，股价会变成' : '你卖完之后，股价会变成') +
+              `</div>` +
+              `<div style="font-size:1.1rem; font-weight:800; font-family:monospace; color:${hlColor}; letter-spacing:.5px;">` +
+                `${formatPrice(before)} <span style="opacity:.6;">→</span> ${formatPrice(after)}` +
+                `<span style="font-size:0.82rem; font-weight:700; margin-left:8px;">` +
+                  `${up ? '▲' : '▼'} ${Math.abs(deltaPct).toFixed(2)}%` +
+                `</span>` +
+              `</div>` +
+            `</div>`;
+
         let rows = '';
-        rows += row('当前股价', formatPrice(p.price_before) + ' NB币/张', '#00a1d6');
         rows += row('预计成交均价', formatPrice(p.avg_price) + ' NB币/张');
         rows += row('价格影响', (slip >= 0 ? '+' : '') + slip.toFixed(2) + '%', slipColor,
-                    slipHigh ? '本次交易会明显推动价格' : '');
+                    slipHigh ? '这一笔会明显推动股价，金额小一点更划算' : '');
         if (mode === 'buy') {
             const fee = Math.floor(val * feeRate);
             rows += row('预计得到', Number(p.shares).toFixed(2) + ' 张', '#f44336');
@@ -3429,17 +3450,15 @@ html { -webkit-text-size-adjust: 100%; }
             rows += row('手续费', formatValue(fee) + ' NB币');
             rows += row('净到账', formatLarge(Math.max((Number(p.cash) || 0) - fee, 0)) + ' NB币', '#4caf50');
         }
-        rows += row('成交后股价', formatPrice(p.price_after) + ' NB币/张',
-                    Number(p.price_after) >= Number(p.price_before) ? '#f44336' : '#4caf50');
 
         const head = mode === 'buy'
             ? `投入 ${formatValue(val)} NB币`
             : `卖出 ${Number(val).toFixed(2)} 张`;
         const warn = slipHigh
-            ? `<div style="margin-top:6px; padding:6px 8px; border-radius:8px; background:rgba(244,67,54,.12); color:#f44336; font-weight:700; text-align:center;">⚠️ 价格影响 ${slip.toFixed(2)}% —— 本次交易会明显推动价格</div>`
+            ? `<div style="margin-top:6px; padding:6px 8px; border-radius:8px; background:rgba(244,67,54,.12); color:#f44336; font-weight:700; text-align:center;">⚠️ 价格影响 ${slip.toFixed(2)}% —— 这一笔会把股价推动得很厉害，建议拆成几笔</div>`
             : '';
         preview.style.color = 'var(--text-color)';
-        preview.innerHTML = `<div style="font-weight:700; margin-bottom:4px;">${head}</div>${rows}${warn}`;
+        preview.innerHTML = `<div style="font-weight:700; margin-bottom:2px;">${head}</div>${banner}${rows}${warn}`;
     }
 
     async function executeTrade(mode) {
