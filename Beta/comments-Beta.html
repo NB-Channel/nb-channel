@@ -415,6 +415,35 @@ html.dark .nav-auth:hover { background: rgba(255,255,255,.1); border-color: rgba
 button { border-radius: 999px; }
 .sort-btn.active { background: var(--brand) !important; }
 .announcement-bar { border-left-color: var(--brand) !important; }
+
+            /* ===== 公告栏可折叠（新增）===== */
+            .announcement-bar .ab-head {
+                display: flex; align-items: center; justify-content: space-between;
+                gap: 12px;
+            }
+            .announcement-bar .ab-title { flex-shrink: 0; }
+            .announcement-bar .ab-toggle {
+                flex-shrink: 0; cursor: pointer; font-family: inherit;
+                font-size: 0.76rem; line-height: 1.9; padding: 1px 12px;
+                border-radius: 999px; border: 1px solid #ffd591;
+                background: rgba(255, 255, 255, .55); color: #a35b00;
+                transition: background .2s ease, color .2s ease, border-color .2s ease;
+            }
+            .announcement-bar .ab-toggle:hover {
+                background: #ff9800; color: #fff; border-color: #ff9800;
+            }
+            .announcement-bar .ab-body {
+                margin-top: 6px; white-space: pre-line; word-break: break-word;
+            }
+            .announcement-bar.collapsed .ab-body { display: none; }
+
+            html.dark .announcement-bar .ab-toggle {
+                background: rgba(255, 255, 255, .08); border-color: #664a1f; color: #ffb74d;
+            }
+            html.dark .announcement-bar .ab-toggle:hover {
+                background: #ff9800; color: #1a1208; border-color: #ff9800;
+            }
+
 textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
 .comment-author { color: var(--ink); }
 </style>
@@ -905,7 +934,13 @@ html { -webkit-text-size-adjust: 100%; }
 
 <div class="comment-section" id="comments">
         <!-- 公告栏（内容在 Supabase admin_config 表，key=announcement） -->
-        <div id="announcementBar" class="announcement-bar" style="display:none;"></div>
+        <div id="announcementBar" class="announcement-bar" style="display:none;">
+                <div class="ab-head">
+                    <span class="ab-title">📢 <strong>公告</strong></span>
+                    <button type="button" class="ab-toggle" id="announceToggle" aria-expanded="true" aria-controls="announceBody">收起 ▾</button>
+                </div>
+                <div class="ab-body" id="announceBody"></div>
+            </div>
 
         <div class="auth-bar">
             <span id="user-status">未登录</span>
@@ -2700,11 +2735,37 @@ html { -webkit-text-size-adjust: 100%; }
                 bar.style.display = 'none';
                 return;
             }
-            bar.innerHTML = '📢 <strong>公告：</strong>' + linkify(escapeHtml(data.value));
+            var body = document.getElementById('announceBody');
+                if (body) body.innerHTML = linkify(escapeHtml(data.value));
+                applyAnnounceCollapsed();
             bar.style.display = 'block';
         } catch (e) {
             console.warn('公告加载失败', e);
         }
+
+
+        // ===== 公告栏可折叠 =====
+        var ANNOUNCE_KEY = 'nb_announce_collapsed';
+        function applyAnnounceCollapsed() {
+            var bar = document.getElementById('announcementBar');
+            var btn = document.getElementById('announceToggle');
+            if (!bar || !btn) return;
+            var off = false;
+            try { off = localStorage.getItem(ANNOUNCE_KEY) === '1'; } catch (e) {}
+            bar.classList.toggle('collapsed', off);
+            btn.setAttribute('aria-expanded', off ? 'false' : 'true');
+            btn.textContent = off ? '展开 ▸' : '收起 ▾';
+        }
+        (function () {
+            var btn = document.getElementById('announceToggle');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                var bar = document.getElementById('announcementBar');
+                var off = !bar.classList.contains('collapsed');
+                try { localStorage.setItem(ANNOUNCE_KEY, off ? '1' : '0'); } catch (e) {}
+                applyAnnounceCollapsed();
+            });
+        })();
     }
 
     submitCommentBtn.onclick = postComment;

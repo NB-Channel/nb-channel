@@ -1,0 +1,48 @@
+feat(comments): 评论区的公告栏改成可折叠
+
+站长要求。公告有时候很长，压在评论区上方占地方，
+加个收起按钮，看过的人可以折起来。
+
+【改了哪两个文件】
+  Beta/comments-Beta.html   官网版评论区
+  comments-beta.html        新潮/经典版评论区
+（comments.html 本来就没有公告栏，不用改）
+
+【改动】
+1. HTML 从
+       <div id="announcementBar" class="announcement-bar" style="display:none;"></div>
+   改成带标题行和内容区的结构：
+       <div id="announcementBar" class="announcement-bar" style="display:none;">
+           <div class="ab-head">
+               <span class="ab-title">📢 <strong>公告</strong></span>
+               <button type="button" class="ab-toggle" id="announceToggle"
+                       aria-expanded="true" aria-controls="announceBody">收起 ▾</button>
+           </div>
+           <div class="ab-body" id="announceBody"></div>
+       </div>
+
+2. JS 的 fetchAnnouncement 里，内容从塞进 bar.innerHTML 改成塞进 #announceBody，
+   并在末尾调 applyAnnounceCollapsed() 套用记住的状态
+
+3. 新增折叠逻辑：
+       ANNOUNCE_KEY = 'nb_announce_collapsed'   （两个页面共用同一个 key）
+       applyAnnounceCollapsed()  读取 localStorage 决定收起还是展开，
+                                 同时改按钮文字（收起 ▾ / 展开 ▸）和 aria-expanded
+       点按钮切换，写回 localStorage
+
+4. CSS 新增 .ab-head / .ab-title / .ab-toggle / .ab-body 四条规则 +
+   .announcement-bar.collapsed .ab-body { display: none }
+   Beta 那份用 html.dark 写深色主题下的按钮配色，
+   根目录那份用 body.dark-mode（它没有那么细的主题体系）。
+
+【为什么把 white-space: pre-line 从 .announcement-bar 挪到 .ab-body】
+原来 pre-line 挂在公告栏本体上，让公告里的换行能保留。
+现在内容挪进 .ab-body 了，所以这条也要跟着挪过去，否则换行会失效。
+
+【校验】
+两个文件的内联脚本（13 段 + 7 段）全部 node --check 通过。
+标签配对：改动前后差数一致（Beta 的 span 30/29、根目录的 div 58/59 都是
+文件里本来就有的），我加的那段是配平的。
+截图实测：展开时显示「📢 公告 + 收起 ▾ + 内容」，收起后只剩
+「📢 公告 + 展开 ▸」，内容确实隐藏。
+两处临时测试文件已删除。
