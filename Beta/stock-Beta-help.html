@@ -1323,7 +1323,9 @@ html { -webkit-text-size-adjust: 100%; }
     var LEAD = /^(?:[\u2190-\u21FF\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]|[\uD83C-\uDBFF][\uDC00-\uDFFF])+\s*/;
     function strip() {
         try {
-            var as = document.querySelectorAll('.nav-more-panel a');
+            var as = document.querySelectorAll('.nav-more-panel a, .drawer a');
+            // ⚠️ 桌面下拉(.nav-more-panel)在手机上被 CSS 藏了，手机走的是
+            //    汉堡抽屉(.drawer)。两个都要处理，否则 APP 里会漏。
             for (var i = 0; i < as.length; i++) {
                 var x = as[i].textContent || '';
                 var y = x.replace(LEAD, '');

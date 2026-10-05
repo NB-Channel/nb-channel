@@ -1163,7 +1163,9 @@ html { -webkit-text-size-adjust: 100%; }
 
     function strip() {
         try {
-            var as = document.querySelectorAll('.nav-more-panel a');
+            var as = document.querySelectorAll('.nav-more-panel a, .drawer a');
+            // ⚠️ 桌面下拉(.nav-more-panel)在手机上被 CSS 藏了，手机走的是
+            //    汉堡抽屉(.drawer)。两个都要处理，否则 APP 里会漏。
             for (var i = 0; i < as.length; i++) {
                 var t = as[i].textContent || '';
                 var n = t.replace(LEAD, '');
@@ -1410,7 +1412,7 @@ html { -webkit-text-size-adjust: 100%; }
         <span class="d-brand"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span class="logo-text">NB频道</span></span>
         <button class="d-close" id="drawerClose" aria-label="关闭菜单">✕</button>
     </div>
-        <a class="d-item" href="vote-Beta.html">🗳️ 投票中心</a>
+        <a class="d-item" href="vote-Beta.html">投票中心</a>
         <a class="d-item" href="stock-Beta.html">虚拟股票</a>
         <a class="d-item" href="messages-Beta.html">消息中心</a>
         <a class="d-item" href="chat-Beta.html">好友 / 私信</a>
@@ -1421,13 +1423,13 @@ html { -webkit-text-size-adjust: 100%; }
         <a class="d-item" href="achievements-Beta.html">成就墙</a>
         <a class="d-item" href="lottery-Beta.html">签到 · 转盘</a>
         <a class="d-item" href="lottery_records-Beta.html">抽奖记录</a>
-        <a class="d-item" href="tools-Beta.html">🔧 工具</a>
+        <a class="d-item" href="tools-Beta.html">工具</a>
         <a class="d-item" href="product_share-Beta.html">作品分享</a>
         <a class="d-item" href="comments-Beta.html">评论区</a>
         <a class="d-item" href="ban-Beta.html">小黑屋</a>
         <a class="d-item" href="feedback-Beta.html">漏洞/建议反馈</a>
     <div class="d-auth">
-        <a class="ga" id="dProfileBtn" href="#">👤 个人中心</a>
+        <a class="ga" id="dProfileBtn" href="#">个人中心</a>
         <a class="gab" id="dAuthBtn" href="#">登录 / 注册</a>
     </div>
 </aside>
