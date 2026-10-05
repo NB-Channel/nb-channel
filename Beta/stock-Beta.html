@@ -450,6 +450,22 @@ html.dark .nav-auth:hover { background: rgba(255,255,255,.1); border-color: rgba
         html.dark .beta-announce { background: var(--card); }
         html.dark .beta-announce .ba-item { color: var(--ink-soft); }
         @media (max-width: 760px) { .beta-announce { align-items: flex-start; flex-wrap: wrap; } }
+
+        /* ===== 图表区折叠（新增） ===== */
+        .stk-fold-head {
+            width: 100%; display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; margin: 18px 0 0;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 16px; cursor: pointer; font-family: inherit;
+            font-size: 0.92rem; font-weight: 700; color: var(--text-color);
+            text-align: left;
+        }
+        .stk-fold-head:hover { border-color: rgba(59, 130, 246, .5); }
+        .stk-fold-sub { font-weight: 400; font-size: .78rem; color: var(--count-text); }
+        .stk-fold-caret { margin-left: auto; font-size: .9rem; transition: transform .25s ease; }
+        #stockChartSection.collapsed .stk-fold-caret { transform: rotate(-90deg); }
+        #stockChartSection.collapsed .stk-fold-body { display: none; }
+
 </style>
 <style>html.dark {
     --card-bg: #101a2e; --bg-color: #0a101f; --text-color: #e5eaf3;
@@ -1306,6 +1322,16 @@ html { -webkit-text-size-adjust: 100%; }
             <span class="countdown-badge" id="countdownBadge">🕒 下次刷新: --秒</span>
         </div>
 
+        <!-- ===== 图表区（可折叠，默认收起）===== -->
+        <div id="stockChartSection" class="collapsed">
+            <button type="button" id="stockChartHead" class="stk-fold-head"
+                    aria-expanded="false" aria-controls="stockChartBody">
+                <span aria-hidden="true">📊</span>
+                <span>图表</span>
+                <span class="stk-fold-sub">走势 / 规模分布 / 前五名</span>
+                <span class="stk-fold-caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="stk-fold-body" id="stockChartBody">
         <div class="toolbar">
             <div class="btn-group">
                 <button class="chart-btn active" id="barBtn">📊 柱状图</button>
@@ -1357,6 +1383,23 @@ html { -webkit-text-size-adjust: 100%; }
             <canvas id="miniPieChart" width="400" height="200" class="mini-canvas"></canvas>
         </div>
 
+            </div>
+        </div>
+        <div class="data-table-wrapper">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 搜索虚拟股票名称" autocomplete="off">
+            </div>
+            <table class="data-table">
+                <thead>
+                   <tr><th>虚拟股票名称</th><th>股价</th><th>公司的钱</th><th>归属用户</th><th>我的持股</th><th>涨跌幅</th><th>操作</th></tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="7">加载中...</td></tr>
+                </tbody>
+            </table>
+            <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
+        </div>
+
         <!-- 我的持仓区块 -->
         <div id="myHoldingsSection" class="my-company-card" style="display:none;">
             <div style="width:100%;">
@@ -1372,21 +1415,6 @@ html { -webkit-text-size-adjust: 100%; }
                 <span style="font-size:0.78rem; color:var(--count-text);">加钱拿不到股份；加完 7 天内不能卖这家公司的股票</span>
             </div>
             <div id="injectionsList" style="width:100%; font-size:0.9rem; overflow-x:auto; margin-top:8px;"></div>
-        </div>
-
-        <div class="data-table-wrapper">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 搜索虚拟股票名称" autocomplete="off">
-            </div>
-            <table class="data-table">
-                <thead>
-                   <tr><th>虚拟股票名称</th><th>股价</th><th>公司的钱</th><th>归属用户</th><th>我的持股</th><th>涨跌幅</th><th>操作</th></tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr><td colspan="7">加载中...</td></tr>
-                </tbody>
-            </table>
-            <button id="toggleTableBtn" class="toggle-table-btn">📋 展开全部</button>
         </div>
 
         <div class="stats" id="statsPanel">
@@ -4697,6 +4725,29 @@ html { -webkit-text-size-adjust: 100%; }
   } else {
     setTimeout(check, 600);
   }
+})();
+</script>
+
+<script>
+/* 图表区折叠：默认收起（行情表才是主角），展开过就记住 */
+(function () {
+  var KEY = 'nb_stock_chart_open';
+  var box = document.getElementById('stockChartSection');
+  var head = document.getElementById('stockChartHead');
+  if (!box || !head) return;
+  function apply(open) {
+    if (open) { box.classList.remove('collapsed'); }
+    else { box.classList.add('collapsed'); }
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  apply(saved === '1');
+  head.addEventListener('click', function () {
+    var next = box.classList.contains('collapsed');
+    apply(next);
+    try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
+  });
 })();
 </script>
 
