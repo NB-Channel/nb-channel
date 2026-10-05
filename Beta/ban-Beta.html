@@ -1124,6 +1124,35 @@ html { -webkit-text-size-adjust: 100%; }
 
 </nav>
 <script>
+// ===== 在 APP 里隐藏导航菜单的 emoji =====
+// 站长要求：APP 的「更多功能」下拉菜单不要 emoji，网页端保留原样。
+//
+// APP 是 Capacitor 套壳，加载的就是本站 —— 改 HTML 会两边一起改，
+// 所以只能按 UA 区分（APP 在 UA 里注入了 NBChannelApp）。
+// 判断写法与上面「扫一扫」那段保持一致。
+(function () {
+    var isApp = false;
+    try { isApp = /NBChannelApp/i.test(navigator.userAgent || ''); } catch (e) {}
+    if (!isApp) return;              // 浏览器里 —— emoji 保持原样
+
+    // 代理对（U+1F000 以上）+ BMP 符号区 + 变体选择符 + 零宽连接符，连同后面的空格一起剥掉
+    var LEAD = /^(?:[\u2190-\u21FF\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]|[\uD83C-\uDBFF][\uDC00-\uDFFF])+\s*/;
+
+    function strip() {
+        try {
+            var as = document.querySelectorAll('.nav-more-panel a');
+            for (var i = 0; i < as.length; i++) {
+                var t = as[i].textContent || '';
+                var n = t.replace(LEAD, '');
+                if (n !== t) as[i].textContent = n;
+            }
+        } catch (e) {}
+    }
+    strip();
+    setTimeout(strip, 400);    // 导航若是后渲染的，补两次
+    setTimeout(strip, 1500);
+})();
+
 // ===== 导航「更多功能」下拉 =====
 (function () {
     var box = document.querySelector('.nav-more');
