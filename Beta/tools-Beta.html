@@ -2640,7 +2640,7 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
   }
 
   /* ============ 函数图像：曲线从左到右扫出来 ============ */
-  var PLOT_ANIM_MS = 700;   /* 扫完一条曲线用多久 */
+  var PLOT_ANIM_MS = 1400;  /* 扫完一条曲线用多久（原来 700ms 站长嫌快，翻倍） */
   var plotRaf = null;       /* 当前动画的句柄，重画时先取消 */
 
   function draw(opt) {
@@ -2696,7 +2696,11 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     function tick(ts) {
       if (!t0) t0 = ts;
       var p = Math.min(1, (ts - t0) / PLOT_ANIM_MS);
-      plotFrame(1 - Math.pow(1 - p, 3));           /* 缓出：开头快、收尾慢 */
+      /* 用正弦缓出，不用三次缓出 ——
+         三次缓出在 p=0.5 时就画到 87.5% 了，前半程"嗖"一下过去，
+         后半程几乎不动，看着像卡住。正弦缓出匀速感更好：
+         p=0.25 → 38% / p=0.5 → 71% / p=0.75 → 92% */
+      plotFrame(Math.sin(p * Math.PI / 2));
       if (p < 1) { plotRaf = requestAnimationFrame(tick); }
       else { plotRaf = null; }
     }
