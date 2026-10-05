@@ -7,3 +7,17 @@
 tools/_*
 _*.html
 _injtest_*.html
+
+# 提交信息临时文件 —— git commit -F 用，写完就删。
+# ⚠️ 这个被误提交过三次（365b851、ebe31b9、99647ea），
+#    原因是「先创建 _cm.txt、再 git add -A」，它就被一起暂存了。
+#    正确顺序是「先 git add -A、再创建 _cm.txt」，
+#    但加进 .gitignore 更保险。
+_cm.txt
+_m.txt
+
+# AI 排查用的临时脚本
+_chk*.js
+_ck/
+_dates.txt
+
