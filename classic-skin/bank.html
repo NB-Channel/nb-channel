@@ -253,7 +253,7 @@
     async function callRpc(name, params) {
         const user = getUser();
         if (!user) throw new Error('请先登录');
-        const { data, error } = await supabaseClient.rpc(name, { p_user_id: user.id, ...params });
+        const { data, error } = await supabaseClient.rpc(name, { p_user_id: user.id, p_session: localStorage.getItem('nb_session'), ...params });
         if (error) throw error;
         if (!data || !data.success) throw new Error((data && data.message) || '操作失败');
         return data;

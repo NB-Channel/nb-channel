@@ -414,7 +414,7 @@
             if (!val) { await showMessage('提示', '请先选择一个样式'); return; }
             modal.remove();
             const { data, error } = await supabaseClient.rpc('set_item_settings', {
-                p_user_id: getCurrentUser().id, p_item_id: itemId, p_settings: { value: val }
+                p_user_id: getCurrentUser().id, p_item_id: itemId, p_settings: { value: val }, p_session: localStorage.getItem('nb_session')
             });
             await showMessage(error || !data || !data.success ? '保存失败' : '✅ 已保存', (error && error.message) || (data && data.message) || '');
             loadBackpack();
