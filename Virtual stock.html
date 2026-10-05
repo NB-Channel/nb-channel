@@ -643,7 +643,7 @@
             </div>
             <table class="data-table">
                 <thead>
-                   <tr><th>虚拟股票名称</th><th>公司总值</th><th>股价</th><th>公司的钱</th><th>归属用户</th><th>我的持股</th><th>股价涨跌</th><th>操作</th></tr>
+                   <tr><th>虚拟股票名称</th><th>市值</th><th>股价</th><th>公司的钱</th><th>归属用户</th><th>我的持股</th><th>股价涨跌</th><th>操作</th></tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr><td colspan="8">加载中...</td></tr>
@@ -1201,6 +1201,81 @@
         await showMessage('分红完成', data.message || '分红已发放');
     }
 
+    async function extractCompanyValue() {
+        if (!myCompany) { await showMessage('提示', '您还没有虚拟公司'); return; }
+        const cid = myCompany.id;
+        const row = allCompanies.find(c => c.company_id === cid);
+        const poolCash = Math.floor(row ? row.pool_cash : (Number(myCompany.pool_cash) || 0));
+        const FLOOR = 20000;
+        if (poolCash <= FLOOR) {
+            await showMessage('无法提取',
+                `公司账上只有 ${formatLarge(poolCash)} NB币，低于 ${formatLarge(FLOOR)} 的保底，暂时提不出来。`);
+            return;
+        }
+
+        const totalShares = row ? row.total_shares : (Number(myCompany.total_shares) || 0);
+        const myShares = row ? row.my_shares : 0;
+        const myPct = totalShares > 0 ? (myShares / totalShares) : 0;
+        const maxTake = Math.floor(poolCash * myPct);
+
+        if (maxTake <= 0) {
+            await showMessage('无法提取',
+                '你手上没有这家公司的股份，提不了。想提的话先用创始人身份买入一些。');
+            return;
+        }
+
+        const val = await showPrompt(
+            '💸 提取公司价值',
+            `公司：${myCompany.company_name}\n` +
+            `公司账上：${formatLarge(poolCash)} NB币\n` +
+            `总股数：${formatLarge(totalShares)} 张（你持有 ${myShares.toFixed(2)} 张，占 ${(myPct * 100).toFixed(2)}%）\n\n` +
+            `提取就是把公司账上的钱拿进自己口袋。\n` +
+            `⚠️ 你最多只能提【公司账上 × 你的持股比例】= ${formatLarge(maxTake)} NB币。\n` +
+            `⚠️ 提完公司账上钱少了，股价会自动跌 —— 其他股东手里的股票会跟着贬值。`,
+            `提取金额（最多 ${formatLarge(maxTake)}）`,
+            ''
+        );
+        if (val === null) return;
+        const amount = Math.floor(Number(val));
+        if (!amount || amount <= 0) { await showMessage('提示', '请输入有效的提取金额'); return; }
+        if (amount > maxTake) {
+            await showMessage('提示', `最多只能提 ${formatLarge(maxTake)} NB币（你占 ${(myPct * 100).toFixed(2)}% 的股份）`);
+            return;
+        }
+
+        const priceBefore = row ? Number(row.price) || 0 : 0;
+        const poolShares = row ? Number(row.pool_shares) || 0 : 0;
+        const priceAfter = poolShares > 0 ? ((poolCash - amount) / poolShares) : 0;
+
+        const ok = await showConfirm('确认提取',
+            `确定从「${myCompany.company_name}」账上提 ${formatLarge(amount)} NB币到你自己的余额吗？\n\n` +
+            `股价：${formatPrice(priceBefore)} → 约 ${formatPrice(priceAfter)}\n` +
+            `公司账上：${formatLarge(poolCash)} → ${formatLarge(poolCash - amount)} NB币`);
+        if (!ok) return;
+
+        let data = null, error = null;
+        try {
+            const r = await supabaseClient.rpc('extract_company_value', {
+                p_user_id: currentUserId,
+                p_session: localStorage.getItem('nb_session'),
+                p_company_id: cid,
+                p_amount: amount
+            });
+            data = r.data; error = r.error;
+        } catch (e) { error = e; }
+        if (error) { await showMessage('提取失败', error.message || '未知错误'); return; }
+        if (!data || data.success === false || data.ok === false) {
+            await showMessage('提取失败', (data && data.message) || '未知错误');
+            return;
+        }
+
+        await fetchUserBalance();
+        await fetchAllCompanies();
+        await refreshStockDataFromDB();
+        renderMyCompanySection();
+        await showMessage('提取完成', data.message || '已提取到你的余额');
+    }
+
     // ============================================================
     // 加钱（创始人专属）
     // ------------------------------------------------------------
@@ -1649,15 +1724,17 @@
             </div>
             <div>
                 ${actionButtons}
-                <button id="injectBtn" class="company-btn inject-btn" title="⚠️ 给公司加钱【拿不到任何股份】。如果你手上没有这家公司的股票，千万别加 —— 那等于白送钱给其他股东。">💰 给公司加钱</button>
+                <button id="injectBtn" class="company-btn inject-btn" title="⚠️ 给公司加钱【拿不到任何股份】。如果你手上没有这家公司的股票，千万别加 —— 那等于白送钱给其他股东。">💰 注资</button>
                 <button id="dividendBtn" class="company-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;" title="把公司账上的钱分给所有股东。分完公司账上钱少了，股价会跌 —— 你拿到现金，手里的股票同时贬值，总资产不变">💸 分红</button>
-                <button id="bankruptBtn" class="company-btn danger-btn" title="公司不做了。账上剩的钱按持股比例分给所有股东">🧹 关门分钱</button>
+                <button id="extractBtn" class="company-btn" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;border:none;" title="⚠️ 只有创始人能提。【最多只能提公司账上的钱 × 你的持股比例】，提完公司账上钱少了股价会跌，其他股东的股票会跟着贬值。">💸 提取</button>
+                <button id="bankruptBtn" class="company-btn danger-btn" title="公司不做了。账上剩的钱按持股比例分给所有股东">🧹 破产清算</button>
             </div>
-            <div class="nb-btn-legend">💡 <b>加钱</b>= 白给公司钱，拿不到股份，钱进了就出不来 · <b>分红</b>= 把公司账上的钱分给全体股东（分完股价会跌）· <b>关门分钱</b>= 公司不做了，账上的钱按持股比例分给大家</div>
+            <div class="nb-btn-legend">💡 <b>注资</b>= 白给公司钱，拿不到股份，钱进了就出不来 · <b>分红</b>= 把公司账上的钱分给全体股东（分完股价会跌）· <b>提取</b>= 创始人按持股比例把公司账上的钱拿进自己口袋 · <b>破产清算</b>= 公司不做了，账上的钱按持股比例分给大家</div>
         `;
 
         document.getElementById('bankruptBtn')?.addEventListener('click', bankruptCompany);
         document.getElementById('dividendBtn')?.addEventListener('click', payDividend);
+        document.getElementById('extractBtn')?.addEventListener('click', extractCompanyValue);
         document.getElementById('injectBtn')?.addEventListener('click', () => showInjectDialog(myCompany.pool_cash, myCompany.pool_shares));
 
         const applyBtn = document.getElementById('applyVerifyBtn');
