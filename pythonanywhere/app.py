@@ -44,6 +44,12 @@ except ImportError:
 # ==================== 配置 ====================
 SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co'
 SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+
+# service_role key —— 【只从环境变量读，绝不写进代码或仓库】。
+# 它绕过 RLS，等于数据库的万能钥匙；泄露出去别人能改任何数据。
+# 在 PythonAnywhere → Web → Environment variables 里加 SUPABASE_SERVICE_KEY。
+# 没配的话下面会自动退回 anon key，功能和现在完全一样。
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXT = re.compile(r'^[a-zA-Z0-9]{1,10}$')  # 扩展名白名单格式
 
@@ -158,6 +164,19 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+# Storage 专用客户端。
+# ⚠️ 为什么单独开一个、而不是把上面那个换成 service_role：
+#    service_role 绕过 RLS —— 整个客户端都换掉的话，
+#    那些「本来靠 RLS 过滤」的查询会返回全部数据，直接漏数据。
+#    所以只让 storage.from_() 走这个客户端，普通查询照旧用 anon。
+# 没配 SUPABASE_SERVICE_KEY 时它就是上面那个对象，零行为变化。
+if SUPABASE_SERVICE_KEY:
+    sb_storage: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    print('[NB] Storage 客户端已切换到 service_role（绕过 RLS）')
+else:
+    sb_storage: Client = supabase
+    print('[NB] 未配置 SUPABASE_SERVICE_KEY，Storage 继续用 anon key')
 
 # 允许的跨域来源
 # ⚠️ 这个白名单是防"私自部署"的第一道闸：别人把站点扒走部署到自己的域名后，
@@ -424,7 +443,7 @@ def upload():
     key = safe_filename(file.filename)
     file_bytes = file.read()   # supabase-py upload 需要 bytes，不接受文件流
     try:
-        supabase.storage.from_('products').upload(key, file_bytes, {
+        sb_storage.storage.from_('products').upload(key, file_bytes, {
             'content-type': file.mimetype or 'application/octet-stream'
         })
     except Exception as e:
@@ -444,7 +463,7 @@ def upload():
     if rpc_err or not data or data.get('success') is not True:
         # 数据库写入失败时清理已上传的文件，避免孤儿文件
         try:
-            supabase.storage.from_('products').remove([key])
+            sb_storage.storage.from_('products').remove([key])
         except Exception:
             pass
         msg = (rpc_err or (data and data.get('message')) or '写入数据库失败，请检查 SQL 脚本是否已执行')
@@ -483,7 +502,7 @@ def upload_avatar():
     key = 'user_%s_%d%s' % (str(user_id), int(datetime.datetime.now().timestamp() * 1000), ext)
     file_bytes = file.read()   # supabase-py upload 需要 bytes，不接受文件流
     try:
-        supabase.storage.from_('avatars').upload(key, file_bytes, {
+        sb_storage.storage.from_('avatars').upload(key, file_bytes, {
             'content-type': mime
         })
     except Exception as e:
@@ -495,7 +514,7 @@ def upload_avatar():
     if rpc_err or not data or data.get('success') is not True:
         # 地址保存失败时清理刚上传的文件，避免孤儿文件
         try:
-            supabase.storage.from_('avatars').remove([key])
+            sb_storage.storage.from_('avatars').remove([key])
         except Exception:
             pass
         return jsonify({'success': False, 'message': '头像地址保存失败: %s' % (rpc_err or '未知错误')}), 500
@@ -503,11 +522,11 @@ def upload_avatar():
     # 清理该用户的旧头像文件（保留刚上传的；删除策略已配置）
     try:
         prefix = 'user_%s' % str(user_id)
-        old_rows = _exec_rows(supabase.storage.from_('avatars').list('', {}))
+        old_rows = _exec_rows(sb_storage.storage.from_('avatars').list('', {}))
         for old in old_rows:
             old_name = old.get('name') or ''
             if old_name.startswith(prefix) and old_name != key:
-                supabase.storage.from_('avatars').remove([old_name])
+                sb_storage.storage.from_('avatars').remove([old_name])
     except Exception:
         pass   # 清理失败不影响头像使用
 
@@ -541,7 +560,7 @@ def upload_banner():
     key = 'banner_%s_%d%s' % (str(user_id), int(datetime.datetime.now().timestamp() * 1000), ext)
     file_bytes = file.read()
     try:
-        supabase.storage.from_('avatars').upload(key, file_bytes, {'content-type': mime})
+        sb_storage.storage.from_('avatars').upload(key, file_bytes, {'content-type': mime})
     except Exception as e:
         return jsonify({'success': False, 'message': '头图上传失败: %s' % e}), 500
 
@@ -549,7 +568,7 @@ def upload_banner():
     data, rpc_err = rpc('set_profile_banner', {'p_user_id': user_id, 'p_url': banner_url})
     if rpc_err or not data or data.get('success') is not True:
         try:
-            supabase.storage.from_('avatars').remove([key])
+            sb_storage.storage.from_('avatars').remove([key])
         except Exception:
             pass
         return jsonify({'success': False, 'message': '头图保存失败: %s' % (rpc_err or '未知错误')}), 500
@@ -557,11 +576,11 @@ def upload_banner():
     # 清理旧头图
     try:
         prefix = 'banner_%s' % str(user_id)
-        old_rows = _exec_rows(supabase.storage.from_('avatars').list('', {}))
+        old_rows = _exec_rows(sb_storage.storage.from_('avatars').list('', {}))
         for old in old_rows:
             old_name = old.get('name') or ''
             if old_name.startswith(prefix) and old_name != key:
-                supabase.storage.from_('avatars').remove([old_name])
+                sb_storage.storage.from_('avatars').remove([old_name])
     except Exception:
         pass
 
@@ -598,7 +617,7 @@ def upload_image():
     key = 'i_%d_%s%s' % (int(datetime.datetime.now().timestamp() * 1000), uuid.uuid4().hex[:8], ext)
     file_bytes = file.read()   # supabase-py upload 需要 bytes，不接受文件流
     try:
-        supabase.storage.from_('images').upload(key, file_bytes, {'content-type': mime})
+        sb_storage.storage.from_('images').upload(key, file_bytes, {'content-type': mime})
     except Exception as e:
         return jsonify({'success': False, 'message': '图片上传失败: %s' % e}), 500
 
@@ -637,7 +656,7 @@ def upload_video():
     key = 'v_%d_%s%s' % (int(datetime.datetime.now().timestamp() * 1000), uuid.uuid4().hex[:8], ext)
     file_bytes = file.read()
     try:
-        supabase.storage.from_('images').upload(key, file_bytes, {'content-type': mime})
+        sb_storage.storage.from_('images').upload(key, file_bytes, {'content-type': mime})
     except Exception as e:
         return jsonify({'success': False, 'message': '视频上传失败: %s' % e}), 500
 
@@ -664,11 +683,11 @@ def remove_avatar():
     # 删除该用户的头像文件（尽力而为）
     try:
         prefix = 'user_%s' % str(user_id)
-        old_rows = _exec_rows(supabase.storage.from_('avatars').list('', {}))
+        old_rows = _exec_rows(sb_storage.storage.from_('avatars').list('', {}))
         for old in old_rows:
             old_name = old.get('name') or ''
             if old_name.startswith(prefix):
-                supabase.storage.from_('avatars').remove([old_name])
+                sb_storage.storage.from_('avatars').remove([old_name])
     except Exception:
         pass
 
@@ -745,7 +764,7 @@ def edit_product():
             return jsonify({'success': False, 'message': '文件不能超过 50 MB'}), 400
         key = safe_filename(file.filename)
         try:
-            supabase.storage.from_('products').upload(key, file.read(), {
+            sb_storage.storage.from_('products').upload(key, file.read(), {
                 'content-type': file.mimetype or 'application/octet-stream'
             })
         except Exception as e:
@@ -772,7 +791,7 @@ def edit_product():
         # 记录更新失败时清理已上传的新文件
         if new_file_url != old_file_url:
             try:
-                supabase.storage.from_('products').remove([_storage_key_from_url(new_file_url)])
+                sb_storage.storage.from_('products').remove([_storage_key_from_url(new_file_url)])
             except Exception:
                 pass
         return jsonify({'success': False, 'message': (rpc_err or (data and data.get('message')) or '保存失败')}), 500
@@ -780,7 +799,7 @@ def edit_product():
     # 删除旧文件（替换场景）
     if old_key and new_file_url != old_file_url:
         try:
-            supabase.storage.from_('products').remove([old_key])
+            sb_storage.storage.from_('products').remove([old_key])
         except Exception:
             pass
 
@@ -816,7 +835,7 @@ def delete_product():
         return jsonify({'success': False, 'message': (rpc_err or (data and data.get('message')) or '删除失败')}), 500
     if key:
         try:
-            supabase.storage.from_('products').remove([key])
+            sb_storage.storage.from_('products').remove([key])
         except Exception:
             pass
 
@@ -917,7 +936,7 @@ def serve_s3_file(key):
 
     # 1) Supabase Storage（新文件）
     try:
-        body = supabase.storage.from_('products').download(key)
+        body = sb_storage.storage.from_('products').download(key)
         resp = Response(body, mimetype='application/octet-stream')
         resp.headers['Content-Disposition'] = 'attachment; filename="%s"' % key
         return resp
