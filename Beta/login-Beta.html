@@ -1796,7 +1796,7 @@ html { -webkit-text-size-adjust: 100%; }
         var code = document.getElementById('regCode').value.trim();
         var errorDiv = document.getElementById('regError');
         errorDiv.innerText = '';
-        if (!/^[\u4e00-\u9fa5a-zA-Z0-9]+$/.test(username)) { errorDiv.innerText = '用户名只能包含中文、字母和数字'; return; }
+        if (!/^[\u4e00-\u9fa5a-zA-Z0-9_.+~!?,:;#%^*()\[\]=★☆♪♫♥❤✿❀※·×÷±≈≠≤≥∞°←→↑↓▲△▼▽●○◆◇■□-]+$/.test(username)) { errorDiv.innerText = '用户名只能包含中文、字母、数字和常用符号'; return; }
         if (password !== password2) { errorDiv.innerText = '两次输入的密码不一致'; return; }
         if (password.length < 4) { errorDiv.innerText = '密码长度至少4位'; return; }
         if (!email || !/^\d{6}$/.test(code)) { errorDiv.innerText = '请先获取邮箱验证码并填写 6 位数字'; return; }

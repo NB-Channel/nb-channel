@@ -1708,9 +1708,9 @@
     document.getElementById('do-register').onclick = async () => {
         // 清洗零宽字符（防伪装同名）
         const username = document.getElementById('reg-username').value.trim().replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '').trim();
-        // 用户名只能包含中文、字母和数字
-        if (!/^[\u4e00-\u9fa5a-zA-Z0-9]+$/.test(username)) {
-            document.getElementById('register-error').innerText = '用户名只能包含中文、字母和数字';
+        // 用户名只能包含中文、字母、数字和常用符号
+        if (!/^[\u4e00-\u9fa5a-zA-Z0-9_.+~!?,:;#%^*()\[\]=★☆♪♫♥❤✿❀※·×÷±≈≠≤≥∞°←→↑↓▲△▼▽●○◆◇■□-]+$/.test(username)) {
+            document.getElementById('register-error').innerText = '用户名只能包含中文、字母、数字和常用符号';
             return;
         }
         const password = document.getElementById('reg-password').value;
@@ -1737,8 +1737,8 @@
             errorDiv.innerText = '请输入新用户名';
             return;
         }
-        if (!/^[\u4e00-\u9fa5a-zA-Z0-9]+$/.test(newUsername)) {
-            errorDiv.innerText = '用户名只能包含中文、字母和数字';
+        if (!/^[\u4e00-\u9fa5a-zA-Z0-9_.+~!?,:;#%^*()\[\]=★☆♪♫♥❤✿❀※·×÷±≈≠≤≥∞°←→↑↓▲△▼▽●○◆◇■□-]+$/.test(newUsername)) {
+            errorDiv.innerText = '用户名只能包含中文、字母、数字和常用符号';
             return;
         }
         try {

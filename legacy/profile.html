@@ -600,8 +600,8 @@
             errorDiv.innerText = '请输入新用户名';
             return;
         }
-        if (!/^[\u4e00-\u9fa5a-zA-Z0-9]+$/.test(newUsername)) {
-            errorDiv.innerText = '用户名只能包含中文、字母和数字';
+        if (!/^[\u4e00-\u9fa5a-zA-Z0-9_.+~!?,:;#%^*()\[\]=★☆♪♫♥❤✿❀※·×÷±≈≠≤≥∞°←→↑↓▲△▼▽●○◆◇■□-]+$/.test(newUsername)) {
+            errorDiv.innerText = '用户名只能包含中文、字母、数字和常用符号';
             return;
         }
         errorDiv.innerText = '';
