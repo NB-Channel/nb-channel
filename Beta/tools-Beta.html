@@ -443,14 +443,32 @@ html.dark .pcell.empty, html.dark .pcell.hole { color: var(--ink-faint); }
     background: linear-gradient(135deg, var(--brand), #6366f1);
     color: #fff; box-shadow: 0 5px 14px -6px rgba(59,130,246,.6);
 }
-/* 电子公转动画:默认静止;快速=各环基准周期 --t;慢速=2 倍 */
-.sh-orbit { transform-box: view-box; transform-origin: 50% 50%; }
-.sh-svg.spd-fast .sh-orbit { animation: shspin var(--t, 4s) linear infinite; }
-.sh-svg.spd-slow .sh-orbit { animation: shspin calc(var(--t, 4s) * 2) linear infinite; }
-@keyframes shspin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-    .sh-svg.spd-fast .sh-orbit, .sh-svg.spd-slow .sh-orbit { animation: none; }
+/* 电子公转动画：默认静止；快速 = 各环基准周期 --t；慢速 = 2 倍（--t2）
+   ⚠️ 三条经验，都是踩过的坑：
+      ① 不要用 animation 简写 —— 简写里的 calc() / var() 在 Safari 上不稳。
+         拆成 longhand，时长单独写在 animation-duration 里。
+      ② 慢速的 2 倍周期不要用 calc() 算，直接在 JS 里生成 --t2。
+      ③ 【不要】用 @media (prefers-reduced-motion: reduce) 去覆盖
+         spd-fast / spd-slow —— 那是用户明确选的速度，
+         系统偏好只该影响【默认值】。默认值已经由 orbitMode() 处理：
+             没选过 + 系统开了减弱动态效果 → off
+         之前这里有一层 animation:none 的覆盖，导致 iOS 开了
+         「设置 → 辅助功能 → 动态效果 → 减弱动态效果」之后，
+         不管选慢速还是快速都不转。 */
+.sh-orbit {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    will-change: transform;
 }
+.sh-svg.spd-fast .sh-orbit,
+.sh-svg.spd-slow .sh-orbit {
+    animation-name: shspin;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+.sh-svg.spd-fast .sh-orbit { animation-duration: var(--t, 4s); }
+.sh-svg.spd-slow .sh-orbit { animation-duration: var(--t2, 8s); }
+@keyframes shspin { to { transform: rotate(360deg); } }
 .el-box table { width: 100%; font-size: .9rem; border-collapse: collapse; margin: 4px 0 16px; }
 .el-box td { padding: 9px 8px; border-bottom: 1px dashed var(--line); text-align: left; }
 .el-box tr:last-child td { border-bottom: none; }
@@ -1702,7 +1720,10 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
             var cnt = shells[i];
             // 每层电子包进独立轨道组:开启转动时整组绕中心旋转(内层快外层慢)
             var dur = (0.45 + i * 0.2).toFixed(2);
-            s += '<g class="sh-orbit" style="--t:' + dur + 's">';
+            // 慢速用 2 倍周期。这里直接算好写进 --t2，
+            // 免得 CSS 里出现 calc() —— Safari 对 animation 简写里的 calc 支持不稳。
+            var dur2 = (parseFloat(dur) * 2).toFixed(2);
+            s += '<g class="sh-orbit" style="--t:' + dur + 's;--t2:' + dur2 + 's">';
             for (var j = 0; j < cnt; j++) {
                 var ang = (j / cnt) * Math.PI * 2 - Math.PI / 2 + (i % 2) * 0.06;
                 var dx = CX + Math.cos(ang) * r;

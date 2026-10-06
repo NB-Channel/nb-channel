@@ -2195,14 +2195,31 @@ html { -webkit-text-size-adjust: 100%; }
                 editForm.appendChild(saveBtn);
                 editForm.appendChild(cancelBtn);
 
+                // 行数上限：超过 10 行就截断（服务端也有一道，这里是当场提示）
                 textarea.addEventListener('input', () => {
+                    const lines = textarea.value.split(/\r\n|\r|\n/);
+                    if (lines.length > 10) {
+                        textarea.value = lines.slice(0, 10).join('\n');
+                        showMessage('提示', '评论最多只能有10行');
+                    }
                     counter.querySelector('span').innerText = textarea.value.length;
+                });
+                textarea.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && textarea.value.split(/\r\n|\r|\n/).length >= 10) {
+                        e.preventDefault();
+                        showMessage('提示', '评论最多只能有10行，不能再添加新行');
+                    }
                 });
 
                 saveBtn.onclick = async () => {
                     const newContent = textarea.value.trim();
                     if (!newContent) { showMessage('提示', '内容不能为空'); return; }
                     if (newContent.length > 200) { showMessage('提示', '内容不能超过200字'); return; }
+                    // 修改也要查行数 —— 以前只有发表框查，改成 100 行都能存进去
+                    if (newContent.split(/\r\n|\r|\n/).length > 10) {
+                        showMessage('提示', '评论最多只能有10行');
+                        return;
+                    }
                     const { data, error } = await supabaseClient.rpc('update_comment', {
                         p_user_id: currentUser.id,
                         p_comment_id: parseInt(commentId),
@@ -2228,7 +2245,18 @@ html { -webkit-text-size-adjust: 100%; }
         document.querySelectorAll('.reply-form textarea').forEach(textarea => {
             const counterSpan = textarea.closest('.reply-form').querySelector('.char-counter span');
             textarea.addEventListener('input', () => {
+                const lines = textarea.value.split(/\r\n|\r|\n/);
+                if (lines.length > 10) {
+                    textarea.value = lines.slice(0, 10).join('\n');
+                    showMessage('提示', '评论最多只能有10行');
+                }
                 counterSpan.innerText = textarea.value.length;
+            });
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && textarea.value.split(/\r\n|\r|\n/).length >= 10) {
+                    e.preventDefault();
+                    showMessage('提示', '评论最多只能有10行，不能再添加新行');
+                }
             });
             initMentionAutocomplete(textarea);
         });
