@@ -96,8 +96,13 @@ BEGIN
         END IF;
 
         -- 把整条白名单判断（IF ... !~ ... THEN）换掉
+        -- ⚠️ 重复次数上界必须 ≤ 255 —— PostgreSQL 的 regex 引擎里
+        --    #define DUPMAX 255，超过就报
+        --        ERROR: invalid repetition count(s)   (REG_BADBR)
+        --    这里实际间隔不到 100 字，200 绰绰有余。
+        --    之前把上界写成 400 就是踩了这个，报 invalid repetition count(s)。
         v_new := regexp_replace(v_src,
-            'IF\s+clean_name\s*!~\s*[\s\S]{0,400}?THEN',
+            'IF\s+clean_name\s*!~\s*[\s\S]{0,200}?THEN',
             v_pat);
 
         IF v_new = v_src THEN
