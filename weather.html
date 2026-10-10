@@ -191,7 +191,8 @@
             <div class="bar"><i id="tickBar"></i></div>
             <span class="txt" id="tickNum">10.0s</span>
             <button id="refreshNow">🔄 立刻刷新</button>
-            <span class="txt" id="clockTxt"></span>
+            <span class="txt" id="clockTxt"></span>
+            <span id="wxSrc" style="font-size:.82rem;color:var(--count-text);white-space:nowrap;"></span>
         </div>
     </div>
 
@@ -444,6 +445,59 @@
     }
 
     /* ── 倒计时进度条 ── */
+        /* ── 数据来源 ──────────────────────────────────────────────
+       气象数据存在数据库里（weather_state 表，由 market_tick_loop
+       每 10 秒推进一轮），前端调 get_weather 拿 ——
+       这样所有人同一时刻看到的是同一份，不会两个人对不上。
+
+       拿不到就退回本地算法（下面那套随机游走），页面不会空着。 */
+    var sb = null;
+    try {
+        if (window.supabase) {
+            sb = window.supabase.createClient(
+                'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+                'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg');
+        }
+    } catch (e) { sb = null; }
+
+    var srcTag = document.getElementById('wxSrc');
+    var FROM_SERVER = false;
+
+    function applyServer(rows) {
+        rows.forEach(function (r) {
+            for (var k = 0; k < CITIES.length; k++) {
+                if (CITIES[k].name === r.city) {
+                    var st = state[k];
+                    st.temp  = parseFloat(r.temp_c);
+                    st.hum   = parseFloat(r.humidity);
+                    st.pres  = parseFloat(r.pressure);
+                    st.vis   = parseFloat(r.visibility);
+                    st.aqi   = parseFloat(r.aqi);
+                    st.dir   = parseInt(r.wind_dir, 10);
+                    st.force = parseFloat(r.wind_force);
+                    break;
+                }
+            }
+        });
+        FROM_SERVER = true;
+        if (srcTag) srcTag.textContent = '· 服务端数据';
+    }
+
+    function pull() {
+        if (!sb || !sb.rpc) { full(); return; }
+        sb.rpc('get_weather').then(function (res) {
+            if (res && res.data && res.data.length) {
+                applyServer(res.data);
+                render();
+                t0 = Date.now();
+                bar.style.width = '0%';
+                clockUi();
+            } else {
+                full();
+            }
+        }).catch(function () { full(); });
+    }
+
     var t0 = Date.now();
     function tickUi() {
         var el = Date.now() - t0;
@@ -467,17 +521,18 @@
 
     document.getElementById('seasonTxt').textContent =
         seasonName(seasonFactor(new Date()));
-    document.getElementById('refreshNow').onclick = full;
-
-    full();
-    clockUi();
-    setInterval(tickUi, 100);
+    document.getElementById('refreshNow').onclick = full;
+
+    full();          // 先用本地数据立刻渲染，不等网络
+    clockUi();
+    pull();          // 同时问服务端要那一份
+    setInterval(tickUi, 100);
     setInterval(clockUi, 1000);
-    setInterval(full, REFRESH_MS);
+    setInterval(pull, REFRESH_MS);
 
     /* 手机上切到后台再回来时，别让它停在旧数据上 */
     document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) full();
+        if (!document.hidden) pull();
     });
 })();
 </script>
