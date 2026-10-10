@@ -1648,8 +1648,6 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         // 曲线下方填一层淡色
         var area = d + ' L' + X(x1).toFixed(1) + ' ' + (H - PADB) + ' L' + X(x0).toFixed(1) + ' ' + (H - PADB) + ' Z';
         // 当前时刻的点
-        var curT = useReal ? pts[pts.length - 1] : tempAt(c, nowH, now);
-        var curX = useReal ? x1 : nowH;
 
         // 时刻刻度 + 两条网格线（让曲线有参照，不至于看着像没数据）
         var grid = '';
@@ -1666,6 +1664,8 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                     '" stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="3 4"/>';
         });
 
+        var curT = useReal ? pts[pts.length - 1] : tempAt(c, nowH, now);
+        var curX = useReal ? x1 : nowH;
         var srcTxt = useReal ? ('实际记录 · ' + pts.length + ' 个采样')
                              : '模型推算（数据攒够后自动切换）';
         return '<svg class="wx-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
@@ -1682,6 +1682,8 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                    'fill="#7c8cf8" opacity=".18"/>' +
                  '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="3.2" ' +
                    'fill="#fff" stroke="#7c8cf8" stroke-width="2"/>' +
+                 '<text x="' + (X(curX) + 8).toFixed(1) + '" y="' + (Y(curT) - 6).toFixed(1) + '" ' +
+                   'font-size="10" font-weight="700" fill="#7c8cf8">现在</text>' +
                  // 鼠标悬停时的高亮点（初始藏起来，交互时由 JS 移动）
                  '<g class="wx-hover-g" style="display:none">' +
                    '<line class="wx-hover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PADB) +
@@ -1960,11 +1962,12 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         if (hi - lo < .4) hi = lo + .4;
         function X(h) { return PAD + (W - PAD * 2) * (h / 24); }
         function Y(v) { return PAD + (H - PAD * 2) * (1 - (v - lo) / (hi - lo)); }
+        var nowH2 = new Date().getHours() + new Date().getMinutes() / 60;
+        var nowV = pres + A * Math.cos(2 * Math.PI * (nowH2 - 10) / 12);
         var d = '', area = '';
         for (i = 0; i <= 24; i++) { d += (i ? ' L' : 'M') + X(i).toFixed(1) + ' ' + Y(pts[i]).toFixed(1); }
         area = d + ' L' + X(24).toFixed(1) + ' ' + (H - PAD) + ' L' + X(0).toFixed(1) + ' ' + (H - PAD) + ' Z';
         var nowH = new Date().getHours() + new Date().getMinutes() / 60;
-        var nowV = pres + A * Math.cos(2 * Math.PI * (nowH - 10) / 12);
         return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="wx-mini" preserveAspectRatio="none">' +
                '<defs><linearGradient id="pcg" x1="0" y1="0" x2="1" y2="0">' +
                '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
@@ -1972,8 +1975,8 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                '<path d="' + area + '" fill="url(#pcg)" opacity=".14"/>' +
                '<path d="' + d + '" fill="none" stroke="url(#pcg)" stroke-width="1.5" ' +
                'vector-effect="non-scaling-stroke" stroke-linejoin="round"/>' +
-               '<circle cx="' + X(nowH).toFixed(1) + '" cy="' + Y(nowV).toFixed(1) + '" r="3" ' +
-               'fill="#fff" stroke="#7c8cf8" stroke-width="1.6"/>' +
+               '<circle cx="' + X(nowH2).toFixed(1) + '" cy="' + Y(nowV).toFixed(1) + '" r="3.4" ' +
+               'fill="#fff" stroke="#7c8cf8" stroke-width="1.8"/>' +
                '<g class="wx-phover-g" style="display:none">' +
                  '<line class="wx-phover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PAD) +
                    '" stroke="rgba(124,140,248,.5)" stroke-width="1" stroke-dasharray="3 3"/>' +
