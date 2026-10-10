@@ -1250,8 +1250,6 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
             font-family: "Songti SC", "SimSun", Georgia, serif;
             font-size: .82rem; color: var(--muted); text-align: center; line-height: 1.6;
         }
-        /* ── 翻页条 ── */
-        .np-pager {
             display: flex; align-items: center; justify-content: center; gap: 16px;
             margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--card-border);
         }
@@ -3072,13 +3070,13 @@ function render() {
             el.onclick = function () {
                 var no = parseInt(el.getAttribute('data-no'), 10);
                 setHash('#/issue/' + no);
-                openIssue(no, 1);
+                openIssue(no);
             };
         });
     }
 
     /* ── 某一期 ── */
-    function openIssue(no, startPage) {
+    function openIssue(no) {
         body.innerHTML = '<div class="np-loading">正在展开第 ' + no + ' 期…</div>';
         var u = me();
         rpc('get_news_issue', { p_user_id: u ? u.id : null, p_issue_no: no }).then(function (d) {
@@ -3088,9 +3086,8 @@ function render() {
                 document.getElementById('npBack').onclick = backToList;
                 return;
             }
-            CUR = d;                       // 记住这一期，翻页用
-            CUR.page = startPage || 1;
-            setHash('#/issue/' + no + (CUR.page > 1 ? '/' + CUR.page : ''));
+            CUR = d;                       // 记住这一期
+            setHash('#/issue/' + no);
             drawIssue();
         }).catch(function (e) {
             body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
@@ -3099,13 +3096,10 @@ function render() {
         });
     }
 
-    /* 画当前这一页（翻页只重画报纸那块，不重新请求） */
+    /* 画这一期 —— 所有页顺着往下排，不翻页 */
     function drawIssue() {
         var d = CUR;
         var total = d.pages || 1;
-        var cur = Math.min(Math.max(d.page || 1, 1), total);
-        d.page = cur;
-        var arts = (d.by_page && d.by_page[String(cur)]) || [];
 
         var h = '<button class="np-back" id="npBack">← 回各期</button>' +
             '<div class="np-paper" id="npPaper">' +
@@ -3114,18 +3108,22 @@ function render() {
               '<div class="np-rule"></div>' +
               '<h2 class="np-h1" style="margin-top:18px">' + esc(d.title) + '</h2>' +
               (d.summary ? '<div class="np-hsub">' + esc(d.summary) + '</div>' : '') +
-              '<div class="np-rule-thin" style="margin:16px 0 4px"></div>' +
-              '<div class="np-sec" style="margin-top:20px">第 ' + cur + ' 页</div>';
+              '<div class="np-rule-thin" style="margin:16px 0 4px"></div>';
 
-        if (arts.length) {
-            h += renderArticles(arts);
-        } else {
-            h += '<div class="np-empty" style="padding:30px 20px">这一页还没有内容。</div>';
+        // 一页一页顺着往下排
+        for (var pg = 1; pg <= total; pg++) {
+            var arts = (d.by_page && d.by_page[String(pg)]) || [];
+            h += '<div class="np-sec" style="margin-top:' + (pg === 1 ? '20px' : '34px') + '">' +
+                 (total > 1 ? '第 ' + pg + ' 页' : '本 期 内 容') + '</div>';
+            if (arts.length) {
+                h += renderArticles(arts);
+            } else {
+                h += '<div class="np-empty" style="padding:22px 20px">这一页还没有内容。</div>';
+            }
         }
 
-        // 付费刊：最后一页放解锁卡（没买才放）
-        var isPaidIssue = (d.kind === 'paid') && !d.owned && (d.paid || []).length;
-        if (isPaidIssue && cur === total) {
+        // 付费刊没买时，解锁卡放最后
+        if ((d.kind === 'paid') && !d.owned && (d.paid || []).length) {
             h += '<div class="np-lock">' +
                    '<div class="lk-title">🔒 这一期还有内容没解锁</div>' +
                    '<div class="lk-sub">共 ' + d.paid.length + ' 篇 · 花 ' + d.price +
@@ -3142,52 +3140,15 @@ function render() {
         }
 
         h += '<div class="np-notice" style="margin-top:24px;border-top:3px double var(--card-border);padding-top:14px">' +
-             '《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 第 ' + cur + ' 页 / 共 ' + total + ' 页<br>' +
-             '本报所有内容均为虚构，如有雷同，那大概是巧合</div>';
-
-        // 翻页条
-        if (total > 1) {
-            h += '<div class="np-pager">' +
-                   '<button class="np-pg" data-go="prev"' + (cur <= 1 ? ' disabled' : '') + '>← 上一页</button>' +
-                   '<span class="np-pg-info">第 <b>' + cur + '</b> / ' + total + ' 页</span>' +
-                   '<button class="np-pg" data-go="next"' + (cur >= total ? ' disabled' : '') + '>下一页 →</button>' +
-                 '</div>';
-            h += '<div class="np-pg-dots">';
-            for (var i = 1; i <= total; i++) {
-                h += '<button class="np-dot' + (i === cur ? ' on' : '') + '" data-page="' + i + '">' + i + '</button>';
-            }
-            h += '</div>';
-        }
-        h += '</div>';
+             '《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 共 ' + total + ' 页<br>' +
+             '本报所有内容均为虚构，如有雷同，那大概是巧合</div>' +
+            '</div>';
 
         body.innerHTML = h;
 
         document.getElementById('npBack').onclick = backToList;
         var buy = document.getElementById('npBuy');
         if (buy && !buy.disabled) buy.onclick = function () { doBuy(d.issue_no, buy); };
-
-        Array.prototype.forEach.call(body.querySelectorAll('.np-pg'), function (b) {
-            b.onclick = function () {
-                var g = b.getAttribute('data-go');
-                if (g === 'prev') d.page = cur - 1; else d.page = cur + 1;
-                setHash('#/issue/' + d.issue_no + (d.page > 1 ? '/' + d.page : ''));
-                drawIssue();
-                toPaperTop();
-            };
-        });
-        Array.prototype.forEach.call(body.querySelectorAll('.np-dot'), function (b) {
-            b.onclick = function () {
-                d.page = parseInt(b.getAttribute('data-page'), 10);
-                setHash('#/issue/' + d.issue_no + (d.page > 1 ? '/' + d.page : ''));
-                drawIssue();
-                toPaperTop();
-            };
-        });
-    }
-
-    function toPaperTop() {
-        var el = document.getElementById('npPaper');
-        if (el) { var y = el.getBoundingClientRect().top + window.pageYOffset - 90; window.scrollTo({ top: y, behavior: 'smooth' }); }
     }
 
     function backToList() {
@@ -3287,16 +3248,9 @@ function render() {
         // #/issue/N 或 #/issue/N/P
         if (seg[0] === 'issue' && seg[1]) {
             var no = parseInt(seg[1], 10);
-            var pg = seg[2] ? parseInt(seg[2], 10) : 1;
             if (!isNaN(no) && no > 0) {
-                if (CUR && CUR.issue_no === no) {
-                    // 已经是这一期了，只翻页
-                    CUR.page = (isNaN(pg) || pg < 1) ? 1 : pg;
-                    drawIssue();
-                    toPaperTop();
-                } else {
-                    openIssue(no, isNaN(pg) ? 1 : pg);
-                }
+                if (CUR && CUR.issue_no === no) return;   // 已经在看这一期
+                openIssue(no);
                 return;
             }
         }
