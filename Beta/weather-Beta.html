@@ -963,6 +963,39 @@ html { -webkit-text-size-adjust: 100%; }
            color: var(--ink-faint); line-height: 2; }
 html.dark .wx-card { box-shadow: 0 6px 20px -14px rgba(0,0,0,.5); }
 html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28); }
+
+    /* ── 刷新倒计时条 ──
+       ⚠️ 这几条是补的。Beta 版当初只从 weather.html 抽了「城市卡片」那段 CSS，
+          刷新条那几条漏了；而 Beta 的 HTML 用的是另一套类名
+          （.wx-tickbar / .wx-tb-bar / .wx-tb-txt），和根目录的 .wx-tick 对不上，
+          于是刷新条一直没有布局样式：「下次刷新」独占一行、进度条也看不见。 */
+    .wx-tickbar {
+        margin-top: 18px;
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .wx-tb-bar {
+        flex: 1; min-width: 160px; height: 7px; border-radius: 99px;
+        background: var(--line); overflow: hidden;
+    }
+    .wx-tb-bar i {
+        display: block; height: 100%; width: 0%;
+        background: var(--brand); border-radius: 99px;
+        transition: width .25s linear;
+    }
+    .wx-tb-txt { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+    .wx-tickbar button {
+        background: var(--card); color: var(--ink);
+        border: 1px solid var(--line); border-radius: 30px;
+        padding: 7px 16px; font-size: .84rem; cursor: pointer; transition: .2s;
+    }
+    .wx-tickbar button:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+
+    /* 正文容器：和官网模式的标准宽度对齐（.vwrap 也是 1080px）。
+       ⚠️ 页面里本来就有 <div class="wx-main">，但一直没有对应的 CSS 规则 ——
+          于是刷新条和城市卡片都是满宽，而上面的公告条是 1080px，三段对不齐。 */
+    .wx-main { max-width: 1080px; margin: 0 auto; padding: 0 20px 60px; }
+
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -1631,7 +1664,8 @@ function render() {
             if (!FROM_SERVER || !srvAt) { srcTag.textContent = '· 本地推算'; }
             else {
                 var age = Math.max(0, Math.round((Date.now() - srvAt) / 1000));
-                srcTag.textContent = '· 服务端 ' + age + ' 秒前更新';
+                srcTag.textContent = '· 服务端数据';
+                srcTag.title = '这份数据是 ' + age + ' 秒前从服务端取的';
             }
         }
     }
