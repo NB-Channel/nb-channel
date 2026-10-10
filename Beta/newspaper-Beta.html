@@ -3069,12 +3069,16 @@ function render() {
 
     function bindIssueClicks() {
         Array.prototype.forEach.call(body.querySelectorAll('.np-card'), function (el) {
-            el.onclick = function () { openIssue(parseInt(el.getAttribute('data-no'), 10)); };
+            el.onclick = function () {
+                var no = parseInt(el.getAttribute('data-no'), 10);
+                setHash('#/issue/' + no);
+                openIssue(no, 1);
+            };
         });
     }
 
     /* ── 某一期 ── */
-    function openIssue(no) {
+    function openIssue(no, startPage) {
         body.innerHTML = '<div class="np-loading">正在展开第 ' + no + ' 期…</div>';
         var u = me();
         rpc('get_news_issue', { p_user_id: u ? u.id : null, p_issue_no: no }).then(function (d) {
@@ -3085,7 +3089,8 @@ function render() {
                 return;
             }
             CUR = d;                       // 记住这一期，翻页用
-            CUR.page = 1;
+            CUR.page = startPage || 1;
+            setHash('#/issue/' + no + (CUR.page > 1 ? '/' + CUR.page : ''));
             drawIssue();
         }).catch(function (e) {
             body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
@@ -3165,6 +3170,7 @@ function render() {
             b.onclick = function () {
                 var g = b.getAttribute('data-go');
                 if (g === 'prev') d.page = cur - 1; else d.page = cur + 1;
+                setHash('#/issue/' + d.issue_no + (d.page > 1 ? '/' + d.page : ''));
                 drawIssue();
                 toPaperTop();
             };
@@ -3172,6 +3178,7 @@ function render() {
         Array.prototype.forEach.call(body.querySelectorAll('.np-dot'), function (b) {
             b.onclick = function () {
                 d.page = parseInt(b.getAttribute('data-page'), 10);
+                setHash('#/issue/' + d.issue_no + (d.page > 1 ? '/' + d.page : ''));
                 drawIssue();
                 toPaperTop();
             };
@@ -3183,7 +3190,11 @@ function render() {
         if (el) { var y = el.getBoundingClientRect().top + window.pageYOffset - 90; window.scrollTo({ top: y, behavior: 'smooth' }); }
     }
 
-    function backToList() { if (VIEW === 'mine') renderMine(); else renderIssues(); }
+    function backToList() {
+        CUR = null;
+        setHash(VIEW === 'mine' ? '#/mine' : '#/' + VIEW);
+        if (VIEW === 'mine') renderMine(); else renderIssues();
+    }
 
     function renderArticles(list) {
         var arts = (list || []).filter(function (a) { return a.kind !== 'brief'; });
@@ -3239,11 +3250,68 @@ function render() {
             Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (x) { x.classList.remove('active'); });
             b.classList.add('active');
             VIEW = b.getAttribute('data-view');
+            setHash(VIEW === 'mine' ? '#/mine' : '#/' + VIEW);
             backToList();
         };
     });
 
-    renderIssues();
+    /* ══════════════════════════════════════════════════════════
+       hash 路由 —— 让刷新 / 前进后退能停在同一期同一页
+           #/            各期（默认免费刊）
+           #/free        免费刊
+           #/paid        付费刊
+           #/mine        我拥有的报纸
+           #/issue/1     第 1 期
+           #/issue/1/2   第 1 期第 2 页
+       ══════════════════════════════════════════════════════════ */
+    var HASH_LOCK = false;      // 自己写 hash 时别触发 hashchange 重复渲染
+
+    function setHash(h) {
+        if (location.hash === h) return;
+        HASH_LOCK = true;
+        location.hash = h;
+        setTimeout(function () { HASH_LOCK = false; }, 60);
+    }
+
+    function pickTab(v) {
+        Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (x) {
+            x.classList.toggle('active', x.getAttribute('data-view') === v);
+        });
+    }
+
+    function route() {
+        if (HASH_LOCK) return;
+        var h = (location.hash || '').replace(/^#\/?/, '');   // 去掉开头的 # 和 /
+        var seg = h.split('/').filter(function (x) { return x !== ''; });
+
+        // #/issue/N 或 #/issue/N/P
+        if (seg[0] === 'issue' && seg[1]) {
+            var no = parseInt(seg[1], 10);
+            var pg = seg[2] ? parseInt(seg[2], 10) : 1;
+            if (!isNaN(no) && no > 0) {
+                if (CUR && CUR.issue_no === no) {
+                    // 已经是这一期了，只翻页
+                    CUR.page = (isNaN(pg) || pg < 1) ? 1 : pg;
+                    drawIssue();
+                    toPaperTop();
+                } else {
+                    openIssue(no, isNaN(pg) ? 1 : pg);
+                }
+                return;
+            }
+        }
+
+        // #/free | #/paid | #/mine | 空
+        var v = (seg[0] === 'paid' || seg[0] === 'mine') ? seg[0] : 'free';
+        VIEW = v;
+        pickTab(v);
+        CUR = null;
+        if (v === 'mine') renderMine(); else renderIssues();
+    }
+
+    window.addEventListener('hashchange', route);
+
+    route();
 })();
 </script>
 </body>
