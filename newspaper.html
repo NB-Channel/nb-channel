@@ -373,9 +373,17 @@
             .map(function (p) { return '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>'; }).join('');
     }
 
+    // 会话令牌：站点用自定义登录，Supabase 一律看到 anon，
+    // 所以每个需要认人的 RPC 都得自己把 nb_session 传过去。
+    // ⚠️ 不要指望页面上那个「自动注入补丁」—— 它只包了 window.supabaseClient，
+    //    而这个页面是自己 createClient 的，那个补丁包不到。
+    function sess() { try { return localStorage.getItem('nb_session'); } catch (e) { return null; } }
+
     function rpc(fn, args) {
         if (!sb || !sb.rpc) return Promise.reject(new Error('supabase 没加载'));
-        return sb.rpc(fn, args || {}).then(function (r) {
+        args = Object.assign({}, args || {});
+        if (!('p_session' in args)) args.p_session = sess();
+        return sb.rpc(fn, args).then(function (r) {
             if (r && r.error) throw new Error(r.error.message || 'RPC 失败');
             return r ? r.data : null;
         });
@@ -407,7 +415,7 @@
         var u = me();
         if (!u) {
             body.innerHTML = '<div class="np-empty">请先登录，才能看到你拥有的报纸。<br>' +
-                '<a href="login.html" style="color:var(--status-border)">去登录 →</a></div>';
+                '<a href="Beta/login-Beta.html" style="color:var(--status-border)">去登录 →</a></div>';
             return;
         }
         body.innerHTML = '<div class="np-loading">正在翻你的报箱…</div>';
@@ -508,7 +516,7 @@
                              ? '<button class="np-buy" id="npBuy">花 ' + d.price + ' NB币 购买这一期</button>'
                              : '<button class="np-buy" disabled>请先登录</button>' +
                                '<div class="lk-sub" style="margin-top:12px">' +
-                               '<a href="login.html" style="color:var(--status-border)">去登录 →</a></div>') +
+                               '<a href="Beta/login-Beta.html" style="color:var(--status-border)">去登录 →</a></div>') +
                            '<div class="np-locked-list">' +
                              d.paid.map(function (a) { return '<div>' + esc(a.headline) + '</div>'; }).join('') +
                            '</div>' +
