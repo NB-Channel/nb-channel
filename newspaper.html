@@ -232,6 +232,30 @@
             font-family: "Songti SC", "SimSun", Georgia, serif;
             font-size: .82rem; color: var(--count-text); text-align: center; line-height: 1.6;
         }
+        /* ── 翻页条 ── */
+        .np-pager {
+            display: flex; align-items: center; justify-content: center; gap: 16px;
+            margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--card-border);
+        }
+        .np-pg {
+            border: 1px solid var(--card-border); background: var(--card-bg);
+            color: var(--count-text); border-radius: 30px; padding: 8px 20px;
+            font-size: .86rem; font-weight: 600; cursor: pointer; transition: .2s;
+        }
+        .np-pg:hover:not(:disabled) { border-color: var(--status-border); color: var(--status-border); }
+        .np-pg:disabled { opacity: .35; cursor: not-allowed; }
+        .np-pg-info { font-size: .86rem; color: var(--count-text); }
+        .np-pg-info b { color: var(--status-border); font-size: 1.05rem; }
+        .np-pg-dots { display: flex; gap: 7px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+        .np-dot {
+            width: 32px; height: 32px; border-radius: 50%;
+            border: 1px solid var(--card-border); background: var(--card-bg);
+            color: var(--count-text); font-size: .82rem; font-weight: 600;
+            cursor: pointer; transition: .2s;
+        }
+        .np-dot:hover { border-color: var(--status-border); color: var(--status-border); }
+        .np-dot.on { background: var(--status-border); border-color: var(--status-border); color: #fff; }
+
         @media (max-width: 720px) {
             .np-card { flex-direction: column-reverse; }
             .np-card-r { flex: none; }
@@ -459,7 +483,7 @@
                          '<div class="np-card-t">' + esc(it.title) + '</div>' +
                          '<div class="np-card-s">' + esc(it.summary || '') + '</div>' +
                          '<div class="np-card-m">' + esc(it.publish_date) +
-                           ' · 共 ' + (it.total_count || (it.free_count + it.paid_count)) + ' 篇' +
+                           ' · 共 ' + (it.pages || 1) + ' 页' +
                            (isFree ? ' · 全部免费' : ' · 单期 ' + it.price + ' NB币买断') +
                            (mine && it.bought_at ? ' · 购买于 ' + esc(it.bought_at) : '') +
                          '</div>' +
@@ -490,52 +514,103 @@
                 document.getElementById('npBack').onclick = backToList;
                 return;
             }
-            var h = '<button class="np-back" id="npBack">← 回各期</button>' +
-                '<div class="np-paper">' +
-                  '<div class="np-notice">第 ' + d.issue_no + ' 期 · ' + esc(d.title) + ' · ' +
-                    esc(d.publish_date) + ' · 仅供娱乐 · 请勿代入现实</div>' +
-                  '<div class="np-rule"></div>' +
-                  '<h2 class="np-h1" style="margin-top:18px">' + esc(d.title) + '</h2>' +
-                  (d.summary ? '<div class="np-hsub">' + esc(d.summary) + '</div>' : '') +
-                  '<div class="np-rule-thin" style="margin:16px 0 4px"></div>' +
-                  '<div class="np-sec" style="margin-top:22px">' +
-                    (d.kind === 'free' ? '本 期 内 容' : '免 费 阅 读') + '</div>' +
-                  renderArticles(d.free);
-
-            if ((d.paid || []).length) {
-                h += '<div class="np-sec" style="margin-top:30px">试 读 到 此 为 止</div>';
-                if (d.owned) {
-                    h += '<div class="np-notice">✓ 你已拥有这一期，以下全文可读</div>';
-                    h += renderArticles(d.paid);
-                } else {
-                    h += '<div class="np-lock">' +
-                           '<div class="lk-title">🔒 这是一期付费刊，还没解锁</div>' +
-                           '<div class="lk-sub">共 ' + d.paid.length + ' 篇 · 花 ' + d.price +
-                             ' NB币买下，<b>永久可读</b>，不会重复扣</div>' +
-                           (d.logged_in
-                             ? '<button class="np-buy" id="npBuy">花 ' + d.price + ' NB币 购买这一期</button>'
-                             : '<button class="np-buy" disabled>请先登录</button>' +
-                               '<div class="lk-sub" style="margin-top:12px">' +
-                               '<a href="Beta/login-Beta.html" style="color:var(--status-border)">去登录 →</a></div>') +
-                           '<div class="np-locked-list">' +
-                             d.paid.map(function (a) { return '<div>' + esc(a.headline) + '</div>'; }).join('') +
-                           '</div>' +
-                         '</div>';
-                }
-            }
-            h += '<div class="np-notice" style="margin-top:24px;border-top:3px double var(--card-border);padding-top:14px">' +
-                 '《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 第 1 版<br>' +
-                 '本报所有内容均为虚构，如有雷同，那大概是巧合</div></div>';
-            body.innerHTML = h;
-
-            document.getElementById('npBack').onclick = backToList;
-            var buy = document.getElementById('npBuy');
-            if (buy && !buy.disabled) buy.onclick = function () { doBuy(no, buy); };
+            CUR = d;                       // 记住这一期，翻页用
+            CUR.page = 1;
+            drawIssue();
         }).catch(function (e) {
             body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
                 '<div class="np-empty">打开失败：' + esc(e.message) + '</div>';
             document.getElementById('npBack').onclick = backToList;
         });
+    }
+
+    /* 画当前这一页（翻页只重画报纸那块，不重新请求） */
+    function drawIssue() {
+        var d = CUR;
+        var total = d.pages || 1;
+        var cur = Math.min(Math.max(d.page || 1, 1), total);
+        d.page = cur;
+        var arts = (d.by_page && d.by_page[String(cur)]) || [];
+
+        var h = '<button class="np-back" id="npBack">← 回各期</button>' +
+            '<div class="np-paper" id="npPaper">' +
+              '<div class="np-notice">第 ' + d.issue_no + ' 期 · ' + esc(d.title) + ' · ' +
+                esc(d.publish_date) + ' · 共 ' + total + ' 页 · 仅供娱乐 · 请勿代入现实</div>' +
+              '<div class="np-rule"></div>' +
+              '<h2 class="np-h1" style="margin-top:18px">' + esc(d.title) + '</h2>' +
+              (d.summary ? '<div class="np-hsub">' + esc(d.summary) + '</div>' : '') +
+              '<div class="np-rule-thin" style="margin:16px 0 4px"></div>' +
+              '<div class="np-sec" style="margin-top:20px">第 ' + cur + ' 页</div>';
+
+        if (arts.length) {
+            h += renderArticles(arts);
+        } else {
+            h += '<div class="np-empty" style="padding:30px 20px">这一页还没有内容。</div>';
+        }
+
+        // 付费刊：最后一页放解锁卡（没买才放）
+        var isPaidIssue = (d.kind === 'paid') && !d.owned && (d.paid || []).length;
+        if (isPaidIssue && cur === total) {
+            h += '<div class="np-lock">' +
+                   '<div class="lk-title">🔒 这一期还有内容没解锁</div>' +
+                   '<div class="lk-sub">共 ' + d.paid.length + ' 篇 · 花 ' + d.price +
+                     ' NB币买下，<b>永久可读</b>，不会重复扣</div>' +
+                   (d.logged_in
+                     ? '<button class="np-buy" id="npBuy">花 ' + d.price + ' NB币 购买这一期</button>'
+                     : '<button class="np-buy" disabled>请先登录</button>' +
+                       '<div class="lk-sub" style="margin-top:12px">' +
+                       '<a href="Beta/login-Beta.html" style="color:var(--status-border)">去登录 →</a></div>') +
+                   '<div class="np-locked-list">' +
+                     d.paid.map(function (a) { return '<div>' + esc(a.headline) + '</div>'; }).join('') +
+                   '</div>' +
+                 '</div>';
+        }
+
+        h += '<div class="np-notice" style="margin-top:24px;border-top:3px double var(--card-border);padding-top:14px">' +
+             '《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 第 ' + cur + ' 页 / 共 ' + total + ' 页<br>' +
+             '本报所有内容均为虚构，如有雷同，那大概是巧合</div>';
+
+        // 翻页条
+        if (total > 1) {
+            h += '<div class="np-pager">' +
+                   '<button class="np-pg" data-go="prev"' + (cur <= 1 ? ' disabled' : '') + '>← 上一页</button>' +
+                   '<span class="np-pg-info">第 <b>' + cur + '</b> / ' + total + ' 页</span>' +
+                   '<button class="np-pg" data-go="next"' + (cur >= total ? ' disabled' : '') + '>下一页 →</button>' +
+                 '</div>';
+            h += '<div class="np-pg-dots">';
+            for (var i = 1; i <= total; i++) {
+                h += '<button class="np-dot' + (i === cur ? ' on' : '') + '" data-page="' + i + '">' + i + '</button>';
+            }
+            h += '</div>';
+        }
+        h += '</div>';
+
+        body.innerHTML = h;
+
+        document.getElementById('npBack').onclick = backToList;
+        var buy = document.getElementById('npBuy');
+        if (buy && !buy.disabled) buy.onclick = function () { doBuy(d.issue_no, buy); };
+
+        Array.prototype.forEach.call(body.querySelectorAll('.np-pg'), function (b) {
+            b.onclick = function () {
+                var g = b.getAttribute('data-go');
+                if (g === 'prev') d.page = cur - 1; else d.page = cur + 1;
+                drawIssue();
+                toPaperTop();
+            };
+        });
+        Array.prototype.forEach.call(body.querySelectorAll('.np-dot'), function (b) {
+            b.onclick = function () {
+                d.page = parseInt(b.getAttribute('data-page'), 10);
+                drawIssue();
+                toPaperTop();
+            };
+        });
+    }
+
+    function toPaperTop() {
+        var el = document.getElementById('npPaper');
+        if (el) { var y = el.getBoundingClientRect().top + window.pageYOffset - 90; window.scrollTo({ top: y, behavior: 'smooth' }); }
     }
 
     function backToList() { if (VIEW === 'mine') renderMine(); else renderIssues(); }
