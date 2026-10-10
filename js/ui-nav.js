@@ -152,8 +152,12 @@
             '<div style="font-size:1.9rem; font-weight:900; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,0.2);">' + title + '</div>' +
             '<div style="font-size:0.95rem; opacity:0.92; color:#fff; margin-top:6px;">📺 NB频道 · 虚拟公司 · 官网</div>');
         banner.style.cssText = 'position:relative; overflow:hidden; background:linear-gradient(135deg, #00a1d6 0%, #0a84c1 45%, #6c5ce7 100%); border-radius:24px; padding:36px 28px; text-align:center; margin-bottom:24px; box-shadow:0 18px 40px -12px rgba(0,161,214,0.5);';
-        // 插入到导航之后（body 顶部附近）
-        var navHost = document.querySelector('.top-nav') || document.querySelector('.quick-nav');
+        // 插入到【整个导航块】之后（body 顶部附近）
+        // ⚠️ 优先取 .quick-nav：导航是 nav + 快捷入口两块的组合，
+        //    只按 .top-nav 定位会把横幅插在两者【中间】，
+        //    于是变成「导航 → 横幅 → 快捷入口」，
+        //    和别的页面「导航 → 快捷入口 → 横幅」不一致。
+        var navHost = document.querySelector('.quick-nav') || document.querySelector('.top-nav');
         var container = document.querySelector('.container') || document.body;
         if (navHost && navHost.nextSibling) {
             container.insertBefore(banner, navHost.nextSibling);
@@ -479,8 +483,15 @@
             var navWrap = document.createElement('div');
             navWrap.innerHTML = newHtml;
             var container = document.querySelector('.container') || document.body;
-            container.insertBefore(navWrap.firstChild, container.firstChild);
-            container.insertBefore(navWrap.firstChild, container.firstChild);
+            // ⚠️ 这里原来连着两次 insertBefore(navWrap.firstChild, container.firstChild)，
+            //    想按顺序插 <nav class="top-nav"> 和 <div class="quick-nav">，
+            //    但两次都插在【同一个】firstChild 位置 ——
+            //    第二次把快捷入口顶到了主导航【上面】，顺序整个反过来。
+            //    改用 DocumentFragment 整块插入，顺序就保住了。
+            //    （这条路径以前被外面那个 if 挡着，从没跑到过，所以一直没暴露。）
+            var frag = document.createDocumentFragment();
+            while (navWrap.firstChild) frag.appendChild(navWrap.firstChild);
+            container.insertBefore(frag, container.firstChild);
         }
 
         // 登录按钮默认行为（页面自身逻辑若存在会覆盖）
@@ -1067,9 +1078,16 @@
             injectMouseFx();
             injectOrbs();
             bindNavAuth();   // 导航登录/个人中心按钮绑定（页面未绑定时生效）
-            if (document.querySelector('.nav-container')) {
-                replaceNav();
-            }
+            // ⚠️ 这里原来套了个 if (querySelector('.nav-container'))，
+            //    和 replaceNav() 里的兜底逻辑（第 419 行：没有 .nav-container
+            //    时用标准模板生成）自相矛盾 —— 于是【既没有 .top-nav 也没有
+            //    .nav-container】的页面（weather.html / newspaper.html）
+            //    整个导航栏都注入不出来，看着就比别的页面少一大块。
+            //    replaceNav() 自己已经处理了三种情况：
+            //      · 已有 .top-nav   → 直接 return（静态导航页，如 about.html）
+            //      · 有 .nav-container → 换成新导航（首页）
+            //      · 都没有           → 用标准模板生成（本页要修的就是这个）
+            replaceNav();
             injectHomeHero();   // 首页：注入完整官网效果（= preview/index.html）
             injectBanner();     // 其他页面：注入 Hero 横幅（已有 .hero 的页面自动跳过）
             injectClassicHeader();   // 经典模式：注入旧版网站大标题（📺 NB频道官网 + UP主）
