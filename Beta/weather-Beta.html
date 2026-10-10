@@ -1046,6 +1046,10 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         white-space: nowrap; box-shadow: 0 6px 18px -6px rgba(0,0,0,.5);
         font-variant-numeric: tabular-nums;
     }
+
+    /* ── 三张小图的热区 ── */
+    .wx-mini-hit { position: relative; cursor: crosshair; }
+    .wx-hit { cursor: crosshair; }
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -1690,6 +1694,87 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         });
     }
 
+    /* ── 三张小图的悬停提示（和温度曲线共用同一个气泡） ──
+       [data-tip]    静态文字：鼠标进就显示
+       [data-track]  跟随 x 取值：按位置反算时刻/气压                                */
+    function bindMiniHover() {
+        function tipEl() {
+            var tip = document.getElementById('wxChartTip');
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.id = 'wxChartTip';
+                tip.className = 'wx-chart-tipbox';
+                document.body.appendChild(tip);
+            }
+            return tip;
+        }
+        function place(tip, ev, el) {
+            var r = (el || ev.currentTarget).getBoundingClientRect();
+            var cx = (ev.clientX !== undefined) ? ev.clientX : (r.left + r.width / 2);
+            tip.style.left = cx + 'px';
+            tip.style.top = (r.top - 30) + 'px';
+            tip.style.display = 'block';
+        }
+
+        // 静态提示
+        Array.prototype.forEach.call(document.querySelectorAll('[data-tip]'), function (el) {
+            if (el.__tipBound) return;
+            el.__tipBound = true;
+            var txt = el.getAttribute('data-tip') || '';
+            function on(ev) { var tip = tipEl(); tip.textContent = txt; place(tip, ev, el); }
+            el.addEventListener('mouseenter', on);
+            el.addEventListener('mousemove', on);
+            el.addEventListener('mouseleave', function () {
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            });
+        });
+
+        // 跟随取值的（气压趋势线）
+        Array.prototype.forEach.call(document.querySelectorAll('[data-track="pres"]'), function (el) {
+            if (el.__trkBound) return;
+            el.__trkBound = true;
+            var pres = parseFloat(el.getAttribute('data-pres')) || 101.3;
+            var svg = el.querySelector('svg');
+            var g = el.querySelector('.wx-phover-g');
+            var line = el.querySelector('.wx-phover-line');
+            var dot = el.querySelector('.wx-phover-dot');
+            var A = 1.4;
+            function val(h) { return pres + A * Math.cos(2 * Math.PI * (h - 10) / 12); }
+            function on(ev) {
+                var r = svg.getBoundingClientRect();
+                var cx = (ev.clientX !== undefined) ? ev.clientX : (r.left + r.width / 2);
+                var ratio = Math.max(0, Math.min(1, (cx - r.left) / r.width));
+                var hour = ratio * 24;
+                var v = val(hour);
+                // 换算到 viewBox 坐标（W=300, H=92, PAD=8）
+                var vx = 8 + (300 - 16) * ratio;
+                var lo = pres - A, hi = pres + A;
+                var vy = 8 + (92 - 16) * (1 - (v - lo) / (hi - lo));
+                if (g && line && dot) {
+                    line.setAttribute('x1', vx); line.setAttribute('x2', vx);
+                    dot.setAttribute('cx', vx); dot.setAttribute('cy', vy);
+                    g.style.display = '';
+                }
+                var tip = tipEl();
+                var hh = Math.floor(hour), mm = Math.round((hour - hh) * 60);
+                if (mm === 60) { hh += 1; mm = 0; }
+                tip.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm +
+                                  '　' + v.toFixed(1) + ' kPa';
+                place(tip, ev, el);
+            }
+            function off() {
+                if (g) g.style.display = 'none';
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            }
+            el.addEventListener('mousemove', on);
+            el.addEventListener('mouseleave', off);
+            el.addEventListener('touchmove', function (e) { on(e); }, { passive: true });
+            el.addEventListener('touchend', off);
+        });
+    }
+
     /* ── 空气质量柱状图：十二城横向对比，本城高亮 ── */
     function aqiBars(me) {
         var W = 300, H = 92, PAD = 4;
@@ -1706,7 +1791,12 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
             var isMe = (CITIES[i].name === me);
             var col = isMe ? '#7c8cf8' : 'rgba(124,140,248,.30)';
             g += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) +
-                 '" height="' + bh.toFixed(1) + '" rx="1.6" fill="' + col + '"/>';
+                 '" height="' + bh.toFixed(1) + '" rx="1.6" fill="' + col + '"/>' +
+                 // 透明热区：整根柱子高度都可命中，悬停出提示
+                 '<rect class="wx-hit" x="' + (PAD + i * bw).toFixed(1) + '" y="0" width="' + bw.toFixed(1) +
+                 '" height="' + H + '" fill="transparent" ' +
+                 'data-tip="' + CITIES[i].name + ' · AQI ' + Math.round(v) + ' · ' +
+                 aqiLevel(Math.round(v)).t + '"/>';
             if (isMe) {
                 g += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y - 2).toFixed(1) +
                      '" text-anchor="middle" font-size="8" font-weight="700" fill="#7c8cf8">' +
@@ -1791,6 +1881,12 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                'vector-effect="non-scaling-stroke" stroke-linejoin="round"/>' +
                '<circle cx="' + X(nowH).toFixed(1) + '" cy="' + Y(nowV).toFixed(1) + '" r="3" ' +
                'fill="#fff" stroke="#7c8cf8" stroke-width="1.6"/>' +
+               '<g class="wx-phover-g" style="display:none">' +
+                 '<line class="wx-phover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PAD) +
+                   '" stroke="rgba(124,140,248,.5)" stroke-width="1" stroke-dasharray="3 3"/>' +
+                 '<circle class="wx-phover-dot" cx="0" cy="0" r="3.2" fill="#7c8cf8" ' +
+                   'stroke="#fff" stroke-width="1.6"/>' +
+               '</g>' +
                '<text x="' + PAD + '" y="' + (PAD + 8) + '" font-size="9" font-weight="700" ' +
                'fill="rgba(124,140,248,.85)">' + hi.toFixed(1) + '</text>' +
                '<text x="' + PAD + '" y="' + (H - PAD + 2) + '" font-size="9" font-weight="700" ' +
@@ -1933,15 +2029,20 @@ function render() {
                     '<div class="wx-chart-hit" data-city="' + c.name + '"></div>' +
                   '</div></div>' +
                   '<div class="wx-row wx-row-charts">' +
-                    '<div class="wx-mini-box"><h5>🍃 空气质量对比</h5>' + aqiBars(c.name) + '</div>' +
-                    '<div class="wx-mini-box"><h5>🌬 风速罗盘</h5>' + windCompass(s.dir, s.force) + '</div>' +
-                    '<div class="wx-mini-box"><h5>🧭 气压趋势</h5>' + presCurve(s.pres) + '</div>' +
+                      '<div class="wx-mini-box"><h5>🍃 空气质量对比</h5>' + aqiBars(c.name) + '</div>' +
+                      '<div class="wx-mini-box"><h5>🌬 风速罗盘</h5>' +
+                        '<div class="wx-mini-hit" data-tip="' + DIRS[s.dir] + '风 · ' + w.lv +
+                        ' 级 · ' + s.force.toFixed(1) + ' m/s">' + windCompass(s.dir, s.force) + '</div></div>' +
+                      '<div class="wx-mini-box"><h5>🧭 气压趋势</h5>' +
+                        '<div class="wx-mini-hit wx-pres-hit" data-track="pres" data-pres="' + s.pres + '">' +
+                        presCurve(s.pres) + '</div></div>' +
                   '</div>' +
                 '</dl>' +
               '</article>';
         });
         grid.innerHTML = html;
         bindChartHover();   // 曲线交互（每次重绘后重新绑）
+        bindMiniHover();    // 三张小图的悬停提示
     }
 
         /* ── 数据来源 ──────────────────────────────────────────────
