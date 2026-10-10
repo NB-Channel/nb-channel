@@ -1185,6 +1185,27 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
             padding: 10px 16px; margin-bottom: 16px;
         }
         .np-readnote b { color: var(--status-border); }
+        /* ── 插图（假图片）── 照旧版那个占位框 */
+        .np-figure { margin: 20px 0; text-align: center; }
+        .np-figure .box {
+            border: 1px dashed var(--card-border); border-radius: 6px;
+            background: var(--count-bg); padding: 30px 22px;
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: .92rem; color: var(--count-text); line-height: 1.9;
+        }
+        .np-figure .box .tag {
+            display: inline-block; font-size: .68rem; font-weight: 700;
+            color: #fff; background: var(--status-border);
+            border-radius: 3px; padding: 1px 7px; margin-bottom: 10px;
+        }
+        .np-figure figcaption {
+            margin-top: 8px; font-size: .78rem; color: var(--count-text);
+            letter-spacing: .5px;
+        }
+        /* ── 便民信息里的链接 ── */
+        .np-service a { color: var(--status-border); text-decoration: underline; text-underline-offset: 2px; }
+        .np-service a:hover { opacity: .78; }
+
         .np-empty, .np-loading { text-align: center; padding: 40px 20px; color: var(--muted); font-size: .9rem; line-height: 2; }
         #npToast {
             position: fixed; left: 50%; top: 84px; transform: translateX(-50%) translateY(-8px);
@@ -2978,6 +2999,23 @@ function render() {
     //    而这个页面是自己 createClient 的，那个补丁包不到。
     function sess() { try { return localStorage.getItem('nb_session'); } catch (e) { return null; } }
 
+    // 便民信息里的链接化：先把整段转义，再把 xxx.html / http(s)://… 包成 <a>
+    // ⚠️ 一定要先 esc 再包链接 —— 反过来的话正文里的尖括号就能注入 HTML
+    // ⚠️ 名字用 npLinkify 不用 linkify —— 公告条那边已经有一个同名的 linkify，
+    //    它在自己的 IIFE 里，够不着；重名会让「已存在就跳过」的判断误判，
+    //    结果这里调用的名字根本没定义 → ReferenceError → 整个脚本挂掉。
+    function npLinkify(txt) {
+        var safe = esc(txt);
+        return safe.replace(
+            /(https?:\/\/[^\s<>"']+)|((?:[\w\u4e00-\u9fa5][\w\u4e00-\u9fa5 .\-]*?)\.html\b)/g,
+            function (all, url, page) {
+                var href = url || page;
+                return '<a href="' + href + '"' +
+                       (url ? ' target="_blank" rel="noopener noreferrer"' : '') +
+                       '>' + href + '</a>';
+            });
+    }
+
     function rpc(fn, args) {
         if (!sb || !sb.rpc) return Promise.reject(new Error('supabase 没加载'));
         args = Object.assign({}, args || {});
@@ -3190,9 +3228,18 @@ function render() {
         var h = '';
         arts.forEach(function (a) {
             h += '<article class="np-art">';
-            if (a.kind === 'service') {
+            if (a.kind === 'figure') {
+                // 插图（假图片）：headline 是图注，body 是框里那句话
+                h += '<figure class="np-figure">' +
+                       '<div class="box">' +
+                         (a.tag ? '<span class="tag">' + esc(a.tag) + '</span><br>' : '') +
+                         esc(a.body || '') +
+                       '</div>' +
+                       (a.headline ? '<figcaption>' + esc(a.headline) + '</figcaption>' : '') +
+                     '</figure>';
+            } else if (a.kind === 'service') {
                 h += '<h3 class="np-h2">' + esc(a.headline) + '</h3>' +
-                     '<div class="np-service"><pre>' + esc(a.body) + '</pre></div>';
+                     '<div class="np-service"><pre>' + npLinkify(a.body) + '</pre></div>';
             } else if (a.subhead) {
                 h += '<h2 class="np-h1">' + esc(a.headline) + '</h2>' +
                      '<div class="np-hsub">' + esc(a.subhead) + '</div>' +
