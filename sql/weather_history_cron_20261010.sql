@@ -55,8 +55,13 @@ END $$;
 
 
 -- ============================================================
--- 第 2 步：确认采样函数在（上一版应该已经建了）
+-- 第 2 步：重建采样函数
+--   ⚠️ 必须先 DROP —— 上一版建的是 RETURNS void，这一版改成 RETURNS integer，
+--      而 CREATE OR REPLACE 只有在【参数和返回类型都相同】时才能替换，
+--      否则会报 42P13: cannot change return type of existing function。
 -- ============================================================
+DROP FUNCTION IF EXISTS public.sample_weather_history();
+
 CREATE OR REPLACE FUNCTION public.sample_weather_history()
 RETURNS integer                       -- 改成返回「这次写了几行」，方便手动调时看结果
 LANGUAGE plpgsql
