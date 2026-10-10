@@ -979,7 +979,8 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     }
     .wx-tb-bar i {
         display: block; height: 100%; width: 0%;
-        background: var(--brand); border-radius: 99px;
+        /* 和站里其它进度条统一：蓝紫渐变（见 index-Beta 的 .jny-progress .bar i） */
+        background: linear-gradient(90deg, #60a5fa, #a78bfa); border-radius: 99px;
         transition: width .25s linear;
     }
     .wx-tb-txt { font-size: .82rem; color: var(--muted); white-space: nowrap; }
