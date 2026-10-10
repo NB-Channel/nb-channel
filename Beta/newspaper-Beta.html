@@ -1427,7 +1427,8 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
 
     <!-- ══ 标签页 ══ -->
     <div class="np-tabs">
-        <button class="np-tab active" data-view="issues">📰 各期</button>
+        <button class="np-tab active" data-view="free">🆓 免费刊</button>
+        <button class="np-tab" data-view="paid">💰 付费刊</button>
         <button class="np-tab" data-view="mine">🔖 我拥有的报纸</button>
     </div>
 
@@ -2916,7 +2917,7 @@ function render() {
 
     var body = document.getElementById('npBody');
     var toastEl = document.getElementById('npToast');
-    var VIEW = 'issues';
+    var VIEW = 'free';
 
     function me() {
         try {
@@ -2955,9 +2956,12 @@ function render() {
         body.innerHTML = '<div class="np-loading">正在取报…</div>';
         var u = me();
         rpc('get_news_issues', { p_user_id: u ? u.id : null }).then(function (d) {
-            var list = (d && d.issues) || [];
+            var all = (d && d.issues) || [];
+            var list = all.filter(function (x) { return (x.kind || 'free') === VIEW; });
             if (!list.length) {
-                body.innerHTML = '<div class="np-empty">还没有出刊。<br>站长去后台发一期就有了。</div>';
+                body.innerHTML = '<div class="np-empty">' +
+                    (VIEW === 'free' ? '免费刊还没有出刊。' : '付费刊还没有出刊。') +
+                    '<br>站长去后台发一期就有了。</div>';
                 return;
             }
             body.innerHTML = issueListHtml(list);
@@ -3004,10 +3008,10 @@ function render() {
             h += '<div class="np-day"><span class="d">' + esc(day) + '</span></div>' +
                  '<div class="np-cards">';
             byDay[day].forEach(function (it) {
-                var badge;
-                if (it.owned || mine) badge = '<span class="np-badge owned">✓ 已拥有</span>';
-                else if (it.paid_count > 0) badge = '<span class="np-badge buy">🔒 ' + it.price + ' NB币</span>';
-                else badge = '<span class="np-badge free">全免费</span>';
+                var badge, isFree = (it.kind || 'free') === 'free';
+                if (isFree) badge = '<span class="np-badge free">🆓 免费刊</span>';
+                else if (it.owned || mine) badge = '<span class="np-badge owned">✓ 已拥有</span>';
+                else badge = '<span class="np-badge buy">💰 ' + it.price + ' NB币</span>';
                 var cover = it.cover
                     ? '<img class="np-cover" src="' + esc(it.cover) + '" alt="' + esc(it.title) + ' 封面" loading="lazy">'
                     : '<div class="np-cover-ph">第 ' + it.issue_no + ' 期<br>NB报刊社</div>';
@@ -3017,8 +3021,8 @@ function render() {
                          '<div class="np-card-t">' + esc(it.title) + '</div>' +
                          '<div class="np-card-s">' + esc(it.summary || '') + '</div>' +
                          '<div class="np-card-m">' + esc(it.publish_date) +
-                           ' · 免费 ' + it.free_count + ' 篇' +
-                           (it.paid_count > 0 ? ' · 付费 ' + it.paid_count + ' 篇' : '') +
+                           ' · 共 ' + (it.total_count || (it.free_count + it.paid_count)) + ' 篇' +
+                           (isFree ? ' · 全部免费' : ' · 单期 ' + it.price + ' NB币买断') +
                            (mine && it.bought_at ? ' · 购买于 ' + esc(it.bought_at) : '') +
                          '</div>' +
                          '<button class="np-read">📄 阅读</button>' +
@@ -3056,17 +3060,18 @@ function render() {
                   '<h2 class="np-h1" style="margin-top:18px">' + esc(d.title) + '</h2>' +
                   (d.summary ? '<div class="np-hsub">' + esc(d.summary) + '</div>' : '') +
                   '<div class="np-rule-thin" style="margin:16px 0 4px"></div>' +
-                  '<div class="np-sec" style="margin-top:22px">免 费 栏</div>' +
+                  '<div class="np-sec" style="margin-top:22px">' +
+                    (d.kind === 'free' ? '本 期 内 容' : '免 费 阅 读') + '</div>' +
                   renderArticles(d.free);
 
             if ((d.paid || []).length) {
-                h += '<div class="np-sec" style="margin-top:30px">付 费 栏</div>';
+                h += '<div class="np-sec" style="margin-top:30px">试 读 到 此 为 止</div>';
                 if (d.owned) {
                     h += '<div class="np-notice">✓ 你已拥有这一期，以下全文可读</div>';
                     h += renderArticles(d.paid);
                 } else {
                     h += '<div class="np-lock">' +
-                           '<div class="lk-title">🔒 这一期的付费内容还没解锁</div>' +
+                           '<div class="lk-title">🔒 这是一期付费刊，还没解锁</div>' +
                            '<div class="lk-sub">共 ' + d.paid.length + ' 篇 · 花 ' + d.price +
                              ' NB币买下，<b>永久可读</b>，不会重复扣</div>' +
                            (d.logged_in
