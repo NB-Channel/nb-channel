@@ -1031,6 +1031,21 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     }
     .wx-mini { display: block; width: 100%; height: 92px; color: var(--muted); }
     .wx-mini-sq { width: 92px; height: 92px; margin: 0 auto; }
+
+    /* ── 曲线热区 + 悬停气泡 ── */
+    .wx-chart-hit {
+        position: absolute; left: 34px; right: 34px; top: 0; bottom: 0;
+        cursor: crosshair; z-index: 2;
+    }
+    .wx-chart-tipbox {
+        position: fixed; z-index: 9999; display: none; pointer-events: none;
+        transform: translateX(-50%);
+        padding: 5px 10px; border-radius: 8px;
+        background: rgba(30,41,59,.94); color: #fff;
+        font-size: .78rem; font-weight: 600; letter-spacing: .3px;
+        white-space: nowrap; box-shadow: 0 6px 18px -6px rgba(0,0,0,.5);
+        font-variant-numeric: tabular-nums;
+    }
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -1409,29 +1424,29 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     var REFRESH_MS = 10000;
 
     var CITIES = [
-        { name: 'NB频道总部', ico: '🏢', base: 22, swing: 2, vol: .4, lat: 30, uvK: 1.0,
+        { name: 'NB频道总部', ico: '🏢', base: 22, swing: 2, vol: .4, lat: 30, uvK: 1.0, peak: 14,
           hum: 45, aqi: 22, vis: 28, note: '总部不打烊，数据不走样' },
-        { name: 'U星', ico: '🪐', base: 12, swing: 26, vol: 3.2, lat: 15, uvK: 1.1,
+        { name: 'U星', ico: '🪐', base: 12, swing: 26, vol: 3.2, lat: 15, uvK: 1.1, peak: 15,
           hum: 30, aqi: 24, vis: 42, note: '从 U 星发来的，可能有点偏' },
-        { name: 'AWM市', ico: '🎯', base: 6, swing: 14, vol: 1.4, lat: 38, uvK: 1.22,
+        { name: 'AWM市', ico: '🎯', base: 6, swing: 14, vol: 1.4, lat: 38, uvK: 1.22, peak: 13,
           hum: 62, aqi: 20, vis: 48, note: '枪法不虚发，天气不虚报' },
-        { name: 'Lemon市', ico: '🍋', base: 20, swing: 9, vol: 1.0, lat: 24, uvK: 0.98,
+        { name: 'Lemon市', ico: '🍋', base: 20, swing: 9, vol: 1.0, lat: 24, uvK: 0.98, peak: 15.5,
           hum: 58, aqi: 26, vis: 26, note: '柠檬酸一点，日子甜一点' },
-        { name: 'Oganesson市', ico: '☢️', base: 34, swing: 8, vol: 2.6, lat: 22, uvK: 1.05,
+        { name: 'Oganesson市', ico: '☢️', base: 34, swing: 8, vol: 2.6, lat: 22, uvK: 1.05, peak: 14.5,
           hum: 22, aqi: 38, vis: 30, note: '元素排最后，热度排第一' },
-        { name: 'Fafat市', ico: '🌫️', base: 17, swing: 11, vol: 1.2, lat: 31, uvK: 0.96,
+        { name: 'Fafat市', ico: '🌫️', base: 17, swing: 11, vol: 1.2, lat: 31, uvK: 0.96, peak: 15.5,
           hum: 72, aqi: 34, vis: 22, note: '功能做得全，天气也周全' },
-        { name: 'GC3市', ico: '🏗️', base: 15, swing: 12, vol: 1.1, lat: 32, uvK: 0.95,
+        { name: 'GC3市', ico: '🏗️', base: 15, swing: 12, vol: 1.1, lat: 32, uvK: 0.95, peak: 13.5,
           hum: 52, aqi: 42, vis: 26, note: '产品不将就，天气不凑合' },
-        { name: 'UVS市', ico: '☀️', base: 25, swing: 10, vol: .9, lat: 35, uvK: 1.18,
+        { name: 'UVS市', ico: '☀️', base: 25, swing: 10, vol: .9, lat: 35, uvK: 1.18, peak: 13,
           hum: 34, aqi: 18, vis: 50, note: '紫外线最强，心情最亮' },
-        { name: 'UWSF市', ico: '🌬️', base: 13, swing: 15, vol: 1.6, lat: 28, uvK: 1.0,
+        { name: 'UWSF市', ico: '🌬️', base: 13, swing: 15, vol: 1.6, lat: 28, uvK: 1.0, peak: 14,
           hum: 55, aqi: 21, vis: 38, note: '市值往上长，风也往上长' },
-        { name: 'PTC市', ico: '🔥', base: 27, swing: 7, vol: 1.3, lat: 33, uvK: 0.97,
+        { name: 'PTC市', ico: '🔥', base: 27, swing: 7, vol: 1.3, lat: 33, uvK: 0.97, peak: 14.5,
           hum: 40, aqi: 30, vis: 28, note: '加热不马虎，天气不认输' },
-        { name: '5U市', ico: '🎈', base: 18, swing: 13, vol: 1.2, lat: 26, uvK: 1.02,
+        { name: '5U市', ico: '🎈', base: 18, swing: 13, vol: 1.2, lat: 26, uvK: 1.02, peak: 15,
           hum: 60, aqi: 32, vis: 25, note: '细节做得足，天气也靠谱' },
-        { name: 'Ubn市', ico: '🌃', base: 16, swing: 12, vol: 1.0, lat: 29, uvK: 0.9,
+        { name: 'Ubn市', ico: '🌃', base: 16, swing: 12, vol: 1.0, lat: 29, uvK: 0.9, peak: 16,
           hum: 64, aqi: 36, vis: 24, note: '夜里不打盹，白天不迟到' }
     ];
 
@@ -1542,10 +1557,17 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     function tempAt(c, hour, date) {
         var mean = c.base + c.swing * seasonFactor(date);
         var amp = Math.max(1.8, c.vol * 1.5 + 2.4);
-        return mean + amp * Math.cos(2 * Math.PI * (hour - 14) / 24);
+        // 各城的最高温出现时刻不同：内陆/干燥早（13 时前后），沿海/湿润晚（15~16 时）
+        var pk = (c.peak === undefined) ? 14 : c.peak;
+        var base = amp * Math.cos(2 * Math.PI * (hour - pk) / 24);
+        // 二阶谐波：真实气温是【升温快、降温慢】的不对称曲线，不是纯正弦。
+        // 没有这一项的话，十二张图各自归一化之后形状会完全一样。
+        var harm = amp * 0.22 * Math.cos(4 * Math.PI * (hour - pk - 1.6) / 24);
+        return mean + base + harm;
     }
 
     function tempChart(c, now) {
+        var svg = document.createElement('div');   // 用来挂元信息，不参与渲染
         var W = 900, H = 84, PAD = 10, PADB = 16;
         var pts = [], i, h, t;
         var lo = Infinity, hi = -Infinity;
@@ -1584,6 +1606,7 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                     '" stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="3 4"/>';
         });
 
+        svg._X = X; svg._Y = Y; svg._lo = lo; svg._hi = hi; svg._W = W; svg._H = H; svg._PADB = PADB;
         return '<svg class="wx-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
                'role="img" aria-label="24 小时温度曲线">' +
                  '<defs><linearGradient id="cg' + c.name.replace(/[^\w]/g, '') + '" x1="0" y1="0" x2="1" y2="0">' +
@@ -1597,8 +1620,74 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                    'fill="#7c8cf8" opacity=".18"/>' +
                  '<circle cx="' + X(nowH).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="3.2" ' +
                    'fill="#fff" stroke="#7c8cf8" stroke-width="2"/>' +
+                 // 鼠标悬停时的高亮点（初始藏起来，交互时由 JS 移动）
+                 '<g class="wx-hover-g" style="display:none">' +
+                   '<line class="wx-hover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PADB) +
+                     '" stroke="rgba(124,140,248,.5)" stroke-width="1" stroke-dasharray="3 3"/>' +
+                   '<circle class="wx-hover-dot" cx="0" cy="0" r="3.6" fill="#7c8cf8" ' +
+                     'stroke="#fff" stroke-width="1.8"/>' +
+                 '</g>' +
                '</svg>';
 
+    }
+
+    /* ── 曲线鼠标交互：按 x 位置反算时刻，显示该时刻的温度 ── */
+    function bindChartHover() {
+        var hits = document.querySelectorAll('.wx-chart-hit');
+        Array.prototype.forEach.call(hits, function (hit) {
+            if (hit.__bound) return;
+            hit.__bound = true;
+            var box = hit.parentNode;
+            var svg = box.querySelector('svg.wx-chart');
+            var g = box.querySelector('.wx-hover-g');
+            var line = box.querySelector('.wx-hover-line');
+            var dot = box.querySelector('.wx-hover-dot');
+            var city = null;
+            for (var i = 0; i < CITIES.length; i++) {
+                if (CITIES[i].name === hit.getAttribute('data-city')) { city = CITIES[i]; break; }
+            }
+            if (!svg || !g || !city) return;
+
+            function move(ev) {
+                var r = svg.getBoundingClientRect();
+                var x = (ev.clientX !== undefined ? ev.clientX : ev.touches[0].clientX) - r.left;
+                var ratio = Math.max(0, Math.min(1, x / r.width));
+                var hour = ratio * 24;
+                var temp = tempAt(city, hour, new Date());
+                // 换算到 viewBox 坐标
+                var vx = 10 + (900 - 20) * ratio;
+                var lo = svg.__lo, hi = svg.__hi;
+                var vy = 10 + (84 - 10 - 16) * (1 - (temp - lo) / (hi - lo));
+                line.setAttribute('x1', vx); line.setAttribute('x2', vx);
+                dot.setAttribute('cx', vx); dot.setAttribute('cy', vy);
+                g.style.display = '';
+                // 气泡
+                var tip = document.getElementById('wxChartTip');
+                if (!tip) {
+                    tip = document.createElement('div');
+                    tip.id = 'wxChartTip';
+                    tip.className = 'wx-chart-tipbox';
+                    document.body.appendChild(tip);
+                }
+                var hh = Math.floor(hour), mm = Math.round((hour - hh) * 60);
+                if (mm === 60) { hh += 1; mm = 0; }
+                tip.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm +
+                                  '　' + temp.toFixed(1) + '°C';
+                tip.style.display = 'block';
+                var br = box.getBoundingClientRect();
+                tip.style.left = (br.left + br.width * ratio) + 'px';
+                tip.style.top = (br.top - 30) + 'px';
+            }
+            function leave() {
+                g.style.display = 'none';
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            }
+            hit.addEventListener('mousemove', move);
+            hit.addEventListener('mouseleave', leave);
+            hit.addEventListener('touchmove', function (e) { move(e); }, { passive: true });
+            hit.addEventListener('touchend', leave);
+        });
     }
 
     /* ── 空气质量柱状图：十二城横向对比，本城高亮 ── */
@@ -1841,6 +1930,7 @@ function render() {
                     '<span class="wx-chart-tip">未来 24 小时气温走势</span>' +
                     '<span class="wx-chart-lo">' + tLo.toFixed(0) + '°</span>' +
                     '<span class="wx-chart-hi">' + tHi.toFixed(0) + '°</span>' +
+                    '<div class="wx-chart-hit" data-city="' + c.name + '"></div>' +
                   '</div></div>' +
                   '<div class="wx-row wx-row-charts">' +
                     '<div class="wx-mini-box"><h5>🍃 空气质量对比</h5>' + aqiBars(c.name) + '</div>' +
@@ -1851,6 +1941,7 @@ function render() {
               '</article>';
         });
         grid.innerHTML = html;
+        bindChartHover();   // 曲线交互（每次重绘后重新绑）
     }
 
         /* ── 数据来源 ──────────────────────────────────────────────
