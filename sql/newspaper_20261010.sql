@@ -63,6 +63,9 @@ REVOKE ALL ON public.news_issues   FROM anon, authenticated;
 REVOKE ALL ON public.news_articles FROM anon, authenticated;
 REVOKE ALL ON public.news_owned    FROM anon, authenticated;
 
+-- 封面图（报刊亭列表上那张图；站长在后台填图片地址）
+ALTER TABLE public.news_issues ADD COLUMN IF NOT EXISTS cover text NOT NULL DEFAULT '';
+
 COMMENT ON TABLE public.news_issues   IS 'NB报刊社 · 期';
 COMMENT ON TABLE public.news_articles IS 'NB报刊社 · 文章（section: free 免费栏 / paid 付费栏）';
 COMMENT ON TABLE public.news_owned    IS 'NB报刊社 · 已购买（买了永久拥有）';
@@ -101,6 +104,7 @@ BEGIN
         SELECT i.issue_no,
                i.title,
                i.summary,
+               i.cover,
                to_char(i.publish_date, 'YYYY-MM-DD') AS publish_date,
                i.price,
                (SELECT count(*) FROM public.news_articles a
@@ -180,6 +184,7 @@ BEGIN
         'issue_no', v_issue.issue_no,
         'title', v_issue.title,
         'summary', v_issue.summary,
+        'cover', v_issue.cover,
         'publish_date', to_char(v_issue.publish_date, 'YYYY-MM-DD'),
         'price', v_issue.price,
         'owned', v_owned,
@@ -304,7 +309,7 @@ BEGIN
     END IF;
     SELECT COALESCE(jsonb_agg(x ORDER BY x.issue_no DESC), '[]'::jsonb) INTO v_out
       FROM (
-        SELECT i.id, i.issue_no, i.title, i.summary,
+        SELECT i.id, i.issue_no, i.title, i.summary, i.cover,
                to_char(i.publish_date, 'YYYY-MM-DD') AS publish_date,
                i.price, i.published,
                (SELECT count(*) FROM public.news_articles a WHERE a.issue_id = i.id) AS article_count
@@ -316,6 +321,7 @@ $fn$;
 
 -- 3.2 新建 / 修改一期
 DROP FUNCTION IF EXISTS public.admin_news_save_issue(text, bigint, integer, text, text, text, bigint, boolean);
+DROP FUNCTION IF EXISTS public.admin_news_save_issue(text, bigint, integer, text, text, text, bigint, boolean, text);
 CREATE OR REPLACE FUNCTION public.admin_news_save_issue(
     p_token text,
     p_id bigint DEFAULT NULL,                 -- NULL = 新建
@@ -324,7 +330,8 @@ CREATE OR REPLACE FUNCTION public.admin_news_save_issue(
     p_summary text DEFAULT '',
     p_publish_date text DEFAULT NULL,         -- 'YYYY-MM-DD'
     p_price bigint DEFAULT 20,
-    p_published boolean DEFAULT true
+    p_published boolean DEFAULT true,
+    p_cover text DEFAULT ''                   -- 封面图地址
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -351,9 +358,9 @@ BEGIN
 
     IF p_id IS NULL THEN
         v_no := COALESCE(p_issue_no, (SELECT COALESCE(max(issue_no), 0) + 1 FROM public.news_issues));
-        INSERT INTO public.news_issues (issue_no, title, summary, publish_date, price, published)
+        INSERT INTO public.news_issues (issue_no, title, summary, publish_date, price, published, cover)
         VALUES (v_no, btrim(p_title), COALESCE(p_summary, ''), v_dt,
-                COALESCE(p_price, 20), COALESCE(p_published, true))
+                COALESCE(p_price, 20), COALESCE(p_published, true), COALESCE(p_cover, ''))
         RETURNING id INTO v_id;
         RETURN jsonb_build_object('success', true, 'message', '第 ' || v_no || ' 期已创建', 'id', v_id);
     ELSE
@@ -363,6 +370,7 @@ BEGIN
                publish_date = v_dt,
                price = COALESCE(p_price, price),
                published = COALESCE(p_published, published),
+               cover = COALESCE(p_cover, cover),
                issue_no = COALESCE(p_issue_no, issue_no)
          WHERE id = p_id;
         IF NOT FOUND THEN
@@ -565,7 +573,7 @@ GRANT EXECUTE ON FUNCTION public.get_news_issue(uuid, text, integer)         TO 
 GRANT EXECUTE ON FUNCTION public.buy_newspaper(uuid, text, integer)          TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_newspapers(uuid, text)               TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_news_list_issues(text)                TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_news_save_issue(text, bigint, integer, text, text, text, bigint, boolean) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_news_save_issue(text, bigint, integer, text, text, text, bigint, boolean, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_news_delete_issue(text, bigint)       TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_news_list_articles(text, bigint)      TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_news_save_article(text, bigint, bigint, text, text, text, text, text, text, integer) TO anon, authenticated;

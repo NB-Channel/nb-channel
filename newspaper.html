@@ -170,6 +170,75 @@
         }
         #npToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+        /* ── 报刊亭 ── */
+        .np-kiosk { text-align: center; margin: 20px 0 18px; }
+        .np-kiosk-t {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1.6rem; font-weight: 800; letter-spacing: 6px; text-indent: 6px;
+            color: var(--text-color); margin: 0 0 8px;
+        }
+        .np-kiosk-s { font-size: .86rem; color: var(--count-text); margin: 0; }
+
+        /* 日期分组 */
+        .np-day {
+            display: flex; align-items: center; gap: 12px;
+            margin: 22px 0 12px; font-size: .84rem; font-weight: 700;
+            color: var(--count-text); letter-spacing: 1px;
+        }
+        .np-day::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+        .np-day .d {
+            background: var(--count-bg); border-radius: 20px; padding: 3px 12px;
+            color: var(--status-border);
+        }
+
+        /* 卡片：左信息 + 右封面 */
+        .np-cards { display: flex; flex-direction: column; gap: 14px; }
+        .np-card {
+            display: flex; gap: 20px; align-items: stretch;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 12px; padding: 18px 20px; transition: .22s;
+        }
+        .np-card:hover { border-color: var(--status-border); transform: translateY(-2px); }
+        .np-card-l { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .np-card-no {
+            font-size: .74rem; font-weight: 700; letter-spacing: 1px;
+            color: var(--status-border); margin-bottom: 6px;
+        }
+        .np-card-t {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1.2rem; font-weight: 800; line-height: 1.4;
+            color: var(--text-color); margin-bottom: 6px;
+        }
+        .np-card-s { font-size: .84rem; color: var(--count-text); line-height: 1.8; flex: 1; }
+        .np-card-m { font-size: .74rem; color: var(--count-text); margin: 10px 0 12px; letter-spacing: .3px; }
+        .np-read {
+            align-self: flex-start;
+            border: 1px solid var(--status-border); background: transparent;
+            color: var(--status-border); border-radius: 30px;
+            padding: 8px 22px; font-size: .86rem; font-weight: 700;
+            cursor: pointer; transition: .2s;
+        }
+        .np-read:hover { background: var(--status-border); color: #fff; }
+        .np-card-r { flex: 0 0 190px; display: flex; align-items: center; justify-content: center; }
+        .np-cover {
+            width: 190px; height: 124px; object-fit: cover;
+            border-radius: 8px; border: 1px solid var(--card-border);
+            background: linear-gradient(135deg, rgba(96,165,250,.14), rgba(167,139,250,.14));
+        }
+        .np-cover-ph {
+            width: 190px; height: 124px; border-radius: 8px;
+            border: 1px dashed var(--card-border);
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, rgba(96,165,250,.10), rgba(167,139,250,.10));
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: .82rem; color: var(--count-text); text-align: center; line-height: 1.6;
+        }
+        @media (max-width: 720px) {
+            .np-card { flex-direction: column-reverse; }
+            .np-card-r { flex: none; }
+            .np-cover, .np-cover-ph { width: 100%; height: 150px; }
+        }
+
         @media (max-width: 720px) {
             .np-paper { padding: 22px 18px 20px; }
             .np-cols { column-count: 1; }
@@ -199,6 +268,11 @@
     <div class="np-tabs">
         <button class="np-tab active" data-view="issues">📰 各期</button>
         <button class="np-tab" data-view="mine">🔖 我拥有的报纸</button>
+    </div>
+
+    <div class="np-kiosk">
+        <h2 class="np-kiosk-t">📰 报刊亭</h2>
+        <p class="np-kiosk-s">👋 欢迎来到报刊亭！这里汇集了 NB频道 的电子报纸，欢迎阅读。</p>
     </div>
 
     <div id="npBody"><div class="np-loading">正在取报…</div></div>
@@ -350,32 +424,47 @@
     }
 
     function issueListHtml(list, mine) {
-        var h = '<div class="np-issues">';
+        // 按出版日期分组（和齐喜那个报刊亭一样）
+        var groups = [], byDay = {};
         list.forEach(function (it) {
-            var badge;
-            if (it.owned || mine) badge = '<span class="np-badge owned">✓ 已拥有</span>';
-            else if (it.paid_count > 0) badge = '<span class="np-badge buy">🔒 ' + it.price + ' NB币</span>';
-            else badge = '<span class="np-badge free">全免费</span>';
-            h += '<div class="np-issue" data-no="' + it.issue_no + '">' +
-                   '<div class="np-issue-no"><b>' + it.issue_no + '</b><span>期</span></div>' +
-                   '<div class="np-issue-mid">' +
-                     '<div class="np-issue-title">' + esc(it.title) + '</div>' +
-                     '<div class="np-issue-sum">' + esc(it.summary || '') + '</div>' +
-                     '<div class="np-issue-meta">' + esc(it.publish_date) +
-                       ' · 免费 ' + it.free_count + ' 篇' +
-                       (it.paid_count > 0 ? ' · 付费 ' + it.paid_count + ' 篇' : '') +
-                       (mine && it.bought_at ? ' · 购买于 ' + esc(it.bought_at) : '') +
-                     '</div>' +
-                   '</div>' +
-                   '<div class="np-issue-right">' + badge + '</div>' +
-                 '</div>';
+            var d = it.publish_date || '未知日期';
+            if (!byDay[d]) { byDay[d] = []; groups.push(d); }
+            byDay[d].push(it);
         });
-        h += '</div>';
+        var h = '';
+        groups.forEach(function (day) {
+            h += '<div class="np-day"><span class="d">' + esc(day) + '</span></div>' +
+                 '<div class="np-cards">';
+            byDay[day].forEach(function (it) {
+                var badge;
+                if (it.owned || mine) badge = '<span class="np-badge owned">✓ 已拥有</span>';
+                else if (it.paid_count > 0) badge = '<span class="np-badge buy">🔒 ' + it.price + ' NB币</span>';
+                else badge = '<span class="np-badge free">全免费</span>';
+                var cover = it.cover
+                    ? '<img class="np-cover" src="' + esc(it.cover) + '" alt="' + esc(it.title) + ' 封面" loading="lazy">'
+                    : '<div class="np-cover-ph">第 ' + it.issue_no + ' 期<br>NB报刊社</div>';
+                h += '<div class="np-card" data-no="' + it.issue_no + '">' +
+                       '<div class="np-card-l">' +
+                         '<div class="np-card-no">第 ' + it.issue_no + ' 期' + (badge ? '　' + badge : '') + '</div>' +
+                         '<div class="np-card-t">' + esc(it.title) + '</div>' +
+                         '<div class="np-card-s">' + esc(it.summary || '') + '</div>' +
+                         '<div class="np-card-m">' + esc(it.publish_date) +
+                           ' · 免费 ' + it.free_count + ' 篇' +
+                           (it.paid_count > 0 ? ' · 付费 ' + it.paid_count + ' 篇' : '') +
+                           (mine && it.bought_at ? ' · 购买于 ' + esc(it.bought_at) : '') +
+                         '</div>' +
+                         '<button class="np-read">📄 阅读</button>' +
+                       '</div>' +
+                       '<div class="np-card-r">' + cover + '</div>' +
+                     '</div>';
+            });
+            h += '</div>';
+        });
         return h;
     }
 
     function bindIssueClicks() {
-        Array.prototype.forEach.call(body.querySelectorAll('.np-issue'), function (el) {
+        Array.prototype.forEach.call(body.querySelectorAll('.np-card'), function (el) {
             el.onclick = function () { openIssue(parseInt(el.getAttribute('data-no'), 10)); };
         });
     }
