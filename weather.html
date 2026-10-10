@@ -398,6 +398,8 @@
         if (t.indexOf('雷') >= 0) return .30;
         if (t.indexOf('雪') >= 0) return .35;
         if (t.indexOf('雨') >= 0) return .28;
+        if (t.indexOf('霾') >= 0) return .55;   // ⚠️ 补：原来匹配不到关键字会返回 1.0
+        if (t.indexOf('雾') >= 0) return .45;   // ⚠️ 补：同上，雾霾天紫外线该更弱
         if (t.indexOf('阴') >= 0) return .35;
         if (t.indexOf('间') >= 0) return .85;   // 晴间多云
         if (t.indexOf('多云') >= 0) return .62;

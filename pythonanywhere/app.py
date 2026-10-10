@@ -18,6 +18,7 @@ NB频道 - PythonAnywhere 一体化 Flask 应用
 import os
 import re
 import io
+import math
 import csv
 import json
 import uuid
@@ -1008,7 +1009,7 @@ def github_webhook():
 # GET /api/market                       全市场快照（支持 ?name= 模糊查询）
 # GET /api/market/<company_id>          单家公司市值
 # GET /api/market/<company_id>/history  历史K线（?days=7，默认7天，最多30天）
-# GET /api/weather                      天气瞎报（十二座虚拟城市的当前气象）
+# GET /api/weather                      天气瞎报（十二座虚拟城市的当前气象，含紫外线）
 # GET /api/docs                         接口文档页
 # 别名：/api/virtual-market-value 与 /api/Virtual market value 等价于 /api/market
 # 统一响应：{success, code, message?, ...data}
@@ -1030,6 +1031,85 @@ if not API_KEY:
         pass
 
 _market_cache = {'ts': 0, 'data': None}
+# ---------- 紫外线指数（/api/weather 用） ----------
+# 公式与前端 weather.html 里的 uvIndex() 一致：
+#   赤纬 → 太阳高度角 → 晴空 UV = 11.2 × sinH^2.42 → 乘城市系数和云量系数
+# 城市系数 uvK 表示海拔/气候（高原强、日照少的城市弱）。
+_UV_GEO = {
+    'NB频道总部': (30, 1.00),
+    'U星': (15, 1.08),
+    'AWM市': (38, 1.22),          # 高原，海拔高
+    'Lemon市': (24, 0.98),
+    'Oganesson市': (22, 1.05),
+    'Fafat市': (31, 0.96),
+    'GC3市': (32, 0.95),
+    'UVS市': (35, 1.18),          # 紫外线之都
+    'UWSF市': (28, 1.00),
+    'PTC市': (33, 0.97),
+    '5U市': (26, 1.02),
+    'Ubn市': (29, 0.90),          # 日照少的夜猫子之城
+}
+
+# 天气状况 → 云量系数（顺序有意义，先匹配到的赢）
+_UV_CLOUD = (('雷', 0.30), ('雪', 0.35), ('雨', 0.28), ('霾', 0.55),
+             ('雾', 0.45), ('阴', 0.35), ('间', 0.85), ('多云', 0.62))
+
+_UV_LEVELS = ((3, '弱'), (6, '中等'), (8, '强'), (11, '很强'))
+
+
+def _uv_condition(temp, hum, vis, aqi):
+    """按 temp/hum/vis/aqi 推天气状况 —— 与前端 condition() 同一套规则。"""
+    if temp <= 0 and hum >= 65:
+        return '小雪'
+    if temp <= 0:
+        return '晴冷'
+    if vis < 6:
+        return '有雾'
+    if aqi > 120:
+        return '霾'
+    if hum >= 88:
+        return '小雨'
+    if hum >= 78:
+        return '多云'
+    if temp >= 33:
+        return '酷热'
+    if hum <= 38:
+        return '晴'
+    return '晴间多云'
+
+
+def _uv_cloud(cond):
+    for kw, v in _UV_CLOUD:
+        if kw in cond:
+            return v
+    return 1.0
+
+
+def _uv_index(city, cond, dt):
+    """紫外線指数。太阳在地平线下返回 0。"""
+    geo = _UV_GEO.get(city)
+    if not geo:
+        return 0.0
+    lat, k = geo
+    doy = int(dt.strftime('%j'))
+    decl = 23.44 * math.sin(2 * math.pi * (doy - 81) / 365.25)
+    hours = dt.hour + dt.minute / 60.0 + dt.second / 3600.0
+    ha = 15.0 * (hours - 12.0)
+    latR, decR, haR = math.radians(lat), math.radians(decl), math.radians(ha)
+    sin_h = (math.sin(latR) * math.sin(decR) +
+             math.cos(latR) * math.cos(decR) * math.cos(haR))
+    if sin_h <= 0.02:
+        return 0.0
+    clear = 11.2 * (sin_h ** 2.42)
+    return max(0.0, min(12.0, clear * k * _uv_cloud(cond)))
+
+
+def _uv_level(v):
+    for hi, name in _UV_LEVELS:
+        if v < hi:
+            return name
+    return '极强'
+
 _weather_cache = {'ts': 0, 'data': None}
 _rate_buckets = {}  # ip -> [请求时间戳]
 
@@ -1531,12 +1611,41 @@ def api_weather():
         if u > updated:
             updated = u
 
+    # ---- 紫外线：按【请求时刻】现算，公式与前端一致 ----
+    # 支持 ?at=2026-10-10T12:00 指定时刻（不传就用现在，东八区）
+    when = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
+    at = (request.args.get('at') or '').strip()
+    if at:
+        for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%Y-%m-%d'):
+            try:
+                when = datetime.datetime.strptime(at, fmt)
+                break
+            except ValueError:
+                continue
+    try:
+        conds = {}
+        for r in rows:
+            cond = _uv_condition(float(r.get('temp_c') or 0),
+                                 float(r.get('humidity') or 0),
+                                 float(r.get('visibility') or 0),
+                                 float(r.get('aqi') or 0))
+            conds[str(r.get('city'))] = cond
+            uv = _uv_index(str(r.get('city')), cond, when)
+            r['condition'] = cond
+            r['uv'] = round(uv, 2)
+            r['uv_level'] = _uv_level(uv)
+    except Exception:
+        pass
+
     return _ok({
         'unit': {'temp': '°C', 'temp_alt': '°F', 'pressure': 'kPa',
                  'visibility': 'km', 'humidity': '%', 'wind_force': 'm/s'},
         'wind_dir_index': '风向按 16 方位，0=北、4=东、8=南、12=西，顺时针',
         'count': len(rows),
         'updated_at': updated,
+        'uv_at': when.strftime('%Y-%m-%d %H:%M'),
+        'uv_note': 'uv 是按 uv_at 这个时刻现算的（默认东八区当前时间）；'
+                   'uv_level 分档：<3 弱 / <6 中等 / <8 强 / <11 很强 / 其余 极强',
         'cities': rows,
     })
 
@@ -1664,6 +1773,18 @@ curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/weather?city=U"</
 <tr><td><code>wind_force</code></td><td>风速，m/s</td></tr>
 <tr><td><code>updated_at</code></td><td>该城市数据最后一次推进的时间</td></tr>
 </table>
+<tr><td><code>condition</code></td><td>由温度/湿度/能见度/空气质量推出的天气状况</td></tr>
+<tr><td><code>uv</code></td><td><b>紫外线指数</b>（0~12）</td></tr>
+<tr><td><code>uv_level</code></td><td>紫外线等级：弱 / 中等 / 强 / 很强 / 极强</td></tr>
+</table>
+<p><b>紫外线是按请求时刻现算的</b>，公式：</p>
+<pre>太阳赤纬   decl = 23.44° × sin(2π(doy-81)/365.25)      ← 季节
+时角       ha   = 15° × (小时 - 12)                     ← 时刻
+太阳高度角 sinH = sin(lat)·sin(decl) + cos(lat)·cos(decl)·cos(ha)
+晴空 UV    = 11.2 × sinH^2.42
+最终 UV    = 晴空 UV × 城市系数 × 云量系数(天气状况)</pre>
+<p>太阳在地平线下时返回 <code>0</code>。响应里的 <code>uv_at</code> 是算这个值用的时刻。
+可以用 <code>?at=</code> 指定时刻（东八区），例如 <code>?at=2026-07-15T12:00</code> 看盛夏正午。</p>
 <p>支持 <code>?city=</code> 按城市名模糊筛选。数据全是编的，与真实天气无关。</p>
 
 <span class="badge">GET</span><code>/api/docs</code> — 本文档
