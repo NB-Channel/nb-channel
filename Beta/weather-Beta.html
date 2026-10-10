@@ -983,7 +983,7 @@ html { -webkit-text-size-adjust: 100%; }
 .wx-card {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(190px, 1fr) 168px minmax(0, 2.35fr);
+    grid-template-columns: minmax(180px, 1fr) 160px minmax(0, 2.7fr);
     align-items: center;
     gap: 22px;
     padding: 22px 26px 22px 30px;
@@ -1057,7 +1057,7 @@ html { -webkit-text-size-adjust: 100%; }
 .wx-rows {
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.5fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
 }
 .wx-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -1075,7 +1075,12 @@ html { -webkit-text-size-adjust: 100%; }
     margin-left: 3px;
 }
 /* 风向风力那格文字长，单独小一号 */
-.wx-row-wide dd { font-size: .98rem; }
+.wx-row-wide {
+    grid-column: 1 / -1;
+    padding-top: 9px;
+    border-top: 1px dashed var(--card-border);
+}
+.wx-row-wide dd { font-size: 1.06rem; }
 .wx-row-wide dd .u { font-size: .78rem; }
 
 /* 空气质量的颜色由 JS 挂类，这里只保证加粗 */
