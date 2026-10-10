@@ -429,7 +429,7 @@
                 ['messages.html', '🔔 消息'], ['tools.html', '🔬 化学工具'],
                 ['titles.html', '🏅 称号'], ['bank.html', '🏦 NB银行'],
                 ['shop.html', '🛍️ NB商店'], ['backpack.html', '🎒 背包'],
-                ['weather.html', '🌦️ 天气瞎报']
+                ['weather.html', '🌦️ 天气瞎报'], ['newspaper.html', '📰 NB报刊社']
             ];
             links = S.concat(F).map(function (p) {
                 return { href: p[0], text: p[1], active: false };
@@ -744,6 +744,7 @@
             '<a href="shop.html">🛍️ NB商店</a>' +
             '<a href="backpack.html">🎒 背包</a>' +
             '<a href="weather.html">🌦️ 天气瞎报</a>' +
+            '<a href="newspaper.html">📰 NB报刊社</a>' +
         '</div>';
     }
 
@@ -913,7 +914,7 @@
             '<footer class="footer">' +
                 '<div class="footer-grid">' +
                     '<div><div class="brand"><span class="dot"></span>NB频道</div><p class="desc">NB频道（NoBook频道）——热爱理科（和作死）的 UP主建立的虚拟公司。化学物理实验、日常作死、虚拟经济，一个有趣的数字世界。</p></div>' +
-                    '<div><h5>功能</h5><a href="Virtual stock.html">虚拟股票</a><a href="bank.html">NB银行</a><a href="comments-beta.html">评论区</a><a href="shop.html">NB商店</a><a href="titles.html">称号系统</a><a href="weather.html">天气瞎报</a></div>' +
+                    '<div><h5>功能</h5><a href="Virtual stock.html">虚拟股票</a><a href="bank.html">NB银行</a><a href="comments-beta.html">评论区</a><a href="shop.html">NB商店</a><a href="titles.html">称号系统</a><a href="weather.html">天气瞎报</a><a href="newspaper.html">NB报刊社</a></div>' +
                     '<div><h5>友商</h5><a href="https://orgent.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">Orgent（已注销）</a><a href="https://45d.cn/AWM/" target="_blank" rel="noopener noreferrer">AWM</a><a href="https://fafat.uuk.pp.ua/" target="_blank" rel="noopener noreferrer">Fafat</a><a href="https://nb-qx.top/" target="_blank" rel="noopener noreferrer">Lemon（齐喜）</a><a href="https://gaohantu.cn/" target="_blank" rel="noopener noreferrer">GaoHanTu</a><a href="https://utw.pages.dev" target="_blank" rel="noopener noreferrer">Utw</a><a href="https://pipetrainingcamp.github.io/" target="_blank" rel="noopener noreferrer">PTC（GoodPTC）</a><a href="https://yoyo-user-awa.github.io/UVS/" target="_blank" rel="noopener noreferrer">UVS</a><a href="https://3f7ceb4e.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">UwLS</a><a href="https://45d.cn/nb-og.top/" target="_blank" rel="noopener noreferrer">Oganesson</a><a href="https://78439049.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">SOT</a></div>' +
                     '<div><h5>联系</h5><a href="mailto:nbchannel@163.com">nbchannel@163.com</a><a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">B站：NB搞事局</a><a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top</a></div>' +
                 '</div>' +

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>NB报刊社 - NB频道</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ui-new.css">
+    <link rel="stylesheet" href="css/classic.css">
+    <!-- 官网模式皮肤(仅html.beta选择器生效;静态加载避免样式闪跳) -->
+    <link rel="stylesheet" href="css/beta.css?v=20260846" id="uiBetaCss">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script id="uiBootGuard">
+(function () {
+    try {
+        // 经典模式(可选):localStorage nb_classic=1 时加 classic 类(第一帧前生效,零闪跳)
+        var m = localStorage.getItem('nb_ui_mode');
+        try { var qp = new URLSearchParams(location.search).get('ui'); if (qp === 'new' || qp === 'classic' || qp === 'beta') m = qp; } catch (e) {}
+        if (m === 'classic' || (m !== 'beta' && localStorage.getItem('nb_classic') === '1')) document.documentElement.classList.add('classic');
+        else if (m === 'beta') document.documentElement.classList.add('beta');
+        // 纯新UI:隐藏 body,等待 ui-nav.js 注入完成后解除(首帧即完整新UI,零闪跳)
+        document.documentElement.classList.add('ui-boot-new');
+        var st = document.createElement('style');
+        st.id = 'uiBootHide';
+        st.textContent = 'html.ui-boot-new body{visibility:hidden}';
+        document.head.appendChild(st);
+        setTimeout(function () {
+            document.documentElement.classList.remove('ui-boot-new');
+            var s = document.getElementById('uiBootHide');
+            if (s) s.remove();
+        }, 3500);
+    } catch (e) {}
+})();
+</script><script src="js/common.js?v=20260845"></script>
+    <script src="js/ui-nav.js?v=20261010"></script>
+    <style>
+        /* ══════════════════════════════════════════════════════
+           NB报刊社 —— 报纸版式
+           用全站 CSS 变量，三套界面 + 七套主题下都能看。
+           纸面感靠：报头双线、正文分栏、细竖线分隔、衬线标题。
+           ══════════════════════════════════════════════════════ */
+        body { padding: 34px 16px 120px; background: var(--bg-color); }
+
+        .np-wrap { max-width: 1120px; margin: 0 auto; }
+        .np-paper {
+            background: var(--card-bg);
+            border-radius: 6px;
+            padding: 34px 40px 30px;
+            box-shadow: 0 20px 40px -18px rgba(16,24,40,.25);
+            border: 1px solid var(--card-border);
+        }
+
+        /* ── 报头 ── */
+        .np-masthead { text-align: center; padding-bottom: 6px; }
+        .np-name {
+            font-family: "Songti SC", "SimSun", "Noto Serif SC", Georgia, serif;
+            font-size: clamp(2.4rem, 6vw, 4rem);
+            font-weight: 800; letter-spacing: 10px;
+            color: var(--status-border); line-height: 1.1;
+            margin: 0 0 6px;
+        }
+        .np-sub {
+            font-size: .82rem; letter-spacing: 3px;
+            color: var(--count-text); margin-bottom: 14px;
+        }
+        /* 报头上下双线 —— 报纸的招牌样子 */
+        .np-rule { border-top: 3px solid var(--status-border); }
+        .np-rule-thin { border-top: 1px solid var(--card-border); margin-top: 3px; }
+        .np-dateline {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 8px;
+            padding: 9px 2px; font-size: .78rem; color: var(--count-text);
+        }
+        .np-dateline .mid { letter-spacing: 1px; }
+        .np-notice {
+            text-align: center; font-size: .74rem; color: var(--count-text);
+            letter-spacing: 2px; padding: 5px 0 0;
+        }
+
+        /* ── 头条 ── */
+        .np-lead { padding: 24px 0 20px; border-bottom: 1px solid var(--card-border); }
+        .np-h1 {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: clamp(1.5rem, 3.4vw, 2.15rem);
+            font-weight: 800; line-height: 1.35; text-align: center;
+            color: var(--text-color); margin: 0 0 10px;
+        }
+        .np-h1-sub {
+            text-align: center; font-size: .92rem; color: var(--status-border);
+            font-weight: 600; margin-bottom: 16px;
+        }
+        .np-byline {
+            text-align: center; font-size: .76rem; color: var(--count-text);
+            margin-bottom: 18px;
+        }
+
+        /* 正文：两栏，报纸感 */
+        .np-cols { column-count: 2; column-gap: 30px; column-rule: 1px solid var(--card-border); }
+        .np-cols p {
+            margin: 0 0 12px; font-size: .92rem; line-height: 2.05;
+            color: var(--text-color); text-align: justify;
+            text-indent: 2em;
+        }
+        .np-cols p.noindent { text-indent: 0; }
+
+        /* ── 配图 ── */
+        .np-figure { margin: 20px 0; text-align: center; }
+        .np-figure .box {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 100%; max-width: 520px; height: 170px;
+            border: 1px dashed var(--card-border); border-radius: 6px;
+            background: var(--count-bg); color: var(--count-text);
+            font-size: .85rem; letter-spacing: 1px;
+        }
+        .np-figure figcaption {
+            margin-top: 8px; font-size: .75rem; color: var(--count-text);
+        }
+
+        /* ── 次条区 ── */
+        .np-second { padding: 22px 0; border-bottom: 1px solid var(--card-border); }
+        .np-h2 {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1.28rem; font-weight: 800; line-height: 1.4;
+            color: var(--text-color); margin: 0 0 8px;
+        }
+        .np-h2 .tag {
+            display: inline-block; font-family: inherit;
+            font-size: .7rem; font-weight: 700; letter-spacing: 1px;
+            color: #fff; background: var(--status-border);
+            border-radius: 3px; padding: 1px 7px; margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        /* ── 短讯 ── */
+        .np-briefs { padding: 22px 0; border-bottom: 1px solid var(--card-border); }
+        .np-sec-title {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1.1rem; font-weight: 800; letter-spacing: 4px;
+            color: var(--status-border); text-align: center;
+            margin: 0 0 16px; position: relative;
+        }
+        .np-sec-title::before, .np-sec-title::after {
+            content: ''; position: absolute; top: 50%; width: 28%;
+            border-top: 1px solid var(--card-border);
+        }
+        .np-sec-title::before { left: 2%; }
+        .np-sec-title::after { right: 2%; }
+        .np-brief-list {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px 26px; margin: 0; padding: 0; list-style: none;
+        }
+        .np-brief-list li {
+            font-size: .88rem; line-height: 1.9; color: var(--text-color);
+            padding-left: 16px; position: relative;
+        }
+        .np-brief-list li::before {
+            content: '◆'; position: absolute; left: 0; top: 0;
+            color: var(--status-border); font-size: .62rem; line-height: 2.7;
+        }
+
+        /* ── 便民信息 ── */
+        .np-service {
+            margin: 22px 0 0; padding: 18px 22px;
+            border: 1px solid var(--card-border); border-radius: 6px;
+            background: var(--count-bg);
+        }
+        .np-service h4 {
+            margin: 0 0 12px; font-size: .95rem; letter-spacing: 3px;
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            color: var(--status-border); text-align: center;
+        }
+        .np-service ul {
+            margin: 0; padding: 0; list-style: none;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 8px 24px;
+        }
+        .np-service li { font-size: .84rem; display: flex; justify-content: space-between; gap: 10px; }
+        .np-service li span { color: var(--count-text); }
+        .np-service a { color: var(--status-border); text-decoration: none; font-weight: 600; }
+        .np-service a:hover { text-decoration: underline; }
+
+        /* ── 报尾 ── */
+        .np-colophon {
+            margin-top: 24px; padding-top: 14px;
+            border-top: 3px double var(--card-border);
+            text-align: center; font-size: .76rem;
+            color: var(--count-text); line-height: 2;
+        }
+
+        @media (max-width: 720px) {
+            .np-paper { padding: 24px 20px 22px; border-radius: 4px; }
+            .np-cols { column-count: 1; }
+            .np-name { letter-spacing: 6px; }
+            .np-sec-title::before, .np-sec-title::after { width: 18%; }
+        }
+    </style>
+</head>
+<body>
+<script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
+
+<div class="np-wrap">
+<div class="np-paper">
+
+    <!-- ══ 报头 ══ -->
+    <header class="np-masthead">
+        <h1 class="np-name">NB报刊社</h1>
+        <div class="np-sub">NB CHANNEL · DAILY</div>
+    </header>
+    <div class="np-rule"></div>
+    <div class="np-rule-thin"></div>
+    <div class="np-dateline">
+        <span>第 <b>1</b> 期</span>
+        <span class="mid">2026 年 10 月 · NB频道 · 虚拟公司</span>
+        <span>第一版 · 共一版</span>
+    </div>
+    <div class="np-rule-thin"></div>
+    <div class="np-notice">仅供娱乐 · 请勿代入现实 · 免费取阅</div>
+    <div class="np-rule" style="margin-top:10px;"></div>
+
+    <!-- ══ 头条 ══ -->
+    <article class="np-lead">
+        <h2 class="np-h1">官网 1.0.8 上线<br>「关于域名」挂出域名证书</h2>
+        <div class="np-h1-sub">—— 那张证书在抽屉里放了半年</div>
+        <div class="np-byline">本报记者 · NB频道唯一正式员工 · 报道</div>
+
+        <div class="np-cols">
+            <p>NB频道官网 V1.0.8 于本月上线。本次更新的重点是「关于」页面新增一节「关于域名」，把 <b>nb-channel.top</b> 的顶级国际域名证书挂了出来。</p>
+            <p>该证书由 ICANN 授权机构颁发，记载域名注册于 2026 年 3 月 23 日，到期时间 2027 年 3 月 23 日，注册机构为 DNSPod · 腾讯云。</p>
+            <p class="noindent">据站长介绍，这张证书「早就下来了，一直没往页面上放」。编辑部追问为何拖了半年，站长表示「忘了」。</p>
+            <p class="noindent">另据观察，证书上「注册所有者」一栏已被涂黑。站长回应：<b>「这个不用给大家看。」</b></p>
+        </div>
+
+        <figure class="np-figure">
+            <div class="box">此处应有证书照片 —— 不过你往上看「关于」页就能看到真图</div>
+            <figcaption>图示：顶级国际域名证书（真图见「关于」页面）</figcaption>
+        </figure>
+    </article>
+
+    <!-- ══ 次条 ══ -->
+    <article class="np-second">
+        <h2 class="np-h2"><span class="tag">新栏目</span>「天气瞎报」开张，十二座城市每十秒报一次</h2>
+        <div class="np-cols">
+            <p>本站新建的《天气瞎报》栏目正式开张，覆盖 <b>NB频道总部、U星、AWM市、Lemon市、Oganesson市、Fafat市、GC3市、UVS市、UWSF市、PTC市、5U市、Ubn市</b>，共十二座城市。</p>
+            <p>栏目按真实季节走 —— 现在这个时节显示的是「春秋之交」。数据每十秒刷新一次，并且由数据库统一计算：<b>你和朋友同时打开，看到的数字是一样的。</b></p>
+            <p class="noindent">编辑部特别声明：所有气象数据均由随机数生成，与任何真实地点、真实天气无关。看到「Oganesson市 36°C」请不要给当地打电话。</p>
+        </div>
+    </article>
+
+    <!-- ══ 短讯 ══ -->
+    <section class="np-briefs">
+        <h3 class="np-sec-title">短 讯</h3>
+        <ul class="np-brief-list">
+            <li>虚拟股票市场：公司税改按<b>市值</b>征收，单次扣款设上限</li>
+            <li>NB银行补上四道闸：存款十亿封顶、两类贷款各一亿、计息基数十亿</li>
+            <li>用户名放开一批常用符号，空格与 at 符号仍然不行</li>
+            <li>评论行数限制前后端补齐，最多十行</li>
+            <li>个人中心右下角重复的那组按钮已删除</li>
+            <li>域名 nb-channel.top 注册于 2026-03-23，2027-03-23 到期</li>
+        </ul>
+    </section>
+
+    <!-- ══ 便民信息 ══ -->
+    <section class="np-service">
+        <h4>便 民 信 息</h4>
+        <ul>
+            <li><span>天气瞎报</span><a href="weather.html">weather.html</a></li>
+            <li><span>虚拟股票</span><a href="Virtual stock.html">行情与交易</a></li>
+            <li><span>官网更新日志</span><a href="changelog.html">changelog.html</a></li>
+            <li><span>漏洞与建议</span><a href="feedback.html">feedback.html</a></li>
+        </ul>
+    </section>
+
+    <!-- ══ 报尾 ══ -->
+    <div class="np-colophon">
+        《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 第 1 版<br>
+        本报所有内容均为虚构，如有雷同，那大概是巧合
+    </div>
+
+</div>
+</div>
+
+<div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
+    © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://edgeone.nb-channel.top" target="_blank" rel="noopener noreferrer">edgeone站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
+    如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a><br>
+    制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
+    托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://edgeone.ai/products/pages" target="_blank" rel="noopener noreferrer">EdgeOne</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a>
+<div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div></div>
+
+<div class="fixed-buttons">
+    <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+</div>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261010-NP0000000001
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDEwLU5QMDAwMDAwMDAwMQ";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="js/science-tips.js?v=26"></script>
+</body>
+</html>
