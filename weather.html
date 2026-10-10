@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>天气瞎报 - NB频道</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ui-new.css">
+    <link rel="stylesheet" href="css/classic.css">
+    <!-- 官网模式皮肤(仅html.beta选择器生效;静态加载避免样式闪跳) -->
+    <link rel="stylesheet" href="css/beta.css?v=20260846" id="uiBetaCss">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script id="uiBootGuard">
+(function () {
+    try {
+        // 经典模式(可选):localStorage nb_classic=1 时加 classic 类(第一帧前生效,零闪跳)
+        var m = localStorage.getItem('nb_ui_mode');
+        try { var qp = new URLSearchParams(location.search).get('ui'); if (qp === 'new' || qp === 'classic' || qp === 'beta') m = qp; } catch (e) {}
+        if (m === 'classic' || (m !== 'beta' && localStorage.getItem('nb_classic') === '1')) document.documentElement.classList.add('classic');
+        else if (m === 'beta') document.documentElement.classList.add('beta');
+        // 纯新UI:隐藏 body,等待 ui-nav.js 注入完成后解除(首帧即完整新UI,零闪跳)
+        document.documentElement.classList.add('ui-boot-new');
+        var st = document.createElement('style');
+        st.id = 'uiBootHide';
+        st.textContent = 'html.ui-boot-new body{visibility:hidden}';
+        document.head.appendChild(st);
+        setTimeout(function () {
+            document.documentElement.classList.remove('ui-boot-new');
+            var s = document.getElementById('uiBootHide');
+            if (s) s.remove();
+        }, 3500);
+    } catch (e) {}
+})();
+</script><script src="js/common.js?v=20260845"></script>
+    <script src="js/ui-nav.js?v=20261010"></script>
+    <style>
+        body { padding: 34px 16px 120px; background: var(--bg-color); }
+
+        .wx-wrap { max-width: 1180px; margin: 0 auto; }
+
+        /* ── 顶部标题区 ── */
+        .wx-hero {
+            background: var(--card-bg);
+            border-radius: 30px;
+            padding: 28px 26px 24px;
+            box-shadow: 0 20px 35px -14px rgba(0,0,0,.22);
+            margin-bottom: 22px;
+        }
+        .wx-hero h1 { margin: 0 0 8px; font-size: 1.75rem; color: var(--status-border); }
+        .wx-hero .sub { color: var(--count-text); font-size: .92rem; line-height: 1.9; }
+
+        /* 刷新倒计时条 */
+        .wx-tick {
+            margin-top: 18px;
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .wx-tick .bar {
+            flex: 1; min-width: 160px; height: 7px; border-radius: 99px;
+            background: var(--count-bg); overflow: hidden;
+        }
+        .wx-tick .bar i {
+            display: block; height: 100%; width: 0%;
+            background: var(--status-border);
+            border-radius: 99px;
+            transition: width .25s linear;
+        }
+        .wx-tick .txt { font-size: .82rem; color: var(--count-text); white-space: nowrap; }
+        .wx-tick button {
+            background: var(--nav-btn-bg); color: var(--nav-btn-text);
+            border: 1px solid var(--card-border); border-radius: 30px;
+            padding: 7px 16px; font-size: .84rem; cursor: pointer; transition: .2s;
+        }
+        .wx-tick button:hover { background: var(--nav-btn-hover-bg); color: #fff; }
+
+        /* ── 城市卡片网格 ── */
+        .wx-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+            gap: 16px;
+        }
+        .wx-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 18px 18px 16px;
+            box-shadow: 0 12px 26px -14px rgba(0,0,0,.22);
+            border: 1px solid var(--card-border);
+            position: relative;
+            overflow: hidden;
+        }
+        /* 左侧一条随温度变色的竖条 */
+        .wx-card::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+            background: var(--tc, #6b7280);
+            transition: background .5s;
+        }
+        .wx-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+        .wx-head .ico { font-size: 1.15rem; }
+        .wx-head .nm { font-weight: 700; font-size: 1.06rem; color: var(--text-color); }
+        .wx-note { font-size: .76rem; color: var(--count-text); margin-bottom: 12px; line-height: 1.6; }
+
+        .wx-temp { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 14px; }
+        .wx-temp .c { font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--status-border); }
+        .wx-temp .unit { font-size: 1rem; font-weight: 600; color: var(--status-border); margin-bottom: 4px; }
+        .wx-temp .f { font-size: .86rem; color: var(--count-text); margin-bottom: 5px; }
+
+        /* 数据格子 */
+        .wx-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+        .wx-row { font-size: .82rem; display: flex; justify-content: space-between; gap: 6px; }
+        .wx-row .k { color: var(--count-text); white-space: nowrap; }
+        .wx-row .v { font-weight: 600; color: var(--text-color); text-align: right; }
+
+        /* 空气质量色标 */
+        .aq-good  { color: #16a34a !important; }
+        .aq-mid   { color: #ca8a04 !important; }
+        .aq-bad   { color: #ea580c !important; }
+        .aq-worse { color: #dc2626 !important; }
+        .aq-awful { color: #7e22ce !important; }
+
+        .wx-foot {
+            margin-top: 26px; text-align: center;
+            font-size: .82rem; color: var(--count-text); line-height: 2;
+        }
+
+        @media (max-width: 560px) {
+            .wx-grid { grid-template-columns: 1fr; }
+            .wx-temp .c { font-size: 2.1rem; }
+        }
+    </style>
+</head>
+<body>
+<script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
+
+<div class="wx-wrap">
+
+    <div class="wx-hero">
+        <h1>🌦️ 天气瞎报</h1>
+        <p class="sub">
+            NB频道虚拟公司下属十二座城市的实时气象 —— <b>全是编的，别当真</b>。<br>
+            数据按真实季节走（现在是<span id="seasonTxt">…</span>），每 10 秒刷新一次。
+        </p>
+        <div class="wx-tick">
+            <span class="txt">下次刷新</span>
+            <div class="bar"><i id="tickBar"></i></div>
+            <span class="txt" id="tickNum">10.0s</span>
+            <button id="refreshNow">🔄 立刻刷新</button>
+            <span class="txt" id="clockTxt"></span>
+        </div>
+    </div>
+
+    <div class="wx-grid" id="wxGrid"></div>
+
+    <div class="wx-foot">
+        本页所有气象数据由随机数生成，与任何真实地点、真实天气无关 · 单位：温度 °C / °F · 气压 kPa · 能见度 km
+    </div>
+</div>
+
+<div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
+    © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://edgeone.nb-channel.top" target="_blank" rel="noopener noreferrer">edgeone站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
+    如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a><br>
+    制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
+    托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://edgeone.ai/products/pages" target="_blank" rel="noopener noreferrer">EdgeOne</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a>
+<div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div></div>
+
+<div class="fixed-buttons">
+    <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   天气瞎报 —— 十二座城市的气象生成器
+   ══════════════════════════════════════════════════════════════════
+
+   设计要点
+
+   ① 按真实季节走
+      用当天在一年中的第几天算一个「季节系数」：
+          season = -cos(2π × (第几天 - 15) / 365.25)
+      1 月中旬 = -1（最冷），7 月中旬 = +1（最热），春秋 = 0 附近。
+      每座城市的实际温度 = 年均基准 + 季节振幅 × 季节系数 + 随机抖动。
+      振幅大的城市四季分明，振幅小的（比如机房）全年差不多。
+
+   ② 数据之间互相关联，不是各自乱随
+      温度高 → 湿度低、气压略低
+      湿度高 + 空气差 → 能见度低
+      这样看起来才像一份真的气象数据，而不是六个独立随机数。
+
+   ③ 每 10 秒变一次
+      不是整批跳变，而是每座城市在上一轮的基础上小幅游走
+      （随机游走），所以数值是连续变化的，不会突然从 5°C 跳到 30°C。
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+    'use strict';
+
+    var REFRESH_MS = 10000;
+
+    /* 十二座城市。base = 年均基准温度，swing = 季节振幅，
+       vol = 每轮抖动幅度，其余是各自的基准值 */
+    var CITIES = [
+        { name: 'NB频道总部', ico: '🏢', base: 22, swing: 2,  vol: .4,
+          hum: 45, aqi: 22, vis: 28, note: '恒温机房 · 全年 22°C 上下，最稳的一座城' },
+
+        { name: 'U星',        ico: '🪐', base: 12, swing: 26, vol: 3.2,
+          hum: 30, aqi: 60, vis: 40, note: '外星球 · 昼夜与四季都极端，一天能过完一年' },
+
+        { name: 'AWM市',      ico: '🎯', base: 6,  swing: 14, vol: 1.4,
+          hum: 62, aqi: 30, vis: 22, note: '高寒狙击高地 · 风大、干冷、视野极远' },
+
+        { name: 'Lemon市',    ico: '🍋', base: 20, swing: 9,  vol: 1.0,
+          hum: 58, aqi: 28, vis: 24, note: '柠檬主产区 · 温暖湿润，日照给得很足' },
+
+        { name: 'Oganesson市',ico: '☢️', base: 34, swing: 8,  vol: 2.6,
+          hum: 22, aqi: 145, vis: 9,  note: '118 号元素城 · 出了名的热，空气也不太敢深呼吸' },
+
+        { name: 'Fafat市',    ico: '🌫️', base: 17, swing: 11, vol: 1.2,
+          hum: 78, aqi: 52, vis: 12, note: '常年多雾 · 湿气重，能见度是全城最拿不出手的一项' },
+
+        { name: 'GC3市',      ico: '🏗️', base: 15, swing: 12, vol: 1.1,
+          hum: 52, aqi: 72, vis: 18, note: '工业新城 · 施工多，空气质量起起伏伏' },
+
+        { name: 'UVS市',      ico: '☀️', base: 25, swing: 10, vol: .9,
+          hum: 34, aqi: 18, vis: 45, note: '紫外线之都 · 晴得离谱，能见度常年全站第一' },
+
+        { name: 'UWSF市',     ico: '🌬️', base: 13, swing: 15, vol: 1.6,
+          hum: 55, aqi: 26, vis: 30, note: '风城 · 一年刮两次风，一次刮半年' },
+
+        { name: 'PTC市',      ico: '🔥', base: 27, swing: 7,  vol: 1.3,
+          hum: 40, aqi: 40, vis: 20, note: '正温度系数城 · 自带加热片，冬天也不怎么冷' },
+
+        { name: '5U市',       ico: '🎈', base: 18, swing: 13, vol: 1.2,
+          hum: 60, aqi: 34, vis: 23, note: '轻盈之城 · 气压常年偏低，云都飘得比别人快' },
+
+        { name: 'Ubn市',      ico: '🌃', base: 16, swing: 12, vol: 1.0,
+          hum: 64, aqi: 46, vis: 20, note: '夜猫子之都 · 湿度高，晚上比白天舒服' }
+    ];
+
+    var DIRS = ['北', '东北偏北', '东北', '东北偏东', '东', '东南偏东', '东南', '东南偏南',
+                '南', '西南偏南', '西南', '西南偏西', '西', '西北偏西', '西北', '西北偏北'];
+
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+    function f2c(f) { return (f - 32) * 5 / 9; }
+
+    /* 季节系数：-1 = 隆冬，+1 = 盛夏 */
+    function seasonFactor(d) {
+        var start = new Date(d.getFullYear(), 0, 0);
+        var doy = Math.floor((d - start) / 86400000);
+        return -Math.cos(2 * Math.PI * (doy - 15) / 365.25);
+    }
+
+    function seasonName(sf) {
+        if (sf > .55) return '盛夏';
+        if (sf > .15) return '夏末初秋';
+        if (sf > -.15) return '春秋之交';
+        if (sf > -.55) return '深秋初冬';
+        return '隆冬';
+    }
+
+    /* 空气质量的六档（照国标那套说法，图个像） */
+    function aqiLevel(a) {
+        if (a <= 50)  return { t: '优',       c: 'aq-good'  };
+        if (a <= 100) return { t: '良',       c: 'aq-mid'   };
+        if (a <= 150) return { t: '轻度污染',  c: 'aq-bad'   };
+        if (a <= 200) return { t: '中度污染',  c: 'aq-worse' };
+        return              { t: '重度污染',  c: 'aq-awful' };
+    }
+
+    /* 温度 → 卡片竖条的颜色（蓝 → 青 → 绿 → 橙 → 红） */
+    function tempColor(c) {
+        if (c <= -10) return '#1e40af';
+        if (c <= 0)   return '#0ea5e9';
+        if (c <= 10)  return '#14b8a6';
+        if (c <= 20)  return '#22c55e';
+        if (c <= 28)  return '#f59e0b';
+        if (c <= 35)  return '#f97316';
+        return '#dc2626';
+    }
+
+    /* 每座城市当前的状态（随机游走的起点） */
+    var state = CITIES.map(function (c) {
+        return {
+            temp: c.base + c.swing * seasonFactor(new Date()),
+            aqi: c.aqi,
+            hum: c.hum,
+            vis: c.vis,
+            dir: Math.floor(Math.random() * 16),
+            force: rnd(1, 4),
+            pres: 101.3
+        };
+    });
+
+    function step(d) {
+        var sf = seasonFactor(d);
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+
+            /* ① 温度：往「季节应有值」慢慢靠，再加抖动 —— 随机游走，不会突变 */
+            var target = c.base + c.swing * sf;
+            s.temp += (target - s.temp) * .35 + rnd(-c.vol, c.vol);
+            s.temp = clamp(s.temp, -55, 60);
+
+            /* ② 湿度：温度偏高就偏干，偏低就偏湿 */
+            var humTarget = c.hum - (s.temp - c.base) * 1.1;
+            s.hum += (humTarget - s.hum) * .3 + rnd(-3, 3);
+            s.hum = clamp(s.hum, 5, 100);
+
+            /* ③ 空气质量：湿度大、风小的时候更容易堆积 */
+            var aqiTarget = c.aqi + (s.hum - 50) * .35 + (4 - s.force) * 5;
+            s.aqi += (aqiTarget - s.aqi) * .25 + rnd(-7, 7);
+            s.aqi = clamp(s.aqi, 8, 320);
+
+            /* ④ 气压：温度高则略低，再小抖 */
+            var presTarget = 101.3 - (s.temp - 15) * .085;
+            s.pres += (presTarget - s.pres) * .3 + rnd(-.35, .35);
+            s.pres = clamp(s.pres, 87, 108);
+
+            /* ⑤ 能见度：湿度和空气差都会压低它 */
+            var visTarget = c.vis * (1 - (s.hum - 55) / 190) - s.aqi / 45;
+            s.vis += (visTarget - s.vis) * .3 + rnd(-1.2, 1.2);
+            s.vis = clamp(s.vis, .2, 60);
+
+            /* ⑥ 风：慢慢转向、慢慢变大变小 */
+            s.dir = (s.dir + (Math.random() < .3 ? (Math.random() < .5 ? 1 : 15) : 0)) % 16;
+            s.force += rnd(-.45, .45);
+            s.force = clamp(s.force, .2, 12);
+        });
+    }
+
+    function windName(f) {
+        if (f < .3) return { t: '无风', lv: 0 };
+        if (f < 1.6) return { t: '软风', lv: 1 };
+        if (f < 3.4) return { t: '轻风', lv: 2 };
+        if (f < 5.5) return { t: '微风', lv: 3 };
+        if (f < 8.0) return { t: '和风', lv: 4 };
+        if (f < 10.8) return { t: '清风', lv: 5 };
+        if (f < 13.9) return { t: '强风', lv: 6 };
+        return { t: '疾风', lv: 7 };
+    }
+
+    var grid = document.getElementById('wxGrid');
+    var bar = document.getElementById('tickBar');
+    var num = document.getElementById('tickNum');
+    var clock = document.getElementById('clockTxt');
+
+    function render() {
+        var html = '';
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+            var cT = s.temp;
+            var fT = cT * 9 / 5 + 32;
+            var lv = aqiLevel(Math.round(s.aqi));
+            var w = windName(s.force);
+
+            html +=
+              '<div class="wx-card" style="--tc:' + tempColor(cT) + '">' +
+                '<div class="wx-head"><span class="ico">' + c.ico + '</span>' +
+                  '<span class="nm">' + c.name + '</span></div>' +
+                '<div class="wx-note">' + c.note + '</div>' +
+
+                '<div class="wx-temp">' +
+                  '<span class="c">' + cT.toFixed(1) + '</span>' +
+                  '<span class="unit">°C</span>' +
+                  '<span class="f">= ' + fT.toFixed(1) + ' °F</span>' +
+                '</div>' +
+
+                '<div class="wx-rows">' +
+                  '<div class="wx-row"><span class="k">湿度</span>' +
+                    '<span class="v">' + Math.round(s.hum) + ' %</span></div>' +
+                  '<div class="wx-row"><span class="k">气压</span>' +
+                    '<span class="v">' + s.pres.toFixed(2) + ' kPa</span></div>' +
+                  '<div class="wx-row"><span class="k">能见度</span>' +
+                    '<span class="v">' + s.vis.toFixed(1) + ' km</span></div>' +
+                  '<div class="wx-row"><span class="k">空气质量</span>' +
+                    '<span class="v ' + lv.c + '">' + Math.round(s.aqi) + ' ' + lv.t + '</span></div>' +
+                  '<div class="wx-row" style="grid-column:1/-1"><span class="k">风向风力</span>' +
+                    '<span class="v">' + DIRS[s.dir] + '风 ' + w.lv + ' 级 · ' + w.t +
+                    '（' + s.force.toFixed(1) + ' m/s）</span></div>' +
+                '</div>' +
+              '</div>';
+        });
+        grid.innerHTML = html;
+    }
+
+    /* ── 倒计时进度条 ── */
+    var t0 = Date.now();
+    function tickUi() {
+        var el = Date.now() - t0;
+        var pct = Math.min(100, el / REFRESH_MS * 100);
+        bar.style.width = pct.toFixed(1) + '%';
+        num.textContent = Math.max(0, (REFRESH_MS - el) / 1000).toFixed(1) + 's';
+    }
+
+    function full() {
+        step(new Date());
+        render();
+        t0 = Date.now();
+        bar.style.width = '0%';
+    }
+
+    function clockUi() {
+        var d = new Date();
+        clock.textContent = d.toLocaleTimeString('zh-CN', { hour12: false }) +
+                            ' 观测';
+    }
+
+    document.getElementById('seasonTxt').textContent =
+        seasonName(seasonFactor(new Date()));
+    document.getElementById('refreshNow').onclick = full;
+
+    full();
+    clockUi();
+    setInterval(tickUi, 100);
+    setInterval(clockUi, 1000);
+    setInterval(full, REFRESH_MS);
+
+    /* 手机上切到后台再回来时，别让它停在旧数据上 */
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) full();
+    });
+})();
+</script>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261010-WX0000000001
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDEwLVdYMDAwMDAwMDAwMQ";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="js/science-tips.js?v=26"></script>
+</body>
+</html>

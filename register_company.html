@@ -1,452 +1,452 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>注册虚拟公司 - NB频道</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/ui-new.css">
-    <link rel="stylesheet" href="css/classic.css">
-    <!-- 官网模式皮肤(仅html.beta选择器生效;静态加载避免样式闪跳) -->
-    <link rel="stylesheet" href="css/beta.css?v=20260846" id="uiBetaCss">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script id="uiBootGuard">
-(function () {
-    try {
-        // 经典模式(可选):localStorage nb_classic=1 时加 classic 类(第一帧前生效,零闪跳)
-        var m = localStorage.getItem('nb_ui_mode');
-        try { var qp = new URLSearchParams(location.search).get('ui'); if (qp === 'new' || qp === 'classic' || qp === 'beta') m = qp; } catch (e) {}
-        if (m === 'classic' || (m !== 'beta' && localStorage.getItem('nb_classic') === '1')) document.documentElement.classList.add('classic');
-        else if (m === 'beta') document.documentElement.classList.add('beta');
-        // 纯新UI:隐藏 body,等待 ui-nav.js 注入完成后解除(首帧即完整新UI,零闪跳)
-        document.documentElement.classList.add('ui-boot-new');
-        var st = document.createElement('style');
-        st.id = 'uiBootHide';
-        st.textContent = 'html.ui-boot-new body{visibility:hidden}';
-        document.head.appendChild(st);
-        setTimeout(function () {
-            document.documentElement.classList.remove('ui-boot-new');
-            var s = document.getElementById('uiBootHide');
-            if (s) s.remove();
-        }, 3500);
-    } catch (e) {}
-})();
-</script><script src="js/common.js?v=20260845"></script>
-    <script src="js/ui-nav.js?v=20260848"></script>
-    <style>
-        body {
-            background: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .register-card {
-            max-width: 450px;
-            width: 100%;
-            background: var(--card-bg);
-            border-radius: 32px;
-            padding: 30px;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
-        }
-        h2 {
-            text-align: center;
-            color: var(--status-border);
-            margin-bottom: 24px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--text-color);
-        }
-        input, .readonly-field {
-            width: 100%;
-            padding: 10px 15px;
-            border-radius: 30px;
-            border: 1px solid var(--card-border);
-            background: var(--bg-color);
-            color: var(--text-color);
-            font-size: 1rem;
-        }
-        .readonly-field {
-            background: var(--count-bg);
-            cursor: not-allowed;
-        }
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        .checkbox-group input {
-            width: 20px;
-            height: 20px;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            border-radius: 40px;
-            background: var(--nav-btn-hover-bg);
-            color: white;
-            border: none;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover {
-            filter: brightness(0.9);
-        }
-        .error {
-            color: #ff6b6b;
-            font-size: 0.85rem;
-            margin-top: 8px;
-        }
-        /* 出资额快捷按钮 + 说明（颜色全部走主题变量，新潮/经典两套皮肤通用） */
-        .quick-amounts {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-        .quick-amounts button {
-            flex: 1;
-            min-width: 72px;
-            width: auto;
-            padding: 8px 6px;
-            border-radius: 999px;
-            background: transparent;
-            border: 1px solid var(--card-border);
-            color: var(--text-color);
-            font-size: 0.78rem;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .quick-amounts button:hover {
-            border-color: var(--status-border);
-            color: var(--status-border);
-            filter: none;
-        }
-        .capital-hint {
-            margin-top: 10px;
-            font-size: 0.78rem;
-            line-height: 1.75;
-            color: var(--count-text);
-        }
-        .capital-hint b { color: var(--status-border); font-weight: 700; }
-        .capital-hint .warn { color: #ff6b6b; }
-        .back-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .back-link a {
-            color: var(--status-border);
-            text-decoration: none;
-        }
-    </style>
-</head>
-<body>
-<script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
-<div class="register-card">
-    <h2>🏢 注册虚拟公司</h2>
-    <div id="formContainer">
-        <div class="form-group">
-            <label>公司名称</label>
-            <input type="text" id="companyName" placeholder="例如：NB科技（1-20字）" maxlength="20">
-        </div>
-        <div class="form-group">
-            <label>公司所有人</label>
-            <div class="readonly-field" id="ownerName">加载中...</div>
-        </div>
-        <div class="form-group">
-            <label for="capitalAmount">出资额（建公司资金池）</label>
-            <input type="number" id="capitalAmount" min="20000" step="1000" value="20000" placeholder="最低 20000 NB币">
-            <div class="quick-amounts">
-                <button type="button" data-add="0">最低 2万</button>
-                <button type="button" data-add="30000">5万</button>
-                <button type="button" data-add="80000">10万</button>
-                <button type="button" data-add="180000">20万</button>
-            </div>
-            <div class="capital-hint" id="capitalHint">
-                这笔钱会作为公司的<b>初始资金池</b>。你会获得<b>等量股份</b>（股价 1.00），另一半留在池子里供别人购买。
-                最低 20000 NB币起。
-            </div>
-        </div>
-        <div class="checkbox-group">
-            <input type="checkbox" id="needVerify">
-            <label for="needVerify">去认证你的虚拟公司（审核通过后评论区内会显示已认证）</label>
-        </div>
-        <div class="error" id="errorMsg"></div>
-        <button id="submitBtn">提交注册</button>
-        <div class="back-link">
-            <a href="Virtual stock.html">← 返回股票页面</a>
-        </div>
-    </div>
-</div>
-
-<div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
-    © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
-    如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a><br>
-    制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
-    托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a> <br>     资源致谢：<a href="https://www.jsdelivr.com/" target="_blank" rel="noopener noreferrer">jsDelivr</a> · <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer">Supabase</a>
-<div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div></div>
-<div class="fixed-buttons">
-    <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
-    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
-</div>
-
-<script>
-    const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    let currentUser = null;
-
-    async function loadCurrentUser() {
-        const stored = localStorage.getItem('nb_user');
-        if (!stored) {
-            window.location.href = uiHref('login.html?redirect=') + encodeURIComponent(window.location.href);
-            return;
-        }
-        try {
-            const user = JSON.parse(stored);
-            const { data, error } = await supabaseClient
-                .from('profiles')
-                .select('id, username')
-                .eq('id', user.id)
-                .maybeSingle();
-            if (error || !data) {
-                localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session');
-                window.location.href = uiHref('login.html?redirect=') + encodeURIComponent(window.location.href);
-                return;
-            }
-            currentUser = data;
-            document.getElementById('ownerName').innerText = currentUser.username;
-        } catch(e) {
-            console.error(e);
-            window.location.href = uiHref('login.html');
-        }
-    }
-
-    // 会话令牌：本站统一存在 localStorage 的 nb_session（和股票页、银行页等完全一致）。
-    // 站内那段「会话令牌自动注入」补丁只覆盖固定的 RPC 名单，register_company_funded
-    // 不在名单里，所以这里必须显式传 p_session。
-    function getSessionToken() {
-        try { return localStorage.getItem('nb_session'); } catch (e) { return null; }
-    }
-
-    // ===== 出资额：建公司初始资金池的金额 =====
-    // 池子现金 = 出资额、池子股份 = 出资额 → 股价 1.00，总股本 = 2 × 出资额，
-    // 创始人拿一半（= 出资额张），另一半留在池子里供别人买入。
-    var MIN_CAPITAL = 20000;
-    var MAX_CAPITAL = 100000000;   // 1 亿，和后端一致
-    var myBalance = null;
-
-    function capitalInput() { return document.getElementById('capitalAmount'); }
-    function fmtMoney(n) { try { return Number(n).toLocaleString('zh-CN'); } catch (e) { return n; } }
-
-    function currentCapital() {
-        var v = Math.floor(Number(capitalInput().value || 0));
-        return isNaN(v) ? 0 : v;
-    }
-
-    // 余额：沿用站内 get_my_balance RPC（返回 {ok, balance}）
-    function loadMyBalance() {
-        if (!currentUser) return;
-        supabaseClient.rpc('get_my_balance', {
-            p_user_id: currentUser.id, p_session: getSessionToken()
-        }).then(function (res) {
-            var d = res && res.data;
-            if (d && typeof d === 'object' && d.ok === false) return;
-            myBalance = (d && typeof d === 'object') ? (d.balance != null ? d.balance : d.nb_balance) : d;
-            if (myBalance == null || isNaN(Number(myBalance))) myBalance = null;
-            updateCapitalHint();
-        }).catch(function () {});
-    }
-
-    function updateCapitalHint() {
-        var hint = document.getElementById('capitalHint');
-        if (!hint) return;
-        var v = currentCapital();
-        var bal = (myBalance == null) ? '—' : fmtMoney(myBalance);
-        var lack = (myBalance != null && v > myBalance)
-            ? '<br><span class="warn">NB币不足（还差 ' + fmtMoney(v - myBalance) + '）</span>' : '';
-        var low = (v > 0 && v < MIN_CAPITAL)
-            ? '<br><span class="warn">出资额不能低于 ' + fmtMoney(MIN_CAPITAL) + ' NB币</span>' : '';
-        hint.innerHTML =
-            '这笔钱会作为公司的<b>初始资金池</b>。你会获得<b>等量股份</b>（股价 1.00），另一半留在池子里供别人购买。' +
-            '<br>你的 NB币余额:<b>' + bal + '</b>；本次将扣除:<b>' + fmtMoney(v) + '</b> NB币' +
-            '<br>公司资金池:<b>' + fmtMoney(v) + '</b> · 你拿到:<b>' + fmtMoney(v) + '</b> 张 · 总股本:<b>'
-            + fmtMoney(v * 2) + '</b> 张' + lack + low;
-    }
-
-    (function bindCapital() {
-        document.querySelectorAll('.quick-amounts button').forEach(function (b) {
-            b.addEventListener('click', function () {
-                var add = Number(b.dataset.add || 0);
-                var el = capitalInput();
-                if (!el) return;
-                el.value = MIN_CAPITAL + add;
-                updateCapitalHint();
-            });
-        });
-        var el = capitalInput();
-        if (el) el.addEventListener('input', updateCapitalHint);
-    })();
-
-    async function registerCompany() {
-        if (!currentUser) return;
-        const companyName = document.getElementById('companyName').value.trim();
-        const needVerify = document.getElementById('needVerify').checked;
-        const errorDiv = document.getElementById('errorMsg');
-        const btn = document.getElementById('submitBtn');
-        const capital = currentCapital();
-        errorDiv.innerText = '';
-
-        // 本地只挡最基本的几种，其余（重名 / 违禁词 / 登录过期 / 余额不足…）都由后端 message 给出
-        if (!companyName) { errorDiv.innerText = '请填写公司名称'; return; }
-        if (companyName.length > 20) { errorDiv.innerText = '公司名称不能超过20字'; return; }
-        if (capital < MIN_CAPITAL) {
-            errorDiv.innerText = '出资额不能低于 ' + fmtMoney(MIN_CAPITAL) + ' NB币（这笔钱是公司的初始资金池）';
-            return;
-        }
-        if (capital > MAX_CAPITAL) { errorDiv.innerText = '单次出资不能超过 1 亿 NB币'; return; }
-        if (myBalance != null && capital > myBalance) {
-            errorDiv.innerText = 'NB币不足（需要 ' + fmtMoney(capital) + '，当前 ' + fmtMoney(myBalance) + '）';
-            return;
-        }
-
-        btn.disabled = true; btn.textContent = '提交中…';
-        // 新版注册接口：出资额走 p_fund，会话令牌走 p_session。
-        // 失败原因有七八种（余额不足 / 低于 20000 / 超 1 亿 / 重名 / 违禁词 / 已注册过 / 登录过期），
-        // 后端 message 全都覆盖了，直接展示，不自己拼文案。
-        try {
-            const { data, error } = await supabaseClient.rpc('register_company_funded', {
-                p_user_id: currentUser.id,
-                p_session: getSessionToken(),
-                p_company_name: companyName,
-                p_need_verify: needVerify,
-                p_fund: capital
-            });
-            if (error) {
-                errorDiv.innerText = error.message || '注册失败';
-                btn.disabled = false; btn.textContent = '提交注册';
-                return;
-            }
-            if (!data || data.success === false) {
-                errorDiv.innerText = (data && data.message) || '注册失败';
-                btn.disabled = false; btn.textContent = '提交注册';
-                return;
-            }
-            // 后端 message 最准确（含实际到账股份数），优先用它
-            let tip = data.message || ('🎉 公司注册成功！资金池 ' + fmtMoney(capital) + ' NB币');
-            if (needVerify && data.need_verify) tip = '📨 注册申请已提交，请等待管理员审核。\n' + tip;
-            alert(tip);
-            window.location.href = uiHref('Virtual stock.html');
-        } catch (e) {
-            errorDiv.innerText = '注册失败：' + ((e && e.message) ? e.message : e);
-            btn.disabled = false; btn.textContent = '提交注册';
-        }
-    }
-
-    (async function boot() {
-        await loadCurrentUser();
-        setTimeout(loadMyBalance, 600);
-    })();
-    document.getElementById('submitBtn').addEventListener('click', registerCompany);
-    document.getElementById('companyName').addEventListener('keydown', function (e) { if (e.key === 'Enter') registerCompany(); });
-    document.getElementById('capitalAmount').addEventListener('keydown', function (e) { if (e.key === 'Enter') registerCompany(); });
-</script>
-
-<script>
-    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
-    (function () {
-        function patch(sb) {
-            if (!sb || sb.__secPatched) return;
-            sb.__secPatched = true;
-            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
-            var orig = sb.rpc.bind(sb);
-            sb.rpc = function (fn, args) {
-                if (names.indexOf(fn) !== -1) {
-                    args = Object.assign({}, args || {});
-                    var t = null;
-                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
-                    args.p_session = t;
-                }
-                return orig(fn, args);
-            };
-        }
-        var cands = [];
-        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
-        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
-        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
-        cands.forEach(patch);
-    })();
-</script>
-
-
-<script>
-    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
-    (function () {
-        try {
-            var u = localStorage.getItem('nb_user');
-            var s = localStorage.getItem('nb_session');
-            if (u && !s) {
-                localStorage.removeItem('nb_user');
-                location.reload();
-            }
-        } catch (e) {}
-    })();
-</script>
-
-
-<script>
-    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
-    (function () {
-        function applyBal() {
-            var u = null, t = null;
-            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
-            if (!u || !u.id || !t) return;
-            var el = document.getElementById('balanceDisplay') ||
-                     document.getElementById('balanceSpan') ||
-                     document.getElementById('tradeBalance');
-            if (!el) return;
-            var sb = null;
-            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
-            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
-            if (!sb) return;
-            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
-                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
-            }).catch(function () {});
-        }
-        var tries = 0;
-        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
-    })();
-</script>
-
-
-<!--
-  ══════════════════════════════════════════════════════════════════
-   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
-   构建指纹 NBC-20261001-8D8CCAB43F5D
-   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
-   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
-   欢迎举报：nbchannel@163.com
-  ══════════════════════════════════════════════════════════════════
--->
-
-<script>/* 构建元信息（请勿删除，侵权取证用） */
-(function () {
-    try {
-        var _nb = "TkJDLTIwMjYxMDAxLThEOENDQUI0M0Y1RA";
-        if (typeof window !== "undefined") window.__nbBuild = _nb;
-    } catch (e) {}
-})();
-</script>
-<script defer src="js/science-tips.js?v=26"></script>
-</body>
-</html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册虚拟公司 - NB频道</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ui-new.css">
+    <link rel="stylesheet" href="css/classic.css">
+    <!-- 官网模式皮肤(仅html.beta选择器生效;静态加载避免样式闪跳) -->
+    <link rel="stylesheet" href="css/beta.css?v=20260846" id="uiBetaCss">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script id="uiBootGuard">
+(function () {
+    try {
+        // 经典模式(可选):localStorage nb_classic=1 时加 classic 类(第一帧前生效,零闪跳)
+        var m = localStorage.getItem('nb_ui_mode');
+        try { var qp = new URLSearchParams(location.search).get('ui'); if (qp === 'new' || qp === 'classic' || qp === 'beta') m = qp; } catch (e) {}
+        if (m === 'classic' || (m !== 'beta' && localStorage.getItem('nb_classic') === '1')) document.documentElement.classList.add('classic');
+        else if (m === 'beta') document.documentElement.classList.add('beta');
+        // 纯新UI:隐藏 body,等待 ui-nav.js 注入完成后解除(首帧即完整新UI,零闪跳)
+        document.documentElement.classList.add('ui-boot-new');
+        var st = document.createElement('style');
+        st.id = 'uiBootHide';
+        st.textContent = 'html.ui-boot-new body{visibility:hidden}';
+        document.head.appendChild(st);
+        setTimeout(function () {
+            document.documentElement.classList.remove('ui-boot-new');
+            var s = document.getElementById('uiBootHide');
+            if (s) s.remove();
+        }, 3500);
+    } catch (e) {}
+})();
+</script><script src="js/common.js?v=20260845"></script>
+    <script src="js/ui-nav.js?v=20261010"></script>
+    <style>
+        body {
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .register-card {
+            max-width: 450px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 32px;
+            padding: 30px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+        }
+        h2 {
+            text-align: center;
+            color: var(--status-border);
+            margin-bottom: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        input, .readonly-field {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 30px;
+            border: 1px solid var(--card-border);
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+        .readonly-field {
+            background: var(--count-bg);
+            cursor: not-allowed;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .checkbox-group input {
+            width: 20px;
+            height: 20px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 40px;
+            background: var(--nav-btn-hover-bg);
+            color: white;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            filter: brightness(0.9);
+        }
+        .error {
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+        /* 出资额快捷按钮 + 说明（颜色全部走主题变量，新潮/经典两套皮肤通用） */
+        .quick-amounts {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .quick-amounts button {
+            flex: 1;
+            min-width: 72px;
+            width: auto;
+            padding: 8px 6px;
+            border-radius: 999px;
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: var(--text-color);
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .quick-amounts button:hover {
+            border-color: var(--status-border);
+            color: var(--status-border);
+            filter: none;
+        }
+        .capital-hint {
+            margin-top: 10px;
+            font-size: 0.78rem;
+            line-height: 1.75;
+            color: var(--count-text);
+        }
+        .capital-hint b { color: var(--status-border); font-weight: 700; }
+        .capital-hint .warn { color: #ff6b6b; }
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .back-link a {
+            color: var(--status-border);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+<script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
+<div class="register-card">
+    <h2>🏢 注册虚拟公司</h2>
+    <div id="formContainer">
+        <div class="form-group">
+            <label>公司名称</label>
+            <input type="text" id="companyName" placeholder="例如：NB科技（1-20字）" maxlength="20">
+        </div>
+        <div class="form-group">
+            <label>公司所有人</label>
+            <div class="readonly-field" id="ownerName">加载中...</div>
+        </div>
+        <div class="form-group">
+            <label for="capitalAmount">出资额（建公司资金池）</label>
+            <input type="number" id="capitalAmount" min="20000" step="1000" value="20000" placeholder="最低 20000 NB币">
+            <div class="quick-amounts">
+                <button type="button" data-add="0">最低 2万</button>
+                <button type="button" data-add="30000">5万</button>
+                <button type="button" data-add="80000">10万</button>
+                <button type="button" data-add="180000">20万</button>
+            </div>
+            <div class="capital-hint" id="capitalHint">
+                这笔钱会作为公司的<b>初始资金池</b>。你会获得<b>等量股份</b>（股价 1.00），另一半留在池子里供别人购买。
+                最低 20000 NB币起。
+            </div>
+        </div>
+        <div class="checkbox-group">
+            <input type="checkbox" id="needVerify">
+            <label for="needVerify">去认证你的虚拟公司（审核通过后评论区内会显示已认证）</label>
+        </div>
+        <div class="error" id="errorMsg"></div>
+        <button id="submitBtn">提交注册</button>
+        <div class="back-link">
+            <a href="Virtual stock.html">← 返回股票页面</a>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
+    © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
+    如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a><br>
+    制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
+    托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a> <br>     资源致谢：<a href="https://www.jsdelivr.com/" target="_blank" rel="noopener noreferrer">jsDelivr</a> · <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer">Supabase</a>
+<div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div></div>
+<div class="fixed-buttons">
+    <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+
+    async function loadCurrentUser() {
+        const stored = localStorage.getItem('nb_user');
+        if (!stored) {
+            window.location.href = uiHref('login.html?redirect=') + encodeURIComponent(window.location.href);
+            return;
+        }
+        try {
+            const user = JSON.parse(stored);
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('id, username')
+                .eq('id', user.id)
+                .maybeSingle();
+            if (error || !data) {
+                localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session');
+                window.location.href = uiHref('login.html?redirect=') + encodeURIComponent(window.location.href);
+                return;
+            }
+            currentUser = data;
+            document.getElementById('ownerName').innerText = currentUser.username;
+        } catch(e) {
+            console.error(e);
+            window.location.href = uiHref('login.html');
+        }
+    }
+
+    // 会话令牌：本站统一存在 localStorage 的 nb_session（和股票页、银行页等完全一致）。
+    // 站内那段「会话令牌自动注入」补丁只覆盖固定的 RPC 名单，register_company_funded
+    // 不在名单里，所以这里必须显式传 p_session。
+    function getSessionToken() {
+        try { return localStorage.getItem('nb_session'); } catch (e) { return null; }
+    }
+
+    // ===== 出资额：建公司初始资金池的金额 =====
+    // 池子现金 = 出资额、池子股份 = 出资额 → 股价 1.00，总股本 = 2 × 出资额，
+    // 创始人拿一半（= 出资额张），另一半留在池子里供别人买入。
+    var MIN_CAPITAL = 20000;
+    var MAX_CAPITAL = 100000000;   // 1 亿，和后端一致
+    var myBalance = null;
+
+    function capitalInput() { return document.getElementById('capitalAmount'); }
+    function fmtMoney(n) { try { return Number(n).toLocaleString('zh-CN'); } catch (e) { return n; } }
+
+    function currentCapital() {
+        var v = Math.floor(Number(capitalInput().value || 0));
+        return isNaN(v) ? 0 : v;
+    }
+
+    // 余额：沿用站内 get_my_balance RPC（返回 {ok, balance}）
+    function loadMyBalance() {
+        if (!currentUser) return;
+        supabaseClient.rpc('get_my_balance', {
+            p_user_id: currentUser.id, p_session: getSessionToken()
+        }).then(function (res) {
+            var d = res && res.data;
+            if (d && typeof d === 'object' && d.ok === false) return;
+            myBalance = (d && typeof d === 'object') ? (d.balance != null ? d.balance : d.nb_balance) : d;
+            if (myBalance == null || isNaN(Number(myBalance))) myBalance = null;
+            updateCapitalHint();
+        }).catch(function () {});
+    }
+
+    function updateCapitalHint() {
+        var hint = document.getElementById('capitalHint');
+        if (!hint) return;
+        var v = currentCapital();
+        var bal = (myBalance == null) ? '—' : fmtMoney(myBalance);
+        var lack = (myBalance != null && v > myBalance)
+            ? '<br><span class="warn">NB币不足（还差 ' + fmtMoney(v - myBalance) + '）</span>' : '';
+        var low = (v > 0 && v < MIN_CAPITAL)
+            ? '<br><span class="warn">出资额不能低于 ' + fmtMoney(MIN_CAPITAL) + ' NB币</span>' : '';
+        hint.innerHTML =
+            '这笔钱会作为公司的<b>初始资金池</b>。你会获得<b>等量股份</b>（股价 1.00），另一半留在池子里供别人购买。' +
+            '<br>你的 NB币余额:<b>' + bal + '</b>；本次将扣除:<b>' + fmtMoney(v) + '</b> NB币' +
+            '<br>公司资金池:<b>' + fmtMoney(v) + '</b> · 你拿到:<b>' + fmtMoney(v) + '</b> 张 · 总股本:<b>'
+            + fmtMoney(v * 2) + '</b> 张' + lack + low;
+    }
+
+    (function bindCapital() {
+        document.querySelectorAll('.quick-amounts button').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var add = Number(b.dataset.add || 0);
+                var el = capitalInput();
+                if (!el) return;
+                el.value = MIN_CAPITAL + add;
+                updateCapitalHint();
+            });
+        });
+        var el = capitalInput();
+        if (el) el.addEventListener('input', updateCapitalHint);
+    })();
+
+    async function registerCompany() {
+        if (!currentUser) return;
+        const companyName = document.getElementById('companyName').value.trim();
+        const needVerify = document.getElementById('needVerify').checked;
+        const errorDiv = document.getElementById('errorMsg');
+        const btn = document.getElementById('submitBtn');
+        const capital = currentCapital();
+        errorDiv.innerText = '';
+
+        // 本地只挡最基本的几种，其余（重名 / 违禁词 / 登录过期 / 余额不足…）都由后端 message 给出
+        if (!companyName) { errorDiv.innerText = '请填写公司名称'; return; }
+        if (companyName.length > 20) { errorDiv.innerText = '公司名称不能超过20字'; return; }
+        if (capital < MIN_CAPITAL) {
+            errorDiv.innerText = '出资额不能低于 ' + fmtMoney(MIN_CAPITAL) + ' NB币（这笔钱是公司的初始资金池）';
+            return;
+        }
+        if (capital > MAX_CAPITAL) { errorDiv.innerText = '单次出资不能超过 1 亿 NB币'; return; }
+        if (myBalance != null && capital > myBalance) {
+            errorDiv.innerText = 'NB币不足（需要 ' + fmtMoney(capital) + '，当前 ' + fmtMoney(myBalance) + '）';
+            return;
+        }
+
+        btn.disabled = true; btn.textContent = '提交中…';
+        // 新版注册接口：出资额走 p_fund，会话令牌走 p_session。
+        // 失败原因有七八种（余额不足 / 低于 20000 / 超 1 亿 / 重名 / 违禁词 / 已注册过 / 登录过期），
+        // 后端 message 全都覆盖了，直接展示，不自己拼文案。
+        try {
+            const { data, error } = await supabaseClient.rpc('register_company_funded', {
+                p_user_id: currentUser.id,
+                p_session: getSessionToken(),
+                p_company_name: companyName,
+                p_need_verify: needVerify,
+                p_fund: capital
+            });
+            if (error) {
+                errorDiv.innerText = error.message || '注册失败';
+                btn.disabled = false; btn.textContent = '提交注册';
+                return;
+            }
+            if (!data || data.success === false) {
+                errorDiv.innerText = (data && data.message) || '注册失败';
+                btn.disabled = false; btn.textContent = '提交注册';
+                return;
+            }
+            // 后端 message 最准确（含实际到账股份数），优先用它
+            let tip = data.message || ('🎉 公司注册成功！资金池 ' + fmtMoney(capital) + ' NB币');
+            if (needVerify && data.need_verify) tip = '📨 注册申请已提交，请等待管理员审核。\n' + tip;
+            alert(tip);
+            window.location.href = uiHref('Virtual stock.html');
+        } catch (e) {
+            errorDiv.innerText = '注册失败：' + ((e && e.message) ? e.message : e);
+            btn.disabled = false; btn.textContent = '提交注册';
+        }
+    }
+
+    (async function boot() {
+        await loadCurrentUser();
+        setTimeout(loadMyBalance, 600);
+    })();
+    document.getElementById('submitBtn').addEventListener('click', registerCompany);
+    document.getElementById('companyName').addEventListener('keydown', function (e) { if (e.key === 'Enter') registerCompany(); });
+    document.getElementById('capitalAmount').addEventListener('keydown', function (e) { if (e.key === 'Enter') registerCompany(); });
+</script>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
+
+<script>
+    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
+    (function () {
+        function applyBal() {
+            var u = null, t = null;
+            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
+            if (!u || !u.id || !t) return;
+            var el = document.getElementById('balanceDisplay') ||
+                     document.getElementById('balanceSpan') ||
+                     document.getElementById('tradeBalance');
+            if (!el) return;
+            var sb = null;
+            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
+            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
+            if (!sb) return;
+            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
+                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
+            }).catch(function () {});
+        }
+        var tries = 0;
+        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
+    })();
+</script>
+
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261001-8D8CCAB43F5D
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDAxLThEOENDQUI0M0Y1RA";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="js/science-tips.js?v=26"></script>
+</body>
+</html>
