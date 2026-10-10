@@ -974,121 +974,130 @@ html { -webkit-text-size-adjust: 100%; }
    设计：温度定色 → 卡片左上角一层淡色晕开，左边一条温度色条，
         右上角一个大天气图标。悬停轻微浮起。
    ══════════════════════════════════════════════════════ */
-.wx-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(282px, 1fr));
-    gap: 18px;
-}
+/* ══════════════════════════════════════════════════════
+   天气瞎报 · 一行一个城市
+   三栏：城市 | 温度 | 指标。窄屏自动竖排。
+   ══════════════════════════════════════════════════════ */
+.wx-grid { display: flex; flex-direction: column; gap: 14px; }
 
 .wx-card {
     position: relative;
-    padding: 20px 20px 18px 24px;
-    border-radius: 22px;
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) 168px minmax(0, 2.35fr);
+    align-items: center;
+    gap: 22px;
+    padding: 22px 26px 22px 30px;
+    border-radius: 20px;
     overflow: hidden;
     border: 1px solid var(--line);
     background:
-        linear-gradient(165deg, var(--tc-soft) 0%, rgba(255,255,255,0) 55%),
+        linear-gradient(120deg, var(--tc-soft) 0%, rgba(255,255,255,0) 42%),
         var(--card);
     box-shadow: 0 6px 20px -14px rgba(16,24,40,.22);
-    transition: transform .28s cubic-bezier(.2,.8,.3,1), box-shadow .28s;
+    transition: transform .24s cubic-bezier(.2,.8,.3,1), box-shadow .24s;
 }
 .wx-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 36px -18px rgba(16,24,40,.34);
+    transform: translateY(-3px);
+    box-shadow: 0 18px 34px -18px rgba(16,24,40,.32);
 }
 /* 左侧温度色条 */
 .wx-card::before {
     content: '';
-    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
     background: var(--tc);
     transition: background .5s;
 }
 
-/* ── 头部：城市名 · 天气状态 ── */
+/* ── 第一栏：城市 ── */
+.wx-who { min-width: 0; }
 .wx-head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 6px;
 }
-.wx-city { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.wx-ico { font-size: 1.05rem; font-style: normal; flex: none; }
+.wx-city { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.wx-ico { font-size: 1.3rem; font-style: normal; flex: none; }
 .wx-nm {
-    font-size: 1.03rem; font-weight: 700; color: var(--ink);
+    font-size: 1.18rem; font-weight: 800; color: var(--ink);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .wx-cond {
-    display: flex; align-items: center; gap: 5px; flex: none;
-    font-size: .76rem; color: var(--ink-faint);
+    display: inline-flex; align-items: center; gap: 4px; flex: none;
+    font-size: .8rem; font-weight: 600; color: var(--ink-faint);
+    background: rgba(148,163,184,.14);
+    border-radius: 99px; padding: 2px 10px 2px 6px;
 }
-.wx-cond i { font-size: 1.5rem; font-style: normal; line-height: 1; }
+.wx-cond i { font-size: 1.05rem; font-style: normal; line-height: 1; }
 .wx-cond em { font-style: normal; }
-
-/* ── 城市简介 ── */
 .wx-note-in {
-    margin: 7px 0 15px;
-    font-size: .75rem; line-height: 1.65;
+    margin: 0; font-size: .78rem; line-height: 1.7;
     color: var(--ink-faint);
 }
 
-/* ── 温度 ── */
+/* ── 第二栏：温度 ── */
 .wx-temp {
-    display: flex; align-items: baseline; gap: 3px;
-    margin-bottom: 17px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    padding-left: 22px;
+    border-left: 1px dashed var(--line);
 }
 .wx-c {
-    font-size: 2.9rem; font-weight: 800; line-height: 1;
-    letter-spacing: -1.5px; color: var(--brand);
+    font-size: 3.4rem; font-weight: 800; line-height: 1;
+    letter-spacing: -2px; color: var(--brand);
     font-variant-numeric: tabular-nums;
 }
-.wx-u { font-size: 1.05rem; font-weight: 700; color: var(--brand); }
+.wx-c .wx-u {
+    font-size: 1.3rem; font-weight: 700; letter-spacing: 0;
+    margin-left: 2px; color: var(--brand);
+}
 .wx-f {
-    margin-left: auto; font-size: .79rem;
+    font-size: .86rem; font-weight: 600;
     color: var(--ink-faint); font-variant-numeric: tabular-nums;
 }
 
-/* ── 指标 ── */
+/* ── 第三栏：五项指标横排 ── */
 .wx-rows {
     margin: 0;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.5fr);
+    gap: 12px;
 }
-.wx-row {
-    display: flex; justify-content: space-between; align-items: baseline;
-    gap: 8px; font-size: .78rem;
+.wx-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.wx-row dt {
+    font-size: .74rem; color: var(--ink-faint);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.wx-row dt { color: var(--ink-faint); white-space: nowrap; }
 .wx-row dd {
-    margin: 0; font-weight: 600; color: var(--ink);
-    text-align: right; font-variant-numeric: tabular-nums;
+    margin: 0; font-size: 1.42rem; font-weight: 800; line-height: 1.15;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.wx-row-wide {
-    grid-column: 1 / -1;
-    padding-top: 10px; margin-top: 3px;
-    border-top: 1px dashed var(--line);
+.wx-row dd .u {
+    font-size: .82rem; font-weight: 600; color: var(--ink-faint);
+    margin-left: 3px;
 }
+/* 风向风力那格文字长，单独小一号 */
+.wx-row-wide dd { font-size: .98rem; }
+.wx-row-wide dd .u { font-size: .78rem; }
 
+/* 空气质量的颜色由 JS 挂类，这里只保证加粗 */
+.wx-row dd.aq-good, .wx-row dd.aq-mid, .wx-row dd.aq-bad,
+.wx-row dd.aq-worse, .wx-row dd.aq-awful { font-weight: 800; }
+
+/* ── 窄屏：竖排 ── */
+@media (max-width: 1000px) {
+    .wx-card { grid-template-columns: 1fr; gap: 16px; padding: 20px 20px 20px 26px; }
+    .wx-temp {
+        flex-direction: row; align-items: baseline; gap: 10px;
+        padding-left: 0; padding-top: 14px;
+        border-left: none; border-top: 1px dashed var(--line);
+    }
+    .wx-c { font-size: 2.9rem; }
+    .wx-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 560px) {
-    .wx-grid { grid-template-columns: 1fr; }
-    .wx-c { font-size: 2.5rem; }
+    .wx-c { font-size: 2.4rem; }
+    .wx-row dd { font-size: 1.28rem; }
 }
 
-/* 官网模式：倒计时条与页脚说明 */
-.wx-main { max-width: 1180px; margin: 0 auto; padding: 0 20px 60px; }
-.wx-tickbar {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: 16px; padding: 14px 18px; margin-bottom: 22px;
-    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
-}
-.wx-tb-txt { font-size: .84rem; white-space: nowrap; color: var(--ink-soft); }
-.wx-tb-bar { flex: 1; min-width: 140px; height: 6px; border-radius: 99px;
-             background: rgba(148,163,184,.2); overflow: hidden; }
-.wx-tb-bar i { display: block; height: 100%; width: 0%;
-               background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-               border-radius: 99px; transition: width .25s linear; }
-#refreshNow {
-    background: var(--brand); color: #fff; border: none; border-radius: 30px;
-    padding: 7px 16px; font-size: .84rem; cursor: pointer; transition: .2s;
-}
-#refreshNow:hover { opacity: .88; }
 .wx-note { text-align: center; margin-top: 26px; font-size: .82rem;
            color: var(--ink-faint); line-height: 2; }
 html.dark .wx-card { box-shadow: 0 6px 20px -14px rgba(0,0,0,.5); }
@@ -1613,29 +1622,30 @@ function render() {
 
             html +=
               '<article class="wx-card" style="--tc:' + tempColor(cT) + ';--tc-soft:' + tempColor(cT) + '1f">' +
+                '<div class="wx-who">' +
                 '<header class="wx-head">' +
                   '<span class="wx-city"><i class="wx-ico">' + c.ico + '</i>' +
                     '<b class="wx-nm">' + c.name + '</b></span>' +
                   '<span class="wx-cond"><i>' + cd.i + '</i><em>' + cd.t + '</em></span>' +
                 '</header>' +
                 '<p class="wx-note-in">' + c.note + '</p>' +
+                '</div>' +
                 '<div class="wx-temp">' +
-                  '<span class="wx-c">' + cT.toFixed(1) + '</span>' +
-                  '<span class="wx-u">°C</span>' +
-                  '<span class="wx-f">' + fT.toFixed(1) + ' °F</span>' +
+                  '<span class="wx-c">' + cT.toFixed(1) + '<span class="wx-u">°C</span></span>' +
+                  '<span class="wx-f">= ' + fT.toFixed(1) + ' °F</span>' +
                 '</div>' +
                 '<dl class="wx-rows">' +
                   '<div class="wx-row"><dt>💧 湿度</dt><dd>' +
-                    Math.round(s.hum) + ' %</dd></div>' +
+                    Math.round(s.hum) + '<span class="u">%</span></dd></div>' +
                   '<div class="wx-row"><dt>🧭 气压</dt><dd>' +
-                    s.pres.toFixed(2) + ' kPa</dd></div>' +
+                    s.pres.toFixed(1) + '<span class="u">kPa</span></dd></div>' +
                   '<div class="wx-row"><dt>👁 能见度</dt><dd>' +
-                    s.vis.toFixed(1) + ' km</dd></div>' +
-                  '<div class="wx-row"><dt>🍃 空气</dt><dd class="' + lv.c + '">' +
-                    Math.round(s.aqi) + ' ' + lv.t + '</dd></div>' +
+                    s.vis.toFixed(1) + '<span class="u">km</span></dd></div>' +
+                  '<div class="wx-row"><dt>🍃 空气质量</dt><dd class="' + lv.c + '">' +
+                    Math.round(s.aqi) + '<span class="u">' + lv.t + '</span></dd></div>' +
                   '<div class="wx-row wx-row-wide"><dt>🌬 风向风力</dt><dd>' +
-                    DIRS[s.dir] + '风 ' + w.lv + ' 级 · ' + w.t +
-                    ' ' + s.force.toFixed(1) + ' m/s</dd></div>' +
+                    DIRS[s.dir] + ' ' + w.lv + ' 级' +
+                    '<span class="u">' + s.force.toFixed(1) + ' m/s</span></dd></div>' +
                 '</dl>' +
               '</article>';
         });
