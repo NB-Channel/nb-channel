@@ -73,10 +73,10 @@
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="description" content="NB频道背包——管理你的商店道具:使用、更换颜色、续期、出售回收,生效中的道具一目了然。">
+<meta name="description" content="NB频道幸运转盘抽奖记录——查看你的总抽奖次数、中奖次数、中奖总额与净收益。">
 <meta name="theme-color" content="#0f172a">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
-<title>我的背包 - NB频道官网</title>
+<title>天气瞎报 - NB频道</title>
 <script>
     (function () {
         try {
@@ -266,81 +266,81 @@ html.dark .nav-auth:hover { background: rgba(255,255,255,.1); border-color: rgba
 }
 
 /* ============ 正文 ============ */
-.pk-wrap { max-width: 1180px; margin: 0 auto; padding: 66px 40px 70px; }
+.bk-wrap { max-width: 1180px; margin: 0 auto; padding: 66px 40px 70px; }
 /* Tab 切换(品牌胶囊) */
-.pk-tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 30px; flex-wrap: wrap; }
-.pk-tab {
+.bk-tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 30px; flex-wrap: wrap; }
+.bk-tab {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 12px 34px; border-radius: 999px; cursor: pointer;
     border: 1px solid var(--line); background: var(--card); color: var(--ink-soft);
     font-size: 1rem; font-weight: 700; letter-spacing: .5px;
     box-shadow: var(--shadow-1); transition: all .25s ease;
 }
-.pk-tab:hover { border-color: rgba(59,130,246,.45); color: var(--brand); transform: translateY(-1px); }
-.pk-tab.active {
+.bk-tab:hover { border-color: rgba(59,130,246,.45); color: var(--brand); transform: translateY(-1px); }
+.bk-tab.active {
     background: linear-gradient(135deg, var(--brand), #6366f1);
     color: #fff; border-color: transparent;
     box-shadow: 0 12px 28px -12px rgba(59,130,246,.65);
 }
-.pk-panel { display: none; }
-.pk-panel.active { display: block; animation: tlfade .45s cubic-bezier(.16,1,.3,1) both; }
+.bk-panel { display: none; }
+.bk-panel.active { display: block; animation: tlfade .45s cubic-bezier(.16,1,.3,1) both; }
 @keyframes tlfade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* 通用卡片 */
-.pk-card {
+.bk-card {
     background: var(--card); border: 1px solid var(--line);
     border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
     padding: 24px;
 }
-.pk-card h3 { font-size: 1.12rem; font-weight: 800; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; }
-.pk-help { font-size: .8rem; color: var(--ink-faint); margin: 8px 0 4px; line-height: 1.8; }
-.pk-inrow { display: flex; gap: 10px; margin: 12px 0 4px; flex-wrap: wrap; align-items: center; }
-.pk-field {
+.bk-card h3 { font-size: 1.12rem; font-weight: 800; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; }
+.bk-help { font-size: .8rem; color: var(--ink-faint); margin: 8px 0 4px; line-height: 1.8; }
+.bk-inrow { display: flex; gap: 10px; margin: 12px 0 4px; flex-wrap: wrap; align-items: center; }
+.bk-field {
     flex: 1; min-width: 190px; padding: 11px 18px; border-radius: 999px;
     border: 1px solid var(--line); background: var(--bg); color: var(--ink);
     font-size: .98rem; font-family: Consolas, Menlo, monospace; outline: none;
     transition: border-color .2s ease, box-shadow .2s ease;
 }
-.pk-field:focus { border-color: rgba(59,130,246,.55); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
-.pk-field.num { flex: none; width: 128px; }
-.pk-field.wide { flex: 1; min-width: 190px; }
-.pk-btn {
+.bk-field:focus { border-color: rgba(59,130,246,.55); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+.bk-field.num { flex: none; width: 128px; }
+.bk-field.wide { flex: 1; min-width: 190px; }
+.bk-btn {
     border: none; border-radius: 999px; padding: 11px 26px; cursor: pointer;
     background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff;
     font-size: .95rem; font-weight: 700; letter-spacing: 1px;
     box-shadow: 0 8px 20px -8px rgba(59,130,246,.55);
     transition: all .22s ease; flex-shrink: 0;
 }
-.pk-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px -8px rgba(59,130,246,.6); }
-.pk-out {
+.bk-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px -8px rgba(59,130,246,.6); }
+.bk-out {
     margin-top: 14px; padding: 15px 18px; border-radius: 16px;
     background: var(--bg); border: 1px solid var(--line);
     font-size: .9rem; line-height: 2; min-height: 26px; white-space: pre-wrap;
     color: var(--ink-soft); word-break: break-word;
 }
-.pk-out .big { font-size: 1.28rem; font-weight: 800; color: var(--brand); letter-spacing: .3px; }
-.pk-out .big.gold { color: #d97706; }
-html.dark .pk-out .big.gold { color: #fbbf24; }
-.pk-out sub { font-size: .72em; }
-.pk-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 2px; }
-.pk-chip {
+.bk-out .big { font-size: 1.28rem; font-weight: 800; color: var(--brand); letter-spacing: .3px; }
+.bk-out .big.gold { color: #d97706; }
+html.dark .bk-out .big.gold { color: #fbbf24; }
+.bk-out sub { font-size: .72em; }
+.bk-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 2px; }
+.bk-chip {
     border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
     border-radius: 999px; padding: 5px 14px; font-size: .78rem;
     cursor: pointer; font-family: Consolas, Menlo, monospace;
     transition: all .2s ease;
 }
-.pk-chip:hover { border-color: rgba(59,130,246,.5); color: var(--brand); background: rgba(59,130,246,.06); }
+.bk-chip:hover { border-color: rgba(59,130,246,.5); color: var(--brand); background: rgba(59,130,246,.06); }
 
 /* 计算器宫格 */
-.pk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.bk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 /* 溶液换算模式段选 */
-.pk-seg { display: inline-flex; gap: 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 5px; }
-.pk-seg button {
+.bk-seg { display: inline-flex; gap: 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 5px; }
+.bk-seg button {
     border: none; background: transparent; color: var(--ink-soft);
     border-radius: 999px; padding: 8px 18px; cursor: pointer; font-size: .86rem; font-weight: 700;
     transition: all .22s ease;
 }
-.pk-seg button.on { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; box-shadow: 0 6px 16px -8px rgba(59,130,246,.6); }
+.bk-seg button.on { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; box-shadow: 0 6px 16px -8px rgba(59,130,246,.6); }
 
 /* ============ 周期表 ============ */
 .pt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
@@ -518,7 +518,7 @@ html.dark .pcell.empty, html.dark .pcell.hole { color: var(--ink-faint); }
 /* 响应式 */
 @media (max-width: 900px) {
     .vhero { padding: 84px 24px 120px; }
-    .pk-wrap { padding: 50px 22px 40px; }
+    .bk-wrap { padding: 50px 22px 40px; }
     .footer { padding: 48px 24px 26px; }
 }
 @media (max-width: 760px) {
@@ -527,9 +527,9 @@ html.dark .pcell.empty, html.dark .pcell.hole { color: var(--ink-faint); }
     .vhero-inner { grid-template-columns: 1fr; gap: 40px; }
     .vhero h1 { font-size: 2.4rem; letter-spacing: 5px; }
     .pd-stats { display: none; }
-    .pk-wrap { padding: 36px 14px 30px; }
-    .pk-grid { grid-template-columns: 1fr; }
-    .pk-card { padding: 18px 16px; }
+    .bk-wrap { padding: 36px 14px 30px; }
+    .bk-grid { grid-template-columns: 1fr; }
+    .bk-card { padding: 18px 16px; }
     .footer-grid { grid-template-columns: 1fr; gap: 26px; }
     .backtop { right: 18px; bottom: 18px; width: 42px; height: 42px; }
 }
@@ -589,151 +589,242 @@ html.dark .pcell.empty, html.dark .pcell.hole { color: var(--ink-faint); }
         html { scroll-behavior: smooth; }
         [id] { scroll-margin-top: 86px; }
 
-/* ==================== 背包 页面专用样式 ==================== */
-.pk-toolbar {
+/* ==================== NB银行 页面专用样式 ==================== */
+.bk-toolbar {
     display: flex; align-items: center; justify-content: space-between; gap: 14px;
-    flex-wrap: wrap; margin: 0 0 14px; padding: 16px 20px;
+    flex-wrap: wrap; margin: 0 0 20px; padding: 16px 20px;
     background: var(--card); border: 1px solid var(--line);
     border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
 }
-.pk-tb-title { font-size: 1.12rem; font-weight: 800; letter-spacing: 1px; }
-.pk-tb-sub { font-size: .8rem; color: var(--ink-faint); margin-top: 3px; }
-.pk-tb-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.pk-go-shop {
+.bk-tb-title { font-size: 1.12rem; font-weight: 800; letter-spacing: 1px; }
+.bk-tb-sub { font-size: .8rem; color: var(--ink-faint); margin-top: 3px; }
+.bk-tb-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bk-balance-chip {
     display: inline-flex; align-items: center; gap: 6px;
-    background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff;
-    border-radius: 999px; padding: 8px 18px; font-size: .85rem; font-weight: 700;
-    box-shadow: 0 8px 20px -8px rgba(59,130,246,.55); transition: all .22s ease;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 16px; font-size: .86rem; color: var(--ink-soft); font-weight: 600;
 }
-.pk-go-shop:hover { transform: translateY(-1px); color: #fff; }
-.pk-refresh {
+.bk-balance-chip b { color: #d97706; font-weight: 800; }
+html.dark .bk-balance-chip b { color: #fbbf24; }
+.bk-refresh {
     display: inline-flex; align-items: center; gap: 6px;
     border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
     padding: 8px 18px; border-radius: 999px; cursor: pointer;
     font-size: .85rem; font-weight: 700; transition: all .25s ease;
 }
-.pk-refresh:hover { border-color: var(--brand); color: var(--brand); transform: translateY(-1px); }
-.pk-refresh.spin { animation: pkSpin .6s linear; }
-@keyframes pkSpin { to { transform: rotate(360deg); } }
-.pk-hint {
-    background: rgba(34,197,94,.07); border: 1px dashed rgba(34,197,94,.35);
-    color: var(--ink-soft); border-radius: var(--radius-md);
-    padding: 9px 16px; font-size: .78rem; margin-bottom: 20px; line-height: 1.7;
-}
+.bk-refresh:hover { border-color: var(--brand); color: var(--brand); transform: translateY(-1px); }
+.bk-refresh.spin { animation: bkSpin .6s linear; }
+@keyframes bkSpin { to { transform: rotate(360deg); } }
 
-.pk-state { text-align: center; padding: 80px 20px; color: var(--ink-faint); }
-.pk-state .pk-st-ico { font-size: 3rem; margin-bottom: 16px; }
-.pk-state h3 { color: var(--ink); font-size: 1.25rem; margin-bottom: 10px; letter-spacing: 1px; }
-.pk-state p { font-size: .92rem; line-height: 2; margin-bottom: 26px; }
-.pk-st-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.pk-st-btn { display: inline-block; padding: 11px 30px; border-radius: 999px; font-size: .92rem; font-weight: 700; letter-spacing: 1px; }
-.pk-st-btn.login { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; box-shadow: 0 10px 24px -10px rgba(59,130,246,.6); }
-.pk-st-btn.ghost { background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); }
-.pk-dot { animation: pkDot 1.2s infinite both; }
-.pk-dot:nth-child(2) { animation-delay: .15s; }
-.pk-dot:nth-child(3) { animation-delay: .3s; }
-@keyframes pkDot { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
+.bk-state { text-align: center; padding: 80px 20px; color: var(--ink-faint); }
+.bk-state .bk-st-ico { font-size: 3rem; margin-bottom: 16px; }
+.bk-state h3 { color: var(--ink); font-size: 1.25rem; margin-bottom: 10px; letter-spacing: 1px; }
+.bk-state p { font-size: .92rem; line-height: 2; margin-bottom: 26px; }
+.bk-st-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.bk-st-btn { display: inline-block; padding: 11px 30px; border-radius: 999px; font-size: .92rem; font-weight: 700; letter-spacing: 1px; }
+.bk-st-btn.login { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; box-shadow: 0 10px 24px -10px rgba(59,130,246,.6); }
+.bk-st-btn.ghost { background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); }
+.bk-dot { animation: bkDot 1.2s infinite both; }
+.bk-dot:nth-child(2) { animation-delay: .15s; }
+.bk-dot:nth-child(3) { animation-delay: .3s; }
+@keyframes bkDot { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
 
-.pk-sec-t {
-    font-size: 1.02rem; font-weight: 800; letter-spacing: .5px;
-    margin: 4px 0 14px; display: flex; align-items: center; gap: 8px;
+.bk-ov { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 22px; }
+@media (max-width: 1000px) { .bk-ov { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px) { .bk-ov { grid-template-columns: repeat(2, 1fr); } }
+.bk-ovc {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1); padding: 18px 10px; text-align: center;
+    transition: transform .3s ease, box-shadow .3s ease;
+    border-top: 3px solid var(--brand);
 }
-.pk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; margin-bottom: 26px; }
-.pk-card {
-    position: relative; background: var(--card); border: 1px solid var(--line);
-    border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
-    padding: 18px; display: flex; flex-direction: column; gap: 8px;
-    transition: transform .3s ease, box-shadow .3s ease; overflow: hidden;
+.bk-ovc:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); }
+.bk-ovc.dep { border-top-color: #22c55e; }
+.bk-ovc.fx { border-top-color: var(--brand); }
+.bk-ovc.loan { border-top-color: #f97316; }
+.bk-num { font-size: 1.5rem; font-weight: 800; color: var(--ink); word-break: break-all; line-height: 1.4; }
+.bk-num.long { font-size: 1.05rem; }
+.bk-lbl { font-size: .8rem; color: var(--ink-soft); margin-top: 5px; letter-spacing: 1px; }
+.bk-tip { font-size: .68rem; color: var(--ink-faint); margin-top: 3px; }
+
+.bk-sec {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1); padding: 22px 24px; margin-bottom: 20px;
 }
-.pk-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-2); }
-.pk-card .pk-count {
-    position: absolute; top: 12px; right: 12px;
+.bk-sec-h { font-size: 1.08rem; font-weight: 800; letter-spacing: 1px; margin-bottom: 14px; }
+.bk-table { width: 100%; border-collapse: collapse; font-size: .88rem; min-width: 560px; }
+.bk-table th { padding: 9px 12px; text-align: left; background: var(--bg); border-bottom: 1px solid var(--line); color: var(--ink-faint); font-size: .8rem; letter-spacing: 1px; }
+.bk-table td { padding: 8px 12px; border-bottom: 1px dashed var(--line); color: var(--ink-soft); }
+.bk-table tr:last-child td { border-bottom: none; }
+.bk-table .td-up { color: #16a34a; font-weight: 700; white-space: nowrap; }
+.bk-table .td-down { color: #e11d48; font-weight: 700; white-space: nowrap; }
+html.dark .bk-table .td-up { color: #4ade80; }
+html.dark .bk-table .td-down { color: #fb7185; }
+.bk-alert {
+    background: rgba(231,76,60,.08); border: 1px solid rgba(231,76,60,.25);
+    color: #e11d48; border-radius: var(--radius-lg); padding: 12px 16px;
+    font-size: .86rem; line-height: 1.8; margin-bottom: 20px;
+}
+html.dark .bk-alert { color: #fb7185; }
+
+.bk-inrow { display: flex; gap: 10px; margin: 0 0 12px; flex-wrap: wrap; align-items: center; }
+.bk-field {
+    padding: 10px 16px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    font-size: .95rem; outline: none; min-width: 150px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+    font-family: inherit;
+}
+.bk-field:focus { border-color: rgba(59,130,246,.55); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+.bk-field.num { min-width: 130px; }
+.bk-field.sel { min-width: 170px; cursor: pointer; }
+.bk-btn {
+    border: none; border-radius: 999px; padding: 10px 22px; cursor: pointer;
     background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff;
-    border-radius: 999px; padding: 2px 11px; font-size: .85rem; font-weight: 800;
+    font-size: .9rem; font-weight: 700; letter-spacing: .5px; font-family: inherit;
+    box-shadow: 0 8px 20px -8px rgba(59,130,246,.55); transition: all .22s ease;
 }
-.pk-card .pk-ico {
-    width: 46px; height: 46px; border-radius: 14px; font-size: 1.5rem;
-    display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(140deg, rgba(59,130,246,.12), rgba(139,92,246,.12));
-}
-.pk-card .pk-name { font-weight: 800; font-size: 1.04rem; letter-spacing: .3px; }
-.pk-card .pk-meta { font-size: .76rem; color: var(--ink-faint); line-height: 1.7; }
-.pk-card .pk-st { font-size: .78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
-.pk-st.live { color: #16a34a; }
-.pk-st.used { color: var(--ink-faint); }
-.pk-st.expired { color: #e11d48; }
-html.dark .pk-st.live { color: #4ade80; }
-html.dark .pk-st.expired { color: #fb7185; }
-.pk-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-.pk-act {
-    border: none; border-radius: 999px; padding: 8px 15px; cursor: pointer; font-family: inherit;
-    font-size: .82rem; font-weight: 700; letter-spacing: .3px;
-    background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff;
-    box-shadow: 0 6px 16px -6px rgba(59,130,246,.5); transition: all .2s ease;
-}
-.pk-act:hover { transform: translateY(-1px); }
-.pk-act.ghost { background: var(--bg); color: var(--ink-soft); box-shadow: none; border: 1px solid var(--line); }
-.pk-act.ghost:hover { border-color: var(--brand); color: var(--brand); }
-.pk-act.warn { background: linear-gradient(135deg, #f59e0b, #f97316); box-shadow: 0 6px 16px -6px rgba(245,158,11,.5); }
+.bk-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px -8px rgba(59,130,246,.6); }
+.bk-btn.green { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 8px 20px -8px rgba(34,197,94,.5); }
+.bk-btn.green:hover { box-shadow: 0 12px 26px -8px rgba(34,197,94,.6); }
+.bk-btn.gold { background: linear-gradient(135deg, #f59e0b, #f97316); box-shadow: 0 8px 20px -8px rgba(245,158,11,.5); }
+.bk-btn.gold:hover { box-shadow: 0 12px 26px -8px rgba(245,158,11,.6); }
+.bk-btn.ghost { background: var(--bg); color: var(--ink-soft); box-shadow: none; border: 1px solid var(--line); }
+.bk-btn.ghost:hover { border-color: var(--brand); color: var(--brand); }
+.bk-btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+.bk-help { font-size: .8rem; color: var(--ink-faint); line-height: 1.9; }
+.bk-help.bk-red { color: #e11d48; }
+html.dark .bk-help.bk-red { color: #fb7185; }
+.bk-tag { display: inline-block; border-radius: 999px; padding: 2px 12px; font-size: .78rem; font-weight: 700; margin: 0 2px; }
+.bk-tag.green { background: rgba(34,197,94,.12); color: #16a34a; }
+.bk-tag.orange { background: rgba(245,158,11,.15); color: #d97706; }
+html.dark .bk-tag.green { color: #4ade80; }
+html.dark .bk-tag.orange { color: #fbbf24; }
 
-.pk-toast {
+.bk-credit { background: var(--bg); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+.bk-crow { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bk-cscore { font-size: 2.2rem; font-weight: 900; color: var(--ink); line-height: 1.2; }
+.bk-cmax { color: var(--ink-faint); font-size: .9rem; }
+.bk-level { font-size: .95rem; font-weight: 800; padding: 4px 16px; border-radius: 999px; letter-spacing: 1px; }
+.bk-level.lv-red { background: rgba(231,76,60,.14); color: #e11d48; }
+.bk-level.lv-orange { background: rgba(255,152,0,.15); color: #d97706; }
+.bk-level.lv-yellow { background: rgba(255,193,7,.18); color: #b45309; }
+.bk-level.lv-green { background: rgba(34,197,94,.14); color: #16a34a; }
+html.dark .bk-level.lv-red { color: #f87171; }
+html.dark .bk-level.lv-orange { color: #fbbf24; }
+html.dark .bk-level.lv-yellow { color: #fcd34d; }
+html.dark .bk-level.lv-green { color: #4ade80; }
+.bk-cbar { height: 10px; background: var(--line); border-radius: 10px; margin-top: 12px; overflow: hidden; }
+.bk-cfill { height: 100%; background: linear-gradient(90deg, #ef4444, #f59e0b, #eab308, #22c55e); border-radius: 10px; transition: width .6s ease; }
+.bk-crules { font-size: .76rem; color: var(--ink-faint); line-height: 1.9; margin-top: 12px; }
+
+.bk-logs { max-height: 320px; overflow-y: auto; }
+.bk-log { display: flex; justify-content: space-between; gap: 12px; padding: 8px 4px; border-bottom: 1px dashed var(--line); font-size: .84rem; }
+.bk-log:last-child { border-bottom: none; }
+.bk-ld { color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; }
+.bk-la { font-weight: 800; white-space: nowrap; }
+.bk-la.in { color: #16a34a; }
+.bk-la.out { color: #e11d48; }
+html.dark .bk-la.in { color: #4ade80; }
+html.dark .bk-la.out { color: #fb7185; }
+
+.bk-toast {
     position: fixed; top: 84px; left: 50%; transform: translateX(-50%) translateY(-8px);
     background: #0f172a; color: #fff; border-radius: 999px;
     padding: 12px 26px; font-size: .92rem; font-weight: 600;
-    box-shadow: 0 12px 30px rgba(0,0,0,.28); z-index: 9600;
+    box-shadow: 0 12px 30px rgba(0,0,0,.28); z-index: 9998;
     opacity: 0; pointer-events: none; transition: all .3s ease;
     max-width: 92vw; text-align: center; letter-spacing: .3px;
 }
-.pk-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.pk-toast.err { background: #dc2626; }
-html.dark .pk-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2); }
-html.dark .pk-toast.err { background: #991b1b; }
+.bk-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.bk-toast.err { background: #dc2626; }
+html.dark .bk-toast { background: #1e293b; border: 1px solid rgba(148,163,184,.2); }
+html.dark .bk-toast.err { background: #991b1b; }
 
-/* 弹窗(提示/出售/改色) */
-.pk-ov {
-    display: none; position: fixed; inset: 0; z-index: 10000;
-    background: rgba(10,15,28,.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    justify-content: center; align-items: center; padding: 22px;
+
+/* ==================== 抽奖记录 页面样式 ==================== */
+.lr-wrap { max-width: 860px; margin: 0 auto; padding: 46px 24px 80px; }
+@media (max-width: 760px) { .lr-wrap { padding: 26px 12px 60px; } }
+.lr-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    flex-wrap: wrap; margin: 0 0 22px; padding: 16px 20px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
 }
-.pk-ov.show { display: flex; }
-.pk-box {
-    background: var(--card); border-radius: 22px; padding: 26px 28px;
-    width: min(440px, 94vw); box-shadow: var(--shadow-2); border: 1px solid var(--line);
-    text-align: center; max-height: 86vh; overflow-y: auto;
-    animation: pkPop .28s cubic-bezier(.16,1,.3,1) both;
+.lr-tb-title { font-size: 1.12rem; font-weight: 800; letter-spacing: 1px; }
+.lr-tb-sub { font-size: .8rem; color: var(--ink-faint); margin-top: 3px; }
+.lr-tb-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lr-go {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff;
+    border-radius: 999px; padding: 8px 18px; font-size: .85rem; font-weight: 700;
+    box-shadow: 0 8px 20px -8px rgba(245,158,11,.5); transition: all .22s ease;
 }
-@keyframes pkPop { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
-.pk-box h3 { font-size: 1.1rem; font-weight: 800; letter-spacing: .5px; margin-bottom: 14px; }
-.pk-msg { font-size: .92rem; line-height: 1.9; color: var(--ink-soft); margin: 8px 0 4px; white-space: pre-wrap; }
-.pk-sub { font-size: .84rem; color: var(--ink-faint); margin: 8px 0 2px; line-height: 1.8; }
-.pk-qty-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 14px 0; }
-.pk-qbtn {
-    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-    border-radius: 50%; width: 38px; height: 38px; cursor: pointer; font-size: 1.2rem; line-height: 1;
-    transition: background .2s ease;
+.lr-go:hover { transform: translateY(-1px); color: #fff; }
+.lr-refresh {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
+    padding: 8px 18px; border-radius: 999px; cursor: pointer;
+    font-size: .85rem; font-weight: 700; transition: all .25s ease;
 }
-.pk-qbtn:hover { background: var(--line); }
-.pk-qty-num { font-size: 1.5rem; font-weight: 900; color: var(--brand); min-width: 46px; text-align: center; }
-.pk-total { color: #d97706; font-weight: 900; font-size: 1.02rem; }
-html.dark .pk-total { color: #fbbf24; }
-.pk-btns { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
-.pk-mbtn {
-    border: none; border-radius: 999px; padding: 9px 26px; cursor: pointer; font-family: inherit;
-    font-size: .92rem; font-weight: 700; letter-spacing: 1px;
+.lr-refresh:hover { border-color: var(--brand); color: var(--brand); transform: translateY(-1px); }
+.lr-refresh.spin { animation: lrSpin .6s linear; }
+@keyframes lrSpin { to { transform: rotate(360deg); } }
+
+.lr-state { text-align: center; padding: 70px 20px; color: var(--ink-faint); }
+.lr-state .lr-st-ico { font-size: 3rem; margin-bottom: 16px; }
+.lr-state h3 { color: var(--ink); font-size: 1.2rem; margin-bottom: 10px; letter-spacing: 1px; }
+.lr-state p { font-size: .92rem; line-height: 2; margin-bottom: 24px; }
+.lr-st-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.lr-st-btn { display: inline-block; padding: 11px 30px; border-radius: 999px; font-size: .92rem; font-weight: 700; letter-spacing: 1px; }
+.lr-st-btn.login { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; box-shadow: 0 10px 24px -10px rgba(59,130,246,.6); }
+.lr-st-btn.ghost { background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); }
+.lr-dot { animation: lrDot 1.2s infinite both; }
+.lr-dot:nth-child(2) { animation-delay: .15s; }
+.lr-dot:nth-child(3) { animation-delay: .3s; }
+@keyframes lrDot { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
+
+.lr-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+@media (max-width: 860px) { .lr-stats { grid-template-columns: repeat(2, 1fr); } }
+.lr-stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-1); padding: 18px 10px; text-align: center;
+    transition: transform .25s ease, box-shadow .25s ease;
 }
-.pk-mbtn.primary { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; box-shadow: 0 8px 20px -8px rgba(59,130,246,.55); }
-.pk-mbtn.warn { background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff; }
-.pk-mbtn.gray { background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); }
-.pk-color-options { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
-.pk-color-opt {
-    width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
-    border: 3px solid transparent; display: flex; align-items: center; justify-content: center;
-    font-size: 1.15rem; transition: transform .15s ease;
+.lr-stat:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); }
+.lr-stat b { display: block; font-size: 1.55rem; font-weight: 900; line-height: 1.3; }
+.lr-stat span { display: block; font-size: .76rem; color: var(--ink-faint); margin-top: 5px; letter-spacing: 2px; }
+.lr-stat.times b { color: var(--brand); }
+.lr-stat.wins b { color: #d97706; }
+.lr-stat.total b { color: var(--ink); }
+.lr-stat.net b { font-size: 1.3rem; }
+.lr-stat.net.pos b { color: #16a34a; }
+.lr-stat.net.neg b { color: #e11d48; }
+html.dark .lr-stat.wins b { color: #fbbf24; }
+html.dark .lr-stat.net.pos b { color: #4ade80; }
+html.dark .lr-stat.net.neg b { color: #fb7185; }
+
+.lr-list {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1); overflow: hidden;
 }
-.pk-color-opt:hover { transform: scale(1.08); }
-.pk-color-opt.selected { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(59,130,246,.2); }
-.pk-color-opt.wide { width: auto; border-radius: 999px; padding: 0 14px; min-width: 46px; }
-.pk-free-color { width: 60px; height: 40px; border: none; background: none; cursor: pointer; vertical-align: middle; }
+.lr-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 13px 18px; border-bottom: 1px dashed var(--line); font-size: .92rem; flex-wrap: wrap;
+    animation: lrRow .35s ease both;
+}
+@keyframes lrRow { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+.lr-row:last-child { border-bottom: none; }
+.lr-result { font-weight: 800; letter-spacing: .5px; }
+.lr-result.win { color: #d97706; }
+.lr-result.none { color: var(--ink-faint); }
+html.dark .lr-result.win { color: #fbbf24; }
+.lr-amount { font-weight: 900; }
+.lr-amount.win { color: #16a34a; }
+.lr-amount.zero { color: var(--ink-faint); }
+html.dark .lr-amount.win { color: #4ade80; }
+.lr-time { color: var(--ink-faint); font-size: .78rem; margin-left: auto; }
+.lr-empty { text-align: center; color: var(--ink-faint); padding: 46px 20px; font-size: .95rem; line-height: 2; }
 
 
 
@@ -878,41 +969,59 @@ html { -webkit-text-size-adjust: 100%; }
 }
 .md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
 .md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
-
-/* ===== RGB 自定义调色 ===== */
-.pk-rgb { margin: 16px 0 4px; padding: 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); }
-.pk-rgb-head { display: flex; align-items: center; justify-content: space-between; font-size: .82rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 12px; }
-.pk-rgb-hex {
-    width: 96px; padding: 5px 9px; border-radius: 9px; text-align: center;
-    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .82rem;
-    font-weight: 800; letter-spacing: .5px; color: var(--brand);
-    border: 1px solid var(--line); background: var(--card);
+/* ══════ 天气瞎报（本页专用）══════ */
+.wx-main { max-width: 1180px; margin: 0 auto; padding: 0 20px 60px; }
+.wx-tickbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--card, #fff); border: 1px solid var(--line, #e8eaee);
+    border-radius: 16px; padding: 14px 18px; margin-bottom: 22px;
+    box-shadow: var(--shadow-1); color: var(--ink-soft, #5a6270);
 }
-.pk-rgb-hex:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(59,130,246,.14); outline: none; }
-.pk-rgb-hex::placeholder { color: var(--ink-faint); font-weight: 600; }
-.pk-rgb-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.pk-rgb-row > label { width: 16px; font-size: .8rem; font-weight: 800; color: var(--ink-faint); text-align: center; }
-.pk-rgb-row input[type="range"] {
-    flex: 1; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px;
-    background: linear-gradient(90deg, #000, #fff); outline: none; cursor: pointer;
+.wx-tb-txt { font-size: .84rem; white-space: nowrap; }
+.wx-tb-bar { flex: 1; min-width: 140px; height: 6px; border-radius: 99px;
+             background: rgba(148,163,184,.2); overflow: hidden; }
+.wx-tb-bar i { display: block; height: 100%; width: 0%;
+               background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+               border-radius: 99px; transition: width .25s linear; }
+#refreshNow {
+    background: var(--nav-btn-bg, #3b82f6); color: #fff; border: none;
+    border-radius: 30px; padding: 7px 16px; font-size: .84rem; cursor: pointer;
+    transition: .2s;
 }
-.pk-rgb-row input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
-    background: #fff; border: 2px solid var(--brand); box-shadow: 0 2px 6px rgba(0,0,0,.25); cursor: pointer;
+#refreshNow:hover { opacity: .88; }
+.wx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 16px; }
+.wx-card {
+    background: var(--card, #fff); border: 1px solid var(--line, #e8eaee);
+    border-radius: 20px; padding: 18px; position: relative; overflow: hidden;
+    box-shadow: var(--shadow-1);
 }
-.pk-rgb-row input[type="range"]::-moz-range-thumb {
-    width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); cursor: pointer;
+.wx-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+                   background: var(--tc, #6b7280); transition: background .5s; }
+.wx-head { display: flex; align-items: baseline; gap: 8px; }
+.wx-head .ico { font-size: 1.1rem; }
+.wx-head .nm { font-weight: 700; font-size: 1.05rem; color: var(--ink, #1a1d23); }
+.wx-note-in { font-size: .76rem; color: var(--ink-faint, #8b93a3); margin: 4px 0 12px; line-height: 1.6; }
+.wx-temp { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 14px; }
+.wx-temp .c { font-size: 2.4rem; font-weight: 800; line-height: 1;
+              color: var(--brand, #3b82f6); }
+.wx-temp .unit { font-size: 1rem; font-weight: 600; color: var(--brand, #3b82f6); margin-bottom: 4px; }
+.wx-temp .f { font-size: .85rem; color: var(--ink-faint, #8b93a3); margin-bottom: 5px; }
+.wx-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.wx-row { font-size: .82rem; display: flex; justify-content: space-between; gap: 6px; }
+.wx-row .k { color: var(--ink-faint, #8b93a3); white-space: nowrap; }
+.wx-row .v { font-weight: 600; color: var(--ink, #1a1d23); text-align: right; }
+.wx-aq-good  { color: #16a34a !important; }
+.wx-aq-mid   { color: #ca8a04 !important; }
+.wx-aq-bad   { color: #ea580c !important; }
+.wx-aq-worse { color: #dc2626 !important; }
+.wx-aq-awful { color: #7e22ce !important; }
+.wx-note { text-align: center; margin-top: 26px; font-size: .82rem;
+           color: var(--ink-faint, #8b93a3); line-height: 2; }
+@media (max-width: 560px) {
+    .wx-grid { grid-template-columns: 1fr; }
+    .wx-temp .c { font-size: 2rem; }
 }
-.pk-rgb-row.r input[type="range"] { background: linear-gradient(90deg, #000, #f00); }
-.pk-rgb-row.g input[type="range"] { background: linear-gradient(90deg, #000, #0f0); }
-.pk-rgb-row.b input[type="range"] { background: linear-gradient(90deg, #000, #00f); }
-.pk-rgb-num {
-    width: 58px; padding: 6px 8px; border-radius: 9px; text-align: center; font-family: inherit;
-    font-size: .82rem; font-weight: 700; border: 1px solid var(--line); background: var(--card); color: var(--ink);
-}
-.pk-rgb-preview { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: .78rem; color: var(--ink-faint); }
-.pk-rgb-preview i { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); display: inline-block; }
-.pk-rgb-tip { font-size: .74rem; color: var(--ink-faint); line-height: 1.7; margin-top: 10px; }
+</style>
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -927,8 +1036,6 @@ html { -webkit-text-size-adjust: 100%; }
 <script src="../js/theme.js?v=9"></script>
 </head>
 <body>
-
-<!-- 导航 -->
 <nav class="nav">
     <a class="nav-logo" href="index-Beta.html"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"></a>
     <div class="nav-menu">
@@ -1035,59 +1142,48 @@ html { -webkit-text-size-adjust: 100%; }
 })();
 </script>
 
-
 <!-- Hero -->
 <!-- Hero -->
 <header class="vhero">
     <div class="vhero-inner">
         <div class="hero-copy">
-            <span class="hero-eyebrow">BACKPACK · 我的道具柜</span>
-            <h1>我的<span class="light">背包</span></h1>
-            <p class="vhero-sub">从商店淘来的道具都在这里——使用、更换颜色、续期、出售回收,生效中的道具一眼看清</p>
+            <span class="hero-eyebrow">WEATHER · 天气瞎报</span>
+            <h1>天气<span class="light">瞎报</span></h1>
+            <p class="vhero-sub">十二座虚拟城市的实时气象——按真实季节走，每 10 秒变一次。全是编的，别当真</p>
             <div class="vhero-actions">
-                <a class="hero-link" href="#content">查看背包 ↓</a>
-                <a class="hero-link" href="shop-Beta.html">去商店 ↗</a>
+                <a class="hero-link" href="#wxGrid">看天气 ↓</a>
+                <a class="hero-link" href="weather.html">网页版 ↗</a>
             </div>
         </div>
         <div class="pd-stats">
-            <div class="pd-row"><span class="k">状态分区</span><b>生效中 · 待使用</b></div>
-            <div class="pd-row"><span class="k">回收价格</span><b>购买价 80%</b></div>
-            <div class="pd-row"><span class="k">样式道具</span><b>随时更换颜色</b></div>
-            <div class="pd-row"><span class="k">规则</span><b>使用中的道具不可出售</b></div>
-            <div class="pd-tip">待使用道具可回收 · 计时道具购买即生效</div>
+            <div class="pd-row"><span class="k">城市数</span><b>12 座</b></div>
+            <div class="pd-row"><span class="k">刷新频率</span><b>每 10 秒</b></div>
+            <div class="pd-row"><span class="k">数据项</span><b>温度 / 湿度 / 气压 / 能见度 / 空气 / 风</b></div>
+            <div class="pd-row"><span class="k">季节</span><b id="wxSeason">…</b></div>
+            <div class="pd-tip">数据由随机数生成，与真实天气无关</div>
         </div>
     </div>
     <div class="vhero-fade"></div>
 </header>
-
-<!-- 全站公告(与首页一致;admin_config key=announcement) -->
+<!-- 全站公告(与全站一致;admin_config key=announcement) -->
 <div class="beta-announce" id="betaAnnounce" style="display:none;">
     <div class="ba-title">公告</div>
     <div class="ba-track-wrap"><div class="ba-track" id="baTrack"></div></div>
 </div>
-
-
-<main class="pk-wrap">
-    <div class="pk-toolbar" id="content">
-        <div>
-            <div class="pk-tb-title">🎒 我的背包</div>
-            <div class="pk-tb-sub" id="pkUserNote">管理你的道具:使用、更换颜色、续期</div>
-        </div>
-        <div class="pk-tb-right">
-            <a class="pk-go-shop" href="shop-Beta.html">🛍️ 去商店</a>
-            <button class="pk-refresh" id="refreshBtn" type="button">↻ 刷新</button>
-        </div>
+<main class="wx-main">
+    <div class="wx-tickbar">
+        <span class="wx-tb-txt">下次刷新</span>
+        <div class="wx-tb-bar"><i id="tickBar"></i></div>
+        <span class="wx-tb-txt" id="tickNum">10.0s</span>
+        <button id="refreshNow" type="button">↻ 立刻刷新</button>
+        <span class="wx-tb-txt" id="clockTxt"></span>
     </div>
-    <div class="pk-hint">💡 正在使用的道具不可出售;待使用(未启用)的道具可按购买价 80% 回收。</div>
-    <div id="pkBody">
-        <div class="pk-state" id="pkLoading">
-            <div class="pk-st-ico">🎒</div>
-            <h3>背包整理中<span class="pk-dot">.</span><span class="pk-dot">.</span><span class="pk-dot">.</span></h3>
-            <p>正在盘点你的道具</p>
-        </div>
-    </div>
+    <div class="wx-grid" id="wxGrid"></div>
+    <p class="wx-note">
+        本页所有气象数据由随机数生成，与任何真实地点、真实天气无关 ·
+        单位：温度 °C / °F · 气压 kPa · 能见度 km
+    </p>
 </main>
-<!-- 页脚 -->
 <footer class="footer">
     <div class="footer-grid">
         <div>
@@ -1096,7 +1192,7 @@ html { -webkit-text-size-adjust: 100%; }
         </div>
         <div>
             <h5>功能</h5>
-            <a href="stock-Beta.html">虚拟股票</a><a href="bank-Beta.html">NB银行</a><a href="comments-Beta.html">评论区</a><a href="shop-Beta.html">NB商店</a><a href="tools-Beta.html">工具</a><a href="titles-Beta.html">称号系统</a><a href="feedback-Beta.html">漏洞/建议反馈</a>
+            <a href="stock-Beta.html">虚拟股票</a><a href="bank-Beta.html">NB银行</a><a href="comments-Beta.html">评论区</a><a href="shop-Beta.html">NB商店</a><a href="tools-Beta.html">工具</a><a href="titles-Beta.html">称号系统</a><a href="weather-Beta.html">天气瞎报</a><a href="feedback-Beta.html">漏洞/建议反馈</a>
         </div>
         <div>
             <h5>友商</h5>
@@ -1117,7 +1213,7 @@ html { -webkit-text-size-adjust: 100%; }
             <a href="mailto:nbchannel@163.com">nbchannel@163.com</a><a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">B站：NB搞事局</a><a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top</a>
         </div>
     </div>
-    <div class="footer-bottom">© 2026 NB频道 · 虚拟公司 · 制作：NB搞事局 · 由 GitHub Pages / Cloudflare / PythonAnywhere 提供支持</div><div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div>
+    <div class="footer-bottom">© 2026 NB频道 · 虚拟公司 · 制作：NB搞事局 · 由 GitHub Pages / Cloudflare / EdgeOne Pages / PythonAnywhere 提供支持</div><div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div>
 </footer>
 
 <!-- 移动端抽屉 -->
@@ -1153,7 +1249,7 @@ html { -webkit-text-size-adjust: 100%; }
 <!-- 回到顶部 -->
 <button class="backtop" id="backTop" aria-label="回到顶部">↑</button>
 
-<div class="pk-toast" id="pkToast"></div>
+
 <script>
     // ===== 入场渐显 =====
     (function () {
@@ -1294,435 +1390,189 @@ html { -webkit-text-size-adjust: 100%; }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // ===== 背包:道具管理(与经典版一致;出售仅限"待使用"道具) =====
-    var supabaseClient = null;
-    try {
-        supabaseClient = supabase.createClient(
-            'https://pbaafgjkwdbwcmsikcmg.supabase.co',
-            'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
-        );
-    } catch (e) { supabaseClient = null; }
+/* ══════════════════════════════════════════════════════════════════
+   天气瞎报 —— 十二座城市的气象生成器（官网模式版）
+   逻辑与网页版 weather.html 完全一致，只是外面套了官网的版式
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+    'use strict';
+    var REFRESH_MS = 10000;
 
-    function getUser() {
-        var stored = localStorage.getItem('nb_user');
-        if (!stored) return null;
-        try { return JSON.parse(stored); } catch (e) { return null; }
-    }
-    function esc(s) {
-        if (s === null || s === undefined) return '';
-        return String(s).replace(/[&<>"']/g, function (m) {
-            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
-        });
-    }
-    function fmtTime(ts) {
-        if (!ts) return '';
-        var d = new Date(ts);
-        function p2(n) { return n < 10 ? '0' + n : String(n); }
-        return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
-    }
-    function remainingDays(expiresAt) {
-        if (!expiresAt) return null;
-        return Math.max(0, Math.ceil((new Date(expiresAt) - new Date()) / 86400000));
-    }
-    var toastTimer = null;
-    function showToast(text, err) {
-        var t = document.getElementById('pkToast');
-        if (!t) { alert(text); return; }
-        t.innerHTML = text;
-        t.classList.toggle('err', !!err);
-        t.classList.add('show');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3800);
-    }
-    function pkModal(html) {
-        var ov = document.createElement('div');
-        ov.className = 'pk-ov';
-        ov.innerHTML = '<div class="pk-box">' + html + '</div>';
-        document.body.appendChild(ov);
-        requestAnimationFrame(function () { ov.classList.add('show'); });
-        function close() { ov.classList.remove('show'); setTimeout(function () { ov.remove(); }, 200); }
-        ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
-        return { el: ov, close: close };
-    }
-    function showMessage(title, msg) {
-        return new Promise(function (resolve) {
-            var m = pkModal('<h3>' + esc(title) + '</h3>' +
-                '<div class="pk-msg">' + esc(msg) + '</div>' +
-                '<div class="pk-btns"><button class="pk-mbtn primary" id="pkMsgOk">确定</button></div>');
-            m.el.querySelector('#pkMsgOk').addEventListener('click', function () { m.close(); resolve(); });
-        });
-    }
+    var CITIES = [
+        { name: 'NB频道总部', ico: '🏢', base: 22, swing: 2,  vol: .4,
+          hum: 45, aqi: 22, vis: 28, note: '恒温机房 · 全年 22°C 上下，最稳的一座城' },
+        { name: 'U星',        ico: '🪐', base: 12, swing: 26, vol: 3.2,
+          hum: 30, aqi: 60, vis: 40, note: '外星球 · 昼夜与四季都极端，一天能过完一年' },
+        { name: 'AWM市',      ico: '🎯', base: 6,  swing: 14, vol: 1.4,
+          hum: 62, aqi: 30, vis: 22, note: '高寒狙击高地 · 风大、干冷、视野极远' },
+        { name: 'Lemon市',    ico: '🍋', base: 20, swing: 9,  vol: 1.0,
+          hum: 58, aqi: 28, vis: 24, note: '柠檬主产区 · 温暖湿润，日照给得很足' },
+        { name: 'Oganesson市',ico: '☢️', base: 34, swing: 8,  vol: 2.6,
+          hum: 22, aqi: 145, vis: 9,  note: '118 号元素城 · 出了名的热，空气也不太敢深呼吸' },
+        { name: 'Fafat市',    ico: '🌫️', base: 17, swing: 11, vol: 1.2,
+          hum: 78, aqi: 52, vis: 12, note: '常年多雾 · 湿气重，能见度是全城最拿不出手的一项' },
+        { name: 'GC3市',      ico: '🏗️', base: 15, swing: 12, vol: 1.1,
+          hum: 52, aqi: 72, vis: 18, note: '工业新城 · 施工多，空气质量起起伏伏' },
+        { name: 'UVS市',      ico: '☀️', base: 25, swing: 10, vol: .9,
+          hum: 34, aqi: 18, vis: 45, note: '紫外线之都 · 晴得离谱，能见度常年全站第一' },
+        { name: 'UWSF市',     ico: '🌬️', base: 13, swing: 15, vol: 1.6,
+          hum: 55, aqi: 26, vis: 30, note: '风城 · 一年刮两次风，一次刮半年' },
+        { name: 'PTC市',      ico: '🔥', base: 27, swing: 7,  vol: 1.3,
+          hum: 40, aqi: 40, vis: 20, note: '正温度系数城 · 自带加热片，冬天也不怎么冷' },
+        { name: '5U市',       ico: '🎈', base: 18, swing: 13, vol: 1.2,
+          hum: 60, aqi: 34, vis: 23, note: '轻盈之城 · 气压常年偏低，云都飘得比别人快' },
+        { name: 'Ubn市',      ico: '🌃', base: 16, swing: 12, vol: 1.0,
+          hum: 64, aqi: 46, vis: 20, note: '夜猫子之都 · 湿度高，晚上比白天舒服' }
+    ];
 
-    function loadBackpack() {
-        var user = getUser();
-        var body = document.getElementById('pkBody');
-        var note = document.getElementById('pkUserNote');
-        if (!user) {
-            note.textContent = '未登录';
-            body.innerHTML = '<div class="pk-state"><div class="pk-st-ico">🔒</div><h3>登录后查看背包</h3>' +
-                '<p>你的商店道具都在这里</p>' +
-                '<div class="pk-st-actions">' +
-                '<a class="pk-st-btn login" href="login-Beta.html?redirect=' + encodeURIComponent(location.href) + '">去登录</a>' +
-                '<a class="pk-st-btn ghost" href="login-Beta.html?register=1&redirect=' + encodeURIComponent(location.href) + '">注册新账号</a>' +
-                '</div></div>';
-            return;
-        }
-        note.textContent = '当前账号: ' + user.username;
-        body.innerHTML = '<div class="pk-state"><div class="pk-st-ico">🎒</div><h3>背包整理中<span class="pk-dot">.</span><span class="pk-dot">.</span><span class="pk-dot">.</span></h3><p>正在盘点你的道具</p></div>';
-        supabaseClient.rpc('get_my_items', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') }).then(function (res) {
-            if (res.error || !res.data || !res.data.success) throw new Error((res.error && res.error.message) || (res.data && res.data.message) || '加载失败');
-            var items = res.data.items || [];
-            // 记录当前生效的样式,打开改色弹窗时用来回显
-            window.__pkCurrent = {};
-            items.forEach(function (it) {
-                if (['comment_color', 'nickname_color', 'chat_bubble', 'particle_fx'].indexOf(it.item_key) === -1) return;
-                if (!it.active) return;
-                var v = it.settings && (it.settings.value || it.settings.color);
-                if (v && !window.__pkCurrent[it.item_key]) window.__pkCurrent[it.item_key] = v;
-            });
-            if (!items.length) {
-                body.innerHTML = '<div class="pk-state"><div class="pk-st-ico">📭</div><h3>背包空空如也</h3>' +
-                    '<p>去商店挑几件喜欢的道具吧</p>' +
-                    '<div class="pk-st-actions"><a class="pk-st-btn login" href="shop-Beta.html">🛍️ 去商店</a></div></div>';
-                return;
-            }
-            // 同种道具合并分组:active(生效中/待使用) / used / expired
-            var groups = {};
-            items.forEach(function (i) {
-                if (!groups[i.item_key]) groups[i.item_key] = { info: i, active: [], used: [], expired: [] };
-                if (i.used) groups[i.item_key].used.push(i);
-                else if (i.expires_at && !i.active) groups[i.item_key].expired.push(i);
-                else groups[i.item_key].active.push(i);
-            });
-            var activeCards = Object.keys(groups).map(function (k) { return cardHtml(groups[k], groups[k].active); }).filter(Boolean).join('');
-            var usedCards = Object.keys(groups).map(function (k) { return cardHtml(groups[k], groups[k].used); }).filter(Boolean).join('');
-            var expiredCards = Object.keys(groups).map(function (k) { return cardHtml(groups[k], groups[k].expired); }).filter(Boolean).join('');
-            var h = '';
-            if (activeCards) h += '<div class="pk-sec-t">🟢 生效中 / 待使用</div><div class="pk-grid">' + activeCards + '</div>';
-            if (usedCards) h += '<div class="pk-sec-t">⚪ 已使用</div><div class="pk-grid">' + usedCards + '</div>';
-            if (expiredCards) h += '<div class="pk-sec-t">🔴 已过期</div><div class="pk-grid">' + expiredCards + '</div>';
-            body.innerHTML = h;
-            bindActions(body, user);
-        }).catch(function (err) {
-            console.error(err);
-            body.innerHTML = '<div class="pk-state"><div class="pk-st-ico">😵</div><h3>加载失败</h3><p>' + esc((err && err.message) || err) + '</p></div>';
-        });
+    var DIRS = ['北', '东北偏北', '东北', '东北偏东', '东', '东南偏东', '东南', '东南偏南',
+                '南', '西南偏南', '西南', '西南偏西', '西', '西北偏西', '西北', '西北偏北'];
+
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+    function seasonFactor(d) {
+        var start = new Date(d.getFullYear(), 0, 0);
+        var doy = Math.floor((d - start) / 86400000);
+        return -Math.cos(2 * Math.PI * (doy - 15) / 365.25);
+    }
+    function seasonName(sf) {
+        if (sf > .55) return '盛夏';
+        if (sf > .15) return '夏末初秋';
+        if (sf > -.15) return '春秋之交';
+        if (sf > -.55) return '深秋初冬';
+        return '隆冬';
+    }
+    function aqiLevel(a) {
+        if (a <= 50)  return { t: '优',       c: 'wx-aq-good'  };
+        if (a <= 100) return { t: '良',       c: 'wx-aq-mid'   };
+        if (a <= 150) return { t: '轻度污染',  c: 'wx-aq-bad'   };
+        if (a <= 200) return { t: '中度污染',  c: 'wx-aq-worse' };
+        return              { t: '重度污染',  c: 'wx-aq-awful' };
+    }
+    function tempColor(c) {
+        if (c <= -10) return '#3b82f6';
+        if (c <= 0)   return '#0ea5e9';
+        if (c <= 10)  return '#14b8a6';
+        if (c <= 20)  return '#22c55e';
+        if (c <= 28)  return '#f59e0b';
+        if (c <= 35)  return '#f97316';
+        return '#dc2626';
     }
 
-    function cardHtml(group, list) {
-        if (!list.length) return '';
-        var i = list[0];
-        var count = list.length;
-        var isUsed = list.every(function (x) { return x.used; });
-        var isExpired = !isUsed && list.every(function (x) { return !x.active && x.expires_at; });
-        var status = '', cls = '', actions = '';
-        if (isUsed) { status = '已使用 ×' + count; cls = 'used'; }
-        else if (isExpired) { status = '已过期 ×' + count; cls = 'expired'; }
-        else {
-            var firstActive = list.find(function (x) { return x.active; });
-            if (firstActive && firstActive.expires_at) {
-                status = '生效中 · 剩余 ' + remainingDays(firstActive.expires_at) + ' 天';
-                cls = 'live';
-            } else {
-                status = '待使用 ×' + count;
-                cls = 'live';
-            }
-            // 改色类(选一条生效中的)
-            if (['comment_color', 'nickname_color', 'chat_bubble', 'particle_fx'].indexOf(i.item_key) !== -1) {
-                var a1 = list.find(function (x) { return x.active; });
-                if (a1) actions += '<button type="button" class="pk-act" data-act="color" data-id="' + a1.id + '" data-key="' + i.item_key + '">🎨 更换样式</button>';
-            }
-            // 一次性道具使用
-            if (i.duration_days === null && !isUsed && i.item_key !== 'checkin_fix') {
-                var a2 = list.find(function (x) { return x.active; });
-                if (a2) actions += '<button type="button" class="pk-act" data-act="use" data-id="' + a2.id + '" data-key="' + i.item_key + '" data-name="' + esc(i.name) + '">⚡ 使用</button>';
-            }
-            if (i.item_key === 'checkin_fix' && !isUsed) {
-                var a3 = list.find(function (x) { return x.active; });
-                if (a3) actions += '<button type="button" class="pk-act" data-act="checkin" data-id="' + a3.id + '">📝 去补签</button>';
-            }
-            // 出售:仅"待使用"道具(未启用、无到期);正在使用的不可卖
-            var sellable = list.filter(function (x) { return x.active && !x.expires_at; });
-            if (sellable.length > 0) {
-                actions += '<button type="button" class="pk-act ghost" data-act="sell" data-key="' + i.item_key + '" data-name="' + esc(i.name) + '">💰 出售</button>';
-            }
-        }
-        var meta = i.expires_at
-            ? '到期:' + fmtTime(i.expires_at) + (count > 1 ? '(最早)' : '')
-            : '永久有效(一次性道具)';
-        return '<div class="pk-card">' +
-            '<span class="pk-count">×' + count + '</span>' +
-            '<div class="pk-ico">' + (i.icon || '📦') + '</div>' +
-            '<div class="pk-name">' + esc(i.name) + '</div>' +
-            '<div class="pk-meta">' + meta + '</div>' +
-            '<div class="pk-st ' + cls + '">' + status + '</div>' +
-            (actions ? '<div class="pk-actions">' + actions + '</div>' : '') +
-            '</div>';
-    }
-
-    function bindActions(body, user) {
-        body.querySelectorAll('[data-act]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var act = btn.dataset.act;
-                var id = btn.dataset.id;
-                if (act === 'use') {
-                    supabaseClient.rpc('use_shop_item', { p_user_id: user.id, p_item_id: parseInt(id, 10) , p_session: localStorage.getItem('nb_session') })
-                        .then(function (res) {
-                            var fail = res.error || !res.data || !res.data.success;
-                            var msg = (res.error && res.error.message) || (res.data && res.data.message) || '已使用';
-                            if (fail) return showMessage('使用失败', msg).then(function () { loadBackpack(); });
-                            showToast('✅ ' + msg);
-                            loadBackpack();
-                        })
-                        .catch(function (e) { showToast('❌ ' + (e.message || e), true); });
-                } else if (act === 'color') {
-                    openColorModal(btn.dataset.key, parseInt(id, 10), user);
-                } else if (act === 'checkin') {
-                    showMessage('提示', '补签功能将在签到页面开放');
-                } else if (act === 'sell') {
-                    openSellModal(btn.dataset.key, btn.dataset.name, user);
-                }
-            });
-        });
-    }
-
-    // ===== 出售弹窗(仅统计"待使用"数量;正在使用的不回收) =====
-    function openSellModal(itemKey, itemName, user) {
-        supabaseClient.rpc('get_my_items', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') }).then(function (res) {
-            if (res.error || !res.data || !res.data.success) return;
-            var sellable = (res.data.items || []).filter(function (i) { return i.item_key === itemKey && i.active && !i.expires_at; });
-            var count = sellable.length;
-            if (!count) { showMessage('提示', '没有可出售的道具(正在使用中的不可出售)'); return; }
-            return supabaseClient.from('shop_items').select('price').eq('key', itemKey).maybeSingle().then(function (si) {
-                var unit = si.data ? Math.floor((Number(si.data.price) || 0) * 0.8) : 0;
-                return { count: count, unit: unit };
-            });
-        }).then(function (info) {
-            if (!info) return;
-            var qty = 1;
-            var m = pkModal(
-                '<h3>💰 出售「' + esc(itemName) + '」</h3>' +
-                '<div class="pk-sub">待使用道具 ' + info.count + ' 个 · 单价回收 ' + info.unit + ' NB币(购买价80%)</div>' +
-                '<div class="pk-qty-row">' +
-                '<button type="button" class="pk-qbtn" id="pkSellMinus">−</button>' +
-                '<span class="pk-qty-num" id="pkSellQty">1</span>' +
-                '<button type="button" class="pk-qbtn" id="pkSellPlus">+</button>' +
-                '</div>' +
-                '<div class="pk-total" id="pkSellTotal">' + info.unit + ' NB币</div>' +
-                '<div class="pk-btns">' +
-                '<button type="button" class="pk-mbtn gray" id="pkSellNo">取消</button>' +
-                '<button type="button" class="pk-mbtn warn" id="pkSellYes">确认出售</button>' +
-                '</div>');
-            var qtyEl = m.el.querySelector('#pkSellQty');
-            var totalEl = m.el.querySelector('#pkSellTotal');
-            var update = function () {
-                qtyEl.innerText = qty;
-                totalEl.innerText = (info.unit * qty) + ' NB币';
-            };
-            m.el.querySelector('#pkSellMinus').addEventListener('click', function () { qty = Math.max(1, qty - 1); update(); });
-            m.el.querySelector('#pkSellPlus').addEventListener('click', function () { qty = Math.min(info.count, qty + 1); update(); });
-            m.el.querySelector('#pkSellNo').addEventListener('click', function () { m.close(); });
-            m.el.querySelector('#pkSellYes').addEventListener('click', function () {
-                m.close();
-                supabaseClient.rpc('sell_shop_item', { p_user_id: user.id, p_item_key: itemKey, p_quantity: qty , p_session: localStorage.getItem('nb_session') })
-                    .then(function (res) {
-                        var fail = res.error || !res.data || !res.data.success;
-                        var msg = (res.error && res.error.message) || (res.data && res.data.message) || ('已出售 ' + qty + ' 件');
-                        if (fail) return showMessage('出售失败', msg).then(function () { loadBackpack(); });
-                        showToast('✅ ' + msg);
-                        loadBackpack();
-                    })
-                    .catch(function (e) { showToast('❌ ' + (e.message || e), true); });
-            });
-        }).catch(function (e) { showToast('❌ ' + (e.message || e), true); });
-    }
-
-    // ===== 改色弹窗(支持 RGB 自定义) =====
-    var COLOR_PRESETS = {
-        comment_color: { label: '评论文字颜色', color: true,  options: ['#e74c3c', '#ff9800', '#f5a623', '#4caf50', '#00a1d6', '#7c4dff', '#ff6b9d', '#795548'] },
-        nickname_color: { label: '昵称颜色', color: true,  options: ['#e74c3c', '#f5a623', '#00a1d6', '#7c4dff', 'rainbow'] },
-        chat_bubble: { label: '气泡颜色', color: true,  options: ['#00a1d6', '#ff6b9d', '#4caf50', '#7c4dff', 'rainbow'] },
-        particle_fx: { label: '粒子特效', color: false, options: ['fire', 'lightning', 'bubble', 'star'] }
-    };
-    var COLOR_LABELS = {
-        '#e74c3c': '❤️ 红', '#ff9800': '🧡 橙', '#f5a623': '💛 金', '#4caf50': '💚 绿',
-        '#00a1d6': '💙 蓝', '#7c4dff': '💜 紫', '#ff6b9d': '💗 粉', '#795548': '🤎 棕',
-        rainbow: '🌈 彩虹', fire: '🔥 火焰', lightning: '⚡ 闪电', bubble: '🫧 气泡', star: '✨ 星光',
-        default: '🌙 默认', aurora: '🌌 极光', night: '🌃 夜晚', cherry: '🌸 樱花'
-    };
-    var SPECIAL_VALS = ['rainbow', 'fire', 'lightning', 'bubble', 'star', 'aurora', 'night', 'cherry', 'default'];
-    function isSpecialVal(c) { return SPECIAL_VALS.indexOf(c) !== -1; }
-    function hexToRgb(hex) {
-        var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex || ''));
-        if (!m) return null;
-        return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
-    }
-    function rgbToHex(r, g, b) {
-        var h = function (n) { var v = Math.max(0, Math.min(255, parseInt(n, 10) || 0)).toString(16); return v.length < 2 ? '0' + v : v; };
-        return '#' + h(r) + h(g) + h(b);
-    }
-
-    function openColorModal(itemKey, itemId, user) {
-        var cfg = COLOR_PRESETS[itemKey];
-        if (!cfg) return;
-        var cur = (window.__pkCurrent && window.__pkCurrent[itemKey]) || null;  // 已保存的值,用于回显
-
-        // 预设/特殊样式按钮
-        var opts = cfg.options.map(function (c) {
-            var bg = isSpecialVal(c) ? 'linear-gradient(135deg,#ff6b9d,#7c4dff)' : c;
-            var lbl = COLOR_LABELS[c] || '';
-            return isSpecialVal(c)
-                ? '<div class="pk-color-opt wide" data-val="' + c + '" style="background:' + bg + ';">' + lbl + '</div>'
-                : '<div class="pk-color-opt" data-val="' + c + '" style="background:' + bg + '" title="' + c + '"></div>';
-        }).join('');
-
-        var rgbPanel = '';
-        if (cfg.color) {
-            var init = (cur && !isSpecialVal(cur) && hexToRgb(cur)) ? hexToRgb(cur) : { r: 59, g: 130, b: 246 };
-            rgbPanel =
-                '<div class="pk-rgb">' +
-                  '<div class="pk-rgb-head"><span>🎚️ 自定义 RGB</span><input type="text" class="pk-rgb-hex" id="pkRgbHex" maxlength="7" spellcheck="false" autocomplete="off" placeholder="#3b82f6"></div>' +
-                  '<div class="pk-rgb-row r"><label>R</label><input type="range" id="pkR" min="0" max="255" value="' + init.r + '"><input type="number" class="pk-rgb-num" id="pkRn" min="0" max="255" value="' + init.r + '"></div>' +
-                  '<div class="pk-rgb-row g"><label>G</label><input type="range" id="pkG" min="0" max="255" value="' + init.g + '"><input type="number" class="pk-rgb-num" id="pkGn" min="0" max="255" value="' + init.g + '"></div>' +
-                  '<div class="pk-rgb-row b"><label>B</label><input type="range" id="pkB" min="0" max="255" value="' + init.b + '"><input type="number" class="pk-rgb-num" id="pkBn" min="0" max="255" value="' + init.b + '"></div>' +
-                  '<div class="pk-rgb-preview"><i id="pkRgbSwatch" style="background:' + rgbToHex(init.r, init.g, init.b) + ';"></i><span>拖滑块,或直接在上面填 16 进制(如 #ff0080)</span></div>' +
-                  '<div class="pk-rgb-tip">16 进制支持 3 位缩写(#f0a = #ff00aa);调好后点「确定」保存,上面的色块是常用色快捷填充。</div>' +
-                '</div>';
-        }
-
-        var m = pkModal('<h3>🎨 ' + cfg.label + '</h3>' +
-            '<div class="pk-color-options">' + opts + '</div>' + rgbPanel +
-            '<div class="pk-btns">' +
-            '<button type="button" class="pk-mbtn gray" id="pkColorNo">取消</button>' +
-            '<button type="button" class="pk-mbtn primary" id="pkColorYes">确定</button>' +
-            '</div>');
-
-        var selected = null;
-
-        function readRgb() {
-            return {
-                r: parseInt(m.el.querySelector('#pkRn').value, 10) || 0,
-                g: parseInt(m.el.querySelector('#pkGn').value, 10) || 0,
-                b: parseInt(m.el.querySelector('#pkBn').value, 10) || 0
-            };
-        }
-        function syncFromSliders() {
-            if (!cfg.color) return;
-            var v = readRgb();
-            var hex = rgbToHex(v.r, v.g, v.b);
-            m.el.querySelector('#pkR').value = v.r; m.el.querySelector('#pkRn').value = v.r;
-            m.el.querySelector('#pkG').value = v.g; m.el.querySelector('#pkGn').value = v.g;
-            m.el.querySelector('#pkB').value = v.b; m.el.querySelector('#pkBn').value = v.b;
-            m.el.querySelector('#pkRgbHex').value = hex;
-            m.el.querySelector('#pkRgbSwatch').style.background = hex;
-        }
-        // 直接输 16 进制(支持 #f00 / f00 / #ff0000 / ff0000)
-        function applyHexInput(raw, strict) {
-            var t = String(raw || '').trim().replace(/^#/, '');
-            if (/^[0-9a-fA-F]{3}$/.test(t)) {
-                t = t[0] + t[0] + t[1] + t[1] + t[2] + t[2];
-            }
-            if (!/^[0-9a-fA-F]{6}$/.test(t)) return false;
-            var v = hexToRgb(t);
-            if (!v) return false;
-            m.el.querySelector('#pkRn').value = v.r;
-            m.el.querySelector('#pkGn').value = v.g;
-            m.el.querySelector('#pkBn').value = v.b;
-            if (strict) clearPreset();
-            syncFromSliders();
-            return true;
-        }
-        function clearPreset() {
-            m.el.querySelectorAll('.pk-color-opt').forEach(function (o) { o.classList.remove('selected'); });
-            selected = null;
-        }
-        function applyColor(hex) { applyHexInput(hex, false); }
-
-        // 预设 / 特殊样式
-        m.el.querySelectorAll('.pk-color-opt').forEach(function (opt) {
-            opt.addEventListener('click', function () {
-                m.el.querySelectorAll('.pk-color-opt').forEach(function (o) { o.classList.remove('selected'); });
-                opt.classList.add('selected');
-                var val = opt.dataset.val;
-                if (isSpecialVal(val)) {
-                    selected = val;
-                } else {
-                    selected = null;
-                    applyColor(val);   // 把预设色灌进 RGB 滑块,还能继续微调
-                }
-            });
-        });
-
-        // RGB 三联
-        if (cfg.color) {
-            [['#pkR', '#pkRn'], ['#pkG', '#pkGn'], ['#pkB', '#pkBn']].forEach(function (pair) {
-                var slider = m.el.querySelector(pair[0]), num = m.el.querySelector(pair[1]);
-                slider.addEventListener('input', function () { num.value = slider.value; clearPreset(); syncFromSliders(); });
-                num.addEventListener('input', function () {
-                    var v = parseInt(num.value, 10);
-                    if (isNaN(v)) return;
-                    v = Math.max(0, Math.min(255, v));
-                    slider.value = v;
-                    clearPreset(); syncFromSliders();
-                });
-                num.addEventListener('blur', function () {
-                    var v = Math.max(0, Math.min(255, parseInt(num.value, 10) || 0));
-                    num.value = v; syncFromSliders();
-                });
-            });
-            // 直接输 16 进制
-            var hexInput = m.el.querySelector('#pkRgbHex');
-            hexInput.addEventListener('input', function () { applyHexInput(hexInput.value, true); });
-            hexInput.addEventListener('blur', function () {
-                var v = readRgb();
-                hexInput.value = rgbToHex(v.r, v.g, v.b);   // 没输完/非法就还原成当前颜色
-            });
-            hexInput.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') { e.preventDefault(); applyHexInput(hexInput.value, true); hexInput.blur(); }
-            });
-            // 回显当前已保存的颜色
-            if (cur && !isSpecialVal(cur)) applyColor(cur);
-            else syncFromSliders();
-        }
-        // 回显当前特殊样式
-        if (cur && isSpecialVal(cur)) {
-            var curOpt = m.el.querySelector('.pk-color-opt[data-val="' + cur + '"]');
-            if (curOpt) { curOpt.classList.add('selected'); selected = cur; }
-        }
-
-        m.el.querySelector('#pkColorNo').addEventListener('click', function () { m.close(); });
-        m.el.querySelector('#pkColorYes').addEventListener('click', function () {
-            var val = selected;
-            if (!val) {
-                if (cfg.color) {
-                    var v = readRgb();
-                    val = rgbToHex(v.r, v.g, v.b);
-                } else {
-                    showMessage('提示', '请先选择一个样式');
-                    return;
-                }
-            }
-            m.close();
-            supabaseClient.rpc('set_item_settings', { p_user_id: user.id, p_item_id: itemId, p_settings: { value: val } , p_session: localStorage.getItem('nb_session') })
-                .then(function (res) {
-                    var fail = res.error || !res.data || !res.data.success;
-                    var msg = (res.error && res.error.message) || (res.data && res.data.message) || '样式已保存';
-                    if (fail) return showMessage('保存失败', msg).then(function () { loadBackpack(); });
-                    showToast('✅ ' + msg);
-                    loadBackpack();
-                })
-                .catch(function (e) { showToast('❌ ' + (e.message || e), true); });
-        });
-    }
-
-    document.getElementById('refreshBtn').addEventListener('click', function () {
-        var btn = document.getElementById('refreshBtn');
-        btn.classList.remove('spin');
-        void btn.offsetWidth;
-        btn.classList.add('spin');
-        loadBackpack();
+    var state = CITIES.map(function (c) {
+        return {
+            temp: c.base + c.swing * seasonFactor(new Date()),
+            aqi: c.aqi, hum: c.hum, vis: c.vis,
+            dir: Math.floor(Math.random() * 16),
+            force: rnd(1, 4), pres: 101.3
+        };
     });
-    loadBackpack();
+
+    function step(d) {
+        var sf = seasonFactor(d);
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+            var target = c.base + c.swing * sf;
+            s.temp += (target - s.temp) * .35 + rnd(-c.vol, c.vol);
+            s.temp = clamp(s.temp, -55, 60);
+
+            var humTarget = c.hum - (s.temp - c.base) * 1.1;
+            s.hum += (humTarget - s.hum) * .3 + rnd(-3, 3);
+            s.hum = clamp(s.hum, 5, 100);
+
+            var aqiTarget = c.aqi + (s.hum - 50) * .35 + (4 - s.force) * 5;
+            s.aqi += (aqiTarget - s.aqi) * .25 + rnd(-7, 7);
+            s.aqi = clamp(s.aqi, 8, 320);
+
+            var presTarget = 101.3 - (s.temp - 15) * .085;
+            s.pres += (presTarget - s.pres) * .3 + rnd(-.35, .35);
+            s.pres = clamp(s.pres, 87, 108);
+
+            var visTarget = c.vis * (1 - (s.hum - 55) / 190) - s.aqi / 45;
+            s.vis += (visTarget - s.vis) * .3 + rnd(-1.2, 1.2);
+            s.vis = clamp(s.vis, .2, 60);
+
+            s.dir = (s.dir + (Math.random() < .3 ? (Math.random() < .5 ? 1 : 15) : 0)) % 16;
+            s.force += rnd(-.45, .45);
+            s.force = clamp(s.force, .2, 12);
+        });
+    }
+
+    function windName(f) {
+        if (f < .3) return { t: '无风', lv: 0 };
+        if (f < 1.6) return { t: '软风', lv: 1 };
+        if (f < 3.4) return { t: '轻风', lv: 2 };
+        if (f < 5.5) return { t: '微风', lv: 3 };
+        if (f < 8.0) return { t: '和风', lv: 4 };
+        if (f < 10.8) return { t: '清风', lv: 5 };
+        if (f < 13.9) return { t: '强风', lv: 6 };
+        return { t: '疾风', lv: 7 };
+    }
+
+    var grid = document.getElementById('wxGrid');
+    var bar = document.getElementById('tickBar');
+    var num = document.getElementById('tickNum');
+    var clock = document.getElementById('clockTxt');
+
+    function render() {
+        var html = '';
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+            var cT = s.temp, fT = cT * 9 / 5 + 32;
+            var lv = aqiLevel(Math.round(s.aqi));
+            var w = windName(s.force);
+            html +=
+              '<div class="wx-card" style="--tc:' + tempColor(cT) + '">' +
+                '<div class="wx-head"><span class="ico">' + c.ico + '</span>' +
+                  '<span class="nm">' + c.name + '</span></div>' +
+                '<div class="wx-note-in">' + c.note + '</div>' +
+                '<div class="wx-temp"><span class="c">' + cT.toFixed(1) + '</span>' +
+                  '<span class="unit">°C</span>' +
+                  '<span class="f">= ' + fT.toFixed(1) + ' °F</span></div>' +
+                '<div class="wx-rows">' +
+                  '<div class="wx-row"><span class="k">湿度</span><span class="v">' +
+                    Math.round(s.hum) + ' %</span></div>' +
+                  '<div class="wx-row"><span class="k">气压</span><span class="v">' +
+                    s.pres.toFixed(2) + ' kPa</span></div>' +
+                  '<div class="wx-row"><span class="k">能见度</span><span class="v">' +
+                    s.vis.toFixed(1) + ' km</span></div>' +
+                  '<div class="wx-row"><span class="k">空气质量</span><span class="v ' +
+                    lv.c + '">' + Math.round(s.aqi) + ' ' + lv.t + '</span></div>' +
+                  '<div class="wx-row" style="grid-column:1/-1"><span class="k">风向风力</span>' +
+                    '<span class="v">' + DIRS[s.dir] + '风 ' + w.lv + ' 级 · ' + w.t +
+                    '（' + s.force.toFixed(1) + ' m/s）</span></div>' +
+                '</div></div>';
+        });
+        grid.innerHTML = html;
+    }
+
+    var t0 = Date.now();
+    function tickUi() {
+        var el = Date.now() - t0;
+        bar.style.width = Math.min(100, el / REFRESH_MS * 100).toFixed(1) + '%';
+        num.textContent = Math.max(0, (REFRESH_MS - el) / 1000).toFixed(1) + 's';
+    }
+    function full() {
+        step(new Date());
+        render();
+        t0 = Date.now();
+        bar.style.width = '0%';
+    }
+    function clockUi() {
+        clock.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false }) + ' 观测';
+    }
+
+    var sEl = document.getElementById('wxSeason');
+    if (sEl) sEl.textContent = seasonName(seasonFactor(new Date()));
+    document.getElementById('refreshNow').onclick = full;
+
+    full(); clockUi();
+    setInterval(tickUi, 100);
+    setInterval(clockUi, 1000);
+    setInterval(full, REFRESH_MS);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) full(); });
+})();
 </script>
 <script>
     // ===== 鼠标/触摸特效:跟随光晕 + 点击波纹与彩色粒子(鼠标 + 触屏都启用) =====
@@ -2122,7 +1972,7 @@ html { -webkit-text-size-adjust: 100%; }
 <!--
   ══════════════════════════════════════════════════════════════════
    NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
-   构建指纹 NBC-20261001-1E1669660647
+   构建指纹 NBC-20261001-2CFE309AEC6C
    官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
    如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
    欢迎举报：nbchannel@163.com
@@ -2132,7 +1982,7 @@ html { -webkit-text-size-adjust: 100%; }
 <script>/* 构建元信息（请勿删除，侵权取证用） */
 (function () {
     try {
-        var _nb = "TkJDLTIwMjYxMDAxLTFFMTY2OTY2MDY0Nw";
+        var _nb = "TkJDLTIwMjYxMDAxLTJDRkUzMDlBRUM2Qw";
         if (typeof window !== "undefined") window.__nbBuild = _nb;
     } catch (e) {}
 })();
