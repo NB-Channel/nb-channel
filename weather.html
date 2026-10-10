@@ -489,6 +489,39 @@
        峰值 14:00、谷值 02:00 —— 气温日变化的常用近似。
        振幅按各城市的 vol 折算，再给个下限，免得平坦的城市画成直线。
        ──────────────────────────────────────────────────────── */
+    /* ── 历史数据 ──────────────────────────────────────────────
+       数据库里 weather_history 每 10 分钟存一条/城。
+       页面把它拉下来，某城点数够了就画真实曲线，否则退回模型曲线。
+       ⚠️ 这张表是新建的，从建好那一刻才开始积累 ——
+          刚上线时会先显示模型推算，攒够 6 个点（约 1 小时）自动切过来。
+       ──────────────────────────────────────────────────────── */
+    var HISTORY = {};          // city -> [{ t: 毫秒, v: 温度 }]
+    var HIST_AT = 0;           // 上次拉取时间
+
+    function applyHistory(rows) {
+        var m = {};
+        (rows || []).forEach(function (r) {
+            var c = r.city;
+            if (!m[c]) m[c] = [];
+            var ts = Date.parse(r.at);
+            if (isNaN(ts)) return;
+            m[c].push({ t: ts, v: parseFloat(r.temp_c) });
+        });
+        // 按时间排序
+        Object.keys(m).forEach(function (c) {
+            m[c].sort(function (a, b) { return a.t - b.t; });
+        });
+        HISTORY = m;
+        HIST_AT = Date.now();
+    }
+
+    function pullHistory() {
+        if (!sb || !sb.rpc) return;
+        sb.rpc('get_weather_history', { p_hours: 24 }).then(function (res) {
+            if (res && res.data && res.data.length) { applyHistory(res.data); render(); }
+        }).catch(function () { /* 表还没建好或没数据，静默退回模型曲线 */ });
+    }
+
     function tempAt(c, hour, date) {
         var mean = c.base + c.swing * seasonFactor(date);
         var amp = Math.max(1.8, c.vol * 1.5 + 2.4);
@@ -503,27 +536,51 @@
 
     function tempChart(c, now) {
         var W = 900, H = 84, PAD = 10, PADB = 16;
-        var pts = [], i, h, t;
         var lo = Infinity, hi = -Infinity;
-        for (i = 0; i <= 24; i++) {
-            t = tempAt(c, i, now);
-            pts.push(t);
-            if (t < lo) lo = t;
-            if (t > hi) hi = t;
-        }
-        if (hi - lo < 1) { hi = lo + 1; }
         var nowH = now.getHours() + now.getMinutes() / 60;
         function X(hh) { return PAD + (W - PAD * 2) * (hh / 24); }
         function Y(v) { return PAD + (H - PAD - PADB) * (1 - (v - lo) / (hi - lo)); }
 
-        var d = '';
-        for (i = 0; i <= 24; i++) {
-            d += (i ? ' L' : 'M') + X(i).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+        // ── 优先用真实累计数据 ──
+        var hist = HISTORY[c.name] || [];
+        var useReal = hist.length >= 6;
+        var pts = [], i, h, t, xs = [];
+        if (useReal) {
+            // 横轴：把最近 24 小时映射到 0~24；每条记录按它自己的时刻摆位
+            var t0 = now.getTime() - 24 * 3600 * 1000;
+            for (i = 0; i < hist.length; i++) {
+                var off = (hist[i].t - t0) / 3600000;      // 0~24
+                if (off < 0) continue;
+                xs.push(Math.min(24, off));
+                pts.push(hist[i].v);
+            }
+            for (i = 0; i < pts.length; i++) {
+                if (pts[i] < lo) lo = pts[i];
+                if (pts[i] > hi) hi = pts[i];
+            }
+        } else {
+            // 退回模型曲线
+            for (i = 0; i <= 24; i++) {
+                t = tempAt(c, i, now);
+                xs.push(i);
+                pts.push(t);
+                if (t < lo) lo = t;
+                if (t > hi) hi = t;
+            }
         }
+        if (!pts.length) { lo = 0; hi = 1; pts = [0, 1]; xs = [0, 24]; }
+        if (hi - lo < 1) { hi = lo + 1; }
+
+        var d = '';
+        for (i = 0; i < pts.length; i++) {
+            d += (i ? ' L' : 'M') + X(xs[i]).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+        }
+        var x0 = xs[0], x1 = xs[xs.length - 1];
         // 曲线下方填一层淡色
-        var area = d + ' L' + X(24).toFixed(1) + ' ' + (H - PADB) + ' L' + X(0).toFixed(1) + ' ' + (H - PADB) + ' Z';
+        var area = d + ' L' + X(x1).toFixed(1) + ' ' + (H - PADB) + ' L' + X(x0).toFixed(1) + ' ' + (H - PADB) + ' Z';
         // 当前时刻的点
-        var curT = tempAt(c, nowH, now);
+        var curT = useReal ? pts[pts.length - 1] : tempAt(c, nowH, now);
+        var curX = useReal ? x1 : nowH;
 
         // 时刻刻度 + 两条网格线（让曲线有参照，不至于看着像没数据）
         var grid = '';
@@ -540,7 +597,10 @@
                     '" stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="3 4"/>';
         });
 
+        var srcTxt = useReal ? ('实际记录 · ' + pts.length + ' 个采样')
+                             : '模型推算（数据攒够后自动切换）';
         return '<svg class="wx-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
+               'data-src="' + srcTxt + '" ' +
                'role="img" aria-label="24 小时温度曲线">' +
                  '<defs><linearGradient id="cg' + c.name.replace(/[^\w]/g, '') + '" x1="0" y1="0" x2="1" y2="0">' +
                    '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
@@ -549,9 +609,9 @@
                  '<path d="' + area + '" fill="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" opacity=".14"/>' +
                  '<path d="' + d + '" fill="none" stroke="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" ' +
                    'stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
-                 '<circle cx="' + X(nowH).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="6" ' +
+                 '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="6" ' +
                    'fill="#7c8cf8" opacity=".18"/>' +
-                 '<circle cx="' + X(nowH).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="3.2" ' +
+                 '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="3.2" ' +
                    'fill="#fff" stroke="#7c8cf8" stroke-width="2"/>' +
                  // 鼠标悬停时的高亮点（初始藏起来，交互时由 JS 移动）
                  '<g class="wx-hover-g" style="display:none">' +
@@ -580,22 +640,48 @@
                 if (CITIES[i].name === hit.getAttribute('data-city')) { city = CITIES[i]; break; }
             }
             if (!svg || !g || !city) return;
+            // 把数据来源写到曲线下方那行说明里（实际记录 / 模型推算）
+            var tipTxt = box.querySelector('.wx-chart-tip');
+            var srcTxt2 = svg.getAttribute('data-src');
+            if (tipTxt && srcTxt2) { tipTxt.textContent = '最近 24 小时气温 · ' + srcTxt2; }
 
             function move(ev) {
                 var r = svg.getBoundingClientRect();
                 var x = (ev.clientX !== undefined ? ev.clientX : ev.touches[0].clientX) - r.left;
                 var ratio = Math.max(0, Math.min(1, x / r.width));
                 var hour = ratio * 24;
-                var temp = tempAt(city, hour, new Date());
+                var hist2 = HISTORY[city.name] || [];
+                var temp;
+                if (hist2.length >= 6) {
+                    // 在真实记录里找时刻最接近的那个点
+                    var t0b = Date.now() - 24 * 3600 * 1000;
+                    var want = t0b + hour * 3600 * 1000;
+                    var best = null, bd = Infinity;
+                    for (var q = 0; q < hist2.length; q++) {
+                        var dd = Math.abs(hist2[q].t - want);
+                        if (dd < bd) { bd = dd; best = hist2[q]; }
+                    }
+                    temp = best ? best.v : tempAt(city, hour, new Date());
+                } else {
+                    temp = tempAt(city, hour, new Date());
+                }
                 // 换算到 viewBox 坐标。
                 // ⚠️ lo/hi 必须在这里【自己重算】—— 之前想从 svg 上读，
                 //    但 tempChart 是把它们挂在一个游离的 div 上的（从没进 DOM），
                 //    于是 lo/hi 是 undefined → vy 算成 NaN → 圆点卡在顶上不动。
                 var lo = Infinity, hi = -Infinity;
-                for (var k = 0; k <= 24; k++) {
-                    var tv = tempAt(city, k, new Date());
-                    if (tv < lo) lo = tv;
-                    if (tv > hi) hi = tv;
+                var hh2 = HISTORY[city.name] || [];
+                if (hh2.length >= 6) {
+                    for (var k2 = 0; k2 < hh2.length; k2++) {
+                        if (hh2[k2].v < lo) lo = hh2[k2].v;
+                        if (hh2[k2].v > hi) hi = hh2[k2].v;
+                    }
+                } else {
+                    for (var k = 0; k <= 24; k++) {
+                        var tv = tempAt(city, k, new Date());
+                        if (tv < lo) lo = tv;
+                        if (tv > hi) hi = tv;
+                    }
                 }
                 if (hi - lo < .4) hi = lo + .4;
                 var vx = 10 + (900 - 20) * ratio;
@@ -975,7 +1061,7 @@
                     '<span class="u">' + s.force.toFixed(1) + ' m/s</span></dd></div>' +
                                     '<div class="wx-row wx-row-chart"><div class="wx-chart-box">' +
                     tempChart(c, new Date()) +
-                    '<span class="wx-chart-tip">未来 24 小时气温走势</span>' +
+                    '<span class="wx-chart-tip">最近 24 小时气温</span>' +
                     '<span class="wx-chart-lo">' + tLo.toFixed(0) + '°</span>' +
                     '<span class="wx-chart-hi">' + tHi.toFixed(0) + '°</span>' +
                     '<div class="wx-chart-hit" data-city="' + c.name + '"></div>' +
@@ -1101,6 +1187,8 @@
     step(new Date()); render();      // 先本地渲染，不等网络
     refresh();                       // 同时问服务端要那一份
     clockUi();
+    pullHistory();                   // 拉一次历史（曲线优先用它）
+    setInterval(pullHistory, 300000); // 历史变化慢，5 分钟一次就够
     setInterval(loop, 100);          // 进度条与刷新共用一个定时器
     setInterval(clockUi, 1000);
 
