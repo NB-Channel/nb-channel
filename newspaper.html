@@ -4,21 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>NB报刊社 - NB频道</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/ui-new.css">
     <link rel="stylesheet" href="css/classic.css">
-    <!-- 官网模式皮肤(仅html.beta选择器生效;静态加载避免样式闪跳) -->
     <link rel="stylesheet" href="css/beta.css?v=20260846" id="uiBetaCss">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script id="uiBootGuard">
 (function () {
     try {
-        // 经典模式(可选):localStorage nb_classic=1 时加 classic 类(第一帧前生效,零闪跳)
         var m = localStorage.getItem('nb_ui_mode');
         try { var qp = new URLSearchParams(location.search).get('ui'); if (qp === 'new' || qp === 'classic' || qp === 'beta') m = qp; } catch (e) {}
         if (m === 'classic' || (m !== 'beta' && localStorage.getItem('nb_classic') === '1')) document.documentElement.classList.add('classic');
         else if (m === 'beta') document.documentElement.classList.add('beta');
-        // 纯新UI:隐藏 body,等待 ui-nav.js 注入完成后解除(首帧即完整新UI,零闪跳)
         document.documentElement.classList.add('ui-boot-new');
         var st = document.createElement('style');
         st.id = 'uiBootHide';
@@ -35,163 +33,149 @@
     <script src="js/ui-nav.js?v=20261010"></script>
     <style>
         /* ══════════════════════════════════════════════════════
-           NB报刊社 —— 报纸版式
-           用全站 CSS 变量，三套界面 + 七套主题下都能看。
-           纸面感靠：报头双线、正文分栏、细竖线分隔、衬线标题。
+           NB报刊社 —— 分期制
+           视图：各期列表 / 某一期 / 我拥有的报纸
+           版式沿用报纸那套：报头双线、正文分栏、◆ 短讯
            ══════════════════════════════════════════════════════ */
-        body { padding: 34px 16px 120px; background: var(--bg-color); }
-
-        .np-wrap { padding: 0 4px; }
-        .np-paper {
-            background: var(--card-bg);
-            border-radius: 6px;
-            padding: 34px 40px 30px;
-            box-shadow: 0 20px 40px -18px rgba(16,24,40,.25);
-            border: 1px solid var(--card-border);
-        }
+        .container { max-width: 1240px; }
+        .np-wrap { max-width: 1240px; margin: 0 auto; }
 
         /* ── 报头 ── */
-        .np-masthead { text-align: center; padding-bottom: 6px; }
+        .np-head { text-align: center; padding: 26px 0 0; }
         .np-name {
             font-family: "Songti SC", "SimSun", "Noto Serif SC", Georgia, serif;
-            font-size: clamp(2.4rem, 6vw, 4rem);
+            font-size: clamp(2.2rem, 5.4vw, 3.6rem);
             font-weight: 800; letter-spacing: 10px; text-indent: 10px;
-            color: var(--status-border); line-height: 1.1;
-            margin: 0 0 6px;
+            color: var(--status-border); line-height: 1.1; margin: 0 0 6px;
         }
-        .np-sub {
-            font-size: .82rem; letter-spacing: 3px; text-indent: 3px;
-            color: var(--count-text); margin-bottom: 14px;
-        }
-        /* 报头上下双线 —— 报纸的招牌样子 */
+        .np-sub { font-size: .8rem; letter-spacing: 3px; text-indent: 3px; color: var(--count-text); margin-bottom: 14px; }
         .np-rule { border-top: 3px solid var(--status-border); }
         .np-rule-thin { border-top: 1px solid var(--card-border); margin-top: 3px; }
-        .np-dateline {
-            display: flex; justify-content: space-between; align-items: center;
-            flex-wrap: wrap; gap: 8px;
-            padding: 9px 2px; font-size: .78rem; color: var(--count-text);
-        }
-        .np-dateline .mid { letter-spacing: 1px; text-indent: 1px; }
         .np-notice {
             text-align: center; font-size: .74rem; color: var(--count-text);
-            letter-spacing: 2px; text-indent: 2px; padding: 5px 0 0;
+            letter-spacing: 2px; text-indent: 2px; padding: 7px 0;
         }
 
-        /* ── 头条 ── */
-        .np-lead { padding: 24px 0 20px; border-bottom: 1px solid var(--card-border); }
+        /* ── 顶部标签页 ── */
+        .np-tabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 14px 0 16px; }
+        .np-tab {
+            border: 1px solid var(--card-border); background: var(--card-bg);
+            color: var(--count-text); border-radius: 30px;
+            padding: 8px 20px; font-size: .88rem; font-weight: 600;
+            cursor: pointer; transition: .2s;
+        }
+        .np-tab:hover { border-color: var(--status-border); color: var(--status-border); }
+        .np-tab.active { background: var(--status-border); border-color: var(--status-border); color: #fff; }
+
+        /* ── 期列表 ── */
+        .np-issues { display: flex; flex-direction: column; gap: 12px; }
+        .np-issue {
+            display: flex; align-items: center; gap: 18px;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 12px; padding: 16px 20px; cursor: pointer; transition: .22s;
+        }
+        .np-issue:hover { border-color: var(--status-border); transform: translateY(-2px); }
+        .np-issue-no {
+            flex: 0 0 74px; text-align: center;
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-weight: 800; color: var(--status-border); line-height: 1.05;
+        }
+        .np-issue-no b { display: block; font-size: 1.9rem; }
+        .np-issue-no span { font-size: .7rem; color: var(--count-text); letter-spacing: 1px; }
+        .np-issue-mid { flex: 1; min-width: 0; }
+        .np-issue-title { font-size: 1.06rem; font-weight: 700; color: var(--text-color); margin-bottom: 4px; }
+        .np-issue-sum { font-size: .82rem; color: var(--count-text); line-height: 1.6; }
+        .np-issue-meta { font-size: .74rem; color: var(--count-text); margin-top: 6px; letter-spacing: .3px; }
+        .np-issue-right { flex: 0 0 auto; text-align: right; }
+        .np-badge { display: inline-block; font-size: .72rem; font-weight: 700; border-radius: 20px; padding: 4px 12px; white-space: nowrap; }
+        .np-badge.owned { background: rgba(34,197,94,.14); color: #16a34a; }
+        .np-badge.buy { background: rgba(124,140,248,.16); color: #6366f1; }
+        .np-badge.free { background: rgba(148,163,184,.16); color: var(--count-text); }
+
+        /* ── 某一期 ── */
+        .np-back {
+            display: inline-flex; align-items: center; gap: 6px;
+            border: 1px solid var(--card-border); background: var(--card-bg);
+            color: var(--count-text); border-radius: 30px; padding: 7px 16px;
+            font-size: .84rem; cursor: pointer; margin-bottom: 14px;
+        }
+        .np-back:hover { border-color: var(--status-border); color: var(--status-border); }
+        .np-paper {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 8px; padding: 30px 38px 26px;
+            box-shadow: 0 18px 40px -20px rgba(16,24,40,.22);
+        }
+        .np-sec {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1rem; font-weight: 800; letter-spacing: 4px; text-indent: 4px;
+            color: var(--status-border); text-align: center; margin: 6px 0 18px; position: relative;
+        }
+        .np-sec::before, .np-sec::after { content: ''; position: absolute; top: 50%; width: 26%; border-top: 1px solid var(--card-border); }
+        .np-sec::before { left: 3%; } .np-sec::after { right: 3%; }
+
+        .np-art { padding: 18px 0; border-bottom: 1px solid var(--card-border); }
+        .np-art:last-child { border-bottom: none; }
         .np-h1 {
             font-family: "Songti SC", "SimSun", Georgia, serif;
-            font-size: clamp(1.5rem, 3.4vw, 2.15rem);
-            font-weight: 800; line-height: 1.35; text-align: center;
-            color: var(--text-color); margin: 0 0 10px;
-        }
-        .np-h1-sub {
-            text-align: center; font-size: .92rem; color: var(--status-border);
-            font-weight: 600; margin-bottom: 16px;
-        }
-        .np-byline {
-            text-align: center; font-size: .76rem; color: var(--count-text);
-            margin-bottom: 18px;
-        }
-
-        /* 正文：两栏，报纸感 */
-        .np-cols { column-count: 2; column-gap: 30px; column-rule: 1px solid var(--card-border); }
-        .np-cols p {
-            margin: 0 0 12px; font-size: .92rem; line-height: 2.05;
-            color: var(--text-color); text-align: justify;
-            text-indent: 2em;
-        }
-        .np-cols p.noindent { text-indent: 0; }
-
-        /* ── 配图 ── */
-        .np-figure { margin: 20px 0; text-align: center; }
-        .np-figure .box {
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 100%; max-width: 520px; height: 170px;
-            border: 1px dashed var(--card-border); border-radius: 6px;
-            background: var(--count-bg); color: var(--count-text);
-            font-size: .85rem; letter-spacing: 1px;
-        }
-        .np-figure figcaption {
-            margin-top: 8px; font-size: .75rem; color: var(--count-text);
-        }
-
-        /* ── 次条区 ── */
-        .np-second { padding: 22px 0; border-bottom: 1px solid var(--card-border); }
-        .np-h2 {
-            font-family: "Songti SC", "SimSun", Georgia, serif;
-            font-size: 1.28rem; font-weight: 800; line-height: 1.4;
+            font-size: clamp(1.35rem, 2.9vw, 1.85rem); font-weight: 800;
+            line-height: 1.35; text-align: center; text-indent: 2px;
             color: var(--text-color); margin: 0 0 8px;
         }
+        .np-h2 {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1.16rem; font-weight: 800; line-height: 1.45;
+            color: var(--text-color); margin: 0 0 6px;
+        }
         .np-h2 .tag {
-            display: inline-block; font-family: inherit;
-            font-size: .7rem; font-weight: 700; letter-spacing: 1px;
+            display: inline-block; font-size: .68rem; font-weight: 700;
             color: #fff; background: var(--status-border);
-            border-radius: 3px; padding: 1px 7px; margin-right: 8px;
-            vertical-align: middle;
+            border-radius: 3px; padding: 1px 7px; margin-right: 8px; vertical-align: middle;
         }
+        .np-hsub { text-align: center; font-size: .88rem; color: var(--status-border); font-weight: 600; margin-bottom: 14px; }
+        .np-cols { column-count: 2; column-gap: 28px; column-rule: 1px solid var(--card-border); }
+        .np-cols p { margin: 0 0 12px; font-size: .9rem; line-height: 2; text-indent: 2em; color: var(--text-color); text-align: justify; }
+        .np-briefs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 9px 24px; }
+        .np-briefs div { font-size: .86rem; line-height: 1.9; color: var(--text-color); padding-left: 16px; position: relative; }
+        .np-briefs div::before { content: '◆'; position: absolute; left: 0; top: 0; font-size: .6rem; line-height: 2.7; color: var(--status-border); }
+        .np-service { margin: 16px 0; padding: 16px 20px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--count-bg); }
+        .np-service pre { margin: 0; font-family: inherit; font-size: .84rem; line-height: 2; color: var(--text-color); white-space: pre-wrap; }
 
-        /* ── 短讯 ── */
-        .np-briefs { padding: 22px 0; border-bottom: 1px solid var(--card-border); }
-        .np-sec-title {
-            font-family: "Songti SC", "SimSun", Georgia, serif;
-            font-size: 1.1rem; font-weight: 800; letter-spacing: 4px;
-            color: var(--status-border); text-align: center;
-            margin: 0 0 16px; position: relative;
+        /* ── 付费栏未解锁 ── */
+        .np-lock {
+            margin: 18px 0 4px; padding: 26px 22px; text-align: center;
+            border: 1px dashed var(--card-border); border-radius: 10px;
+            background: linear-gradient(135deg, rgba(96,165,250,.07), rgba(167,139,250,.07));
         }
-        .np-sec-title::before, .np-sec-title::after {
-            content: ''; position: absolute; top: 50%; width: 28%;
-            border-top: 1px solid var(--card-border);
+        .np-lock .lk-title { font-size: 1.05rem; font-weight: 800; color: var(--text-color); margin-bottom: 6px; }
+        .np-lock .lk-sub { font-size: .84rem; color: var(--count-text); line-height: 1.8; margin-bottom: 16px; }
+        .np-buy {
+            border: none; border-radius: 30px; padding: 12px 30px;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            color: #fff; font-size: .95rem; font-weight: 700; cursor: pointer;
+            box-shadow: 0 12px 26px -10px rgba(99,102,241,.6); transition: .2s;
         }
-        .np-sec-title::before { left: 2%; }
-        .np-sec-title::after { right: 2%; }
-        .np-brief-list {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 10px 26px; margin: 0; padding: 0; list-style: none;
-        }
-        .np-brief-list li {
-            font-size: .88rem; line-height: 1.9; color: var(--text-color);
-            padding-left: 16px; position: relative;
-        }
-        .np-brief-list li::before {
-            content: '◆'; position: absolute; left: 0; top: 0;
-            color: var(--status-border); font-size: .62rem; line-height: 2.7;
-        }
+        .np-buy:hover { transform: translateY(-2px); box-shadow: 0 16px 32px -10px rgba(99,102,241,.75); }
+        .np-buy:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+        .np-locked-list { margin-top: 14px; text-align: left; }
+        .np-locked-list div { font-size: .84rem; color: var(--count-text); line-height: 2.2; padding-left: 20px; position: relative; }
+        .np-locked-list div::before { content: '🔒'; position: absolute; left: 0; font-size: .72rem; }
 
-        /* ── 便民信息 ── */
-        .np-service {
-            margin: 22px 0 0; padding: 18px 22px;
-            border: 1px solid var(--card-border); border-radius: 6px;
-            background: var(--count-bg);
+        .np-empty, .np-loading { text-align: center; padding: 40px 20px; color: var(--count-text); font-size: .9rem; line-height: 2; }
+        #npToast {
+            position: fixed; left: 50%; top: 84px; transform: translateX(-50%) translateY(-8px);
+            z-index: 9999; padding: 11px 22px; border-radius: 30px;
+            background: rgba(30,41,59,.95); color: #fff; font-size: .88rem; font-weight: 600;
+            box-shadow: 0 14px 34px -12px rgba(0,0,0,.5);
+            opacity: 0; pointer-events: none; transition: .25s;
         }
-        .np-service h4 {
-            margin: 0 0 12px; font-size: .95rem; letter-spacing: 3px;
-            font-family: "Songti SC", "SimSun", Georgia, serif;
-            color: var(--status-border); text-align: center;
-        }
-        .np-service ul {
-            margin: 0; padding: 0; list-style: none;
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 8px 24px;
-        }
-        .np-service li { font-size: .84rem; display: flex; justify-content: space-between; gap: 10px; }
-        .np-service li span { color: var(--count-text); }
-        .np-service a { color: var(--status-border); text-decoration: none; font-weight: 600; }
-        .np-service a:hover { text-decoration: underline; }
-
-        /* ── 报尾 ── */
-        .np-colophon {
-            margin-top: 24px; padding-top: 14px;
-            border-top: 3px double var(--card-border);
-            text-align: center; font-size: .76rem;
-            color: var(--count-text); line-height: 2;
-        }
+        #npToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 
         @media (max-width: 720px) {
-            .np-paper { padding: 24px 20px 22px; border-radius: 4px; }
+            .np-paper { padding: 22px 18px 20px; }
             .np-cols { column-count: 1; }
-            .np-name { letter-spacing: 6px; }
-            .np-sec-title::before, .np-sec-title::after { width: 18%; }
+            .np-issue { gap: 12px; padding: 14px; }
+            .np-issue-no { flex-basis: 58px; }
+            .np-issue-no b { font-size: 1.5rem; }
         }
     </style>
 </head>
@@ -199,100 +183,30 @@
 <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
 
 <div class="container">
-    <h1>📺 NB频道官网</h1>
-    <div class="author-info" id="authorInfo">UP主：NB搞事局（原NB实验室-作死）</div>
-
-    <nav class="top-nav"><a class="nav-logo" href="index.html">NB频道</a><div class="nav-menu"><a href="index.html" class="nav-btn">首页</a><a href="videos.html" class="nav-btn">视频</a><a href="about.html" class="nav-btn">关于</a><a href="rules.html" class="nav-btn">用户守则</a><a href="changelog.html" class="nav-btn">更新日志</a><a href="product.html" class="nav-btn">我的产品</a><a href="APP.html" class="nav-btn">软件/APP下载</a></div><div class="nav-right"><button id="profileBtn" class="profile-btn">个人中心</button><button id="authButton" class="auth-btn">登录/注册</button></div></nav>
-
-    <div class="quick-nav"><span style="font-size:0.85rem; color:var(--count-text);">快捷入口：</span><a href="comments-beta.html" class="nav-btn">💬 评论区</a><a href="Virtual stock.html" class="nav-btn">📈 NB虚拟股票</a><a href="chat.html" class="nav-btn">👥 好友</a><a href="product_share.html" class="nav-btn">🛍️ 作品分享</a><a href="messages.html" class="nav-btn">🔔 消息</a><a href="tools.html" class="nav-btn">🔬 化学工具</a><a href="titles.html" class="nav-btn">🏅 称号</a><a href="bank.html" class="nav-btn">🏦 NB银行</a><a href="shop.html" class="nav-btn">🛍️ NB商店</a><a href="backpack.html" class="nav-btn">🎒 背包</a><a href="weather.html" class="nav-btn">🌦️ 天气瞎报</a><a href="newspaper.html" class="nav-btn">📰 NB报刊社</a></div>
-
-    <div class="hero" id="uiPageBanner" style="position:relative; overflow:hidden; background:linear-gradient(135deg, #00a1d6 0%, #0a84c1 45%, #6c5ce7 100%); border-radius:24px; padding:36px 28px; text-align:center; margin-bottom:24px; box-shadow:0 18px 40px -12px rgba(0,161,214,0.5);">
-        <div style="position:absolute; top:-60px; right:-60px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,0.08);"></div>
-        <div style="position:absolute; bottom:-80px; left:-40px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,0.06);"></div>
-        <h1 style="font-size:1.9rem; font-weight:900; color:#fff; margin:0; text-shadow:0 2px 8px rgba(0,0,0,0.2);">📰 NB报刊社</h1>
-        <div style="font-size:0.95rem; opacity:0.92; color:#fff; margin-top:6px;">📺 NB频道 · 虚拟公司 · 官网</div>
-    </div>
 <div class="np-wrap">
-<div class="np-paper">
 
     <!-- ══ 报头 ══ -->
-    <header class="np-masthead">
+    <header class="np-head">
         <h1 class="np-name">NB报刊社</h1>
         <div class="np-sub">NB CHANNEL · DAILY</div>
     </header>
     <div class="np-rule"></div>
     <div class="np-rule-thin"></div>
-    <div class="np-dateline">
-        <span>第 <b>1</b> 期</span>
-        <span class="mid">2026 年 10 月 · NB频道 · 虚拟公司</span>
-        <span>第一版 · 共一版</span>
-    </div>
-    <div class="np-rule-thin"></div>
     <div class="np-notice">仅供娱乐 · 请勿代入现实 · 免费取阅</div>
-    <div class="np-rule" style="margin-top:10px;"></div>
+    <div class="np-rule"></div>
 
-    <!-- ══ 头条 ══ -->
-    <article class="np-lead">
-        <h2 class="np-h1">官网 1.0.8 上线<br>「关于域名」挂出域名证书</h2>
-        <div class="np-h1-sub">—— 那张证书在抽屉里放了半年</div>
-        <div class="np-byline">本报记者 · NB频道唯一正式员工 · 报道</div>
-
-        <div class="np-cols">
-            <p>NB频道官网 V1.0.8 于本月上线。本次更新的重点是「关于」页面新增一节「关于域名」，把 <b>nb-channel.top</b> 的顶级国际域名证书挂了出来。</p>
-            <p>该证书由 ICANN 授权机构颁发，记载域名注册于 2026 年 3 月 23 日，到期时间 2027 年 3 月 23 日，注册机构为 DNSPod · 腾讯云。</p>
-            <p class="noindent">据站长介绍，这张证书「早就下来了，一直没往页面上放」。编辑部追问为何拖了半年，站长表示「忘了」。</p>
-            <p class="noindent">另据观察，证书上「注册所有者」一栏已被涂黑。站长回应：<b>「这个不用给大家看。」</b></p>
-        </div>
-
-        <figure class="np-figure">
-            <div class="box">此处应有证书照片 —— 不过你往上看「关于」页就能看到真图</div>
-            <figcaption>图示：顶级国际域名证书（真图见「关于」页面）</figcaption>
-        </figure>
-    </article>
-
-    <!-- ══ 次条 ══ -->
-    <article class="np-second">
-        <h2 class="np-h2"><span class="tag">新栏目</span>「天气瞎报」开张，十二座城市每十秒报一次</h2>
-        <div class="np-cols">
-            <p>本站新建的《天气瞎报》栏目正式开张，覆盖 <b>NB频道总部、U星、AWM市、Lemon市、Oganesson市、Fafat市、GC3市、UVS市、UWSF市、PTC市、5U市、Ubn市</b>，共十二座城市。</p>
-            <p>栏目按真实季节走 —— 现在这个时节显示的是「春秋之交」。数据每十秒刷新一次，并且由数据库统一计算：<b>你和朋友同时打开，看到的数字是一样的。</b></p>
-            <p class="noindent">编辑部特别声明：所有气象数据均由随机数生成，与任何真实地点、真实天气无关。看到「Oganesson市 36°C」请不要给当地打电话。</p>
-        </div>
-    </article>
-
-    <!-- ══ 短讯 ══ -->
-    <section class="np-briefs">
-        <h3 class="np-sec-title">短 讯</h3>
-        <ul class="np-brief-list">
-            <li>虚拟股票市场：公司税改按<b>市值</b>征收，单次扣款设上限</li>
-            <li>NB银行补上四道闸：存款十亿封顶、两类贷款各一亿、计息基数十亿</li>
-            <li>用户名放开一批常用符号，空格与 at 符号仍然不行</li>
-            <li>评论行数限制前后端补齐，最多十行</li>
-            <li>个人中心右下角重复的那组按钮已删除</li>
-            <li>域名 nb-channel.top 注册于 2026-03-23，2027-03-23 到期</li>
-        </ul>
-    </section>
-
-    <!-- ══ 便民信息 ══ -->
-    <section class="np-service">
-        <h4>便 民 信 息</h4>
-        <ul>
-            <li><span>天气瞎报</span><a href="weather.html">weather.html</a></li>
-            <li><span>虚拟股票</span><a href="Virtual stock.html">行情与交易</a></li>
-            <li><span>官网更新日志</span><a href="changelog.html">changelog.html</a></li>
-            <li><span>漏洞与建议</span><a href="feedback.html">feedback.html</a></li>
-        </ul>
-    </section>
-
-    <!-- ══ 报尾 ══ -->
-    <div class="np-colophon">
-        《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 第 1 版<br>
-        本报所有内容均为虚构，如有雷同，那大概是巧合
+    <!-- ══ 标签页 ══ -->
+    <div class="np-tabs">
+        <button class="np-tab active" data-view="issues">📰 各期</button>
+        <button class="np-tab" data-view="mine">🔖 我拥有的报纸</button>
     </div>
 
+    <div id="npBody"><div class="np-loading">正在取报…</div></div>
+
 </div>
 </div>
-</div>
+
+<div id="npToast"></div>
 
 <div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
     © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://edgeone.nb-channel.top" target="_blank" rel="noopener noreferrer">edgeone站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
@@ -307,12 +221,12 @@
 </div>
 
 <script>
-    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    // ===== 会话令牌自动注入 =====
     (function () {
         function patch(sb) {
             if (!sb || sb.__secPatched) return;
             sb.__secPatched = true;
-            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
+            var names = ['buy_newspaper', 'get_my_newspapers', 'get_news_issue', 'get_news_issues'];
             var orig = sb.rpc.bind(sb);
             sb.rpc = function (fn, args) {
                 if (names.indexOf(fn) !== -1) {
@@ -333,17 +247,259 @@
 </script>
 
 <script>
-    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
     (function () {
         try {
             var u = localStorage.getItem('nb_user');
             var s = localStorage.getItem('nb_session');
-            if (u && !s) {
-                localStorage.removeItem('nb_user');
-                location.reload();
-            }
+            if (u && !s) { localStorage.removeItem('nb_user'); location.reload(); }
         } catch (e) {}
     })();
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   NB报刊社 · 分期制前端
+   数据全部走 RPC（news_issues / news_articles / news_owned
+   三张表都开了 RLS 且 REVOKE 掉 anon，前端读不到）
+   ══════════════════════════════════════════════════════════════ */
+(function () {
+    var sb = null;
+    try {
+        if (window.supabase) {
+            sb = window.supabase.createClient(
+                'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+                'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg');
+        }
+    } catch (e) { sb = null; }
+
+    var body = document.getElementById('npBody');
+    var toastEl = document.getElementById('npToast');
+    var VIEW = 'issues';
+
+    function me() {
+        try {
+            var u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+            return (u && u.id) ? u : null;
+        } catch (e) { return null; }
+    }
+
+    function toast(msg, ok) {
+        toastEl.textContent = msg;
+        toastEl.style.background = ok === false ? 'rgba(190,40,40,.95)' : 'rgba(30,41,59,.95)';
+        toastEl.classList.add('on');
+        clearTimeout(toastEl.__t);
+        toastEl.__t = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
+    }
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function paras(txt) {
+        return String(txt || '').split(/\n\s*\n/).filter(function (x) { return x.trim(); })
+            .map(function (p) { return '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>'; }).join('');
+    }
+
+    function rpc(fn, args) {
+        if (!sb || !sb.rpc) return Promise.reject(new Error('supabase 没加载'));
+        return sb.rpc(fn, args || {}).then(function (r) {
+            if (r && r.error) throw new Error(r.error.message || 'RPC 失败');
+            return r ? r.data : null;
+        });
+    }
+
+    /* ── 各期 ── */
+    function renderIssues() {
+        body.innerHTML = '<div class="np-loading">正在取报…</div>';
+        var u = me();
+        rpc('get_news_issues', { p_user_id: u ? u.id : null }).then(function (d) {
+            var list = (d && d.issues) || [];
+            if (!list.length) {
+                body.innerHTML = '<div class="np-empty">还没有出刊。<br>站长去后台发一期就有了。</div>';
+                return;
+            }
+            body.innerHTML = issueListHtml(list);
+            bindIssueClicks();
+        }).catch(function (e) {
+            body.innerHTML = '<div class="np-empty">取报失败：' + esc(e.message) +
+                '<br><span style="font-size:.8rem">（多半是 SQL 还没跑）</span></div>';
+        });
+    }
+
+    /* ── 我拥有的 ── */
+    function renderMine() {
+        var u = me();
+        if (!u) {
+            body.innerHTML = '<div class="np-empty">请先登录，才能看到你拥有的报纸。<br>' +
+                '<a href="login.html" style="color:var(--status-border)">去登录 →</a></div>';
+            return;
+        }
+        body.innerHTML = '<div class="np-loading">正在翻你的报箱…</div>';
+        rpc('get_my_newspapers', { p_user_id: u.id }).then(function (d) {
+            var list = (d && d.issues) || [];
+            if (!list.length) {
+                body.innerHTML = '<div class="np-empty">你的报箱还是空的。<br>' +
+                    '去「📰 各期」看看 —— 付费栏 20 NB币一期，买了就一直是你的。</div>';
+                return;
+            }
+            body.innerHTML = issueListHtml(list, true);
+            bindIssueClicks();
+        }).catch(function (e) {
+            body.innerHTML = '<div class="np-empty">取报失败：' + esc(e.message) + '</div>';
+        });
+    }
+
+    function issueListHtml(list, mine) {
+        var h = '<div class="np-issues">';
+        list.forEach(function (it) {
+            var badge;
+            if (it.owned || mine) badge = '<span class="np-badge owned">✓ 已拥有</span>';
+            else if (it.paid_count > 0) badge = '<span class="np-badge buy">🔒 ' + it.price + ' NB币</span>';
+            else badge = '<span class="np-badge free">全免费</span>';
+            h += '<div class="np-issue" data-no="' + it.issue_no + '">' +
+                   '<div class="np-issue-no"><b>' + it.issue_no + '</b><span>期</span></div>' +
+                   '<div class="np-issue-mid">' +
+                     '<div class="np-issue-title">' + esc(it.title) + '</div>' +
+                     '<div class="np-issue-sum">' + esc(it.summary || '') + '</div>' +
+                     '<div class="np-issue-meta">' + esc(it.publish_date) +
+                       ' · 免费 ' + it.free_count + ' 篇' +
+                       (it.paid_count > 0 ? ' · 付费 ' + it.paid_count + ' 篇' : '') +
+                       (mine && it.bought_at ? ' · 购买于 ' + esc(it.bought_at) : '') +
+                     '</div>' +
+                   '</div>' +
+                   '<div class="np-issue-right">' + badge + '</div>' +
+                 '</div>';
+        });
+        h += '</div>';
+        return h;
+    }
+
+    function bindIssueClicks() {
+        Array.prototype.forEach.call(body.querySelectorAll('.np-issue'), function (el) {
+            el.onclick = function () { openIssue(parseInt(el.getAttribute('data-no'), 10)); };
+        });
+    }
+
+    /* ── 某一期 ── */
+    function openIssue(no) {
+        body.innerHTML = '<div class="np-loading">正在展开第 ' + no + ' 期…</div>';
+        var u = me();
+        rpc('get_news_issue', { p_user_id: u ? u.id : null, p_issue_no: no }).then(function (d) {
+            if (!d || !d.success) {
+                body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
+                    '<div class="np-empty">' + esc((d && d.message) || '没找到这一期') + '</div>';
+                document.getElementById('npBack').onclick = backToList;
+                return;
+            }
+            var h = '<button class="np-back" id="npBack">← 回各期</button>' +
+                '<div class="np-paper">' +
+                  '<div class="np-notice">第 ' + d.issue_no + ' 期 · ' + esc(d.title) + ' · ' +
+                    esc(d.publish_date) + ' · 仅供娱乐 · 请勿代入现实</div>' +
+                  '<div class="np-rule"></div>' +
+                  '<h2 class="np-h1" style="margin-top:18px">' + esc(d.title) + '</h2>' +
+                  (d.summary ? '<div class="np-hsub">' + esc(d.summary) + '</div>' : '') +
+                  '<div class="np-rule-thin" style="margin:16px 0 4px"></div>' +
+                  '<div class="np-sec" style="margin-top:22px">免 费 栏</div>' +
+                  renderArticles(d.free);
+
+            if ((d.paid || []).length) {
+                h += '<div class="np-sec" style="margin-top:30px">付 费 栏</div>';
+                if (d.owned) {
+                    h += '<div class="np-notice">✓ 你已拥有这一期，以下全文可读</div>';
+                    h += renderArticles(d.paid);
+                } else {
+                    h += '<div class="np-lock">' +
+                           '<div class="lk-title">🔒 这一期的付费内容还没解锁</div>' +
+                           '<div class="lk-sub">共 ' + d.paid.length + ' 篇 · 花 ' + d.price +
+                             ' NB币买下，<b>永久可读</b>，不会重复扣</div>' +
+                           (d.logged_in
+                             ? '<button class="np-buy" id="npBuy">花 ' + d.price + ' NB币 购买这一期</button>'
+                             : '<button class="np-buy" disabled>请先登录</button>' +
+                               '<div class="lk-sub" style="margin-top:12px">' +
+                               '<a href="login.html" style="color:var(--status-border)">去登录 →</a></div>') +
+                           '<div class="np-locked-list">' +
+                             d.paid.map(function (a) { return '<div>' + esc(a.headline) + '</div>'; }).join('') +
+                           '</div>' +
+                         '</div>';
+                }
+            }
+            h += '<div class="np-notice" style="margin-top:24px;border-top:3px double var(--card-border);padding-top:14px">' +
+                 '《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 第 1 版<br>' +
+                 '本报所有内容均为虚构，如有雷同，那大概是巧合</div></div>';
+            body.innerHTML = h;
+
+            document.getElementById('npBack').onclick = backToList;
+            var buy = document.getElementById('npBuy');
+            if (buy && !buy.disabled) buy.onclick = function () { doBuy(no, buy); };
+        }).catch(function (e) {
+            body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
+                '<div class="np-empty">打开失败：' + esc(e.message) + '</div>';
+            document.getElementById('npBack').onclick = backToList;
+        });
+    }
+
+    function backToList() { if (VIEW === 'mine') renderMine(); else renderIssues(); }
+
+    function renderArticles(list) {
+        var arts = (list || []).filter(function (a) { return a.kind !== 'brief'; });
+        var briefs = (list || []).filter(function (a) { return a.kind === 'brief'; });
+        var h = '';
+        arts.forEach(function (a) {
+            h += '<article class="np-art">';
+            if (a.kind === 'service') {
+                h += '<h3 class="np-h2">' + esc(a.headline) + '</h3>' +
+                     '<div class="np-service"><pre>' + esc(a.body) + '</pre></div>';
+            } else if (a.subhead) {
+                h += '<h2 class="np-h1">' + esc(a.headline) + '</h2>' +
+                     '<div class="np-hsub">' + esc(a.subhead) + '</div>' +
+                     '<div class="np-cols">' + paras(a.body) + '</div>';
+            } else {
+                h += '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(a.tag) + '</span>' : '') +
+                     esc(a.headline) + '</h3>' +
+                     (a.body ? '<div class="np-cols">' + paras(a.body) + '</div>' : '');
+            }
+            h += '</article>';
+        });
+        if (briefs.length) {
+            h += '<div class="np-art"><div class="np-briefs">' +
+                 briefs.map(function (b) { return '<div>' + esc(b.headline) + '</div>'; }).join('') +
+                 '</div></div>';
+        }
+        return h;
+    }
+
+    /* ── 购买 ── */
+    function doBuy(no, btn) {
+        var u = me();
+        if (!u) { toast('请先登录', false); return; }
+        var old = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '正在扣款…';
+        rpc('buy_newspaper', { p_user_id: u.id, p_issue_no: no }).then(function (d) {
+            if (d && d.success) {
+                toast(d.message || '购买成功', true);
+                openIssue(no);
+            } else {
+                toast((d && d.message) || '购买失败', false);
+                btn.disabled = false; btn.textContent = old;
+            }
+        }).catch(function (e) {
+            toast('购买失败：' + e.message, false);
+            btn.disabled = false; btn.textContent = old;
+        });
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (b) {
+        b.onclick = function () {
+            Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            VIEW = b.getAttribute('data-view');
+            backToList();
+        };
+    });
+
+    renderIssues();
+})();
 </script>
 
 <!--
