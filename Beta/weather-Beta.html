@@ -1524,13 +1524,44 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         var doy = Math.floor((d - start) / 86400000);
         return -Math.cos(2 * Math.PI * (doy - 15) / 365.25);
     }
-    function seasonName(sf) {
-        if (sf > .55) return '盛夏';
-        if (sf > .15) return '夏末初秋';
-        if (sf > -.15) return '春秋之交';
-        if (sf > -.55) return '深秋初冬';
-        return '隆冬';
+    /* ── 季节 ──────────────────────────────────────────────────
+       按【日期】定位 24 节气，再由节气推季节名。
+
+       ⚠️ 这里曾经有个 bug：原来只按 seasonFactor 的【数值】起名，
+          而四月和十月的数值都接近 0，于是十月也被叫成「春秋之交」。
+          那个数值是温度曲线（-cos 型），必须配上方向才能定季节。
+          改成按日期算之后，十月十日在寒露与霜降之间 → 深秋。
+       ──────────────────────────────────────────────────────── */
+    var TERMS = [
+        [1, 5, '小寒'], [1, 20, '大寒'], [2, 4, '立春'], [2, 19, '雨水'],
+        [3, 6, '惊蛰'], [3, 21, '春分'], [4, 5, '清明'], [4, 20, '谷雨'],
+        [5, 6, '立夏'], [5, 21, '小满'], [6, 6, '芒种'], [6, 21, '夏至'],
+        [7, 7, '小暑'], [7, 23, '大暑'], [8, 8, '立秋'], [8, 23, '处暑'],
+        [9, 8, '白露'], [9, 23, '秋分'], [10, 8, '寒露'], [10, 24, '霜降'],
+        [11, 8, '立冬'], [11, 22, '小雪'], [12, 7, '大雪'], [12, 22, '冬至']
+    ];
+    var TERM_SEASON = [
+        '隆冬', '隆冬', '初春', '初春', '仲春', '仲春', '暮春', '暮春',
+        '初夏', '初夏', '仲夏', '仲夏', '盛夏', '盛夏', '初秋', '初秋',
+        '仲秋', '仲秋', '深秋', '深秋', '初冬', '初冬', '寒冬', '寒冬'
+    ];
+
+    function seasonTerm(d) {
+        var m = d.getMonth() + 1, day = d.getDate();
+        var idx = TERMS.length - 1;          // 1 月 5 日之前算上一年的冬至
+        for (var i = 0; i < TERMS.length; i++) {
+            if (m > TERMS[i][0] || (m === TERMS[i][0] && day >= TERMS[i][1])) idx = i;
+            else break;
+        }
+        return { term: TERMS[idx][2], season: TERM_SEASON[idx] };
     }
+
+    /* 季节那句话说白了就是「现在是深秋（寒露）」 */
+    function seasonLabel(d) {
+        var t = seasonTerm(d);
+        return t.season + ' · ' + t.term;
+    }
+
     function aqiLevel(a) {
         if (a <= 50)  return { t: '优',       c: 'wx-aq-good'  };
         if (a <= 100) return { t: '良',       c: 'wx-aq-mid'   };
@@ -1752,7 +1783,7 @@ function render() {
     }
 
     var sEl = document.getElementById('wxSeason');
-    if (sEl) sEl.textContent = seasonName(seasonFactor(new Date()));
+    if (sEl) sEl.textContent = seasonLabel(new Date());
     document.getElementById('refreshNow').onclick = function () { t0 = Date.now(); bar.style.width = '0%'; refresh(); };
 
     step(new Date()); render();      // 先本地渲染，不等网络
