@@ -917,7 +917,7 @@ html { -webkit-text-size-adjust: 100%; }
 .wx-rows {
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
 }
 .wx-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -1131,7 +1131,7 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         <div class="pd-stats">
             <div class="pd-row"><span class="k">城市数</span><b>12 座</b></div>
             <div class="pd-row"><span class="k">刷新频率</span><b>每 10 秒</b></div>
-            <div class="pd-row"><span class="k">数据项</span><b>温度 / 湿度 / 气压 / 能见度 / 空气 / 风</b></div>
+            <div class="pd-row"><span class="k">数据项</span><b>温度 / 湿度 / 气压 / 能见度 / 空气 / 紫外线 / 风</b></div>
             <div class="pd-row"><span class="k">季节</span><b id="wxSeason">…</b></div>
             <div class="pd-tip">数据由随机数生成，与真实天气无关</div>
         </div>
@@ -1374,29 +1374,29 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     var REFRESH_MS = 10000;
 
     var CITIES = [
-        { name: 'NB频道总部', ico: '🏢', base: 22, swing: 2, vol: .4,
+        { name: 'NB频道总部', ico: '🏢', base: 22, swing: 2, vol: .4, lat: 30, uvK: 1.0,
           hum: 45, aqi: 22, vis: 28, note: '总部不打烊，数据不走样' },
-        { name: 'U星', ico: '🪐', base: 12, swing: 26, vol: 3.2,
+        { name: 'U星', ico: '🪐', base: 12, swing: 26, vol: 3.2, lat: 15, uvK: 1.1,
           hum: 30, aqi: 24, vis: 42, note: '从 U 星发来的，可能有点偏' },
-        { name: 'AWM市', ico: '🎯', base: 6, swing: 14, vol: 1.4,
+        { name: 'AWM市', ico: '🎯', base: 6, swing: 14, vol: 1.4, lat: 38, uvK: 1.22,
           hum: 62, aqi: 20, vis: 48, note: '枪法不虚发，天气不虚报' },
-        { name: 'Lemon市', ico: '🍋', base: 20, swing: 9, vol: 1.0,
+        { name: 'Lemon市', ico: '🍋', base: 20, swing: 9, vol: 1.0, lat: 24, uvK: 0.98,
           hum: 58, aqi: 26, vis: 26, note: '柠檬酸一点，日子甜一点' },
-        { name: 'Oganesson市', ico: '☢️', base: 34, swing: 8, vol: 2.6,
+        { name: 'Oganesson市', ico: '☢️', base: 34, swing: 8, vol: 2.6, lat: 22, uvK: 1.05,
           hum: 22, aqi: 38, vis: 30, note: '元素排最后，热度排第一' },
-        { name: 'Fafat市', ico: '🌫️', base: 17, swing: 11, vol: 1.2,
+        { name: 'Fafat市', ico: '🌫️', base: 17, swing: 11, vol: 1.2, lat: 31, uvK: 0.96,
           hum: 72, aqi: 34, vis: 22, note: '功能做得全，天气也周全' },
-        { name: 'GC3市', ico: '🏗️', base: 15, swing: 12, vol: 1.1,
+        { name: 'GC3市', ico: '🏗️', base: 15, swing: 12, vol: 1.1, lat: 32, uvK: 0.95,
           hum: 52, aqi: 42, vis: 26, note: '产品不将就，天气不凑合' },
-        { name: 'UVS市', ico: '☀️', base: 25, swing: 10, vol: .9,
+        { name: 'UVS市', ico: '☀️', base: 25, swing: 10, vol: .9, lat: 35, uvK: 1.18,
           hum: 34, aqi: 18, vis: 50, note: '紫外线最强，心情最亮' },
-        { name: 'UWSF市', ico: '🌬️', base: 13, swing: 15, vol: 1.6,
+        { name: 'UWSF市', ico: '🌬️', base: 13, swing: 15, vol: 1.6, lat: 28, uvK: 1.0,
           hum: 55, aqi: 21, vis: 38, note: '市值往上长，风也往上长' },
-        { name: 'PTC市', ico: '🔥', base: 27, swing: 7, vol: 1.3,
+        { name: 'PTC市', ico: '🔥', base: 27, swing: 7, vol: 1.3, lat: 33, uvK: 0.97,
           hum: 40, aqi: 30, vis: 28, note: '加热不马虎，天气不认输' },
-        { name: '5U市', ico: '🎈', base: 18, swing: 13, vol: 1.2,
+        { name: '5U市', ico: '🎈', base: 18, swing: 13, vol: 1.2, lat: 26, uvK: 1.02,
           hum: 60, aqi: 32, vis: 25, note: '细节做得足，天气也靠谱' },
-        { name: 'Ubn市', ico: '🌃', base: 16, swing: 12, vol: 1.0,
+        { name: 'Ubn市', ico: '🌃', base: 16, swing: 12, vol: 1.0, lat: 29, uvK: 0.9,
           hum: 64, aqi: 36, vis: 24, note: '夜里不打盹，白天不迟到' }
     ];
 
@@ -1447,6 +1447,52 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     function seasonLabel(d) {
         var t = seasonTerm(d);
         return t.season + ' · ' + t.term;
+    }
+
+    /* ── 紫外线指数 ──────────────────────────────────────────────
+       按真实物理算，不是拍脑袋给的数：
+
+           太阳赤纬   decl = 23.44° × sin(2π(doy-81)/365.25)      ← 季节
+           时角       ha   = 15° × (小时 - 12)                     ← 时刻
+           太阳高度角 sinH = sin(lat)sin(decl) + cos(lat)cos(decl)cos(ha)
+           晴空 UV    = 12 × sinH^2.42                            ← 公认近似式
+           最终 UV    = 晴空 UV × 城市系数 × 云量系数
+
+       所以它是【实时】的：清晨低、正午高、太阳落山归零；
+       冬天整体压低，夏天抬起来；高原城市（AWM）比同纬度更强。
+       ──────────────────────────────────────────────────────── */
+    function uvCloud(t) {
+        if (t.indexOf('雷') >= 0) return .30;
+        if (t.indexOf('雪') >= 0) return .35;
+        if (t.indexOf('雨') >= 0) return .28;
+        if (t.indexOf('阴') >= 0) return .35;
+        if (t.indexOf('间') >= 0) return .85;   // 晴间多云
+        if (t.indexOf('多云') >= 0) return .62;
+        return 1.0;                             // 晴
+    }
+
+    function uvIndex(c, condText, d) {
+        var start = new Date(d.getFullYear(), 0, 0);
+        var doy = Math.floor((d - start) / 86400000);
+        var decl = 23.44 * Math.sin(2 * Math.PI * (doy - 81) / 365.25);
+        var hours = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+        var ha = 15 * (hours - 12);
+        var latR = c.lat * Math.PI / 180,
+            decR = decl * Math.PI / 180,
+            haR = ha * Math.PI / 180;
+        var sinH = Math.sin(latR) * Math.sin(decR) +
+                   Math.cos(latR) * Math.cos(decR) * Math.cos(haR);
+        if (sinH <= 0.02) return 0;             // 太阳在地平线下
+        var clear = 11.2 * Math.pow(sinH, 2.42);
+        return Math.max(0, Math.min(12, clear * (c.uvK || 1) * uvCloud(condText || '')));
+    }
+
+    function uvGrade(v) {
+        if (v < 3) return { t: '弱', c: '' };
+        if (v < 6) return { t: '中等', c: '' };
+        if (v < 8) return { t: '强', c: 'lv-warn' };
+        if (v < 11) return { t: '很强', c: 'lv-bad' };
+        return { t: '极强', c: 'lv-bad' };
     }
 
     function aqiLevel(a) {
@@ -1542,6 +1588,8 @@ function render() {
             var lv = aqiLevel(Math.round(s.aqi));
             var w = windName(s.force);
             var cd = condition(s, c);
+                var uv = uvIndex(c, cd.t, new Date());
+                var ug = uvGrade(uv);
 
             html +=
               '<article class="wx-card" style="--tc:' + tempColor(cT) + ';--tc-soft:' + tempColor(cT) + '1f">' +
@@ -1566,6 +1614,8 @@ function render() {
                     s.vis.toFixed(1) + '<span class="u">km</span></dd></div>' +
                   '<div class="wx-row"><dt>🍃 空气质量</dt><dd class="' + lv.c + '">' +
                     Math.round(s.aqi) + '<span class="u">' + lv.t + '</span></dd></div>' +
+                  '<div class="wx-row"><dt>☀️ 紫外线</dt><dd class="' + ug.c + '">' +
+                    uv.toFixed(1) + '<span class="u">' + ug.t + '</span></dd></div>' +
                   '<div class="wx-row wx-row-wide"><dt>🌬 风向风力</dt><dd>' +
                     DIRS[s.dir] + ' ' + w.lv + ' 级' +
                     '<span class="u">' + s.force.toFixed(1) + ' m/s</span></dd></div>' +
