@@ -490,6 +490,7 @@
     } catch (e) { sb = null; }
 
     var srcTag = document.getElementById('wxSrc');
+    var srvAt = 0;          // 服务端数据的时间戳（用于显示「几秒前更新」）
     var FROM_SERVER = false;
 
     function applyServer(rows) {
@@ -509,60 +510,79 @@
             }
         });
         FROM_SERVER = true;
-        if (srcTag) srcTag.textContent = '· 服务端数据';
+        // 记下服务端这次的更新时间，好在页面上显示「几秒前更新」
+        var at = rows[0] && rows[0].updated_at;
+        if (at) { try { srvAt = new Date(at).getTime(); } catch (e) {} }
     }
 
-    function pull() {
-        if (!sb || !sb.rpc) { full(); return; }
+
+    /* ── 刷新节奏 ──────────────────────────────────────────────
+       一个定时器管到底：进度条走到 100% 的【同一时刻】就发起刷新，
+       然后把条子归零。不要把「条子」和「取数」分成两套定时器 ——
+       那样两边周期会越走越偏，看起来就像条子和数据对不上。
+
+       取数成功 → 用服务端那份覆盖
+       取数失败 → 本地走一轮，页面不会卡住
+       ──────────────────────────────────────────────────────── */
+    var t0 = Date.now();
+    var busy = false;
+
+    function refresh() {
+        if (busy) return;
+        busy = true;
+        if (!sb || !sb.rpc) {
+            step(new Date()); render(); FROM_SERVER = false;
+            busy = false;
+            return;
+        }
         sb.rpc('get_weather').then(function (res) {
-            if (res && res.data && res.data.length) {
-                applyServer(res.data);
-                render();
-                t0 = Date.now();
-                bar.style.width = '0%';
-                clockUi();
-            } else {
-                full();
-            }
-        }).catch(function () { full(); });
+            if (res && res.data && res.data.length) applyServer(res.data);
+            else { step(new Date()); FROM_SERVER = false; }
+            render();
+        }).catch(function () {
+            step(new Date()); render(); FROM_SERVER = false;
+        }).then(function () { busy = false; });
     }
 
-    var t0 = Date.now();
-    function tickUi() {
-        var el = Date.now() - t0;
-        var pct = Math.min(100, el / REFRESH_MS * 100);
-        bar.style.width = pct.toFixed(1) + '%';
-        num.textContent = Math.max(0, (REFRESH_MS - el) / 1000).toFixed(1) + 's';
-    }
-
-    function full() {
-        step(new Date());
-        render();
-        t0 = Date.now();
-        bar.style.width = '0%';
-    }
-
-    function clockUi() {
-        var d = new Date();
-        clock.textContent = d.toLocaleTimeString('zh-CN', { hour12: false }) +
-                            ' 观测';
+    function loop() {
+        var el = Date.now() - t0;
+        if (el >= REFRESH_MS) {
+            t0 = Date.now();                 // 先归零和刷新同一时刻
+            bar.style.width = '0%';
+            num.textContent = (REFRESH_MS / 1000).toFixed(1) + 's';
+            refresh();
+        } else {
+            bar.style.width = (el / REFRESH_MS * 100).toFixed(1) + '%';
+            num.textContent = Math.max(0, (REFRESH_MS - el) / 1000).toFixed(1) + 's';
+        }
+    }
+
+    function clockUi() {
+        var d = new Date();
+        clock.textContent = d.toLocaleTimeString('zh-CN', { hour12: false }) + ' 观测';
+        if (srcTag) {
+            if (!FROM_SERVER || !srvAt) { srcTag.textContent = '· 本地推算'; }
+            else {
+                var age = Math.max(0, Math.round((Date.now() - srvAt) / 1000));
+                srcTag.textContent = '· 服务端 ' + age + ' 秒前更新';
+            }
+        }
     }
 
     document.getElementById('seasonTxt').textContent =
         seasonName(seasonFactor(new Date()));
-    document.getElementById('refreshNow').onclick = full;
+    document.getElementById('refreshNow').onclick = function () { t0 = Date.now(); bar.style.width = '0%'; refresh(); };
 
-    full();          // 先用本地数据立刻渲染，不等网络
+    step(new Date()); render();      // 先本地渲染，不等网络
+    refresh();                       // 同时问服务端要那一份
     clockUi();
-    pull();          // 同时问服务端要那一份
-    setInterval(tickUi, 100);
-    setInterval(clockUi, 1000);
-    setInterval(pull, REFRESH_MS);
-
-    /* 手机上切到后台再回来时，别让它停在旧数据上 */
-    document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) pull();
-    });
+    setInterval(loop, 100);          // 进度条与刷新共用一个定时器
+    setInterval(clockUi, 1000);
+
+    /* 手机上切到后台再回来时，别让它停在旧数据上 */
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) { t0 = Date.now(); refresh(); }
+    });
 })();
 </script>
 
