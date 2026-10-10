@@ -1125,10 +1125,13 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
 
         /* ── 配图 ── */
         .np-figure { margin: 20px 0; text-align: center; }
+        /* 尺寸严格照旧版 e22b062：520 宽 / 170 高
+           边框颜色不用 var(--card-border) —— 那个在浅色主题下和纸面几乎同色，
+           所以只有夜晚模式看得见框。换成一个固定中性灰，两种模式都清楚。 */
         .np-figure .box {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 100%; max-width: 560px; height: 360px;
-            border: 1px dashed var(--card-border); border-radius: 6px;
+            width: 100%; max-width: 520px; height: 170px;
+            border: 1px dashed rgba(128,145,170,.62); border-radius: 6px;
             background: var(--count-bg); color: var(--count-text);
             font-size: .85rem; letter-spacing: 1px;
         }
