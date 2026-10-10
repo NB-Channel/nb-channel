@@ -1,3 +1,21 @@
+
+/* ===== 默认滚动条（不限主题） =====
+   ⚠️ 这个文件里原有的滚动条规则都是 html[theme="xxx"] 作用域的 ——
+      只有切到对应主题才生效。而官网模式（Beta/）的页面【只加载本文件】，
+      不加载 css/ui-new.css（根目录页面的蓝色滚动条就在那里），
+      所以不设主题时滚动条是系统默认的灰色，和其他页面明显不一样。
+      这里补一条不受主题限制的默认样式，让官网模式也有颜色。
+      （官网模式本来就走深色，所以两个模式各给一套。） */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(0, 161, 214, .35); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 161, 214, .55); }
+::-webkit-scrollbar-track { background: transparent; }
+html.beta ::-webkit-scrollbar-thumb { background: rgba(140, 170, 255, .38); }
+html.beta ::-webkit-scrollbar-thumb:hover { background: rgba(140, 170, 255, .6); }
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: rgba(0, 161, 214, .38) transparent; }
+html.beta * { scrollbar-color: rgba(140, 170, 255, .4) transparent; }
+
 /* ============================================================
    NB频道 · 主题包（官网模式）
    ------------------------------------------------------------
