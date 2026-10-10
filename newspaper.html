@@ -472,11 +472,42 @@
             });
     }
 
+    // ⚠️ 三层保险，保证不会「一直卡在正在取报…」：
+    //    ① 等 supabase 就绪（CDN 慢时不至于当场判死）
+    //    ② 8 秒超时（网络被墙 / 请求石沉大海时也能给出结果）
+    //    ③ 任何异常都 reject，让调用方的 .catch 接住并显示出来
+    function waitSb() {
+        if (sb && sb.rpc) return Promise.resolve(sb);
+        return new Promise(function (resolve, reject) {
+            var t0 = Date.now();
+            (function tick() {
+                if (sb && sb.rpc) return resolve(sb);
+                if (window.supabase && !sb) {
+                    try {
+                        sb = window.supabase.createClient(
+                            'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+                            'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg');
+                    } catch (e) { /* 下一轮再试 */ }
+                }
+                if (Date.now() - t0 > 10000) {
+                    return reject(new Error('supabase 脚本没能加载（可能是网络/CDN 问题），刷新试试'));
+                }
+                setTimeout(tick, 150);
+            })();
+        });
+    }
+
     function rpc(fn, args) {
-        if (!sb || !sb.rpc) return Promise.reject(new Error('supabase 没加载'));
         args = Object.assign({}, args || {});
         if (!('p_session' in args)) args.p_session = sess();
-        return sb.rpc(fn, args).then(function (r) {
+        return waitSb().then(function (client) {
+            return Promise.race([
+                client.rpc(fn, args),
+                new Promise(function (_, rej) {
+                    setTimeout(function () { rej(new Error('请求超时（8 秒没回应）')); }, 8000);
+                })
+            ]);
+        }).then(function (r) {
             if (r && r.error) throw new Error(r.error.message || 'RPC 失败');
             return r ? r.data : null;
         });
