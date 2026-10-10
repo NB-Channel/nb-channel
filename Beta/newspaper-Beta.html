@@ -1186,12 +1186,28 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         }
         .np-readnote b { color: var(--status-border); }
         /* ── 插图（假图片）── 照旧版那个占位框 */
-        .np-figure { margin: 20px 0; text-align: center; }
+        .np-figure { margin: 24px 0; text-align: center; }
+        /* 占位框做成一块【大长方形】——4:3，像张照片，不至于扁成一条 */
         .np-figure .box {
-            border: 1px dashed var(--card-border); border-radius: 6px;
-            background: var(--count-bg); padding: 30px 22px;
+            box-sizing: border-box;
+            width: 100%; max-width: 560px;
+            aspect-ratio: 4 / 3;
+            min-height: 300px;
+            margin: 0 auto;
+            border: 1px dashed var(--card-border); border-radius: 8px;
+            background: var(--count-bg);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 10px; padding: 26px 30px;
             font-family: "Songti SC", "SimSun", Georgia, serif;
-            font-size: .92rem; color: var(--count-text); line-height: 1.9;
+            font-size: .95rem; color: var(--count-text); line-height: 1.9;
+        }
+        /* 框里放个小图标，空着的时候不至于太秃 */
+        .np-figure .box::before {
+            content: '🖼️'; font-size: 2.1rem; opacity: .5; line-height: 1;
+        }
+        @media (max-width: 720px) {
+            .np-figure .box { max-width: 100%; min-height: 220px; padding: 20px 18px; }
         }
         .np-figure .box .tag {
             display: inline-block; font-size: .68rem; font-weight: 700;
