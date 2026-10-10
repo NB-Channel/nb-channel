@@ -917,7 +917,7 @@ html { -webkit-text-size-adjust: 100%; }
 .wx-rows {
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
 }
 .wx-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -935,11 +935,7 @@ html { -webkit-text-size-adjust: 100%; }
     margin-left: 3px;
 }
 /* 风向风力那格文字长，单独小一号 */
-.wx-row-wide {
-    grid-column: 1 / -1;
-    padding-top: 9px;
-    border-top: 1px dashed var(--card-border);
-}
+
 .wx-row-wide dd { font-size: 1.06rem; }
 .wx-row-wide dd .u { font-size: .78rem; }
 
@@ -995,8 +991,33 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     /* 正文容器：和官网模式的标准宽度对齐（.vwrap 也是 1080px）。
        ⚠️ 页面里本来就有 <div class="wx-main">，但一直没有对应的 CSS 规则 ——
           于是刷新条和城市卡片都是满宽，而上面的公告条是 1080px，三段对不齐。 */
-    .wx-main { max-width: 1080px; margin: 0 auto; padding: 0 20px 60px; }
+    .wx-main { max-width: 1320px; margin: 0 auto; padding: 0 20px 60px; }
 
+
+    /* ── 卡片里的 24 小时温度曲线 ── */
+    .wx-row-chart { grid-column: 1 / -1; display: block; margin-top: 4px; }
+    .wx-chart-box {
+        position: relative; width: 100%;
+        padding: 8px 34px 12px 34px;
+        border-top: 1px dashed var(--line);
+    }
+    .wx-chart { display: block; width: 100%; height: 46px; }
+    .wx-chart-tip {
+        position: absolute; left: 34px; bottom: -2px;
+        font-size: .68rem; color: var(--muted); letter-spacing: .5px;
+    }
+    .wx-chart-lo, .wx-chart-hi {
+        position: absolute; font-size: .72rem; font-weight: 700;
+        color: var(--muted); font-variant-numeric: tabular-nums;
+    }
+    .wx-chart-lo { left: 4px;  bottom: 10px; }
+    .wx-chart-hi { left: 4px;  top: 8px; }
+
+    /* 本页三段统一放宽（官网模式的默认是 hero 1180 / 公告 1080 / 正文 1080）。
+       只写在【本页内联样式】里，不影响其它 Beta 页。 */
+    .vhero-inner { max-width: 1320px; }
+    .beta-announce { max-width: 1320px; }
+    .wx-main { max-width: 1320px; }
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -1498,6 +1519,59 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         return { t: '极强', c: 'lv-bad' };
     }
 
+    /* ── 24 小时温度曲线 ────────────────────────────────────────
+       和实时温度同一个公式：
+           日均值  mean = base + swing × seasonFactor(日期)
+           日内    T(h) = mean + A × cos(2π(h-14)/24)
+       峰值 14:00、谷值 02:00 —— 气温日变化的常用近似。
+       振幅按各城市的 vol 折算，再给个下限，免得平坦的城市画成直线。
+       ──────────────────────────────────────────────────────── */
+    function tempAt(c, hour, date) {
+        var mean = c.base + c.swing * seasonFactor(date);
+        var amp = Math.max(1.8, c.vol * 1.5 + 2.4);
+        return mean + amp * Math.cos(2 * Math.PI * (hour - 14) / 24);
+    }
+
+    function tempChart(c, now) {
+        var W = 300, H = 46, PAD = 6;
+        var pts = [], i, h, t;
+        var lo = Infinity, hi = -Infinity;
+        for (i = 0; i <= 24; i++) {
+            t = tempAt(c, i, now);
+            pts.push(t);
+            if (t < lo) lo = t;
+            if (t > hi) hi = t;
+        }
+        if (hi - lo < 1) { hi = lo + 1; }
+        var nowH = now.getHours() + now.getMinutes() / 60;
+        function X(hh) { return PAD + (W - PAD * 2) * (hh / 24); }
+        function Y(v) { return PAD + (H - PAD * 2) * (1 - (v - lo) / (hi - lo)); }
+
+        var d = '';
+        for (i = 0; i <= 24; i++) {
+            d += (i ? ' L' : 'M') + X(i).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+        }
+        // 曲线下方填一层淡色
+        var area = d + ' L' + X(24).toFixed(1) + ' ' + (H - PAD) + ' L' + X(0).toFixed(1) + ' ' + (H - PAD) + ' Z';
+        // 当前时刻的点
+        var curT = tempAt(c, nowH, now);
+
+        return '<svg class="wx-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
+               'role="img" aria-label="24 小时温度曲线">' +
+                 '<defs><linearGradient id="cg' + c.name.replace(/[^\w]/g, '') + '" x1="0" y1="0" x2="1" y2="0">' +
+                   '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
+                 '</linearGradient></defs>' +
+                 '<path d="' + area + '" fill="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" opacity=".14"/>' +
+                 '<path d="' + d + '" fill="none" stroke="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" ' +
+                   'stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+                 '<circle cx="' + X(nowH).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="2.6" ' +
+                   'fill="#fff" stroke="#7c8cf8" stroke-width="1.6"/>' +
+               '</svg>' +
+               '<span class="wx-chart-lo">' + lo.toFixed(0) + '°</span>' +
+               '<span class="wx-chart-hi">' + hi.toFixed(0) + '°</span>';
+
+    }
+
     function aqiLevel(a) {
         if (a <= 50)  return { t: '优',       c: 'wx-aq-good'  };
         if (a <= 100) return { t: '良',       c: 'wx-aq-mid'   };
@@ -1619,9 +1693,13 @@ function render() {
                     Math.round(s.aqi) + '<span class="u">' + lv.t + '</span></dd></div>' +
                   '<div class="wx-row"><dt>☀️ 紫外线</dt><dd class="' + ug.c + '">' +
                     uv.toFixed(1) + '<span class="u">' + ug.t + '</span></dd></div>' +
-                  '<div class="wx-row wx-row-wide"><dt>🌬 风向风力</dt><dd>' +
+                  '<div class="wx-row"><dt>🌬 风向风力</dt><dd>' +
                     DIRS[s.dir] + ' ' + w.lv + ' 级' +
                     '<span class="u">' + s.force.toFixed(1) + ' m/s</span></dd></div>' +
+                  '<div class="wx-row wx-row-chart"><div class="wx-chart-box">' +
+                    tempChart(c, new Date()) +
+                    '<span class="wx-chart-tip">未来 24 小时气温走势</span>' +
+                  '</div></div>' +
                 '</dl>' +
               '</article>';
         });
