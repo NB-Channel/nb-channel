@@ -1571,7 +1571,6 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     }
 
     function tempChart(c, now) {
-        var svg = document.createElement('div');   // 用来挂元信息，不参与渲染
         var W = 900, H = 84, PAD = 10, PADB = 16;
         var pts = [], i, h, t;
         var lo = Infinity, hi = -Infinity;
@@ -1610,7 +1609,6 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                     '" stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="3 4"/>';
         });
 
-        svg._X = X; svg._Y = Y; svg._lo = lo; svg._hi = hi; svg._W = W; svg._H = H; svg._PADB = PADB;
         return '<svg class="wx-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
                'role="img" aria-label="24 小时温度曲线">' +
                  '<defs><linearGradient id="cg' + c.name.replace(/[^\w]/g, '') + '" x1="0" y1="0" x2="1" y2="0">' +
@@ -1658,9 +1656,18 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                 var ratio = Math.max(0, Math.min(1, x / r.width));
                 var hour = ratio * 24;
                 var temp = tempAt(city, hour, new Date());
-                // 换算到 viewBox 坐标
+                // 换算到 viewBox 坐标。
+                // ⚠️ lo/hi 必须在这里【自己重算】—— 之前想从 svg 上读，
+                //    但 tempChart 是把它们挂在一个游离的 div 上的（从没进 DOM），
+                //    于是 lo/hi 是 undefined → vy 算成 NaN → 圆点卡在顶上不动。
+                var lo = Infinity, hi = -Infinity;
+                for (var k = 0; k <= 24; k++) {
+                    var tv = tempAt(city, k, new Date());
+                    if (tv < lo) lo = tv;
+                    if (tv > hi) hi = tv;
+                }
+                if (hi - lo < .4) hi = lo + .4;
                 var vx = 10 + (900 - 20) * ratio;
-                var lo = svg.__lo, hi = svg.__hi;
                 var vy = 10 + (84 - 10 - 16) * (1 - (temp - lo) / (hi - lo));
                 line.setAttribute('x1', vx); line.setAttribute('x2', vx);
                 dot.setAttribute('cx', vx); dot.setAttribute('cy', vy);
