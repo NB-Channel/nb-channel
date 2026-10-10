@@ -34,6 +34,7 @@ NBMarket.setApiKey('你的Key');         // JavaScript
 | `GET /api/comments?page=1&limit=20` | 需 Key | 最新评论（只读） |
 | `GET /api/stats` | 需 Key | 接口用量统计（开发用） |
 | `GET /api/bili-fans` | 公开 | B站实时粉丝数 |
+| `GET /api/weather` | 需 Key | 天气瞎报（十二座虚拟城市的当前气象，`?city=` 可筛选） |
 | `GET /api/docs` | 公开 | 接口文档 |
 
 统一响应：成功 `{"success": true, "code": "OK", ...}`；失败 `{"success": false, "code": "错误码", "message": "..."}`。

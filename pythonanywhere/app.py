@@ -1008,6 +1008,7 @@ def github_webhook():
 # GET /api/market                       全市场快照（支持 ?name= 模糊查询）
 # GET /api/market/<company_id>          单家公司市值
 # GET /api/market/<company_id>/history  历史K线（?days=7，默认7天，最多30天）
+# GET /api/weather                      天气瞎报（十二座虚拟城市的当前气象）
 # GET /api/docs                         接口文档页
 # 别名：/api/virtual-market-value 与 /api/Virtual market value 等价于 /api/market
 # 统一响应：{success, code, message?, ...data}
@@ -1029,6 +1030,7 @@ if not API_KEY:
         pass
 
 _market_cache = {'ts': 0, 'data': None}
+_weather_cache = {'ts': 0, 'data': None}
 _rate_buckets = {}  # ip -> [请求时间戳]
 
 # API 用量统计（进程内存；PythonAnywhere Reload 后清零）
@@ -1485,6 +1487,60 @@ def api_market_export():
     return resp
 
 
+@app.route('/api/weather')
+def api_weather():
+    """天气瞎报 · 十二座虚拟城市的当前气象（只读）。
+
+    数据由数据库的 weather_tick_loop 每 10 秒推进一轮，
+    这里再缓存 5 秒 —— 也就是最多十几秒的延迟。
+    支持 ?city= 按城市名模糊查询。
+    """
+    denied = _guard()
+    if denied:
+        return denied
+
+    now = datetime.datetime.now().timestamp()
+    rows = None
+    if _weather_cache['data'] is not None and now - _weather_cache['ts'] < 5:
+        rows = _weather_cache['data']
+    else:
+        try:
+            raw_rows = _exec_rows(supabase.rpc('get_weather'))
+            # get_weather 返回 jsonb，不同 supabase-py 版本可能包一层 {get_weather: [...]}
+            if raw_rows and isinstance(raw_rows[0], dict) and 'get_weather' in raw_rows[0]:
+                rows = raw_rows[0]['get_weather']
+            else:
+                rows = raw_rows
+            if not isinstance(rows, list):
+                rows = []
+            _weather_cache['data'] = rows
+            _weather_cache['ts'] = now
+        except Exception as e:
+            return _err('DB_ERROR', '后端数据库连接失败: %s' % e, 500)
+
+    if not isinstance(rows, list):
+        rows = []
+
+    kw = (request.args.get('city') or '').strip().lower()
+    if kw:
+        rows = [r for r in rows if kw in str(r.get('city', '')).lower()]
+
+    updated = ''
+    for r in rows:
+        u = str(r.get('updated_at') or '')
+        if u > updated:
+            updated = u
+
+    return _ok({
+        'unit': {'temp': '°C', 'temp_alt': '°F', 'pressure': 'kPa',
+                 'visibility': 'km', 'humidity': '%', 'wind_force': 'm/s'},
+        'wind_dir_index': '风向按 16 方位，0=北、4=东、8=南、12=西，顺时针',
+        'count': len(rows),
+        'updated_at': updated,
+        'cities': rows,
+    })
+
+
 @app.route('/api/stats')
 def api_stats():
     """API 用量统计：当日请求数、各端点分布、限流次数。"""
@@ -1592,6 +1648,24 @@ curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/comments?page_pat
 </div>
 
 <div class="ep">
+<h2>天气瞎报</h2>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/weather"
+curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/weather?city=U"</pre>
+<p>返回十二座虚拟城市的当前气象：温度（摄氏 + 华氏）、湿度、气压、能见度、空气质量、风向风力。
+数据由数据库每 10 秒推进一轮，接口侧再缓存 5 秒。字段含义：</p>
+<table>
+<tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>temp_c</code> / <code>temp_f</code></td><td>摄氏温度 / 华氏温度</td></tr>
+<tr><td><code>humidity</code></td><td>相对湿度，%</td></tr>
+<tr><td><code>pressure</code></td><td>气压，kPa</td></tr>
+<tr><td><code>visibility</code></td><td>能见度，km</td></tr>
+<tr><td><code>aqi</code></td><td>空气质量指数（越小越好）</td></tr>
+<tr><td><code>wind_dir</code></td><td>风向，0=北、4=东、8=南、12=西，顺时针 16 方位</td></tr>
+<tr><td><code>wind_force</code></td><td>风速，m/s</td></tr>
+<tr><td><code>updated_at</code></td><td>该城市数据最后一次推进的时间</td></tr>
+</table>
+<p>支持 <code>?city=</code> 按城市名模糊筛选。数据全是编的，与真实天气无关。</p>
+
 <span class="badge">GET</span><code>/api/docs</code> — 本文档
 </div>
 

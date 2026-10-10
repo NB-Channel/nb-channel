@@ -115,7 +115,8 @@ pre .s { color: #a5d6a5; }
             <tr><td><code class="m">GET /api/comments</code></td><td>需 Key</td><td class="desc">最新评论（只读）<small>?page=1&limit=20&page_path=comments-beta.html</small></td></tr>
             <tr><td><code class="m">GET /api/stats</code></td><td>需 Key</td><td class="desc">接口用量统计（开发用）</td></tr>
             <tr><td><code class="m">GET /api/bili-fans</code></td><td><b>公开</b></td><td class="desc">B站实时粉丝数（官网首页数据条同源，约 30 秒缓存）</td></tr>
-            <tr><td><code class="m">GET /api/docs</code></td><td><b>公开</b></td><td class="desc">完整接口文档页</td></tr>
+            <tr><td><code class="m">GET /api/weather</code></td><td><b>需 Key</b></td><td class="desc">天气瞎报 · 十二座虚拟城市的当前气象，<code>?city=</code> 可筛选</td></tr>
+        <tr><td><code class="m">GET /api/docs</code></td><td><b>公开</b></td><td class="desc">完整接口文档页</td></tr>
         </table>
         <p class="note">限流：每 IP 每分钟 60 次，超出返回 <code>429 RATE_LIMITED</code>。缺 Key 或 Key 错误返回 <code>401 UNAUTHORIZED</code>。</p>
     </div>
@@ -128,7 +129,10 @@ curl -H "<span class="k">X-API-Key: 你的Key</span>" "<span class="s">https://a
 curl -H "<span class="k">X-API-Key: 你的Key</span>" "<span class="s">https://api.nb-channel.top/api/market/1/history?days=7</span>"
 
 <span class="c"># 公开接口，不需要 Key</span>
-curl "<span class="s">https://api.nb-channel.top/api/bili-fans</span>"</pre>
+curl "<span class="s">https://api.nb-channel.top/api/bili-fans</span>"
+
+<span class="c"># 天气瞎报（十二座虚拟城市的气象）</span>
+curl -H "<span class="k">X-API-Key: 你的Key</span>" "<span class="s">https://api.nb-channel.top/api/weather</span>"</pre>
         <pre><span class="k">NBMarket</span>.setApiKey(<span class="s">'你申请到的 Key'</span>);   <span class="c">// 先填 Key</span>
 <span class="k">const</span> m = <span class="k">await</span> NBMarket.market();
 console.log(<span class="s">'总市值'</span>, m.total_market_value, <span class="s">'公司数'</span>, m.count);</pre>
