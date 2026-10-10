@@ -36,7 +36,7 @@
     <style>
         body { padding: 34px 16px 120px; background: var(--bg-color); }
 
-        .wx-wrap { max-width: 1320px; margin: 0 auto; padding: 0 24px; }
+        .wx-wrap { padding: 0 4px; }
 
         /* ── 顶部标题区 ── */
         .wx-hero {
@@ -211,6 +211,7 @@
 <body>
 <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
 
+<div class="container">
 <div class="wx-wrap">
 
     <div class="wx-hero">
@@ -234,6 +235,7 @@
     <div class="wx-foot">
         本页所有气象数据由随机数生成，与任何真实地点、真实天气无关 · 单位：温度 °C / °F · 气压 kPa · 能见度 km
     </div>
+</div>
 </div>
 
 <div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
@@ -599,7 +601,8 @@
             if (!FROM_SERVER || !srvAt) { srcTag.textContent = '· 本地推算'; }
             else {
                 var age = Math.max(0, Math.round((Date.now() - srvAt) / 1000));
-                srcTag.textContent = '· 服务端 ' + age + ' 秒前更新';
+                srcTag.textContent = '· 服务端数据';
+                srcTag.title = '这份数据是 ' + age + ' 秒前从服务端取的';
             }
         }
     }
