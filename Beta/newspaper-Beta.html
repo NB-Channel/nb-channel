@@ -829,165 +829,442 @@ html { -webkit-text-size-adjust: 100%; }
 }
 .md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
 .md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
-/* ══════ NB报刊社（本页专用，官网模式）══════ */
-.np-main { max-width: 1080px; margin: 0 auto; padding: 0 24px 60px; }
-        /* ══════════════════════════════════════════════════════
-           NB报刊社 —— 报纸版式
-           用全站 CSS 变量，三套界面 + 七套主题下都能看。
-           纸面感靠：报头双线、正文分栏、细竖线分隔、衬线标题。
-           ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   天气瞎报 · 卡片样式
+   设计：温度定色 → 卡片左上角一层淡色晕开，左边一条温度色条，
+        右上角一个大天气图标。悬停轻微浮起。
+   ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   天气瞎报 · 一行一个城市
+   三栏：城市 | 温度 | 指标。窄屏自动竖排。
+   ══════════════════════════════════════════════════════ */
+.wx-grid { display: flex; flex-direction: column; gap: 14px; }
 
-                .np-paper {
-            background: var(--card);
-            border-radius: 6px;
-            padding: 34px 40px 30px;
-            box-shadow: 0 20px 40px -18px rgba(16,24,40,.25);
-            border: 1px solid var(--line);
-        }
+.wx-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) 160px minmax(0, 2.7fr);
+    align-items: center;
+    gap: 22px;
+    padding: 22px 26px 22px 30px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background:
+        linear-gradient(120deg, var(--tc-soft) 0%, rgba(255,255,255,0) 42%),
+        var(--card);
+    box-shadow: 0 6px 20px -14px rgba(16,24,40,.22);
+    transition: transform .24s cubic-bezier(.2,.8,.3,1), box-shadow .24s;
+}
+.wx-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 34px -18px rgba(16,24,40,.32);
+}
+/* 左侧温度色条 */
+.wx-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+    background: var(--tc);
+    transition: background .5s;
+}
+
+/* ── 第一栏：城市 ── */
+.wx-who { min-width: 0; }
+.wx-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.wx-city { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.wx-ico { font-size: 1.3rem; font-style: normal; flex: none; }
+.wx-nm {
+    font-size: 1.18rem; font-weight: 800; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wx-cond {
+    display: inline-flex; align-items: center; gap: 4px; flex: none;
+    font-size: .8rem; font-weight: 600; color: var(--ink-faint);
+    background: rgba(148,163,184,.14);
+    border-radius: 99px; padding: 2px 10px 2px 6px;
+}
+.wx-cond i { font-size: 1.05rem; font-style: normal; line-height: 1; }
+.wx-cond em { font-style: normal; }
+.wx-note-in {
+    margin: 0; font-size: .78rem; line-height: 1.7;
+    color: var(--ink-faint);
+}
+
+/* ── 第二栏：温度 ── */
+.wx-temp {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    padding-left: 22px;
+    border-left: 1px dashed var(--line);
+}
+.wx-c {
+    font-size: 3.4rem; font-weight: 800; line-height: 1;
+    letter-spacing: -2px; color: var(--brand);
+    font-variant-numeric: tabular-nums;
+}
+.wx-c .wx-u {
+    font-size: 1.3rem; font-weight: 700; letter-spacing: 0;
+    margin-left: 2px; color: var(--brand);
+}
+.wx-f {
+    font-size: .86rem; font-weight: 600;
+    color: var(--ink-faint); font-variant-numeric: tabular-nums;
+}
+
+/* ── 第三栏：五项指标横排 ── */
+.wx-rows {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.wx-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.wx-row dt {
+    font-size: .74rem; color: var(--ink-faint);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wx-row dd {
+    margin: 0; font-size: 1.42rem; font-weight: 800; line-height: 1.15;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wx-row dd .u {
+    font-size: .82rem; font-weight: 600; color: var(--ink-faint);
+    margin-left: 3px;
+}
+/* 风向风力那格文字长，单独小一号 */
+
+.wx-row-wide dd { font-size: 1.06rem; }
+.wx-row-wide dd .u { font-size: .78rem; }
+
+/* 空气质量的颜色由 JS 挂类，这里只保证加粗 */
+.wx-row dd.aq-good, .wx-row dd.aq-mid, .wx-row dd.aq-bad,
+.wx-row dd.aq-worse, .wx-row dd.aq-awful { font-weight: 800; }
+
+/* ── 窄屏：竖排 ── */
+@media (max-width: 1000px) {
+    .wx-card { grid-template-columns: 1fr; gap: 16px; padding: 20px 20px 20px 26px; }
+    .wx-temp {
+        flex-direction: row; align-items: baseline; gap: 10px;
+        padding-left: 0; padding-top: 14px;
+        border-left: none; border-top: 1px dashed var(--line);}    .wx-c { font-size: 2.9rem; }
+    .wx-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+    .wx-c { font-size: 2.4rem; }
+    .wx-row dd { font-size: 1.28rem; }}
+.wx-note { text-align: center; margin-top: 26px; font-size: .82rem;
+           color: var(--ink-faint); line-height: 2; }
+html.dark .wx-card { box-shadow: 0 6px 20px -14px rgba(0,0,0,.5); }
+html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28); }
+
+    /* ── 刷新倒计时条 ──
+       ⚠️ 这几条是补的。Beta 版当初只从 weather.html 抽了「城市卡片」那段 CSS，
+          刷新条那几条漏了；而 Beta 的 HTML 用的是另一套类名
+          （.wx-tickbar / .wx-tb-bar / .wx-tb-txt），和根目录的 .wx-tick 对不上，
+          于是刷新条一直没有布局样式：「下次刷新」独占一行、进度条也看不见。 */
+    .wx-tickbar {
+        margin-top: 18px;
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .wx-tb-bar {
+        flex: 1; min-width: 160px; height: 7px; border-radius: 99px;
+        background: var(--line); overflow: hidden;
+    }
+    .wx-tb-bar i {
+        display: block; height: 100%; width: 0%;
+        /* 和站里其它进度条统一：蓝紫渐变（见 index-Beta 的 .jny-progress .bar i） */
+        background: linear-gradient(90deg, #60a5fa, #a78bfa); border-radius: 99px;
+        transition: width .25s linear;
+    }
+    .wx-tb-txt { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+    .wx-tickbar button {
+        background: var(--card); color: var(--ink);
+        border: 1px solid var(--line); border-radius: 30px;
+        padding: 7px 16px; font-size: .84rem; cursor: pointer; transition: .2s;
+    }
+    .wx-tickbar button:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+
+    /* 正文容器：和官网模式的标准宽度对齐（.vwrap 也是 1080px）。
+       ⚠️ 页面里本来就有 <div class="wx-main">，但一直没有对应的 CSS 规则 ——
+          于是刷新条和城市卡片都是满宽，而上面的公告条是 1080px，三段对不齐。 */
+    .wx-main { max-width: 1320px; margin: 0 auto; padding: 0 20px 60px; }
+
+
+    /* ── 卡片里的 24 小时温度曲线 ── */
+    .wx-row-chart { grid-column: 1 / -1; display: block; margin-top: 4px; }
+    .wx-chart-box {
+        position: relative; width: 100%;
+        padding: 8px 34px 12px 34px;
+        border-top: 1px dashed var(--line);
+    }
+    .wx-chart { display: block; width: 100%; height: 84px; }
+    .wx-chart-tip {
+        position: absolute; left: 34px; bottom: -2px;
+        font-size: .68rem; color: var(--muted); letter-spacing: .5px;
+    }
+    .wx-chart-lo, .wx-chart-hi {
+        position: absolute; font-size: .72rem; font-weight: 700;
+        color: var(--muted); font-variant-numeric: tabular-nums;
+    }
+    .wx-chart-lo { left: 4px;  bottom: 10px; }
+    .wx-chart-hi { left: 4px;  top: 8px; }
+
+    /* 本页三段统一放宽（官网模式的默认是 hero 1180 / 公告 1080 / 正文 1080）。
+       只写在【本页内联样式】里，不影响其它 Beta 页。 */
+    .vhero-inner { max-width: 1320px; }
+    .beta-announce { max-width: 1320px; }
+    .wx-main { max-width: 1320px; }
+
+    /* ── 图表区：温度曲线 + 三张小图 ── */
+    .wx-row-charts { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin-top: 2px; }
+    .wx-mini-box {
+        border: 1px solid var(--line); border-radius: 8px;
+        padding: 8px 10px 6px; background: rgba(124,140,248,.04);
+    }
+    .wx-mini-box h5 {
+        margin: 0 0 6px; font-size: .72rem; font-weight: 700; letter-spacing: .5px;
+        color: var(--muted);
+    }
+    .wx-mini { display: block; width: 100%; height: 92px; color: var(--muted); }
+    .wx-mini-sq { width: 92px; height: 92px; margin: 0 auto; }
+
+    /* ── 曲线热区 + 悬停气泡 ── */
+    .wx-chart-hit {
+        position: absolute; left: 34px; right: 34px; top: 0; bottom: 0;
+        cursor: crosshair; z-index: 2;
+    }
+    .wx-chart-tipbox {
+        position: fixed; z-index: 9999; display: none; pointer-events: none;
+        transform: translateX(-50%);
+        padding: 5px 10px; border-radius: 8px;
+        background: rgba(30,41,59,.94); color: #fff;
+        font-size: .78rem; font-weight: 600; letter-spacing: .3px;
+        white-space: nowrap; box-shadow: 0 6px 18px -6px rgba(0,0,0,.5);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ── 三张小图的热区 ── */
+    .wx-mini-hit { position: relative; cursor: crosshair; }
+    .wx-hit { cursor: crosshair; }
+
+/* ══════ NB报刊社 · 分期（本页专用，官网模式）══════ */
+.np-main { max-width: 1320px; margin: 0 auto; padding: 0 20px 60px; }
+.vhero-inner { max-width: 1320px; }
+.beta-announce { max-width: 1320px; }
+        .container { max-width: 1240px; }
+        .np-wrap { max-width: 1240px; margin: 0 auto; }
 
         /* ── 报头 ── */
-        .np-masthead { text-align: center; padding-bottom: 6px; }
+        .np-head { text-align: center; padding: 26px 0 0; }
         .np-name {
             font-family: "Songti SC", "SimSun", "Noto Serif SC", Georgia, serif;
-            font-size: clamp(2.4rem, 6vw, 4rem);
+            font-size: clamp(2.2rem, 5.4vw, 3.6rem);
             font-weight: 800; letter-spacing: 10px; text-indent: 10px;
-            color: var(--brand); line-height: 1.1;
-            margin: 0 0 6px;
+            color: var(--brand); line-height: 1.1; margin: 0 0 6px;
         }
-        .np-sub {
-            font-size: .82rem; letter-spacing: 3px; text-indent: 3px;
-            color: var(--ink-faint); margin-bottom: 14px;
-        }
-        /* 报头上下双线 —— 报纸的招牌样子 */
+        .np-sub { font-size: .8rem; letter-spacing: 3px; text-indent: 3px; color: var(--muted); margin-bottom: 14px; }
         .np-rule { border-top: 3px solid var(--brand); }
         .np-rule-thin { border-top: 1px solid var(--line); margin-top: 3px; }
-        .np-dateline {
-            display: flex; justify-content: space-between; align-items: center;
-            flex-wrap: wrap; gap: 8px;
-            padding: 9px 2px; font-size: .78rem; color: var(--ink-faint);
-        }
-        .np-dateline .mid { letter-spacing: 1px; text-indent: 1px; }
         .np-notice {
-            text-align: center; font-size: .74rem; color: var(--ink-faint);
-            letter-spacing: 2px; text-indent: 2px; padding: 5px 0 0;
+            text-align: center; font-size: .74rem; color: var(--muted);
+            letter-spacing: 2px; text-indent: 2px; padding: 7px 0;
         }
 
-        /* ── 头条 ── */
-        .np-lead { padding: 24px 0 20px; border-bottom: 1px solid var(--line); }
+        /* ── 顶部标签页 ── */
+        .np-tabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 14px 0 16px; }
+        .np-tab {
+            border: 1px solid var(--line); background: var(--card);
+            color: var(--muted); border-radius: 30px;
+            padding: 8px 20px; font-size: .88rem; font-weight: 600;
+            cursor: pointer; transition: .2s;
+        }
+        .np-tab:hover { border-color: var(--brand); color: var(--brand); }
+        .np-tab.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+        /* ── 期列表 ── */
+        .np-issues { display: flex; flex-direction: column; gap: 12px; }
+        .np-issue {
+            display: flex; align-items: center; gap: 18px;
+            background: var(--card); border: 1px solid var(--line);
+            border-radius: 12px; padding: 16px 20px; cursor: pointer; transition: .22s;
+        }
+        .np-issue:hover { border-color: var(--brand); transform: translateY(-2px); }
+        .np-issue-no {
+            flex: 0 0 74px; text-align: center;
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-weight: 800; color: var(--brand); line-height: 1.05;
+        }
+        .np-issue-no b { display: block; font-size: 1.9rem; }
+        .np-issue-no span { font-size: .7rem; color: var(--muted); letter-spacing: 1px; }
+        .np-issue-mid { flex: 1; min-width: 0; }
+        .np-issue-title { font-size: 1.06rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+        .np-issue-sum { font-size: .82rem; color: var(--muted); line-height: 1.6; }
+        .np-issue-meta { font-size: .74rem; color: var(--muted); margin-top: 6px; letter-spacing: .3px; }
+        .np-issue-right { flex: 0 0 auto; text-align: right; }
+        .np-badge { display: inline-block; font-size: .72rem; font-weight: 700; border-radius: 20px; padding: 4px 12px; white-space: nowrap; }
+        .np-badge.owned { background: rgba(34,197,94,.14); color: #16a34a; }
+        .np-badge.buy { background: rgba(124,140,248,.16); color: #6366f1; }
+        .np-badge.free { background: rgba(148,163,184,.16); color: var(--muted); }
+
+        /* ── 某一期 ── */
+        .np-back {
+            display: inline-flex; align-items: center; gap: 6px;
+            border: 1px solid var(--line); background: var(--card);
+            color: var(--muted); border-radius: 30px; padding: 7px 16px;
+            font-size: .84rem; cursor: pointer; margin-bottom: 14px;
+        }
+        .np-back:hover { border-color: var(--brand); color: var(--brand); }
+        .np-paper {
+            background: var(--card); border: 1px solid var(--line);
+            border-radius: 8px; padding: 30px 38px 26px;
+            box-shadow: 0 18px 40px -20px rgba(16,24,40,.22);
+        }
+        .np-sec {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1rem; font-weight: 800; letter-spacing: 4px; text-indent: 4px;
+            color: var(--brand); text-align: center; margin: 6px 0 18px; position: relative;
+        }
+        .np-sec::before, .np-sec::after { content: ''; position: absolute; top: 50%; width: 26%; border-top: 1px solid var(--line); }
+        .np-sec::before { left: 3%; } .np-sec::after { right: 3%; }
+
+        .np-art { padding: 18px 0; border-bottom: 1px solid var(--line); }
+        .np-art:last-child { border-bottom: none; }
         .np-h1 {
             font-family: "Songti SC", "SimSun", Georgia, serif;
-            font-size: clamp(1.5rem, 3.4vw, 2.15rem);
-            font-weight: 800; line-height: 1.35; text-align: center;
-            color: var(--ink); margin: 0 0 10px;
-        }
-        .np-h1-sub {
-            text-align: center; font-size: .92rem; color: var(--brand);
-            font-weight: 600; margin-bottom: 16px;
-        }
-        .np-byline {
-            text-align: center; font-size: .76rem; color: var(--ink-faint);
-            margin-bottom: 18px;
-        }
-
-        /* 正文：两栏，报纸感 */
-        .np-cols { column-count: 2; column-gap: 30px; column-rule: 1px solid var(--line); }
-        .np-cols p {
-            margin: 0 0 12px; font-size: .92rem; line-height: 2.05;
-            color: var(--ink); text-align: justify;
-            text-indent: 2em;
-        }
-        .np-cols p.noindent { text-indent: 0; }
-
-        /* ── 配图 ── */
-        .np-figure { margin: 20px 0; text-align: center; }
-        .np-figure .box {
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 100%; max-width: 520px; height: 170px;
-            border: 1px dashed var(--line); border-radius: 6px;
-            background: rgba(148,163,184,.10); color: var(--ink-faint);
-            font-size: .85rem; letter-spacing: 1px;
-        }
-        .np-figure figcaption {
-            margin-top: 8px; font-size: .75rem; color: var(--ink-faint);
-        }
-
-        /* ── 次条区 ── */
-        .np-second { padding: 22px 0; border-bottom: 1px solid var(--line); }
-        .np-h2 {
-            font-family: "Songti SC", "SimSun", Georgia, serif;
-            font-size: 1.28rem; font-weight: 800; line-height: 1.4;
+            font-size: clamp(1.35rem, 2.9vw, 1.85rem); font-weight: 800;
+            line-height: 1.35; text-align: center; text-indent: 2px;
             color: var(--ink); margin: 0 0 8px;
         }
+        .np-h2 {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1.16rem; font-weight: 800; line-height: 1.45;
+            color: var(--ink); margin: 0 0 6px;
+        }
         .np-h2 .tag {
-            display: inline-block; font-family: inherit;
-            font-size: .7rem; font-weight: 700; letter-spacing: 1px;
+            display: inline-block; font-size: .68rem; font-weight: 700;
             color: #fff; background: var(--brand);
-            border-radius: 3px; padding: 1px 7px; margin-right: 8px;
-            vertical-align: middle;
+            border-radius: 3px; padding: 1px 7px; margin-right: 8px; vertical-align: middle;
         }
+        .np-hsub { text-align: center; font-size: .88rem; color: var(--brand); font-weight: 600; margin-bottom: 14px; }
+        .np-cols { column-count: 2; column-gap: 28px; column-rule: 1px solid var(--line); }
+        .np-cols p { margin: 0 0 12px; font-size: .9rem; line-height: 2; text-indent: 2em; color: var(--ink); text-align: justify; }
+        .np-briefs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 9px 24px; }
+        .np-briefs div { font-size: .86rem; line-height: 1.9; color: var(--ink); padding-left: 16px; position: relative; }
+        .np-briefs div::before { content: '◆'; position: absolute; left: 0; top: 0; font-size: .6rem; line-height: 2.7; color: var(--brand); }
+        .np-service { margin: 16px 0; padding: 16px 20px; border: 1px solid var(--line); border-radius: 6px; background: rgba(148,163,184,.10); }
+        .np-service pre { margin: 0; font-family: inherit; font-size: .84rem; line-height: 2; color: var(--ink); white-space: pre-wrap; }
 
-        /* ── 短讯 ── */
-        .np-briefs { padding: 22px 0; border-bottom: 1px solid var(--line); }
-        .np-sec-title {
+        /* ── 付费栏未解锁 ── */
+        .np-lock {
+            margin: 18px 0 4px; padding: 26px 22px; text-align: center;
+            border: 1px dashed var(--line); border-radius: 10px;
+            background: linear-gradient(135deg, rgba(96,165,250,.07), rgba(167,139,250,.07));
+        }
+        .np-lock .lk-title { font-size: 1.05rem; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+        .np-lock .lk-sub { font-size: .84rem; color: var(--muted); line-height: 1.8; margin-bottom: 16px; }
+        .np-buy {
+            border: none; border-radius: 30px; padding: 12px 30px;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            color: #fff; font-size: .95rem; font-weight: 700; cursor: pointer;
+            box-shadow: 0 12px 26px -10px rgba(99,102,241,.6); transition: .2s;
+        }
+        .np-buy:hover { transform: translateY(-2px); box-shadow: 0 16px 32px -10px rgba(99,102,241,.75); }
+        .np-buy:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+        .np-locked-list { margin-top: 14px; text-align: left; }
+        .np-locked-list div { font-size: .84rem; color: var(--muted); line-height: 2.2; padding-left: 20px; position: relative; }
+        .np-locked-list div::before { content: '🔒'; position: absolute; left: 0; font-size: .72rem; }
+
+        .np-empty, .np-loading { text-align: center; padding: 40px 20px; color: var(--muted); font-size: .9rem; line-height: 2; }
+        #npToast {
+            position: fixed; left: 50%; top: 84px; transform: translateX(-50%) translateY(-8px);
+            z-index: 9999; padding: 11px 22px; border-radius: 30px;
+            background: rgba(30,41,59,.95); color: #fff; font-size: .88rem; font-weight: 600;
+            box-shadow: 0 14px 34px -12px rgba(0,0,0,.5);
+            opacity: 0; pointer-events: none; transition: .25s;
+        }
+        #npToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── 报刊亭 ── */
+        .np-kiosk { text-align: center; margin: 20px 0 18px; }
+        .np-kiosk-t {
             font-family: "Songti SC", "SimSun", Georgia, serif;
-            font-size: 1.1rem; font-weight: 800; letter-spacing: 4px;
-            color: var(--brand); text-align: center;
-            margin: 0 0 16px; position: relative;
+            font-size: 1.6rem; font-weight: 800; letter-spacing: 6px; text-indent: 6px;
+            color: var(--ink); margin: 0 0 8px;
         }
-        .np-sec-title::before, .np-sec-title::after {
-            content: ''; position: absolute; top: 50%; width: 28%;
-            border-top: 1px solid var(--line);
+        .np-kiosk-s { font-size: .86rem; color: var(--muted); margin: 0; }
+
+        /* 日期分组 */
+        .np-day {
+            display: flex; align-items: center; gap: 12px;
+            margin: 22px 0 12px; font-size: .84rem; font-weight: 700;
+            color: var(--muted); letter-spacing: 1px;
         }
-        .np-sec-title::before { left: 2%; }
-        .np-sec-title::after { right: 2%; }
-        .np-brief-list {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 10px 26px; margin: 0; padding: 0; list-style: none;
-        }
-        .np-brief-list li {
-            font-size: .88rem; line-height: 1.9; color: var(--ink);
-            padding-left: 16px; position: relative;
-        }
-        .np-brief-list li::before {
-            content: '◆'; position: absolute; left: 0; top: 0;
-            color: var(--brand); font-size: .62rem; line-height: 2.7;
+        .np-day::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+        .np-day .d {
+            background: rgba(148,163,184,.10); border-radius: 20px; padding: 3px 12px;
+            color: var(--brand);
         }
 
-        /* ── 便民信息 ── */
-        .np-service {
-            margin: 22px 0 0; padding: 18px 22px;
-            border: 1px solid var(--line); border-radius: 6px;
-            background: rgba(148,163,184,.10);
+        /* 卡片：左信息 + 右封面 */
+        .np-cards { display: flex; flex-direction: column; gap: 14px; }
+        .np-card {
+            display: flex; gap: 20px; align-items: stretch;
+            background: var(--card); border: 1px solid var(--line);
+            border-radius: 12px; padding: 18px 20px; transition: .22s;
         }
-        .np-service h4 {
-            margin: 0 0 12px; font-size: .95rem; letter-spacing: 3px;
+        .np-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+        .np-card-l { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .np-card-no {
+            font-size: .74rem; font-weight: 700; letter-spacing: 1px;
+            color: var(--brand); margin-bottom: 6px;
+        }
+        .np-card-t {
             font-family: "Songti SC", "SimSun", Georgia, serif;
-            color: var(--brand); text-align: center;
+            font-size: 1.2rem; font-weight: 800; line-height: 1.4;
+            color: var(--ink); margin-bottom: 6px;
         }
-        .np-service ul {
-            margin: 0; padding: 0; list-style: none;
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 8px 24px;
+        .np-card-s { font-size: .84rem; color: var(--muted); line-height: 1.8; flex: 1; }
+        .np-card-m { font-size: .74rem; color: var(--muted); margin: 10px 0 12px; letter-spacing: .3px; }
+        .np-read {
+            align-self: flex-start;
+            border: 1px solid var(--brand); background: transparent;
+            color: var(--brand); border-radius: 30px;
+            padding: 8px 22px; font-size: .86rem; font-weight: 700;
+            cursor: pointer; transition: .2s;
         }
-        .np-service li { font-size: .84rem; display: flex; justify-content: space-between; gap: 10px; }
-        .np-service li span { color: var(--ink-faint); }
-        .np-service a { color: var(--brand); text-decoration: none; font-weight: 600; }
-        .np-service a:hover { text-decoration: underline; }
-
-        /* ── 报尾 ── */
-        .np-colophon {
-            margin-top: 24px; padding-top: 14px;
-            border-top: 3px double var(--line);
-            text-align: center; font-size: .76rem;
-            color: var(--ink-faint); line-height: 2;
+        .np-read:hover { background: var(--brand); color: #fff; }
+        .np-card-r { flex: 0 0 190px; display: flex; align-items: center; justify-content: center; }
+        .np-cover {
+            width: 190px; height: 124px; object-fit: cover;
+            border-radius: 8px; border: 1px solid var(--line);
+            background: linear-gradient(135deg, rgba(96,165,250,.14), rgba(167,139,250,.14));
+        }
+        .np-cover-ph {
+            width: 190px; height: 124px; border-radius: 8px;
+            border: 1px dashed var(--line);
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, rgba(96,165,250,.10), rgba(167,139,250,.10));
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: .82rem; color: var(--muted); text-align: center; line-height: 1.6;
+        }
+        @media (max-width: 720px) {
+            .np-card { flex-direction: column-reverse; }
+            .np-card-r { flex: none; }
+            .np-cover, .np-cover-ph { width: 100%; height: 150px; }
         }
 
         @media (max-width: 720px) {
-            .np-paper { padding: 24px 20px 22px; border-radius: 4px; }
+            .np-paper { padding: 22px 18px 20px; }
             .np-cols { column-count: 1; }
-            .np-name { letter-spacing: 6px; }
-            .np-sec-title::before, .np-sec-title::after { width: 18%; }}
-html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
+            .np-issue { gap: 12px; padding: 14px; }
+            .np-issue-no { flex-basis: 58px; }
+            .np-issue-no b { font-size: 1.5rem; }
+        }
+
 </style>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
@@ -1114,17 +1391,17 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
         <div class="hero-copy">
             <span class="hero-eyebrow">PRESS · NB 报刊社</span>
             <h1>NB<span class="light">报刊社</span></h1>
-            <p class="vhero-sub">NB频道虚拟公司的机关报——报头、头条、短讯、便民信息，一份正经的假报纸</p>
+            <p class="vhero-sub">NB频道虚拟公司的机关报 —— 分期出刊，免费栏随便看，付费栏 20 NB币买断</p>
             <div class="vhero-actions">
-                <a class="hero-link" href="#npPaper">读报 ↓</a>
-                <a class="hero-link" href="newspaper.html">网页版 ↗</a>
+                <a class="hero-link" href="#npBody">读报 ↓</a>
+                <a class="hero-link" href="../newspaper.html">网页版 ↗</a>
             </div>
         </div>
         <div class="pd-stats">
-            <div class="pd-row"><span class="k">刊期</span><b>第 1 期</b></div>
-            <div class="pd-row"><span class="k">出版</span><b>NB频道 · 虚拟公司</b></div>
-            <div class="pd-row"><span class="k">版次</span><b>第一版 · 共一版</b></div>
-            <div class="pd-row"><span class="k">定价</span><b>免费取阅</b></div>
+            <div class="pd-row"><span class="k">形态</span><b>分期 · 报刊亭</b></div>
+            <div class="pd-row"><span class="k">免费栏</span><b>直接阅读</b></div>
+            <div class="pd-row"><span class="k">付费栏</span><b>20 NB币 · 永久</b></div>
+            <div class="pd-row"><span class="k">出品</span><b>NB频道 · 虚拟公司</b></div>
             <div class="pd-tip">仅供娱乐 · 请勿代入现实</div>
         </div>
     </div>
@@ -1135,84 +1412,37 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
     <div class="ba-title">公告</div>
     <div class="ba-track-wrap"><div class="ba-track" id="baTrack"></div></div>
 </div>
-<main class="np-main" id="npPaper">
-<div class="np-paper">
+<main class="np-main" id="npMain">
+<div class="container">
+<div class="np-wrap">
 
     <!-- ══ 报头 ══ -->
-    <header class="np-masthead">
+    <header class="np-head">
         <h1 class="np-name">NB报刊社</h1>
         <div class="np-sub">NB CHANNEL · DAILY</div>
     </header>
     <div class="np-rule"></div>
     <div class="np-rule-thin"></div>
-    <div class="np-dateline">
-        <span>第 <b>1</b> 期</span>
-        <span class="mid">2026 年 10 月 · NB频道 · 虚拟公司</span>
-        <span>第一版 · 共一版</span>
-    </div>
-    <div class="np-rule-thin"></div>
     <div class="np-notice">仅供娱乐 · 请勿代入现实 · 免费取阅</div>
-    <div class="np-rule" style="margin-top:10px;"></div>
+    <div class="np-rule"></div>
 
-    <!-- ══ 头条 ══ -->
-    <article class="np-lead">
-        <h2 class="np-h1">官网 1.0.8 上线<br>「关于域名」挂出域名证书</h2>
-        <div class="np-h1-sub">—— 那张证书在抽屉里放了半年</div>
-        <div class="np-byline">本报记者 · NB频道唯一正式员工 · 报道</div>
-
-        <div class="np-cols">
-            <p>NB频道官网 V1.0.8 于本月上线。本次更新的重点是「关于」页面新增一节「关于域名」，把 <b>nb-channel.top</b> 的顶级国际域名证书挂了出来。</p>
-            <p>该证书由 ICANN 授权机构颁发，记载域名注册于 2026 年 3 月 23 日，到期时间 2027 年 3 月 23 日，注册机构为 DNSPod · 腾讯云。</p>
-            <p class="noindent">据站长介绍，这张证书「早就下来了，一直没往页面上放」。编辑部追问为何拖了半年，站长表示「忘了」。</p>
-            <p class="noindent">另据观察，证书上「注册所有者」一栏已被涂黑。站长回应：<b>「这个不用给大家看。」</b></p>
-        </div>
-
-        <figure class="np-figure">
-            <div class="box">此处应有证书照片 —— 不过你往上看「关于」页就能看到真图</div>
-            <figcaption>图示：顶级国际域名证书（真图见「关于」页面）</figcaption>
-        </figure>
-    </article>
-
-    <!-- ══ 次条 ══ -->
-    <article class="np-second">
-        <h2 class="np-h2"><span class="tag">新栏目</span>「天气瞎报」开张，十二座城市每十秒报一次</h2>
-        <div class="np-cols">
-            <p>本站新建的《天气瞎报》栏目正式开张，覆盖 <b>NB频道总部、U星、AWM市、Lemon市、Oganesson市、Fafat市、GC3市、UVS市、UWSF市、PTC市、5U市、Ubn市</b>，共十二座城市。</p>
-            <p>栏目按真实季节走 —— 现在这个时节显示的是「春秋之交」。数据每十秒刷新一次，并且由数据库统一计算：<b>你和朋友同时打开，看到的数字是一样的。</b></p>
-            <p class="noindent">编辑部特别声明：所有气象数据均由随机数生成，与任何真实地点、真实天气无关。看到「Oganesson市 36°C」请不要给当地打电话。</p>
-        </div>
-    </article>
-
-    <!-- ══ 短讯 ══ -->
-    <section class="np-briefs">
-        <h3 class="np-sec-title">短 讯</h3>
-        <ul class="np-brief-list">
-            <li>虚拟股票市场：公司税改按<b>市值</b>征收，单次扣款设上限</li>
-            <li>NB银行补上四道闸：存款十亿封顶、两类贷款各一亿、计息基数十亿</li>
-            <li>用户名放开一批常用符号，空格与 at 符号仍然不行</li>
-            <li>评论行数限制前后端补齐，最多十行</li>
-            <li>个人中心右下角重复的那组按钮已删除</li>
-            <li>域名 nb-channel.top 注册于 2026-03-23，2027-03-23 到期</li>
-        </ul>
-    </section>
-
-    <!-- ══ 便民信息 ══ -->
-    <section class="np-service">
-        <h4>便 民 信 息</h4>
-        <ul>
-            <li><span>天气瞎报</span><a href="weather.html">weather.html</a></li>
-            <li><span>虚拟股票</span><a href="Virtual stock.html">行情与交易</a></li>
-            <li><span>官网更新日志</span><a href="changelog.html">changelog.html</a></li>
-            <li><span>漏洞与建议</span><a href="feedback.html">feedback.html</a></li>
-        </ul>
-    </section>
-
-    <!-- ══ 报尾 ══ -->
-    <div class="np-colophon">
-        《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 第 1 版<br>
-        本报所有内容均为虚构，如有雷同，那大概是巧合
+    <!-- ══ 标签页 ══ -->
+    <div class="np-tabs">
+        <button class="np-tab active" data-view="issues">📰 各期</button>
+        <button class="np-tab" data-view="mine">🔖 我拥有的报纸</button>
     </div>
+
+    <div class="np-kiosk">
+        <h2 class="np-kiosk-t">📰 报刊亭</h2>
+        <p class="np-kiosk-s">👋 欢迎来到报刊亭！这里汇集了 NB频道 的电子报纸，欢迎阅读。</p>
+    </div>
+
+    <div id="npBody"><div class="np-loading">正在取报…</div></div>
+
+</div>
+</div>
 </main>
+<div id="npToast"></div>
 <footer class="footer">
     <div class="footer-grid">
         <div>
@@ -1221,7 +1451,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
         </div>
         <div>
             <h5>功能</h5>
-            <a href="stock-Beta.html">虚拟股票</a><a href="bank-Beta.html">NB银行</a><a href="comments-Beta.html">评论区</a><a href="shop-Beta.html">NB商店</a><a href="tools-Beta.html">工具</a><a href="titles-Beta.html">称号系统</a><a href="feedback-Beta.html">漏洞/建议反馈</a>
+            <a href="stock-Beta.html">虚拟股票</a><a href="bank-Beta.html">NB银行</a><a href="comments-Beta.html">评论区</a><a href="shop-Beta.html">NB商店</a><a href="tools-Beta.html">工具</a><a href="titles-Beta.html">称号系统</a><a href="weather-Beta.html">天气瞎报</a><a href="newspaper-Beta.html">NB报刊社</a><a href="feedback-Beta.html">漏洞/建议反馈</a>
         </div>
         <div>
             <h5>友商</h5>
@@ -1365,7 +1595,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
         var btn = document.getElementById('themeBtn');
         var root = document.documentElement;
         function isDark() { return root.classList.contains('dark'); }
-        function render() {
+            function render() {
             if (btn) { btn.textContent = isDark() ? '☀️' : '🌙'; btn.title = isDark() ? '切换到日间模式' : '切换到夜间模式'; }
         }
         function apply(dark) {
@@ -1420,90 +1650,840 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+/* ══════════════════════════════════════════════════════════════════
+   天气瞎报 —— 十二座城市的气象生成器（官网模式版）
+   逻辑与网页版 weather.html 完全一致，只是外面套了官网的版式
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+    'use strict';
+    var REFRESH_MS = 10000;
 
-    // ===== 我的抽奖记录(与经典版一致) =====
-    var supabaseClient = null;
-    try {
-        supabaseClient = supabase.createClient(
-            'https://pbaafgjkwdbwcmsikcmg.supabase.co',
-            'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
-        );
-    } catch (e) { supabaseClient = null; }
-    function getUser() {
-        var stored = localStorage.getItem('nb_user');
-        if (!stored) return null;
-        try { return JSON.parse(stored); } catch (e) { return null; }
+    var CITIES = [
+        { name: 'NB频道总部', ico: '🏢', base: 22, swing: 2, vol: .4, lat: 30, uvK: 1.0, peak: 14,
+          hum: 45, aqi: 22, vis: 28, note: '总部不打烊，数据不走样' },
+        { name: 'U星', ico: '🪐', base: 12, swing: 26, vol: 3.2, lat: 15, uvK: 1.1, peak: 15,
+          hum: 30, aqi: 24, vis: 42, note: '从 U 星发来的，可能有点偏' },
+        { name: 'AWM市', ico: '🎯', base: 6, swing: 14, vol: 1.4, lat: 38, uvK: 1.22, peak: 13,
+          hum: 62, aqi: 20, vis: 48, note: '枪法不虚发，天气不虚报' },
+        { name: 'Lemon市', ico: '🍋', base: 20, swing: 9, vol: 1.0, lat: 24, uvK: 0.98, peak: 15.5,
+          hum: 58, aqi: 26, vis: 26, note: '柠檬酸一点，日子甜一点' },
+        { name: 'Oganesson市', ico: '☢️', base: 34, swing: 8, vol: 2.6, lat: 22, uvK: 1.05, peak: 14.5,
+          hum: 22, aqi: 38, vis: 30, note: '元素排最后，热度排第一' },
+        { name: 'Fafat市', ico: '🌫️', base: 17, swing: 11, vol: 1.2, lat: 31, uvK: 0.96, peak: 15.5,
+          hum: 72, aqi: 34, vis: 22, note: '功能做得全，天气也周全' },
+        { name: 'GC3市', ico: '🏗️', base: 15, swing: 12, vol: 1.1, lat: 32, uvK: 0.95, peak: 13.5,
+          hum: 52, aqi: 42, vis: 26, note: '产品不将就，天气不凑合' },
+        { name: 'UVS市', ico: '☀️', base: 25, swing: 10, vol: .9, lat: 35, uvK: 1.18, peak: 13,
+          hum: 34, aqi: 18, vis: 50, note: '紫外线最强，心情最亮' },
+        { name: 'UWSF市', ico: '🌬️', base: 13, swing: 15, vol: 1.6, lat: 28, uvK: 1.0, peak: 14,
+          hum: 55, aqi: 21, vis: 38, note: '市值往上长，风也往上长' },
+        { name: 'PTC市', ico: '🔥', base: 27, swing: 7, vol: 1.3, lat: 33, uvK: 0.97, peak: 14.5,
+          hum: 40, aqi: 30, vis: 28, note: '加热不马虎，天气不认输' },
+        { name: '5U市', ico: '🎈', base: 18, swing: 13, vol: 1.2, lat: 26, uvK: 1.02, peak: 15,
+          hum: 60, aqi: 32, vis: 25, note: '细节做得足，天气也靠谱' },
+        { name: 'Ubn市', ico: '🌃', base: 16, swing: 12, vol: 1.0, lat: 29, uvK: 0.9, peak: 16,
+          hum: 64, aqi: 36, vis: 24, note: '夜里不打盹，白天不迟到' }
+    ];
+
+    var DIRS = ['北', '东北偏北', '东北', '东北偏东', '东', '东南偏东', '东南', '东南偏南',
+                '南', '西南偏南', '西南', '西南偏西', '西', '西北偏西', '西北', '西北偏北'];
+
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+    function seasonFactor(d) {
+        var start = new Date(d.getFullYear(), 0, 0);
+        var doy = Math.floor((d - start) / 86400000);
+        return -Math.cos(2 * Math.PI * (doy - 15) / 365.25);
     }
-    function esc(s) {
-        if (s === null || s === undefined) return '';
-        return String(s).replace(/[&<>"']/g, function (m) {
-            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+    /* ── 季节 ──────────────────────────────────────────────────
+       按【日期】定位 24 节气，再由节气推季节名。
+
+       ⚠️ 这里曾经有个 bug：原来只按 seasonFactor 的【数值】起名，
+          而四月和十月的数值都接近 0，于是十月也被叫成「春秋之交」。
+          那个数值是温度曲线（-cos 型），必须配上方向才能定季节。
+          改成按日期算之后，十月十日在寒露与霜降之间 → 深秋。
+       ──────────────────────────────────────────────────────── */
+    var TERMS = [
+        [1, 5, '小寒'], [1, 20, '大寒'], [2, 4, '立春'], [2, 19, '雨水'],
+        [3, 6, '惊蛰'], [3, 21, '春分'], [4, 5, '清明'], [4, 20, '谷雨'],
+        [5, 6, '立夏'], [5, 21, '小满'], [6, 6, '芒种'], [6, 21, '夏至'],
+        [7, 7, '小暑'], [7, 23, '大暑'], [8, 8, '立秋'], [8, 23, '处暑'],
+        [9, 8, '白露'], [9, 23, '秋分'], [10, 8, '寒露'], [10, 24, '霜降'],
+        [11, 8, '立冬'], [11, 22, '小雪'], [12, 7, '大雪'], [12, 22, '冬至']
+    ];
+    var TERM_SEASON = [
+        '隆冬', '隆冬', '初春', '初春', '仲春', '仲春', '暮春', '暮春',
+        '初夏', '初夏', '仲夏', '仲夏', '盛夏', '盛夏', '初秋', '初秋',
+        '仲秋', '仲秋', '深秋', '深秋', '初冬', '初冬', '寒冬', '寒冬'
+    ];
+
+    function seasonTerm(d) {
+        var m = d.getMonth() + 1, day = d.getDate();
+        var idx = TERMS.length - 1;          // 1 月 5 日之前算上一年的冬至
+        for (var i = 0; i < TERMS.length; i++) {
+            if (m > TERMS[i][0] || (m === TERMS[i][0] && day >= TERMS[i][1])) idx = i;
+            else break;
+        }
+        return { term: TERMS[idx][2], season: TERM_SEASON[idx] };
+    }
+
+    /* 季节那句话说白了就是「现在是深秋（寒露）」 */
+    function seasonLabel(d) {
+        var t = seasonTerm(d);
+        return t.season + ' · ' + t.term;
+    }
+
+    /* ── 紫外线指数 ──────────────────────────────────────────────
+       按真实物理算，不是拍脑袋给的数：
+
+           太阳赤纬   decl = 23.44° × sin(2π(doy-81)/365.25)      ← 季节
+           时角       ha   = 15° × (小时 - 12)                     ← 时刻
+           太阳高度角 sinH = sin(lat)sin(decl) + cos(lat)cos(decl)cos(ha)
+           晴空 UV    = 12 × sinH^2.42                            ← 公认近似式
+           最终 UV    = 晴空 UV × 城市系数 × 云量系数
+
+       所以它是【实时】的：清晨低、正午高、太阳落山归零；
+       冬天整体压低，夏天抬起来；高原城市（AWM）比同纬度更强。
+       ──────────────────────────────────────────────────────── */
+    function uvCloud(t) {
+        if (t.indexOf('雷') >= 0) return .30;
+        if (t.indexOf('雪') >= 0) return .35;
+        if (t.indexOf('雨') >= 0) return .28;
+        if (t.indexOf('霾') >= 0) return .55;   // ⚠️ 补：原来匹配不到关键字会返回 1.0
+        if (t.indexOf('雾') >= 0) return .45;   // ⚠️ 补：同上，雾霾天紫外线该更弱
+        if (t.indexOf('阴') >= 0) return .35;
+        if (t.indexOf('间') >= 0) return .85;   // 晴间多云
+        if (t.indexOf('多云') >= 0) return .62;
+        return 1.0;                             // 晴
+    }
+
+    function uvIndex(c, condText, d) {
+        var start = new Date(d.getFullYear(), 0, 0);
+        var doy = Math.floor((d - start) / 86400000);
+        var decl = 23.44 * Math.sin(2 * Math.PI * (doy - 81) / 365.25);
+        var hours = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+        var ha = 15 * (hours - 12);
+        var latR = c.lat * Math.PI / 180,
+            decR = decl * Math.PI / 180,
+            haR = ha * Math.PI / 180;
+        var sinH = Math.sin(latR) * Math.sin(decR) +
+                   Math.cos(latR) * Math.cos(decR) * Math.cos(haR);
+        if (sinH <= 0.02) return 0;             // 太阳在地平线下
+        var clear = 11.2 * Math.pow(sinH, 2.42);
+        return Math.max(0, Math.min(12, clear * (c.uvK || 1) * uvCloud(condText || '')));
+    }
+
+    function uvGrade(v) {
+        if (v < 3) return { t: '弱', c: '' };
+        if (v < 6) return { t: '中等', c: '' };
+        if (v < 8) return { t: '强', c: 'lv-warn' };
+        if (v < 11) return { t: '很强', c: 'lv-bad' };
+        return { t: '极强', c: 'lv-bad' };
+    }
+
+    /* ── 24 小时温度曲线 ────────────────────────────────────────
+       和实时温度同一个公式：
+           日均值  mean = base + swing × seasonFactor(日期)
+           日内    T(h) = mean + A × cos(2π(h-14)/24)
+       峰值 14:00、谷值 02:00 —— 气温日变化的常用近似。
+       振幅按各城市的 vol 折算，再给个下限，免得平坦的城市画成直线。
+       ──────────────────────────────────────────────────────── */
+    /* ── 历史数据 ──────────────────────────────────────────────
+       数据库里 weather_history 每 10 分钟存一条/城。
+       页面把它拉下来，某城点数够了就画真实曲线，否则退回模型曲线。
+       ⚠️ 这张表是新建的，从建好那一刻才开始积累 ——
+          刚上线时会先显示模型推算，攒够 6 个点（约 1 小时）自动切过来。
+       ──────────────────────────────────────────────────────── */
+    var HISTORY = {};          // city -> [{ t: 毫秒, v: 温度 }]
+    var HIST_AT = 0;           // 上次拉取时间
+
+    function applyHistory(rows) {
+        var m = {};
+        (rows || []).forEach(function (r) {
+            var c = r.city;
+            if (!m[c]) m[c] = [];
+            var ts = Date.parse(r.at);
+            if (isNaN(ts)) return;
+            m[c].push({ t: ts, v: parseFloat(r.temp_c) });
+        });
+        // 按时间排序
+        Object.keys(m).forEach(function (c) {
+            m[c].sort(function (a, b) { return a.t - b.t; });
+        });
+        HISTORY = m;
+        HIST_AT = Date.now();
+    }
+
+    function pullHistory() {
+        if (!sb || !sb.rpc) return;
+        sb.rpc('get_weather_history', { p_hours: 24 }).then(function (res) {
+            if (res && res.data && res.data.length) { applyHistory(res.data); render(); }
+        }).catch(function () { /* 表还没建好或没数据，静默退回模型曲线 */ });
+    }
+
+    function tempAt(c, hour, date) {
+        var mean = c.base + c.swing * seasonFactor(date);
+        var amp = Math.max(1.8, c.vol * 1.5 + 2.4);
+        // 各城的最高温出现时刻不同：内陆/干燥早（13 时前后），沿海/湿润晚（15~16 时）
+        var pk = (c.peak === undefined) ? 14 : c.peak;
+        var base = amp * Math.cos(2 * Math.PI * (hour - pk) / 24);
+        // 二阶谐波：真实气温是【升温快、降温慢】的不对称曲线，不是纯正弦。
+        // 没有这一项的话，十二张图各自归一化之后形状会完全一样。
+        var harm = amp * 0.22 * Math.cos(4 * Math.PI * (hour - pk - 1.6) / 24);
+        return mean + base + harm;
+    }
+
+    function tempChart(c, now) {
+        var W = 900, H = 84, PAD = 10, PADB = 16;
+        var lo = Infinity, hi = -Infinity;
+        var nowH = now.getHours() + now.getMinutes() / 60;
+        function X(hh) { return PAD + (W - PAD * 2) * (hh / 24); }
+        function Y(v) { return PAD + (H - PAD - PADB) * (1 - (v - lo) / (hi - lo)); }
+
+        // ── 优先用真实累计数据 ──
+        var hist = HISTORY[c.name] || [];
+        var useReal = hist.length >= 6;
+        var pts = [], i, h, t, xs = [];
+        if (useReal) {
+            // 横轴：把最近 24 小时映射到 0~24；每条记录按它自己的时刻摆位
+            var t0 = now.getTime() - 24 * 3600 * 1000;
+            for (i = 0; i < hist.length; i++) {
+                var off = (hist[i].t - t0) / 3600000;      // 0~24
+                if (off < 0) continue;
+                xs.push(Math.min(24, off));
+                pts.push(hist[i].v);
+            }
+            for (i = 0; i < pts.length; i++) {
+                if (pts[i] < lo) lo = pts[i];
+                if (pts[i] > hi) hi = pts[i];
+            }
+        } else {
+            // 退回模型曲线
+            for (i = 0; i <= 24; i++) {
+                t = tempAt(c, i, now);
+                xs.push(i);
+                pts.push(t);
+                if (t < lo) lo = t;
+                if (t > hi) hi = t;
+            }
+        }
+        if (!pts.length) { lo = 0; hi = 1; pts = [0, 1]; xs = [0, 24]; }
+        if (hi - lo < 1) { hi = lo + 1; }
+
+        var d = '';
+        for (i = 0; i < pts.length; i++) {
+            d += (i ? ' L' : 'M') + X(xs[i]).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+        }
+        var x0 = xs[0], x1 = xs[xs.length - 1];
+        // 曲线下方填一层淡色
+        var area = d + ' L' + X(x1).toFixed(1) + ' ' + (H - PADB) + ' L' + X(x0).toFixed(1) + ' ' + (H - PADB) + ' Z';
+        // 当前时刻的点
+
+        // 时刻刻度 + 两条网格线（让曲线有参照，不至于看着像没数据）
+        var grid = '';
+        for (i = 0; i <= 24; i += 6) {
+            var gx = X(i).toFixed(1);
+            grid += '<line x1="' + gx + '" y1="' + (H - PADB) + '" x2="' + gx + '" y2="' + (H - PADB + 3) +
+                    '" stroke="rgba(124,140,248,.45)" stroke-width="1"/>' +
+                    '<text x="' + gx + '" y="' + (H - 4) + '" text-anchor="middle" font-size="9" ' +
+                    'fill="rgba(124,140,248,.8)">' + (i === 24 ? '24时' : i + '时') + '</text>';
+        }
+        [lo, hi].forEach(function (vv) {
+            var gy = Y(vv).toFixed(1);
+            grid += '<line x1="' + PAD + '" y1="' + gy + '" x2="' + (W - PAD) + '" y2="' + gy +
+                    '" stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="3 4"/>';
+        });
+
+        var curT = useReal ? pts[pts.length - 1] : tempAt(c, nowH, now);
+        var curX = useReal ? x1 : nowH;
+        var srcTxt = useReal ? ('实际记录 · ' + pts.length + ' 个采样')
+                             : '模型推算（数据攒够后自动切换）';
+        return '<svg class="wx-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
+               'data-src="' + srcTxt + '" ' +
+               'role="img" aria-label="24 小时温度曲线">' +
+                 '<defs><linearGradient id="cg' + c.name.replace(/[^\w]/g, '') + '" x1="0" y1="0" x2="1" y2="0">' +
+                   '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
+                 '</linearGradient></defs>' +
+                 grid +
+                 '<path d="' + area + '" fill="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" opacity=".14"/>' +
+                 '<path d="' + d + '" fill="none" stroke="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" ' +
+                   'stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+                 '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="6" ' +
+                   'fill="#7c8cf8" opacity=".18"/>' +
+                 '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="3.2" ' +
+                   'fill="#fff" stroke="#7c8cf8" stroke-width="2"/>' +
+                 '<text x="' + (X(curX) + 8).toFixed(1) + '" y="' + (Y(curT) - 6).toFixed(1) + '" ' +
+                   'font-size="10" font-weight="700" fill="#7c8cf8">现在</text>' +
+                 // 鼠标悬停时的高亮点（初始藏起来，交互时由 JS 移动）
+                 '<g class="wx-hover-g" style="display:none">' +
+                   '<line class="wx-hover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PADB) +
+                     '" stroke="rgba(124,140,248,.5)" stroke-width="1" stroke-dasharray="3 3"/>' +
+                   '<circle class="wx-hover-dot" cx="0" cy="0" r="3.6" fill="#7c8cf8" ' +
+                     'stroke="#fff" stroke-width="1.8"/>' +
+                 '</g>' +
+               '</svg>';
+
+    }
+
+    /* ── 曲线鼠标交互：按 x 位置反算时刻，显示该时刻的温度 ── */
+    function bindChartHover() {
+        var hits = document.querySelectorAll('.wx-chart-hit');
+        Array.prototype.forEach.call(hits, function (hit) {
+            if (hit.__bound) return;
+            hit.__bound = true;
+            var box = hit.parentNode;
+            var svg = box.querySelector('svg.wx-chart');
+            var g = box.querySelector('.wx-hover-g');
+            var line = box.querySelector('.wx-hover-line');
+            var dot = box.querySelector('.wx-hover-dot');
+            var city = null;
+            for (var i = 0; i < CITIES.length; i++) {
+                if (CITIES[i].name === hit.getAttribute('data-city')) { city = CITIES[i]; break; }
+            }
+            if (!svg || !g || !city) return;
+            // 把数据来源写到曲线下方那行说明里（实际记录 / 模型推算）
+            var tipTxt = box.querySelector('.wx-chart-tip');
+            var srcTxt2 = svg.getAttribute('data-src');
+            if (tipTxt && srcTxt2) { tipTxt.textContent = '最近 24 小时气温 · ' + srcTxt2; }
+
+            function move(ev) {
+                var r = svg.getBoundingClientRect();
+                var x = (ev.clientX !== undefined ? ev.clientX : ev.touches[0].clientX) - r.left;
+                var ratio = Math.max(0, Math.min(1, x / r.width));
+                var hour = ratio * 24;
+                var hist2 = HISTORY[city.name] || [];
+                var temp;
+                if (hist2.length >= 6) {
+                    // 在真实记录里找时刻最接近的那个点
+                    var t0b = Date.now() - 24 * 3600 * 1000;
+                    var want = t0b + hour * 3600 * 1000;
+                    var best = null, bd = Infinity;
+                    for (var q = 0; q < hist2.length; q++) {
+                        var dd = Math.abs(hist2[q].t - want);
+                        if (dd < bd) { bd = dd; best = hist2[q]; }
+                    }
+                    temp = best ? best.v : tempAt(city, hour, new Date());
+                } else {
+                    temp = tempAt(city, hour, new Date());
+                }
+                // 换算到 viewBox 坐标。
+                // ⚠️ lo/hi 必须在这里【自己重算】—— 之前想从 svg 上读，
+                //    但 tempChart 是把它们挂在一个游离的 div 上的（从没进 DOM），
+                //    于是 lo/hi 是 undefined → vy 算成 NaN → 圆点卡在顶上不动。
+                var lo = Infinity, hi = -Infinity;
+                var hh2 = HISTORY[city.name] || [];
+                if (hh2.length >= 6) {
+                    for (var k2 = 0; k2 < hh2.length; k2++) {
+                        if (hh2[k2].v < lo) lo = hh2[k2].v;
+                        if (hh2[k2].v > hi) hi = hh2[k2].v;
+                    }
+                } else {
+                    for (var k = 0; k <= 24; k++) {
+                        var tv = tempAt(city, k, new Date());
+                        if (tv < lo) lo = tv;
+                        if (tv > hi) hi = tv;
+                    }
+                }
+                if (hi - lo < .4) hi = lo + .4;
+                var vx = 10 + (900 - 20) * ratio;
+                var vy = 10 + (84 - 10 - 16) * (1 - (temp - lo) / (hi - lo));
+                line.setAttribute('x1', vx); line.setAttribute('x2', vx);
+                dot.setAttribute('cx', vx); dot.setAttribute('cy', vy);
+                g.style.display = '';
+                // 气泡
+                var tip = document.getElementById('wxChartTip');
+                if (!tip) {
+                    tip = document.createElement('div');
+                    tip.id = 'wxChartTip';
+                    tip.className = 'wx-chart-tipbox';
+                    document.body.appendChild(tip);
+                }
+                var hh = Math.floor(hour), mm = Math.round((hour - hh) * 60);
+                if (mm === 60) { hh += 1; mm = 0; }
+                tip.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm +
+                                  '　' + temp.toFixed(1) + '°C';
+                tip.style.display = 'block';
+                var br = box.getBoundingClientRect();
+                tip.style.left = (br.left + br.width * ratio) + 'px';
+                tip.style.top = (br.top - 30) + 'px';
+            }
+            function leave() {
+                g.style.display = 'none';
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            }
+            hit.addEventListener('mousemove', move);
+            hit.addEventListener('mouseleave', leave);
+            hit.addEventListener('touchmove', function (e) { move(e); }, { passive: true });
+            hit.addEventListener('touchend', leave);
         });
     }
-    function formatTime(ts) {
-        try { return new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }); }
-        catch (e) { return new Date(ts).toLocaleString(); }
+
+    /* ── 三张小图的悬停提示（和温度曲线共用同一个气泡） ──
+       [data-tip]    静态文字：鼠标进就显示
+       [data-track]  跟随 x 取值：按位置反算时刻/气压                                */
+    function bindMiniHover() {
+        function tipEl() {
+            var tip = document.getElementById('wxChartTip');
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.id = 'wxChartTip';
+                tip.className = 'wx-chart-tipbox';
+                document.body.appendChild(tip);
+            }
+            return tip;
+        }
+        function place(tip, ev, el) {
+            var r = (el || ev.currentTarget).getBoundingClientRect();
+            var cx = (ev.clientX !== undefined) ? ev.clientX : (r.left + r.width / 2);
+            tip.style.left = cx + 'px';
+            tip.style.top = (r.top - 30) + 'px';
+            tip.style.display = 'block';
+        }
+
+        // 静态提示
+        Array.prototype.forEach.call(document.querySelectorAll('[data-tip]'), function (el) {
+            if (el.__tipBound) return;
+            el.__tipBound = true;
+            var txt = el.getAttribute('data-tip') || '';
+            function on(ev) { var tip = tipEl(); tip.textContent = txt; place(tip, ev, el); }
+            el.addEventListener('mouseenter', on);
+            el.addEventListener('mousemove', on);
+            el.addEventListener('mouseleave', function () {
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            });
+        });
+
+        // 跟随取值的（气压趋势线）
+        Array.prototype.forEach.call(document.querySelectorAll('[data-track="pres"]'), function (el) {
+            if (el.__trkBound) return;
+            el.__trkBound = true;
+            var pres = parseFloat(el.getAttribute('data-pres')) || 101.3;
+            var svg = el.querySelector('svg');
+            var g = el.querySelector('.wx-phover-g');
+            var line = el.querySelector('.wx-phover-line');
+            var dot = el.querySelector('.wx-phover-dot');
+            var A = 1.4;
+            function val(h) { return pres + A * Math.cos(2 * Math.PI * (h - 10) / 12); }
+            function on(ev) {
+                var r = svg.getBoundingClientRect();
+                var cx = (ev.clientX !== undefined) ? ev.clientX : (r.left + r.width / 2);
+                var ratio = Math.max(0, Math.min(1, (cx - r.left) / r.width));
+                var hour = ratio * 24;
+                var v = val(hour);
+                // 换算到 viewBox 坐标（W=300, H=92, PAD=8）
+                var vx = 8 + (300 - 16) * ratio;
+                var lo = pres - A, hi = pres + A;
+                var vy = 8 + (92 - 16) * (1 - (v - lo) / (hi - lo));
+                if (g && line && dot) {
+                    line.setAttribute('x1', vx); line.setAttribute('x2', vx);
+                    dot.setAttribute('cx', vx); dot.setAttribute('cy', vy);
+                    g.style.display = '';
+                }
+                var tip = tipEl();
+                var hh = Math.floor(hour), mm = Math.round((hour - hh) * 60);
+                if (mm === 60) { hh += 1; mm = 0; }
+                tip.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm +
+                                  '　' + v.toFixed(1) + ' kPa';
+                place(tip, ev, el);
+            }
+            function off() {
+                if (g) g.style.display = 'none';
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            }
+            el.addEventListener('mousemove', on);
+            el.addEventListener('mouseleave', off);
+            el.addEventListener('touchmove', function (e) { on(e); }, { passive: true });
+            el.addEventListener('touchend', off);
+        });
     }
-    function lrLoginButtons() {
-        return '<div class="lr-st-actions">' +
-            '<a class="lr-st-btn login" href="login-Beta.html?redirect=' + encodeURIComponent(location.href) + '">去登录</a>' +
-            '<a class="lr-st-btn ghost" href="login-Beta.html?register=1&redirect=' + encodeURIComponent(location.href) + '">注册新账号</a>' +
-            '</div>';
+
+    /* ── 空气质量柱状图：十二城横向对比，本城高亮 ── */
+    function aqiBars(me) {
+        var W = 300, H = 92, PAD = 4;
+        var bw = (W - PAD * 2) / CITIES.length;
+        var max = 1, i;
+        for (i = 0; i < CITIES.length; i++) { if (state[i].aqi > max) max = state[i].aqi; }
+        var g = '';
+        for (i = 0; i < CITIES.length; i++) {
+            var v = state[i].aqi;
+            var bh = Math.max(3, (H - 30) * (v / max));
+            var x = PAD + i * bw + bw * .18;
+            var y = H - 22 - bh;
+            var w = bw * .64;
+            var isMe = (CITIES[i].name === me);
+            var col = isMe ? '#7c8cf8' : 'rgba(124,140,248,.30)';
+            g += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) +
+                 '" height="' + bh.toFixed(1) + '" rx="1.6" fill="' + col + '"/>' +
+                 // 透明热区：整根柱子高度都可命中，悬停出提示
+                 '<rect class="wx-hit" x="' + (PAD + i * bw).toFixed(1) + '" y="0" width="' + bw.toFixed(1) +
+                 '" height="' + H + '" fill="transparent" ' +
+                 'data-tip="' + CITIES[i].name + ' · AQI ' + Math.round(v) + ' · ' +
+                 aqiLevel(Math.round(v)).t + '"/>';
+            if (isMe) {
+                g += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y - 2).toFixed(1) +
+                     '" text-anchor="middle" font-size="8" font-weight="700" fill="#7c8cf8">' +
+                     Math.round(v) + '</text>';
+            }
+        }
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="wx-mini" preserveAspectRatio="none">' + g +
+               '<line x1="0" y1="' + (H - 21) + '" x2="' + W + '" y2="' + (H - 21) +
+               '" stroke="rgba(124,140,248,.25)" stroke-width="1"/>' +
+               '<text x="2" y="' + (H - 8) + '" font-size="9" fill="rgba(124,140,248,.7)">1</text>' +
+               '<text x="' + (W - 2) + '" y="' + (H - 8) + '" text-anchor="end" font-size="9" ' +
+               'fill="rgba(124,140,248,.7)">12 座</text></svg>';
     }
-    function loadRecords() {
-        var body = document.getElementById('lrBody');
-        var note = document.getElementById('lrUserNote');
-        var user = getUser();
-        if (!user) {
-            note.textContent = '未登录';
-            body.innerHTML = '<div class="lr-state"><div class="lr-st-ico">🔒</div><h3>登录后查看抽奖记录</h3>' +
-                '<p>每一次转动都有记录</p>' + lrLoginButtons() + '</div>';
+
+    /* ── 风速罗盘：指针指向风的来向 ── */
+    function windCompass(dirIdx, force) {
+        var S = 92, C = S / 2, R = 35;
+        // dirIdx 是 16 方位，0 = 北，顺时针
+        var ang = (dirIdx / 16) * 360;
+        var g = '<circle cx="' + C + '" cy="' + C + '" r="' + R + '" fill="none" ' +
+                'stroke="rgba(124,140,248,.35)" stroke-width="1.2"/>' +
+                '<circle cx="' + C + '" cy="' + C + '" r="' + (R - 9) + '" fill="none" ' +
+                'stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="2 3"/>';
+        // 四个方位字
+        var labs = [['N', 0, -1], ['E', 1, 0], ['S', 0, 1], ['W', -1, 0]];
+        for (var i = 0; i < 4; i++) {
+            g += '<text x="' + (C + labs[i][1] * (R + 6)) + '" y="' + (C + labs[i][2] * (R + 6) + 3) +
+                 '" text-anchor="middle" font-size="7.5" font-weight="700" ' +
+                 'fill="rgba(124,140,248,.75)">' + labs[i][0] + '</text>';
+        }
+        // 刻度
+        for (var k = 0; k < 16; k++) {
+            var a = (k / 16) * 2 * Math.PI - Math.PI / 2;
+            var r1 = R - (k % 4 === 0 ? 6 : 3), r2 = R - 1;
+            g += '<line x1="' + (C + Math.cos(a) * r1).toFixed(1) + '" y1="' + (C + Math.sin(a) * r1).toFixed(1) +
+                 '" x2="' + (C + Math.cos(a) * r2).toFixed(1) + '" y2="' + (C + Math.sin(a) * r2).toFixed(1) +
+                 '" stroke="rgba(124,140,248,.4)" stroke-width="1"/>';
+        }
+        // 指针（从中心指向风的来向）
+        var ar = (ang - 90) * Math.PI / 180;
+        var px = C + Math.cos(ar) * (R - 8), py = C + Math.sin(ar) * (R - 8);
+        g += '<line x1="' + C + '" y1="' + C + '" x2="' + px.toFixed(1) + '" y2="' + py.toFixed(1) +
+             '" stroke="url(#wcg)" stroke-width="2.4" stroke-linecap="round"/>' +
+             '<circle cx="' + C + '" cy="' + C + '" r="3" fill="#7c8cf8"/>' +
+             '<text x="' + C + '" y="' + (C + 16) + '" text-anchor="middle" font-size="9" ' +
+             'font-weight="800" fill="currentColor">' + force.toFixed(1) + '</text>';
+        return '<svg viewBox="0 0 ' + S + ' ' + S + '" class="wx-mini wx-mini-sq">' +
+               '<defs><linearGradient id="wcg" x1="0" y1="0" x2="1" y2="1">' +
+               '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
+               '</linearGradient></defs>' + g + '</svg>';
+    }
+
+    /* ── 气压趋势线 ──
+       ⚠️ 数据库里【没有历史气压】，这条是按物理规律推的：
+          气压半日潮 P(h) = P̄ + A·cos(2π(h-10)/12)
+          —— 10 点和 22 点各一个高值、4 点和 16 点各一个低值，
+             低纬振幅约 1~3 hPa。不是实测历史。 */
+    function presCurve(pres) {
+        var W = 300, H = 92, PAD = 8;
+        var A = 1.4;
+        var pts = [], i, v, lo = Infinity, hi = -Infinity;
+        for (i = 0; i <= 24; i++) {
+            v = pres + A * Math.cos(2 * Math.PI * (i - 10) / 12);
+            pts.push(v);
+            if (v < lo) lo = v;
+            if (v > hi) hi = v;
+        }
+        if (hi - lo < .4) hi = lo + .4;
+        function X(h) { return PAD + (W - PAD * 2) * (h / 24); }
+        function Y(v) { return PAD + (H - PAD * 2) * (1 - (v - lo) / (hi - lo)); }
+        var nowH2 = new Date().getHours() + new Date().getMinutes() / 60;
+        var nowV = pres + A * Math.cos(2 * Math.PI * (nowH2 - 10) / 12);
+        var d = '', area = '';
+        for (i = 0; i <= 24; i++) { d += (i ? ' L' : 'M') + X(i).toFixed(1) + ' ' + Y(pts[i]).toFixed(1); }
+        area = d + ' L' + X(24).toFixed(1) + ' ' + (H - PAD) + ' L' + X(0).toFixed(1) + ' ' + (H - PAD) + ' Z';
+        var nowH = new Date().getHours() + new Date().getMinutes() / 60;
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="wx-mini" preserveAspectRatio="none">' +
+               '<defs><linearGradient id="pcg" x1="0" y1="0" x2="1" y2="0">' +
+               '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
+               '</linearGradient></defs>' +
+               '<path d="' + area + '" fill="url(#pcg)" opacity=".14"/>' +
+               '<path d="' + d + '" fill="none" stroke="url(#pcg)" stroke-width="1.5" ' +
+               'vector-effect="non-scaling-stroke" stroke-linejoin="round"/>' +
+               '<circle cx="' + X(nowH2).toFixed(1) + '" cy="' + Y(nowV).toFixed(1) + '" r="3.4" ' +
+               'fill="#fff" stroke="#7c8cf8" stroke-width="1.8"/>' +
+               '<g class="wx-phover-g" style="display:none">' +
+                 '<line class="wx-phover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PAD) +
+                   '" stroke="rgba(124,140,248,.5)" stroke-width="1" stroke-dasharray="3 3"/>' +
+                 '<circle class="wx-phover-dot" cx="0" cy="0" r="3.2" fill="#7c8cf8" ' +
+                   'stroke="#fff" stroke-width="1.6"/>' +
+               '</g>' +
+               '<text x="' + PAD + '" y="' + (PAD + 8) + '" font-size="9" font-weight="700" ' +
+               'fill="rgba(124,140,248,.85)">' + hi.toFixed(1) + '</text>' +
+               '<text x="' + PAD + '" y="' + (H - PAD + 2) + '" font-size="9" font-weight="700" ' +
+               'fill="rgba(124,140,248,.6)">' + lo.toFixed(1) + '</text>' +
+               '</svg>';
+    }
+
+    function aqiLevel(a) {
+        if (a <= 50)  return { t: '优',       c: 'wx-aq-good'  };
+        if (a <= 100) return { t: '良',       c: 'wx-aq-mid'   };
+        if (a <= 150) return { t: '轻度污染',  c: 'wx-aq-bad'   };
+        if (a <= 200) return { t: '中度污染',  c: 'wx-aq-worse' };
+        return              { t: '重度污染',  c: 'wx-aq-awful' };
+    }
+    function tempColor(c) {
+        if (c <= -10) return '#3b82f6';
+        if (c <= 0)   return '#0ea5e9';
+        if (c <= 10)  return '#14b8a6';
+        if (c <= 20)  return '#22c55e';
+        if (c <= 28)  return '#f59e0b';
+        if (c <= 35)  return '#f97316';
+        return '#dc2626';
+    }
+
+    var state = CITIES.map(function (c) {
+        return {
+            temp: c.base + c.swing * seasonFactor(new Date()),
+            aqi: c.aqi, hum: c.hum, vis: c.vis,
+            dir: Math.floor(Math.random() * 16),
+            force: rnd(1, 4), pres: 101.3
+        };
+    });
+
+    function step(d) {
+        var sf = seasonFactor(d);
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+            var target = c.base + c.swing * sf;
+            s.temp += (target - s.temp) * .35 + rnd(-c.vol, c.vol);
+            s.temp = clamp(s.temp, -55, 60);
+
+            var humTarget = c.hum - (s.temp - c.base) * 1.1;
+            s.hum += (humTarget - s.hum) * .3 + rnd(-3, 3);
+            s.hum = clamp(s.hum, 5, 100);
+
+            var aqiTarget = c.aqi + (s.hum - 50) * .35 + (4 - s.force) * 5;
+            s.aqi += (aqiTarget - s.aqi) * .25 + rnd(-7, 7);
+            s.aqi = clamp(s.aqi, 8, 320);
+
+            var presTarget = 101.3 - (s.temp - 15) * .085;
+            s.pres += (presTarget - s.pres) * .3 + rnd(-.35, .35);
+            s.pres = clamp(s.pres, 87, 108);
+
+            var visTarget = c.vis * (1 - (s.hum - 55) / 190) - s.aqi / 45;
+            s.vis += (visTarget - s.vis) * .3 + rnd(-1.2, 1.2);
+            s.vis = clamp(s.vis, .2, 60);
+
+            s.dir = (s.dir + (Math.random() < .3 ? (Math.random() < .5 ? 1 : 15) : 0)) % 16;
+            s.force += rnd(-.45, .45);
+            s.force = clamp(s.force, .2, 12);
+        });
+    }
+
+    /* 天气状态：一份天气预报总得说晴还是雨 */
+    function condition(s, c) {
+        if (s.temp <= 0 && s.hum >= 65) return { i: '🌨️', t: '小雪' };
+        if (s.temp <= 0)               return { i: '❄️', t: '晴冷' };
+        if (s.vis < 6)                 return { i: '🌫️', t: '有雾' };
+        if (s.aqi > 120)               return { i: '😷', t: '霾' };
+        if (s.hum >= 88)               return { i: '🌧️', t: '小雨' };
+        if (s.hum >= 78)               return { i: '☁️', t: '多云' };
+        if (s.temp >= 33)              return { i: '🔥', t: '酷热' };
+        if (s.hum <= 38)               return { i: '☀️', t: '晴' };
+        return { i: '⛅', t: '晴间多云' };
+    }
+
+    function windName(f) {
+        if (f < .3) return { t: '无风', lv: 0 };
+        if (f < 1.6) return { t: '软风', lv: 1 };
+        if (f < 3.4) return { t: '轻风', lv: 2 };
+        if (f < 5.5) return { t: '微风', lv: 3 };
+        if (f < 8.0) return { t: '和风', lv: 4 };
+        if (f < 10.8) return { t: '清风', lv: 5 };
+        if (f < 13.9) return { t: '强风', lv: 6 };
+        return { t: '疾风', lv: 7 };
+    }
+
+    var grid = document.getElementById('wxGrid');
+    var bar = document.getElementById('tickBar');
+    var num = document.getElementById('tickNum');
+    var clock = document.getElementById('clockTxt');
+
+function render() {
+        var html = '';
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+            var cT = s.temp, fT = cT * 9 / 5 + 32;
+            var lv = aqiLevel(Math.round(s.aqi));
+            var w = windName(s.force);
+            var cd = condition(s, c);
+                var uv = uvIndex(c, cd.t, new Date());
+                var ug = uvGrade(uv);
+                var _tp = [];
+                for (var _h = 0; _h <= 24; _h++) { _tp.push(tempAt(c, _h, new Date())); }
+                var tLo = Math.min.apply(null, _tp), tHi = Math.max.apply(null, _tp);
+
+            html +=
+              '<article class="wx-card" style="--tc:' + tempColor(cT) + ';--tc-soft:' + tempColor(cT) + '1f">' +
+                '<div class="wx-who">' +
+                '<header class="wx-head">' +
+                  '<span class="wx-city"><i class="wx-ico">' + c.ico + '</i>' +
+                    '<b class="wx-nm">' + c.name + '</b></span>' +
+                  '<span class="wx-cond"><i>' + cd.i + '</i><em>' + cd.t + '</em></span>' +
+                '</header>' +
+                '<p class="wx-note-in">' + c.note + '</p>' +
+                '</div>' +
+                '<div class="wx-temp">' +
+                  '<span class="wx-c">' + cT.toFixed(1) + '<span class="wx-u">°C</span></span>' +
+                  '<span class="wx-f">= ' + fT.toFixed(1) + ' °F</span>' +
+                '</div>' +
+                '<dl class="wx-rows">' +
+                  '<div class="wx-row"><dt>💧 湿度</dt><dd>' +
+                    Math.round(s.hum) + '<span class="u">%</span></dd></div>' +
+                  '<div class="wx-row"><dt>🧭 气压</dt><dd>' +
+                    s.pres.toFixed(1) + '<span class="u">kPa</span></dd></div>' +
+                  '<div class="wx-row"><dt>👁 能见度</dt><dd>' +
+                    s.vis.toFixed(1) + '<span class="u">km</span></dd></div>' +
+                  '<div class="wx-row"><dt>🍃 空气质量</dt><dd class="' + lv.c + '">' +
+                    Math.round(s.aqi) + '<span class="u">' + lv.t + '</span></dd></div>' +
+                  '<div class="wx-row"><dt>☀️ 紫外线</dt><dd class="' + ug.c + '">' +
+                    uv.toFixed(1) + '<span class="u">' + ug.t + '</span></dd></div>' +
+                  '<div class="wx-row"><dt>🌬 风向风力</dt><dd>' +
+                    DIRS[s.dir] + ' ' + w.lv + ' 级' +
+                    '<span class="u">' + s.force.toFixed(1) + ' m/s</span></dd></div>' +
+                                    '<div class="wx-row wx-row-chart"><div class="wx-chart-box">' +
+                    tempChart(c, new Date()) +
+                    '<span class="wx-chart-tip">最近 24 小时气温</span>' +
+                    '<span class="wx-chart-lo">' + tLo.toFixed(0) + '°</span>' +
+                    '<span class="wx-chart-hi">' + tHi.toFixed(0) + '°</span>' +
+                    '<div class="wx-chart-hit" data-city="' + c.name + '"></div>' +
+                  '</div></div>' +
+                  '<div class="wx-row wx-row-charts">' +
+                      '<div class="wx-mini-box"><h5>🍃 空气质量对比</h5>' + aqiBars(c.name) + '</div>' +
+                      '<div class="wx-mini-box"><h5>🌬 风速罗盘</h5>' +
+                        '<div class="wx-mini-hit" data-tip="' + DIRS[s.dir] + '风 · ' + w.lv +
+                        ' 级 · ' + s.force.toFixed(1) + ' m/s">' + windCompass(s.dir, s.force) + '</div></div>' +
+                      '<div class="wx-mini-box"><h5>🧭 气压趋势</h5>' +
+                        '<div class="wx-mini-hit wx-pres-hit" data-track="pres" data-pres="' + s.pres + '">' +
+                        presCurve(s.pres) + '</div></div>' +
+                  '</div>' +
+                '</dl>' +
+              '</article>';
+        });
+        grid.innerHTML = html;
+        bindChartHover();   // 曲线交互（每次重绘后重新绑）
+        bindMiniHover();    // 三张小图的悬停提示
+    }
+
+        /* ── 数据来源 ──────────────────────────────────────────────
+       气象数据存在数据库里（weather_state 表，由 market_tick_loop
+       每 10 秒推进一轮），前端调 get_weather 拿 ——
+       这样所有人同一时刻看到的是同一份，不会两个人对不上。
+
+       拿不到就退回本地算法（下面那套随机游走），页面不会空着。 */
+    var sb = null;
+    try {
+        if (window.supabase) {
+            sb = window.supabase.createClient(
+                'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+                'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg');
+        }
+    } catch (e) { sb = null; }
+
+    var srcTag = document.getElementById('wxSrc');
+    var srvAt = 0;          // 服务端数据的时间戳（用于显示「几秒前更新」）
+    var FROM_SERVER = false;
+
+    function applyServer(rows) {
+        rows.forEach(function (r) {
+            for (var k = 0; k < CITIES.length; k++) {
+                if (CITIES[k].name === r.city) {
+                    var st = state[k];
+                    st.temp  = parseFloat(r.temp_c);
+                    st.hum   = parseFloat(r.humidity);
+                    st.pres  = parseFloat(r.pressure);
+                    st.vis   = parseFloat(r.visibility);
+                    st.aqi   = parseFloat(r.aqi);
+                    st.dir   = parseInt(r.wind_dir, 10);
+                    st.force = parseFloat(r.wind_force);
+                    break;
+                }
+            }
+        });
+        FROM_SERVER = true;
+        // 记下服务端这次的更新时间，好在页面上显示「几秒前更新」
+        var at = rows[0] && rows[0].updated_at;
+        if (at) { try { srvAt = new Date(at).getTime(); } catch (e) {} }
+    }
+
+
+    /* ── 刷新节奏 ──────────────────────────────────────────────
+       一个定时器管到底：进度条走到 100% 的【同一时刻】就发起刷新，
+       然后把条子归零。不要把「条子」和「取数」分成两套定时器 ——
+       那样两边周期会越走越偏，看起来就像条子和数据对不上。
+
+       取数成功 → 用服务端那份覆盖
+       取数失败 → 本地走一轮，页面不会卡住
+       ──────────────────────────────────────────────────────── */
+    var t0 = Date.now();
+    var busy = false;
+
+    function refresh() {
+        if (busy) return;
+        busy = true;
+        if (!sb || !sb.rpc) {
+            step(new Date()); render(); FROM_SERVER = false;
+            busy = false;
             return;
         }
-        note.textContent = '当前账号: ' + user.username;
-        body.innerHTML = '<div class="lr-state"><div class="lr-st-ico">🎰</div><h3>记录加载中<span class="lr-dot">.</span><span class="lr-dot">.</span><span class="lr-dot">.</span></h3><p>正在翻账本</p></div>';
-        supabaseClient.rpc('get_my_lottery_records', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') })
-            .then(function (res) {
-                if (res.error) throw res.error;
-                var records = res.data || [];
-                var wins = 0, totalWin = 0;
-                records.forEach(function (r) { if (r.result === 'win') { wins++; totalWin += (Number(r.amount) || 0); } });
-                var cost = records.length * 50;
-                var net = totalWin - cost;
-                var h = '<div class="lr-stats">' +
-                    '<div class="lr-stat times"><b>' + records.length + '</b><span>总抽奖次数</span></div>' +
-                    '<div class="lr-stat wins"><b>' + wins + '</b><span>中奖次数</span></div>' +
-                    '<div class="lr-stat total"><b>' + totalWin + '</b><span>中奖总额(NB)</span></div>' +
-                    '<div class="lr-stat net ' + (net >= 0 ? 'pos' : 'neg') + '"><b>' + (net >= 0 ? '+' : '') + net + '</b><span>净收益(NB)</span></div>' +
-                    '</div>';
-                if (!records.length) {
-                    h += '<div class="lr-empty">还没有抽过奖,快去试试手气吧～ 🎡</div>';
-                } else {
-                    h += '<div class="lr-list">' + records.map(function (r, i) {
-                        var isWin = r.result === 'win';
-                        return '<div class="lr-row" style="animation-delay:' + Math.min(i * 35, 400) + 'ms">' +
-                            '<span class="lr-result ' + (isWin ? 'win' : 'none') + '">' + (isWin ? '🎉 中奖' : '😅 谢谢惠顾') + '</span>' +
-                            '<span class="lr-amount ' + (isWin ? 'win' : 'zero') + '">' + (isWin ? '+' + (Number(r.amount) || 0) + ' NB' : '0 NB') + '</span>' +
-                            '<span class="lr-time">' + formatTime(r.created_at) + '</span>' +
-                            '</div>';
-                    }).join('') + '</div>';
-                }
-                body.innerHTML = h;
-            })
-            .catch(function (err) {
-                console.error(err);
-                body.innerHTML = '<div class="lr-state"><div class="lr-st-ico">😵</div><h3>加载失败</h3><p>' + esc((err && err.message) || err) + ',请稍后重试</p></div>';
-            });
+        sb.rpc('get_weather').then(function (res) {
+            if (res && res.data && res.data.length) applyServer(res.data);
+            else { step(new Date()); FROM_SERVER = false; }
+            render();
+        }).catch(function () {
+            step(new Date()); render(); FROM_SERVER = false;
+        }).then(function () { busy = false; });
     }
-    document.getElementById('refreshBtn').addEventListener('click', function () {
-        var btn = document.getElementById('refreshBtn');
-        btn.classList.remove('spin');
-        void btn.offsetWidth;
-        btn.classList.add('spin');
-        loadRecords();
-    });
-    loadRecords();
 
+    function loop() {
+        var el = Date.now() - t0;
+        if (el >= REFRESH_MS) {
+            t0 = Date.now();                 // 先归零和刷新同一时刻
+            bar.style.width = '0%';
+            num.textContent = (REFRESH_MS / 1000).toFixed(1) + 's';
+            refresh();
+        } else {
+            bar.style.width = (el / REFRESH_MS * 100).toFixed(1) + '%';
+            num.textContent = Math.max(0, (REFRESH_MS - el) / 1000).toFixed(1) + 's';
+        }
+    }
+
+    function clockUi() {
+        clock.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false }) + ' 观测';
+        if (srcTag) {
+            if (!FROM_SERVER || !srvAt) { srcTag.textContent = '· 本地推算'; }
+            else {
+                var age = Math.max(0, Math.round((Date.now() - srvAt) / 1000));
+                srcTag.textContent = '· 服务端数据';
+                srcTag.title = '这份数据是 ' + age + ' 秒前从服务端取的';
+            }
+        }
+    }
+
+    var sEl = document.getElementById('wxSeason');
+    if (sEl) sEl.textContent = seasonLabel(new Date());
+    document.getElementById('refreshNow').onclick = function () { t0 = Date.now(); bar.style.width = '0%'; refresh(); };
+
+    step(new Date()); render();      // 先本地渲染，不等网络
+    refresh();                       // 同时问服务端要那一份
+    clockUi();
+    pullHistory();                   // 拉一次历史（曲线优先用它）
+    setInterval(pullHistory, 300000); // 历史变化慢，5 分钟一次就够
+    setInterval(loop, 100);          // 进度条与刷新共用一个定时器
+    setInterval(clockUi, 1000);
+
+    /* 手机上切到后台再回来时，别让它停在旧数据上 */
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) { t0 = Date.now(); refresh(); }
+    });
+})();
 </script>
 <script>
     // ===== 鼠标/触摸特效:跟随光晕 + 点击波纹与彩色粒子(鼠标 + 触屏都启用) =====
@@ -1920,5 +2900,265 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
 </script>
 <script defer src="../js/science-tips.js?v=26"></script>
 <script src="../js/pomodoro.js?v=7" defer></script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   NB报刊社 · 分期制前端
+   数据全部走 RPC（news_issues / news_articles / news_owned
+   三张表都开了 RLS 且 REVOKE 掉 anon，前端读不到）
+   ══════════════════════════════════════════════════════════════ */
+(function () {
+    var sb = null;
+    try {
+        if (window.supabase) {
+            sb = window.supabase.createClient(
+                'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+                'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg');
+        }
+    } catch (e) { sb = null; }
+
+    var body = document.getElementById('npBody');
+    var toastEl = document.getElementById('npToast');
+    var VIEW = 'issues';
+
+    function me() {
+        try {
+            var u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+            return (u && u.id) ? u : null;
+        } catch (e) { return null; }
+    }
+
+    function toast(msg, ok) {
+        toastEl.textContent = msg;
+        toastEl.style.background = ok === false ? 'rgba(190,40,40,.95)' : 'rgba(30,41,59,.95)';
+        toastEl.classList.add('on');
+        clearTimeout(toastEl.__t);
+        toastEl.__t = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
+    }
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function paras(txt) {
+        return String(txt || '').split(/\n\s*\n/).filter(function (x) { return x.trim(); })
+            .map(function (p) { return '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>'; }).join('');
+    }
+
+    function rpc(fn, args) {
+        if (!sb || !sb.rpc) return Promise.reject(new Error('supabase 没加载'));
+        return sb.rpc(fn, args || {}).then(function (r) {
+            if (r && r.error) throw new Error(r.error.message || 'RPC 失败');
+            return r ? r.data : null;
+        });
+    }
+
+    /* ── 各期 ── */
+    function renderIssues() {
+        body.innerHTML = '<div class="np-loading">正在取报…</div>';
+        var u = me();
+        rpc('get_news_issues', { p_user_id: u ? u.id : null }).then(function (d) {
+            var list = (d && d.issues) || [];
+            if (!list.length) {
+                body.innerHTML = '<div class="np-empty">还没有出刊。<br>站长去后台发一期就有了。</div>';
+                return;
+            }
+            body.innerHTML = issueListHtml(list);
+            bindIssueClicks();
+        }).catch(function (e) {
+            body.innerHTML = '<div class="np-empty">取报失败：' + esc(e.message) +
+                '<br><span style="font-size:.8rem">（多半是 SQL 还没跑）</span></div>';
+        });
+    }
+
+    /* ── 我拥有的 ── */
+    function renderMine() {
+        var u = me();
+        if (!u) {
+            body.innerHTML = '<div class="np-empty">请先登录，才能看到你拥有的报纸。<br>' +
+                '<a href="login.html" style="color:var(--status-border)">去登录 →</a></div>';
+            return;
+        }
+        body.innerHTML = '<div class="np-loading">正在翻你的报箱…</div>';
+        rpc('get_my_newspapers', { p_user_id: u.id }).then(function (d) {
+            var list = (d && d.issues) || [];
+            if (!list.length) {
+                body.innerHTML = '<div class="np-empty">你的报箱还是空的。<br>' +
+                    '去「📰 各期」看看 —— 付费栏 20 NB币一期，买了就一直是你的。</div>';
+                return;
+            }
+            body.innerHTML = issueListHtml(list, true);
+            bindIssueClicks();
+        }).catch(function (e) {
+            body.innerHTML = '<div class="np-empty">取报失败：' + esc(e.message) + '</div>';
+        });
+    }
+
+    function issueListHtml(list, mine) {
+        // 按出版日期分组（和齐喜那个报刊亭一样）
+        var groups = [], byDay = {};
+        list.forEach(function (it) {
+            var d = it.publish_date || '未知日期';
+            if (!byDay[d]) { byDay[d] = []; groups.push(d); }
+            byDay[d].push(it);
+        });
+        var h = '';
+        groups.forEach(function (day) {
+            h += '<div class="np-day"><span class="d">' + esc(day) + '</span></div>' +
+                 '<div class="np-cards">';
+            byDay[day].forEach(function (it) {
+                var badge;
+                if (it.owned || mine) badge = '<span class="np-badge owned">✓ 已拥有</span>';
+                else if (it.paid_count > 0) badge = '<span class="np-badge buy">🔒 ' + it.price + ' NB币</span>';
+                else badge = '<span class="np-badge free">全免费</span>';
+                var cover = it.cover
+                    ? '<img class="np-cover" src="' + esc(it.cover) + '" alt="' + esc(it.title) + ' 封面" loading="lazy">'
+                    : '<div class="np-cover-ph">第 ' + it.issue_no + ' 期<br>NB报刊社</div>';
+                h += '<div class="np-card" data-no="' + it.issue_no + '">' +
+                       '<div class="np-card-l">' +
+                         '<div class="np-card-no">第 ' + it.issue_no + ' 期' + (badge ? '　' + badge : '') + '</div>' +
+                         '<div class="np-card-t">' + esc(it.title) + '</div>' +
+                         '<div class="np-card-s">' + esc(it.summary || '') + '</div>' +
+                         '<div class="np-card-m">' + esc(it.publish_date) +
+                           ' · 免费 ' + it.free_count + ' 篇' +
+                           (it.paid_count > 0 ? ' · 付费 ' + it.paid_count + ' 篇' : '') +
+                           (mine && it.bought_at ? ' · 购买于 ' + esc(it.bought_at) : '') +
+                         '</div>' +
+                         '<button class="np-read">📄 阅读</button>' +
+                       '</div>' +
+                       '<div class="np-card-r">' + cover + '</div>' +
+                     '</div>';
+            });
+            h += '</div>';
+        });
+        return h;
+    }
+
+    function bindIssueClicks() {
+        Array.prototype.forEach.call(body.querySelectorAll('.np-card'), function (el) {
+            el.onclick = function () { openIssue(parseInt(el.getAttribute('data-no'), 10)); };
+        });
+    }
+
+    /* ── 某一期 ── */
+    function openIssue(no) {
+        body.innerHTML = '<div class="np-loading">正在展开第 ' + no + ' 期…</div>';
+        var u = me();
+        rpc('get_news_issue', { p_user_id: u ? u.id : null, p_issue_no: no }).then(function (d) {
+            if (!d || !d.success) {
+                body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
+                    '<div class="np-empty">' + esc((d && d.message) || '没找到这一期') + '</div>';
+                document.getElementById('npBack').onclick = backToList;
+                return;
+            }
+            var h = '<button class="np-back" id="npBack">← 回各期</button>' +
+                '<div class="np-paper">' +
+                  '<div class="np-notice">第 ' + d.issue_no + ' 期 · ' + esc(d.title) + ' · ' +
+                    esc(d.publish_date) + ' · 仅供娱乐 · 请勿代入现实</div>' +
+                  '<div class="np-rule"></div>' +
+                  '<h2 class="np-h1" style="margin-top:18px">' + esc(d.title) + '</h2>' +
+                  (d.summary ? '<div class="np-hsub">' + esc(d.summary) + '</div>' : '') +
+                  '<div class="np-rule-thin" style="margin:16px 0 4px"></div>' +
+                  '<div class="np-sec" style="margin-top:22px">免 费 栏</div>' +
+                  renderArticles(d.free);
+
+            if ((d.paid || []).length) {
+                h += '<div class="np-sec" style="margin-top:30px">付 费 栏</div>';
+                if (d.owned) {
+                    h += '<div class="np-notice">✓ 你已拥有这一期，以下全文可读</div>';
+                    h += renderArticles(d.paid);
+                } else {
+                    h += '<div class="np-lock">' +
+                           '<div class="lk-title">🔒 这一期的付费内容还没解锁</div>' +
+                           '<div class="lk-sub">共 ' + d.paid.length + ' 篇 · 花 ' + d.price +
+                             ' NB币买下，<b>永久可读</b>，不会重复扣</div>' +
+                           (d.logged_in
+                             ? '<button class="np-buy" id="npBuy">花 ' + d.price + ' NB币 购买这一期</button>'
+                             : '<button class="np-buy" disabled>请先登录</button>' +
+                               '<div class="lk-sub" style="margin-top:12px">' +
+                               '<a href="login.html" style="color:var(--status-border)">去登录 →</a></div>') +
+                           '<div class="np-locked-list">' +
+                             d.paid.map(function (a) { return '<div>' + esc(a.headline) + '</div>'; }).join('') +
+                           '</div>' +
+                         '</div>';
+                }
+            }
+            h += '<div class="np-notice" style="margin-top:24px;border-top:3px double var(--card-border);padding-top:14px">' +
+                 '《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 第 1 版<br>' +
+                 '本报所有内容均为虚构，如有雷同，那大概是巧合</div></div>';
+            body.innerHTML = h;
+
+            document.getElementById('npBack').onclick = backToList;
+            var buy = document.getElementById('npBuy');
+            if (buy && !buy.disabled) buy.onclick = function () { doBuy(no, buy); };
+        }).catch(function (e) {
+            body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
+                '<div class="np-empty">打开失败：' + esc(e.message) + '</div>';
+            document.getElementById('npBack').onclick = backToList;
+        });
+    }
+
+    function backToList() { if (VIEW === 'mine') renderMine(); else renderIssues(); }
+
+    function renderArticles(list) {
+        var arts = (list || []).filter(function (a) { return a.kind !== 'brief'; });
+        var briefs = (list || []).filter(function (a) { return a.kind === 'brief'; });
+        var h = '';
+        arts.forEach(function (a) {
+            h += '<article class="np-art">';
+            if (a.kind === 'service') {
+                h += '<h3 class="np-h2">' + esc(a.headline) + '</h3>' +
+                     '<div class="np-service"><pre>' + esc(a.body) + '</pre></div>';
+            } else if (a.subhead) {
+                h += '<h2 class="np-h1">' + esc(a.headline) + '</h2>' +
+                     '<div class="np-hsub">' + esc(a.subhead) + '</div>' +
+                     '<div class="np-cols">' + paras(a.body) + '</div>';
+            } else {
+                h += '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(a.tag) + '</span>' : '') +
+                     esc(a.headline) + '</h3>' +
+                     (a.body ? '<div class="np-cols">' + paras(a.body) + '</div>' : '');
+            }
+            h += '</article>';
+        });
+        if (briefs.length) {
+            h += '<div class="np-art"><div class="np-briefs">' +
+                 briefs.map(function (b) { return '<div>' + esc(b.headline) + '</div>'; }).join('') +
+                 '</div></div>';
+        }
+        return h;
+    }
+
+    /* ── 购买 ── */
+    function doBuy(no, btn) {
+        var u = me();
+        if (!u) { toast('请先登录', false); return; }
+        var old = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '正在扣款…';
+        rpc('buy_newspaper', { p_user_id: u.id, p_issue_no: no }).then(function (d) {
+            if (d && d.success) {
+                toast(d.message || '购买成功', true);
+                openIssue(no);
+            } else {
+                toast((d && d.message) || '购买失败', false);
+                btn.disabled = false; btn.textContent = old;
+            }
+        }).catch(function (e) {
+            toast('购买失败：' + e.message, false);
+            btn.disabled = false; btn.textContent = old;
+        });
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (b) {
+        b.onclick = function () {
+            Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            VIEW = b.getAttribute('data-view');
+            backToList();
+        };
+    });
+
+    renderIssues();
+})();
+</script>
 </body>
 </html>
