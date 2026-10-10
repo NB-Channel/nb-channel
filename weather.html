@@ -73,58 +73,106 @@
         .wx-tick button:hover { background: var(--nav-btn-hover-bg); color: #fff; }
 
         /* ── 城市卡片网格 ── */
-        .wx-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
-            gap: 16px;
-        }
-        .wx-card {
-            background: var(--card-bg);
-            border-radius: 24px;
-            padding: 18px 18px 16px;
-            box-shadow: 0 12px 26px -14px rgba(0,0,0,.22);
-            border: 1px solid var(--card-border);
-            position: relative;
-            overflow: hidden;
-        }
-        /* 左侧一条随温度变色的竖条 */
-        .wx-card::before {
-            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
-            background: var(--tc, #6b7280);
-            transition: background .5s;
-        }
-        .wx-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
-        .wx-head .ico { font-size: 1.15rem; }
-        .wx-head .nm { font-weight: 700; font-size: 1.06rem; color: var(--text-color); }
-        .wx-note { font-size: .76rem; color: var(--count-text); margin-bottom: 12px; line-height: 1.6; }
-
-        .wx-temp { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 14px; }
-        .wx-temp .c { font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--status-border); }
-        .wx-temp .unit { font-size: 1rem; font-weight: 600; color: var(--status-border); margin-bottom: 4px; }
-        .wx-temp .f { font-size: .86rem; color: var(--count-text); margin-bottom: 5px; }
-
-        /* 数据格子 */
-        .wx-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
-        .wx-row { font-size: .82rem; display: flex; justify-content: space-between; gap: 6px; }
-        .wx-row .k { color: var(--count-text); white-space: nowrap; }
-        .wx-row .v { font-weight: 600; color: var(--text-color); text-align: right; }
-
-        /* 空气质量色标 */
-        .aq-good  { color: #16a34a !important; }
-        .aq-mid   { color: #ca8a04 !important; }
-        .aq-bad   { color: #ea580c !important; }
-        .aq-worse { color: #dc2626 !important; }
-        .aq-awful { color: #7e22ce !important; }
-
-        .wx-foot {
-            margin-top: 26px; text-align: center;
-            font-size: .82rem; color: var(--count-text); line-height: 2;
-        }
-
-        @media (max-width: 560px) {
-            .wx-grid { grid-template-columns: 1fr; }
-            .wx-temp .c { font-size: 2.1rem; }
-        }
+/* ══════════════════════════════════════════════════════
+   天气瞎报 · 卡片样式
+   设计：温度定色 → 卡片左上角一层淡色晕开，左边一条温度色条，
+        右上角一个大天气图标。悬停轻微浮起。
+   ══════════════════════════════════════════════════════ */
+.wx-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(282px, 1fr));
+    gap: 18px;
+}
+
+.wx-card {
+    position: relative;
+    padding: 20px 20px 18px 24px;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+    background:
+        linear-gradient(165deg, var(--tc-soft) 0%, rgba(255,255,255,0) 55%),
+        var(--card-bg);
+    box-shadow: 0 6px 20px -14px rgba(16,24,40,.22);
+    transition: transform .28s cubic-bezier(.2,.8,.3,1), box-shadow .28s;
+}
+.wx-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 36px -18px rgba(16,24,40,.34);
+}
+/* 左侧温度色条 */
+.wx-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--tc);
+    transition: background .5s;
+}
+
+/* ── 头部：城市名 · 天气状态 ── */
+.wx-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+}
+.wx-city { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.wx-ico { font-size: 1.05rem; font-style: normal; flex: none; }
+.wx-nm {
+    font-size: 1.03rem; font-weight: 700; color: var(--text-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wx-cond {
+    display: flex; align-items: center; gap: 5px; flex: none;
+    font-size: .76rem; color: var(--count-text);
+}
+.wx-cond i { font-size: 1.5rem; font-style: normal; line-height: 1; }
+.wx-cond em { font-style: normal; }
+
+/* ── 城市简介 ── */
+.wx-note-in {
+    margin: 7px 0 15px;
+    font-size: .75rem; line-height: 1.65;
+    color: var(--count-text);
+}
+
+/* ── 温度 ── */
+.wx-temp {
+    display: flex; align-items: baseline; gap: 3px;
+    margin-bottom: 17px;
+}
+.wx-c {
+    font-size: 2.9rem; font-weight: 800; line-height: 1;
+    letter-spacing: -1.5px; color: var(--status-border);
+    font-variant-numeric: tabular-nums;
+}
+.wx-u { font-size: 1.05rem; font-weight: 700; color: var(--status-border); }
+.wx-f {
+    margin-left: auto; font-size: .79rem;
+    color: var(--count-text); font-variant-numeric: tabular-nums;
+}
+
+/* ── 指标 ── */
+.wx-rows {
+    margin: 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px;
+}
+.wx-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 8px; font-size: .78rem;
+}
+.wx-row dt { color: var(--count-text); white-space: nowrap; }
+.wx-row dd {
+    margin: 0; font-weight: 600; color: var(--text-color);
+    text-align: right; font-variant-numeric: tabular-nums;
+}
+.wx-row-wide {
+    grid-column: 1 / -1;
+    padding-top: 10px; margin-top: 3px;
+    border-top: 1px dashed var(--card-border);
+}
+
+@media (max-width: 560px) {
+    .wx-grid { grid-template-columns: 1fr; }
+    .wx-c { font-size: 2.5rem; }
+}
     </style>
 </head>
 <body>
@@ -342,44 +390,58 @@
     var num = document.getElementById('tickNum');
     var clock = document.getElementById('clockTxt');
 
-    function render() {
-        var html = '';
-        CITIES.forEach(function (c, i) {
-            var s = state[i];
-            var cT = s.temp;
-            var fT = cT * 9 / 5 + 32;
-            var lv = aqiLevel(Math.round(s.aqi));
-            var w = windName(s.force);
-
-            html +=
-              '<div class="wx-card" style="--tc:' + tempColor(cT) + '">' +
-                '<div class="wx-head"><span class="ico">' + c.ico + '</span>' +
-                  '<span class="nm">' + c.name + '</span></div>' +
-                '<div class="wx-note">' + c.note + '</div>' +
-
-                '<div class="wx-temp">' +
-                  '<span class="c">' + cT.toFixed(1) + '</span>' +
-                  '<span class="unit">°C</span>' +
-                  '<span class="f">= ' + fT.toFixed(1) + ' °F</span>' +
-                '</div>' +
-
-                '<div class="wx-rows">' +
-                  '<div class="wx-row"><span class="k">湿度</span>' +
-                    '<span class="v">' + Math.round(s.hum) + ' %</span></div>' +
-                  '<div class="wx-row"><span class="k">气压</span>' +
-                    '<span class="v">' + s.pres.toFixed(2) + ' kPa</span></div>' +
-                  '<div class="wx-row"><span class="k">能见度</span>' +
-                    '<span class="v">' + s.vis.toFixed(1) + ' km</span></div>' +
-                  '<div class="wx-row"><span class="k">空气质量</span>' +
-                    '<span class="v ' + lv.c + '">' + Math.round(s.aqi) + ' ' + lv.t + '</span></div>' +
-                  '<div class="wx-row" style="grid-column:1/-1"><span class="k">风向风力</span>' +
-                    '<span class="v">' + DIRS[s.dir] + '风 ' + w.lv + ' 级 · ' + w.t +
-                    '（' + s.force.toFixed(1) + ' m/s）</span></div>' +
-                '</div>' +
-              '</div>';
-        });
-        grid.innerHTML = html;
-    }
+/* 天气状态：一份天气预报总得说晴还是雨 */
+    function condition(s, c) {
+        if (s.temp <= 0 && s.hum >= 65) return { i: '🌨️', t: '小雪' };
+        if (s.temp <= 0)               return { i: '❄️', t: '晴冷' };
+        if (s.vis < 6)                 return { i: '🌫️', t: '有雾' };
+        if (s.aqi > 120)               return { i: '😷', t: '霾' };
+        if (s.hum >= 88)               return { i: '🌧️', t: '小雨' };
+        if (s.hum >= 78)               return { i: '☁️', t: '多云' };
+        if (s.temp >= 33)              return { i: '🔥', t: '酷热' };
+        if (s.hum <= 38)               return { i: '☀️', t: '晴' };
+        return { i: '⛅', t: '晴间多云' };
+    }
+
+    function render() {
+        var html = '';
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+            var cT = s.temp, fT = cT * 9 / 5 + 32;
+            var lv = aqiLevel(Math.round(s.aqi));
+            var w = windName(s.force);
+            var cd = condition(s, c);
+
+            html +=
+              '<article class="wx-card" style="--tc:' + tempColor(cT) + ';--tc-soft:' + tempColor(cT) + '1f">' +
+                '<header class="wx-head">' +
+                  '<span class="wx-city"><i class="wx-ico">' + c.ico + '</i>' +
+                    '<b class="wx-nm">' + c.name + '</b></span>' +
+                  '<span class="wx-cond"><i>' + cd.i + '</i><em>' + cd.t + '</em></span>' +
+                '</header>' +
+                '<p class="wx-note-in">' + c.note + '</p>' +
+                '<div class="wx-temp">' +
+                  '<span class="wx-c">' + cT.toFixed(1) + '</span>' +
+                  '<span class="wx-u">°C</span>' +
+                  '<span class="wx-f">' + fT.toFixed(1) + ' °F</span>' +
+                '</div>' +
+                '<dl class="wx-rows">' +
+                  '<div class="wx-row"><dt>💧 湿度</dt><dd>' +
+                    Math.round(s.hum) + ' %</dd></div>' +
+                  '<div class="wx-row"><dt>🧭 气压</dt><dd>' +
+                    s.pres.toFixed(2) + ' kPa</dd></div>' +
+                  '<div class="wx-row"><dt>👁 能见度</dt><dd>' +
+                    s.vis.toFixed(1) + ' km</dd></div>' +
+                  '<div class="wx-row"><dt>🍃 空气</dt><dd class="' + lv.c + '">' +
+                    Math.round(s.aqi) + ' ' + lv.t + '</dd></div>' +
+                  '<div class="wx-row wx-row-wide"><dt>🌬 风向风力</dt><dd>' +
+                    DIRS[s.dir] + '风 ' + w.lv + ' 级 · ' + w.t +
+                    ' ' + s.force.toFixed(1) + ' m/s</dd></div>' +
+                '</dl>' +
+              '</article>';
+        });
+        grid.innerHTML = html;
+    }
 
     /* ── 倒计时进度条 ── */
     var t0 = Date.now();
