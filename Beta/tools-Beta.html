@@ -1055,6 +1055,21 @@ html { -webkit-text-size-adjust: 100%; }
                 <div class="tl-out" id="balanceResult">👆 输入方程式开始配平</div>
             </div>
 
+            <div class="card">
+                <h3>⚡ 离子方程式配平</h3>
+                <div class="calc-help">
+                    直接写就行：<code>Ag+ + Cl- = AgCl</code>、<code>Fe3+ + 3OH- = Fe(OH)3</code><br>
+                    带电的写法两种都认（<code>Ag+</code> 和 <code>Ag^+</code>）<br>
+                    比普通配平多一条<b>电荷守恒</b>（左边总电荷 = 右边总电荷）
+                </div>
+                <div class="calc-row">
+                    <input type="text" id="ionInput" placeholder="例：Ba2+ + SO42- = BaSO4">
+                    <button id="ionBtn">配平</button>
+                </div>
+                <div class="examples" id="ionExamples"></div>
+                <div class="calc-result" id="ionResult">👆 输入离子方程式开始配平</div>
+            </div>
+
             <div class="tl-card reveal">
                 <h3>📏 纯物质换算</h3>
                 <div class="tl-help">n = m / M —— 质量 ↔ 物质的量,顺带算出分子个数</div>
@@ -3326,20 +3341,8 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     })();
 
 </script>
-            <div class="card">
-                <h3>⚡ 离子方程式配平</h3>
-                <div class="calc-help">
-                    直接写就行：<code>Ag+ + Cl- = AgCl</code>、<code>Fe3+ + 3OH- = Fe(OH)3</code><br>
-                    带电的写法两种都认（<code>Ag+</code> 和 <code>Ag^+</code>）<br>
-                    比普通配平多一条<b>电荷守恒</b>（左边总电荷 = 右边总电荷）
-                </div>
-                <div class="calc-row">
-                    <input type="text" id="ionInput" placeholder="例：Ba2+ + SO42- = BaSO4">
-                    <button id="ionBtn">配平</button>
-                </div>
-                <div class="examples" id="ionExamples"></div>
-                <div class="calc-result" id="ionResult">👆 输入离子方程式开始配平</div>
-            </div>
+            
+
 
 </body>
 </html>
