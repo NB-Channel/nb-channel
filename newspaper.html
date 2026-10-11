@@ -444,9 +444,15 @@
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
+    // 正文里的 **文字** 会加粗（旧版那些 <b> 就是这么来的）。
+    // ⚠️ 顺序：先 esc 把尖括号转义掉，再把 **…** 换成 <b>…</b> ——
+    //    反过来的话正文里写 <script> 就能注入。
+    function boldify(safe) {
+        return safe.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+    }
     function paras(txt) {
         return String(txt || '').split(/\n\s*\n/).filter(function (x) { return x.trim(); })
-            .map(function (p) { return '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>'; }).join('');
+            .map(function (p) { return '<p>' + boldify(esc(p.trim())).replace(/\n/g, '<br>') + '</p>'; }).join('');
     }
 
     // 会话令牌：站点用自定义登录，Supabase 一律看到 anon，
