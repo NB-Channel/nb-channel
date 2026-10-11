@@ -3091,20 +3091,50 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     //   ^n+ 或 ^n- 会被换成内部标记 ⟦±n⟧，这样剩下的 + 就一定是物种分隔符
     function balanceIonic() {
         const out = document.getElementById('ionResult');
-        // ⚠️ 顺序要紧：先把电荷抽成标记，再压空白。
-        //    反过来的话 'Ag^+ + Cl^-' 去完空白是 'Ag^++Cl^-'，
-        //    电荷号和分隔符粘在一起，^ 就匹配不上了（踩过）。
+        // 电荷号的两种写法都认：
+        //     Ag^+ + Cl^- = AgCl      带 ^ 的
+        //     Ag+ + Cl- = AgCl        不带的（中学里更常这么写）
+        //
+        // 不带的为什么也能解析：+ 既是分隔符又是电荷号，但
+        //     · 分隔符两边【有空格】
+        //     · 电荷号【贴着】物种
+        //   所以不压空白、按「空格+空格」切分，就能把两者分开。
+        //
+        // ⚠️ 约定：尾部数字紧跟符号时，数字是【电荷数】不是下标
+        //    （Fe3+ = Fe³⁺，SO42- = SO4²⁻）—— 中学化学的通行读法。
         let raw = document.getElementById('ionInput').value;
         raw = raw.replace(/＝|→|⇒|=>|⟶/g, '=');
         raw = raw.replace(/[\u2080-\u2089]/g, ch => String.fromCharCode(48 + ch.charCodeAt(0) - 0x2080));
-        //   +n → \uE000+n   -n → \uE100+n
-        //   ⚠️ 标记里绝不能出现 + 或 - —— 后面要按 + 切分物种，
-        //      含 + 的标记会被切坏（踩过一次）
-        raw = raw.replace(/\^(\d*)([+-])/g, (m, n, sign) => {
-            const v = (n === '' ? 1 : parseInt(n));
+        raw = raw.replace(/\u2212|\uFF0D/g, '-');       // 真减号 / 全角减号 → 普通减号
+
+        // 把电荷换成内部标记（私有区字符，不含加减号）
+        //   +n → \uE000+n    -n → \uE100+n
+        const markCharge = (n, sign) => {
+            const v = (n === '' || n === undefined ? 1 : parseInt(n));
             return String.fromCharCode(sign === '+' ? 0xE000 + v : 0xE100 + v);
-        });
-        raw = raw.replace(/\s+/g, '');
+        };
+        const hasCaret = /\^/.test(raw);
+        if (hasCaret) {
+            // ① 带 ^ 的：先抽电荷，再压空白，后面照旧按 + 切
+            raw = raw.replace(/\^(\d*)([+-])/g, (m, n, sign) => markCharge(n, sign));
+            raw = raw.replace(/\s+/g, '');
+        } else {
+            // ② 不带的：按「空格包着的 +」切分，每个物种尾部的 ± 就是电荷
+            raw = raw.split(/\s*=\s*/).map(side =>
+                side.split(/\s+\+\s+|\s*\+\s*(?=[A-Z(])/)   // 兜底：+ 后面紧跟元素符号也算分隔
+                    .filter(x => x.trim())
+                    .map(sp => {
+                        sp = sp.trim();
+                        // 尾部 (\d*)([+-]) 就是电荷，抽掉换成标记
+                        // ⚠️ 这里必须用 \d? 不能 \d*：
+                        //    'CO32-' 里 \d* 会贪婪吃掉 '32'，电荷变成 -32（踩过）。
+                        //    电荷最多一位数（1~4 价）。
+                        sp = sp.replace(/(\d?)([+-])$/, (m, n, sign) => markCharge(n, sign));
+                        return sp;
+                    })
+                    .join('+')
+            ).join('=');
+        }
         try {
             if (!raw) throw new Error('方程式为空');
 
