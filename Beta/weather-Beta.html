@@ -1876,16 +1876,38 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
             var line = el.querySelector('.wx-phover-line');
             var dot = el.querySelector('.wx-phover-dot');
             var A = 1.4;
+            var BK = 6, AH = 18;
             function val(h) { return pres + A * Math.cos(2 * Math.PI * (h - 10) / 12); }
             function on(ev) {
                 var r = svg.getBoundingClientRect();
                 var cx = (ev.clientX !== undefined) ? ev.clientX : (r.left + r.width / 2);
                 var ratio = Math.max(0, Math.min(1, (cx - r.left) / r.width));
-                var hour = ratio * 24;
-                var v = val(hour);
+                // 横轴是 -6 ~ +18（0 = 现在）
+                var off = ratio * (BK + AH) - BK;
+                var nowH0 = parseFloat(svg.getAttribute('data-nowh'));
+                if (isNaN(nowH0)) { var nd = new Date(); nowH0 = nd.getHours() + nd.getMinutes() / 60; }
+                var hod = ((nowH0 + off) % 24 + 24) % 24;      // 一天中的小时（公式要这个）
+                var v = val(hod);
+                // 过去那段优先取实测（和图上的锯齿对齐）
+                if (off <= 0) {
+                    var cn = svg.getAttribute('data-city');
+                    var hs = (typeof HISTORY !== 'undefined' && HISTORY[cn]) || [];
+                    var want = Date.now() + off * 3600000;
+                    var best = null, bd = Infinity;
+                    for (var q = 0; q < hs.length; q++) {
+                        if (isNaN(hs[q].p)) continue;
+                        var dd = Math.abs(hs[q].t - want);
+                        if (dd < bd) { bd = dd; best = hs[q]; }
+                    }
+                    if (best && bd < 45 * 60000) v = best.p;
+                }
                 // 换算到 viewBox 坐标（W=300, H=92, PAD=8）
                 var vx = 8 + (300 - 16) * ratio;
-                var lo = pres - A, hi = pres + A;
+                // ⚠️ lo/hi 必须和图里算的一致 —— 从 SVG 的 data- 上读，
+                //    不能再自己 pres±A 推（图现在是「实测+预测」的动态范围）
+                var lo = parseFloat(svg.getAttribute('data-lo'));
+                var hi = parseFloat(svg.getAttribute('data-hi'));
+                if (!isFinite(lo) || !isFinite(hi) || hi - lo < .001) { lo = pres - A; hi = pres + A; }
                 var vy = 8 + (92 - 16) * (1 - (v - lo) / (hi - lo));
                 if (g && line && dot) {
                     line.setAttribute('x1', vx); line.setAttribute('x2', vx);
@@ -1893,9 +1915,10 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                     g.style.display = '';
                 }
                 var tip = tipEl();
-                var hh = Math.floor(hour), mm = Math.round((hour - hh) * 60);
-                if (mm === 60) { hh += 1; mm = 0; }
+                var abs = new Date(Date.now() + off * 3600000);
+                var hh = abs.getHours(), mm = abs.getMinutes();
                 tip.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm +
+                                  (off > 0.5 ? '（预测）' : '') +
                                   '　' + v.toFixed(1) + ' kPa';
                 place(tip, ev, el);
             }
@@ -1990,33 +2013,81 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
           气压半日潮 P(h) = P̄ + A·cos(2π(h-10)/12)
           —— 10 点和 22 点各一个高值、4 点和 16 点各一个低值，
              低纬振幅约 1~3 hPa。不是实测历史。 */
-    function presCurve(pres) {
+    function presCurve(pres, cityName) {
         var W = 300, H = 92, PAD = 8;
         var A = 1.4;
-        var pts = [], i, v, lo = Infinity, hi = -Infinity;
-        for (i = 0; i <= 24; i++) {
-            v = pres + A * Math.cos(2 * Math.PI * (i - 10) / 12);
+        var BACK = 6, AHEAD = 18;
+        var pts = [], xs = [], i, v, lo = Infinity, hi = -Infinity;
+        var nReal = 0;
+        var nowMs = Date.now();
+        var nowD = new Date();
+        var nowH0 = nowD.getHours() + nowD.getMinutes() / 60;
+
+        // 左段：过去 6 小时的实测气压（HISTORY 里存的 p）
+        var hist = (typeof HISTORY !== 'undefined' && HISTORY[cityName]) || [];
+        var real = [];
+        for (i = 0; i < hist.length; i++) {
+            if (isNaN(hist[i].p)) continue;
+            var off = (hist[i].t - nowMs) / 3600000;
+            if (off < -BACK || off > 0.25) continue;
+            real.push({ x: off, y: hist[i].p });
+        }
+        real.sort(function (a, b) { return a.x - b.x; });
+        if (real.length >= 2) {
+            for (i = 0; i < real.length; i++) { xs.push(real[i].x); pts.push(real[i].y); }
+            nReal = real.length;
+        }
+
+        // 右段：未来 18 小时，半日潮公式
+        //   ⚠️ 公式里的 h 是【一天中的小时】，所以要用 (现在小时 + k) % 24
+        for (i = 0; i <= AHEAD; i++) {
+            var hh = ((nowH0 + i) % 24 + 24) % 24;
+            v = pres + A * Math.cos(2 * Math.PI * (hh - 10) / 12);
+            xs.push(i);
             pts.push(v);
-            if (v < lo) lo = v;
-            if (v > hi) hi = v;
+        }
+        // 没实测的话，左段也用公式铺上（那样整条都是预测）
+        if (!nReal) {
+            xs = []; pts = [];
+            for (i = -BACK; i <= AHEAD; i++) {
+                var hh2 = ((nowH0 + i) % 24 + 24) % 24;
+                xs.push(i);
+                pts.push(pres + A * Math.cos(2 * Math.PI * (hh2 - 10) / 12));
+            }
+        }
+        var splitAt = nReal ? nReal - 1 : Math.round(BACK);
+        for (i = 0; i < pts.length; i++) {
+            if (pts[i] < lo) lo = pts[i];
+            if (pts[i] > hi) hi = pts[i];
         }
         if (hi - lo < .4) hi = lo + .4;
-        function X(h) { return PAD + (W - PAD * 2) * (h / 24); }
+        function X(h) { return PAD + (W - PAD * 2) * ((h + BACK) / (BACK + AHEAD)); }
         function Y(v) { return PAD + (H - PAD * 2) * (1 - (v - lo) / (hi - lo)); }
-        var nowH2 = new Date().getHours() + new Date().getMinutes() / 60;
-        var nowV = pres + A * Math.cos(2 * Math.PI * (nowH2 - 10) / 12);
-        var d = '', area = '';
-        for (i = 0; i <= 24; i++) { d += (i ? ' L' : 'M') + X(i).toFixed(1) + ' ' + Y(pts[i]).toFixed(1); }
-        area = d + ' L' + X(24).toFixed(1) + ' ' + (H - PAD) + ' L' + X(0).toFixed(1) + ' ' + (H - PAD) + ' Z';
-        var nowH = new Date().getHours() + new Date().getMinutes() / 60;
-        return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="wx-mini" preserveAspectRatio="none">' +
+        var nowV = pts[splitAt];
+        var dReal = '', dFcast = '', d = '', area = '';
+        for (i = 0; i < pts.length; i++) {
+            var seg = (i ? ' L' : 'M') + X(xs[i]).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+            if (i <= splitAt) dReal += seg; else dFcast += seg;
+        }
+        d = dReal + (dFcast ? ' ' + dFcast.replace('M', 'L') : '');
+        area = d + ' L' + X(xs[xs.length - 1]).toFixed(1) + ' ' + (H - PAD) +
+               ' L' + X(xs[0]).toFixed(1) + ' ' + (H - PAD) + ' Z';
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="wx-mini" preserveAspectRatio="none" ' +
+               'data-lo="' + lo + '" data-hi="' + hi + '" data-pres="' + pres + '" ' +
+               'data-city="' + (cityName || '') + '" data-nowh="' + nowH0 + '" ' +
+               'data-real="' + (nReal ? '1' : '0') + '">' +
                '<defs><linearGradient id="pcg" x1="0" y1="0" x2="1" y2="0">' +
                '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
                '</linearGradient></defs>' +
                '<path d="' + area + '" fill="url(#pcg)" opacity=".14"/>' +
-               '<path d="' + d + '" fill="none" stroke="url(#pcg)" stroke-width="1.5" ' +
+               // 「现在」的竖虚线 —— 实测 / 预测的分界
+               '<line x1="' + X(0).toFixed(1) + '" y1="' + PAD + '" x2="' + X(0).toFixed(1) +
+                 '" y2="' + (H - PAD) + '" stroke="rgba(124,140,248,.4)" stroke-width="1" stroke-dasharray="3 3"/>' +
+               '<path d="' + dReal + '" fill="none" stroke="url(#pcg)" stroke-width="1.5" ' +
                'vector-effect="non-scaling-stroke" stroke-linejoin="round"/>' +
-               '<circle cx="' + X(nowH2).toFixed(1) + '" cy="' + Y(nowV).toFixed(1) + '" r="3.4" ' +
+               (dFcast ? '<path d="' + dFcast + '" fill="none" stroke="url(#pcg)" stroke-width="1.5" ' +
+               'vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-dasharray="5 4" opacity=".72"/>' : '') +
+               '<circle cx="' + X(0).toFixed(1) + '" cy="' + Y(nowV).toFixed(1) + '" r="3.4" ' +
                'fill="#fff" stroke="#7c8cf8" stroke-width="1.8"/>' +
                '<g class="wx-phover-g" style="display:none">' +
                  '<line class="wx-phover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PAD) +
@@ -2172,7 +2243,7 @@ function render() {
                         ' 级 · ' + s.force.toFixed(1) + ' m/s">' + windCompass(s.dir, s.force) + '</div></div>' +
                       '<div class="wx-mini-box"><h5>🧭 气压趋势</h5>' +
                         '<div class="wx-mini-hit wx-pres-hit" data-track="pres" data-pres="' + s.pres + '">' +
-                        presCurve(s.pres) + '</div></div>' +
+                        presCurve(s.pres, s.name) + '</div></div>' +
                   '</div>' +
                 '</dl>' +
               '</article>';
