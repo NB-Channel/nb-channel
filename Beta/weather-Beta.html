@@ -1574,7 +1574,8 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
             if (!m[c]) m[c] = [];
             var ts = Date.parse(r.at);
             if (isNaN(ts)) return;
-            m[c].push({ t: ts, v: parseFloat(r.temp_c) });
+            // v = 温度，p = 气压（气压趋势图要用实测，不能再只靠公式推）
+            m[c].push({ t: ts, v: parseFloat(r.temp_c), p: parseFloat(r.pressure) });
         });
         // 按时间排序
         Object.keys(m).forEach(function (c) {
@@ -1607,43 +1608,65 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
         var W = 900, H = 84, PAD = 10, PADB = 16;
         var lo = Infinity, hi = -Infinity;
         var nowH = now.getHours() + now.getMinutes() / 60;
-        function X(hh) { return PAD + (W - PAD * 2) * (hh / 24); }
+        // 横轴 -6 ~ +18（0 = 现在）；BACK / AHEAD 在下面定义，这里用常量
+        var BK = 6, AH = 18;
+        function X(hh) { return PAD + (W - PAD * 2) * ((hh + BK) / (BK + AH)); }
         function Y(v) { return PAD + (H - PAD - PADB) * (1 - (v - lo) / (hi - lo)); }
 
-        // ── 优先用真实累计数据 ──
+        // ── 横轴：过去 6 小时 ~ 未来 18 小时，0 = 现在 ──
+        var BACK = 6, AHEAD = 18;
         var hist = HISTORY[c.name] || [];
-        var useReal = hist.length >= 6;
         var pts = [], i, h, t, xs = [];
-        if (useReal) {
-            // 横轴：把最近 24 小时映射到 0~24；每条记录按它自己的时刻摆位
-            var t0 = now.getTime() - 24 * 3600 * 1000;
-            for (i = 0; i < hist.length; i++) {
-                var off = (hist[i].t - t0) / 3600000;      // 0~24
-                if (off < 0) continue;
-                xs.push(Math.min(24, off));
-                pts.push(hist[i].v);
-            }
-            for (i = 0; i < pts.length; i++) {
-                if (pts[i] < lo) lo = pts[i];
-                if (pts[i] > hi) hi = pts[i];
-            }
-        } else {
-            // 退回模型曲线
-            for (i = 0; i <= 24; i++) {
-                t = tempAt(c, i, now);
+        var nReal = 0;                       // pts 里前几个是实测（用来切实线/虚线）
+
+        // 左段：过去 6 小时的实测。采样点太少就不画实测（只给预测）
+        var real = [];
+        for (i = 0; i < hist.length; i++) {
+            if (isNaN(hist[i].v)) continue;
+            var off = (hist[i].t - now.getTime()) / 3600000;
+            if (off < -BACK || off > 0.25) continue;
+            real.push({ x: off, y: hist[i].v });
+        }
+        real.sort(function (a, b) { return a.x - b.x; });
+        if (real.length >= 2) {
+            for (i = 0; i < real.length; i++) { xs.push(real[i].x); pts.push(real[i].y); }
+            nReal = real.length;
+        }
+
+        // 右段：未来 18 小时的模型预测，每小时一个点
+        //      有实测就从「现在」接着画，没实测就直接从 -6 开始铺模型
+        var startI = 0;
+        if (!nReal) {
+            for (i = -BACK; i < 0; i++) {
+                var dh = new Date(now.getTime() + i * 3600000);
                 xs.push(i);
-                pts.push(t);
-                if (t < lo) lo = t;
-                if (t > hi) hi = t;
+                pts.push(tempAt(c, dh.getHours() + dh.getMinutes() / 60, dh));
             }
         }
-        if (!pts.length) { lo = 0; hi = 1; pts = [0, 1]; xs = [0, 24]; }
+        for (i = startI; i <= AHEAD; i++) {
+            var df = new Date(now.getTime() + i * 3600000);
+            xs.push(i);
+            pts.push(tempAt(c, df.getHours() + df.getMinutes() / 60, df));
+        }
+        // 切分点：实测最后一个点也属于预测起点，所以虚线从 nReal-1 开始
+        var splitAt = nReal ? nReal - 1 : 0;
+
+        for (i = 0; i < pts.length; i++) {
+            if (pts[i] < lo) lo = pts[i];
+            if (pts[i] > hi) hi = pts[i];
+        }
+        if (!pts.length) { lo = 0; hi = 1; pts = [0, 1]; xs = [-BACK, AHEAD]; }
         if (hi - lo < 1) { hi = lo + 1; }
 
-        var d = '';
+        // 实线（实测段）+ 虚线（预测段）
+        var dReal = '', dFcast = '';
         for (i = 0; i < pts.length; i++) {
-            d += (i ? ' L' : 'M') + X(xs[i]).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+            var seg = (i ? ' L' : 'M') + X(xs[i]).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+            if (i <= splitAt) dReal += seg;
+            else dFcast += seg;
         }
+        // d 仍然保留（= 全段），下游用它算填充区和悬停兜底
+        var d = dReal + (dFcast ? ' ' + dFcast.replace('M', 'L') : '');
         var x0 = xs[0], x1 = xs[xs.length - 1];
         // 曲线下方填一层淡色
         var area = d + ' L' + X(x1).toFixed(1) + ' ' + (H - PADB) + ' L' + X(x0).toFixed(1) + ' ' + (H - PADB) + ' Z';
@@ -1651,23 +1674,28 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
 
         // 时刻刻度 + 两条网格线（让曲线有参照，不至于看着像没数据）
         var grid = '';
-        for (i = 0; i <= 24; i += 6) {
+        for (i = -BK; i <= AH; i += 6) {
             var gx = X(i).toFixed(1);
+            var lab = (i === 0) ? '现在' : ((i > 0 ? '+' : '') + i + '时');
             grid += '<line x1="' + gx + '" y1="' + (H - PADB) + '" x2="' + gx + '" y2="' + (H - PADB + 3) +
                     '" stroke="rgba(124,140,248,.45)" stroke-width="1"/>' +
                     '<text x="' + gx + '" y="' + (H - 4) + '" text-anchor="middle" font-size="9" ' +
-                    'fill="rgba(124,140,248,.8)">' + (i === 24 ? '24时' : i + '时') + '</text>';
+                    'fill="rgba(124,140,248,.8)">' + lab + '</text>';
         }
+        // 「现在」那条竖虚线 —— 实测和预测的分界
+        grid += '<line x1="' + X(0).toFixed(1) + '" y1="' + PAD + '" x2="' + X(0).toFixed(1) +
+                '" y2="' + (H - PADB) + '" stroke="rgba(124,140,248,.42)" stroke-width="1" ' +
+                'stroke-dasharray="3 3"/>';
         [lo, hi].forEach(function (vv) {
             var gy = Y(vv).toFixed(1);
             grid += '<line x1="' + PAD + '" y1="' + gy + '" x2="' + (W - PAD) + '" y2="' + gy +
                     '" stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="3 4"/>';
         });
 
-        var curT = useReal ? pts[pts.length - 1] : tempAt(c, nowH, now);
-        var curX = useReal ? x1 : nowH;
-        var srcTxt = useReal ? ('实际记录 · ' + pts.length + ' 个采样')
-                             : '模型推算（数据攒够后自动切换）';
+        var curT = pts[splitAt];
+        var curX = 0;                        // 横轴的 0 就是「现在」
+        var srcTxt = (nReal ? ('过去 6 小时实测 · ' + nReal + ' 个采样') : '过去 6 小时没采到样')
+                   + ' · 未来 18 小时预测';
         return '<svg class="wx-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
                'data-src="' + srcTxt + '" ' +
                'role="img" aria-label="24 小时温度曲线">' +
@@ -1676,8 +1704,11 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                  '</linearGradient></defs>' +
                  grid +
                  '<path d="' + area + '" fill="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" opacity=".14"/>' +
-                 '<path d="' + d + '" fill="none" stroke="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" ' +
+                 '<path d="' + dReal + '" fill="none" stroke="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" ' +
                    'stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+                 (dFcast ? '<path d="' + dFcast + '" fill="none" stroke="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" ' +
+                   'stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" ' +
+                   'stroke-dasharray="5 4" opacity=".75"/>' : '') +
                  '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="6" ' +
                    'fill="#7c8cf8" opacity=".18"/>' +
                  '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="3.2" ' +
@@ -1714,46 +1745,56 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
             // 把数据来源写到曲线下方那行说明里（实际记录 / 模型推算）
             var tipTxt = box.querySelector('.wx-chart-tip');
             var srcTxt2 = svg.getAttribute('data-src');
-            if (tipTxt && srcTxt2) { tipTxt.textContent = '最近 24 小时气温 · ' + srcTxt2; }
+            if (tipTxt && srcTxt2) { tipTxt.textContent = '气温走势 · ' + srcTxt2; }
 
             function move(ev) {
                 var r = svg.getBoundingClientRect();
                 var x = (ev.clientX !== undefined ? ev.clientX : ev.touches[0].clientX) - r.left;
                 var ratio = Math.max(0, Math.min(1, x / r.width));
-                var hour = ratio * 24;
+                // 横轴是 -6 ~ +18（0 = 现在），和 tempChart 里的 BK/AH 对应
+                var BKH = 6, AHH = 18;
+                var hour = ratio * (BKH + AHH) - BKH;      // -6 ~ +18
                 var hist2 = HISTORY[city.name] || [];
                 var temp;
-                if (hist2.length >= 6) {
-                    // 在真实记录里找时刻最接近的那个点
-                    var t0b = Date.now() - 24 * 3600 * 1000;
-                    var want = t0b + hour * 3600 * 1000;
+                if (hour <= 0) {
+                    // 过去：在实测里找时刻最接近的那个点
+                    var want = Date.now() + hour * 3600 * 1000;
                     var best = null, bd = Infinity;
                     for (var q = 0; q < hist2.length; q++) {
                         var dd = Math.abs(hist2[q].t - want);
                         if (dd < bd) { bd = dd; best = hist2[q]; }
                     }
-                    temp = best ? best.v : tempAt(city, hour, new Date());
+                    temp = best ? best.v : tempAt(city, ((hour % 24) + 24) % 24, new Date());
                 } else {
-                    temp = tempAt(city, hour, new Date());
+                    // 未来：走模型预测
+                    var dh2 = new Date(Date.now() + hour * 3600 * 1000);
+                    temp = tempAt(city, dh2.getHours() + dh2.getMinutes() / 60, dh2);
                 }
                 // 换算到 viewBox 坐标。
                 // ⚠️ lo/hi 必须在这里【自己重算】—— 之前想从 svg 上读，
                 //    但 tempChart 是把它们挂在一个游离的 div 上的（从没进 DOM），
                 //    于是 lo/hi 是 undefined → vy 算成 NaN → 圆点卡在顶上不动。
+                // ⚠️ lo/hi 必须和 tempChart 里算的完全一致，否则圆点位置会错。
+                //    tempChart 的范围 = 过去 6 小时的实测 + 未来 18 小时的预测，
+                //    这里就照着重算一遍（不能只算实测，那样会偏）。
                 var lo = Infinity, hi = -Infinity;
                 var hh2 = HISTORY[city.name] || [];
-                if (hh2.length >= 6) {
-                    for (var k2 = 0; k2 < hh2.length; k2++) {
-                        if (hh2[k2].v < lo) lo = hh2[k2].v;
-                        if (hh2[k2].v > hi) hi = hh2[k2].v;
-                    }
-                } else {
-                    for (var k = 0; k <= 24; k++) {
-                        var tv = tempAt(city, k, new Date());
-                        if (tv < lo) lo = tv;
-                        if (tv > hi) hi = tv;
-                    }
+                var nowMs = Date.now();
+                for (var k2 = 0; k2 < hh2.length; k2++) {
+                    if (isNaN(hh2[k2].v)) continue;
+                    var off2 = (hh2[k2].t - nowMs) / 3600000;
+                    if (off2 < -BKH || off2 > 0.25) continue;
+                    if (hh2[k2].v < lo) lo = hh2[k2].v;
+                    if (hh2[k2].v > hi) hi = hh2[k2].v;
                 }
+                for (var k = 0; k <= AHH; k++) {
+                    var dfx = new Date(nowMs + k * 3600000);
+                    var tv = tempAt(city, dfx.getHours() + dfx.getMinutes() / 60, dfx);
+                    if (tv < lo) lo = tv;
+                    if (tv > hi) hi = tv;
+                }
+                if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 1; }
+                if (hi - lo < 1) { hi = lo + 1; }
                 if (hi - lo < .4) hi = lo + .4;
                 var vx = 10 + (900 - 20) * ratio;
                 var vy = 10 + (84 - 10 - 16) * (1 - (temp - lo) / (hi - lo));
