@@ -1500,6 +1500,12 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
     function loadRecords() {
         var body = document.getElementById('lrBody');
         var note = document.getElementById('lrUserNote');
+        // ⚠️ 这一段是「我的抽奖记录」的遗留代码，被复制到这个页面上，
+        //    但报刊社页根本没有 #lrBody / #lrUserNote / #refreshBtn。
+        //    以前它会一路跑到底再在 refreshBtn 那里抛
+        //    「Cannot read properties of null (reading 'addEventListener')」。
+        //    容器不在就直接退出，别空跑也别抛错。
+        if (!body) return;
         var user = getUser();
         if (!user) {
             note.textContent = '未登录';
@@ -1542,8 +1548,9 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
                 body.innerHTML = '<div class="lr-state"><div class="lr-st-ico">😵</div><h3>加载失败</h3><p>' + esc((err && err.message) || err) + ',请稍后重试</p></div>';
             });
     }
-    document.getElementById('refreshBtn').addEventListener('click', function () {
-        var btn = document.getElementById('refreshBtn');
+    var __rb = document.getElementById('refreshBtn');
+    if (__rb) __rb.addEventListener('click', function () {
+        var btn = __rb;
         btn.classList.remove('spin');
         void btn.offsetWidth;
         btn.classList.add('spin');
