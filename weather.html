@@ -523,6 +523,28 @@
         }).catch(function () { /* 表还没建好或没数据，静默退回模型曲线 */ });
     }
 
+    /* ── 给预测加真实感的小工具 ──────────────────────────────
+       预测 = 模型值 + 慢波动 + 小抖动
+       两层都用确定性伪随机（种子 = 城市 + 时刻），所以同一城市同一时刻
+       每次算出来一样 —— 不会一闪一闪 —— 但曲线不再像教科书正弦。
+       这不是真预报，只是让「预测」看着可信一点。 */
+    function wxSeed(str) {
+        var h = 0, i;
+        for (i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) | 0; }
+        return h;
+    }
+    function wxRand(seed) {
+        var x = Math.sin(seed * 12.9898) * 43758.5453;
+        return (x - Math.floor(x)) * 2 - 1;                 // -1 ~ 1
+    }
+    // 预测的温度扰动：amp 是幅度（℃），hourIdx 是从现在起的第几小时
+    function wxJitter(name, hourIdx, amp) {
+        var s = wxSeed(name);
+        var slow = wxRand(s + Math.floor(hourIdx / 3) * 7.3) * 0.62;   // 3 小时尺度的天气过程
+        var fast = wxRand(s + hourIdx * 3.7 + 91) * 0.38;              // 每小时的小抖动
+        return (slow + fast) * amp;
+    }
+
     function tempAt(c, hour, date) {
         var mean = c.base + c.swing * seasonFactor(date);
         var amp = Math.max(1.8, c.vol * 1.5 + 2.4);
@@ -571,13 +593,16 @@
             for (i = -BACK; i < 0; i++) {
                 var dh = new Date(now.getTime() + i * 3600000);
                 xs.push(i);
-                pts.push(tempAt(c, dh.getHours() + dh.getMinutes() / 60, dh));
+                pts.push(tempAt(c, dh.getHours() + dh.getMinutes() / 60, dh) +
+                         wxJitter(c.name, i, Math.max(0.35, (c.swing || 6) * 0.10)));
             }
         }
+        var fAmp = Math.max(0.35, (c.swing || 6) * 0.10);   // 扰动幅度跟着该城的日温差走
         for (i = startI; i <= AHEAD; i++) {
             var df = new Date(now.getTime() + i * 3600000);
             xs.push(i);
-            pts.push(tempAt(c, df.getHours() + df.getMinutes() / 60, df));
+            pts.push(tempAt(c, df.getHours() + df.getMinutes() / 60, df) +
+                     wxJitter(c.name, i, fAmp));
         }
         // 切分点：实测最后一个点也属于预测起点，所以虚线从 nReal-1 开始
         var splitAt = nReal ? nReal - 1 : 0;
@@ -971,9 +996,11 @@
 
         // 右段：未来 18 小时，半日潮公式
         //   ⚠️ 公式里的 h 是【一天中的小时】，所以要用 (现在小时 + k) % 24
+        var pAmp = 0.16;                     // 气压的扰动比温度小得多
         for (i = 0; i <= AHEAD; i++) {
             var hh = ((nowH0 + i) % 24 + 24) % 24;
-            v = pres + A * Math.cos(2 * Math.PI * (hh - 10) / 12);
+            v = pres + A * Math.cos(2 * Math.PI * (hh - 10) / 12) +
+                wxJitter((cityName || '') + 'P', i, pAmp);
             xs.push(i);
             pts.push(v);
         }
@@ -983,7 +1010,8 @@
             for (i = -BACK; i <= AHEAD; i++) {
                 var hh2 = ((nowH0 + i) % 24 + 24) % 24;
                 xs.push(i);
-                pts.push(pres + A * Math.cos(2 * Math.PI * (hh2 - 10) / 12));
+                pts.push(pres + A * Math.cos(2 * Math.PI * (hh2 - 10) / 12) +
+                         wxJitter((cityName || '') + 'P', i, 0.16));
             }
         }
         var splitAt = nReal ? nReal - 1 : Math.round(BACK);
