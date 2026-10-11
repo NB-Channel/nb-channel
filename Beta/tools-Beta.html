@@ -2081,6 +2081,7 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     }
 
     // ========== Tab 切换 ==========
+    var HASH_LOCK = false;
     function switchToolTab(which) {
         var ids = ['Periodic', 'Calc', 'Plot', 'Code'];
         var keys = ['periodic', 'calc', 'plot', 'code'];
@@ -2092,7 +2093,26 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
         });
         /* 切到函数图像时按当前宽度重画一次 —— canvas 在隐藏状态下量不到尺寸 */
         if (which === 'plot' && window.__mtDraw) setTimeout(window.__mtDraw, 40);
+        // 把当前标签写进地址 —— 不写的话刷新就跳回元素周期表（站长报的）
+        var h = '#tab' + which.charAt(0).toUpperCase() + which.slice(1);
+        if (location.hash !== h) {
+            HASH_LOCK = true;
+            location.hash = h;
+            setTimeout(function () { HASH_LOCK = false; }, 60);
+        }
     }
+
+    // 加载 / 前进后退时按 hash 恢复标签
+    //   （原来只有 hero 链接会切，加载时压根不读）
+    function toolTabFromHash() {
+        if (HASH_LOCK) return;
+        var h = (location.hash || '').replace(/^#/, '');
+        var map = { tabPeriodic: 'periodic', tabCalc: 'calc', tabPlot: 'plot', tabCode: 'code' };
+        if (map[h]) switchToolTab(map[h]);
+    }
+    window.addEventListener('hashchange', toolTabFromHash);
+    setTimeout(toolTabFromHash, 0);
+    window.addEventListener('load', toolTabFromHash);
     ['Periodic', 'Calc', 'Plot', 'Code'].forEach(function (id) {
         var b = document.getElementById('tab' + id);
         if (b) b.addEventListener('click', function () {

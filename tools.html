@@ -674,14 +674,37 @@
     }
 
     // ========== Tab 切换 ==========
+    // 标签切换 + hash 同步
+    //   ⚠️ 必须【又读又写】：
+    //      只写不读 → 刷新还是回第一个标签
+    //      只读不写 → 点标签不更新地址，刷新也回不去
+    var TAB_KEYS = { periodic: 'tabPeriodic', calc: 'tabCalc' };
+    var HASH_LOCK = false;
     function switchTab(which) {
         document.getElementById('tabPeriodic').classList.toggle('active', which === 'periodic');
         document.getElementById('tabCalc').classList.toggle('active', which === 'calc');
         document.getElementById('panelPeriodic').classList.toggle('active', which === 'periodic');
         document.getElementById('panelCalc').classList.toggle('active', which === 'calc');
+        var h = '#' + (TAB_KEYS[which] || 'tabPeriodic');
+        if (location.hash !== h) {
+            HASH_LOCK = true;
+            location.hash = h;
+            setTimeout(function () { HASH_LOCK = false; }, 60);
+        }
     }
     document.getElementById('tabPeriodic').onclick = () => switchTab('periodic');
     document.getElementById('tabCalc').onclick = () => switchTab('calc');
+
+    // 加载 / 前进后退时按 hash 恢复标签
+    function tabFromHash() {
+        if (HASH_LOCK) return;
+        var h = (location.hash || '').replace(/^#/, '');
+        if (h === 'tabCalc') switchTab('calc');
+        else if (h === 'tabPeriodic') switchTab('periodic');
+    }
+    window.addEventListener('hashchange', tabFromHash);
+    setTimeout(tabFromHash, 0);
+    window.addEventListener('load', tabFromHash);
 
     // ========== 示例按钮 ==========
     const formulaExamples = ['H2O', 'CO2', 'NaCl', 'CaCO3', 'H2SO4', 'Ca(OH)2', '(NH4)2SO4', 'CuSO4·5H2O', 'CH3COOH', 'C6H12O6'];
