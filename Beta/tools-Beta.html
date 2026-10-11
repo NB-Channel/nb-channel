@@ -3314,8 +3314,8 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     (function () {
         const box = document.getElementById('ionExamples');
         if (!box) return;
-        const list = ['Ag^+ + Cl^- = AgCl', 'Ba^2+ + SO4^2- = BaSO4', 'H^+ + OH^- = H2O',
-                      'Fe^3+ + 3OH^- = Fe(OH)3', 'Ca^2+ + CO3^2- = CaCO3', 'Mg^2+ + 2OH^- = Mg(OH)2'];
+        const list = ['Ag+ + Cl- = AgCl', 'Ba2+ + SO42- = BaSO4', 'H+ + OH- = H2O',
+                      'Fe3+ + 3OH- = Fe(OH)3', 'Ca2+ + CO32- = CaCO3', 'Mg2+ + 2OH- = Mg(OH)2'];
         list.forEach(t => {
             const b = document.createElement('button');
             b.className = 'example-btn';
@@ -3326,20 +3326,20 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
     })();
 
 </script>
-</body>
-</html>
-
             <div class="card">
                 <h3>⚡ 离子方程式配平</h3>
                 <div class="calc-help">
-                    电荷用 <b>^</b> 标：<code>Ag^+ + Cl^- = AgCl</code>、<code>Fe^3+ + 3OH^- = Fe(OH)3</code><br>
+                    直接写就行：<code>Ag+ + Cl- = AgCl</code>、<code>Fe3+ + 3OH- = Fe(OH)3</code><br>
+                    带电的写法两种都认（<code>Ag+</code> 和 <code>Ag^+</code>）<br>
                     比普通配平多一条<b>电荷守恒</b>（左边总电荷 = 右边总电荷）
                 </div>
                 <div class="calc-row">
-                    <input type="text" id="ionInput" placeholder="例：Ba^2+ + SO4^2- = BaSO4">
+                    <input type="text" id="ionInput" placeholder="例：Ba2+ + SO42- = BaSO4">
                     <button id="ionBtn">配平</button>
                 </div>
                 <div class="examples" id="ionExamples"></div>
                 <div class="calc-result" id="ionResult">👆 输入离子方程式开始配平</div>
             </div>
 
+</body>
+</html>
