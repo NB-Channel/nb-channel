@@ -444,15 +444,28 @@
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
-    // 正文里的 **文字** 会加粗（旧版那些 <b> 就是这么来的）。
-    // ⚠️ 顺序：先 esc 把尖括号转义掉，再把 **…** 换成 <b>…</b> ——
-    //    反过来的话正文里写 <script> 就能注入。
+    // 正文/标题里的行内标记。旧版是直接写 <b> / <br>，改数据驱动后正文是纯文本，
+    // 所以给两个等价写法：
+    //     **文字**    → <b>文字</b>
+    //     换行        → <br>
+    // ⚠️ 一定【先 esc 再换标签】—— 反过来正文里写 <script> 就能注入。
     function boldify(safe) {
         return safe.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
     }
+    // 标题、短讯这类单行文本用它
+    function npTxt(s) {
+        return boldify(esc(String(s == null ? '' : s))).replace(/\n/g, '<br>');
+    }
+    // 正文按空行分段；段首写 :: 表示这段不缩进（对应旧版的 <p class="noindent">）
     function paras(txt) {
         return String(txt || '').split(/\n\s*\n/).filter(function (x) { return x.trim(); })
-            .map(function (p) { return '<p>' + boldify(esc(p.trim())).replace(/\n/g, '<br>') + '</p>'; }).join('');
+            .map(function (p) {
+                p = p.trim();
+                var noind = /^::\s*/.test(p);
+                if (noind) p = p.replace(/^::\s*/, '');
+                return '<p' + (noind ? ' class="noindent"' : '') + '>' +
+                       boldify(esc(p)).replace(/\n/g, '<br>') + '</p>';
+            }).join('');
     }
 
     // 会话令牌：站点用自定义登录，Supabase 一律看到 anon，
@@ -697,7 +710,7 @@
         // ── 头条 ──
         if (lead) {
             h += '<article class="np-lead">' +
-                   '<h2 class="np-h1">' + esc(lead.headline) + '</h2>' +
+                   '<h2 class="np-h1">' + npTxt(lead.headline) + '</h2>' +
                    (lead.subhead ? '<div class="np-h1-sub">' + esc(lead.subhead) + '</div>' : '') +
                    '<div class="np-byline">本报记者 · NB频道唯一正式员工 · 报道</div>' +
                    '<div class="np-cols">' + paras(lead.body) + '</div>' +
@@ -711,7 +724,7 @@
         second.forEach(function (a) {
             h += '<article class="np-second">' +
                    '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(a.tag) + '</span>' : '') +
-                     esc(a.headline) + '</h3>' +
+                     npTxt(a.headline) + '</h3>' +
                    (a.body ? '<div class="np-cols">' + paras(a.body) + '</div>' : '') +
                  '</article>';
         });
@@ -721,7 +734,7 @@
             h += '<section class="np-briefs">' +
                    '<h3 class="np-sec-title">短 讯</h3>' +
                    '<ul class="np-brief-list">' +
-                     briefs.map(function (b) { return '<li>' + esc(b.headline) + '</li>'; }).join('') +
+                     briefs.map(function (b) { return '<li>' + npTxt(b.headline) + '</li>'; }).join('') +
                    '</ul></section>';
         }
 
