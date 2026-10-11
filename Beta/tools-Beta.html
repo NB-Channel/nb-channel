@@ -1055,19 +1055,19 @@ html { -webkit-text-size-adjust: 100%; }
                 <div class="tl-out" id="balanceResult">👆 输入方程式开始配平</div>
             </div>
 
-            <div class="card">
+            <div class="tl-card reveal">
                 <h3>⚡ 离子方程式配平</h3>
-                <div class="calc-help">
+                <div class="tl-help">
                     直接写就行：<code>Ag+ + Cl- = AgCl</code>、<code>Fe3+ + 3OH- = Fe(OH)3</code><br>
-                    带电的写法两种都认（<code>Ag+</code> 和 <code>Ag^+</code>）<br>
-                    比普通配平多一条<b>电荷守恒</b>（左边总电荷 = 右边总电荷）
+                    带电的写法两种都认（<code>Ag+</code> 和 <code>Ag^+</code>）；
+                    比普通配平多一条<b>电荷守恒</b>
                 </div>
-                <div class="calc-row">
-                    <input type="text" id="ionInput" placeholder="例：Ba2+ + SO42- = BaSO4">
-                    <button id="ionBtn">配平</button>
+                <div class="tl-inrow">
+                    <input type="text" id="ionInput" class="tl-field" placeholder="例：Ba2+ + SO42- = BaSO4">
+                    <button class="tl-btn" id="ionBtn" type="button">配平</button>
                 </div>
-                <div class="examples" id="ionExamples"></div>
-                <div class="calc-result" id="ionResult">👆 输入离子方程式开始配平</div>
+                <div class="tl-chips" id="ionExamples"></div>
+                <div class="tl-out" id="ionResult">👆 输入离子方程式开始配平</div>
             </div>
 
             <div class="tl-card reveal">
@@ -3333,7 +3333,8 @@ ELEMENTS.forEach(el => { ELEMENT_BY_SYM[el.sym] = el; });
                       'Fe3+ + 3OH- = Fe(OH)3', 'Ca2+ + CO32- = CaCO3', 'Mg2+ + 2OH- = Mg(OH)2'];
         list.forEach(t => {
             const b = document.createElement('button');
-            b.className = 'example-btn';
+            b.className = 'tl-chip';          // ⚠️ Beta 用 tl-chip，不是根目录那套 example-btn
+            b.type = 'button';
             b.innerText = t;
             b.onclick = () => { document.getElementById('ionInput').value = t; balanceIonic(); };
             box.appendChild(b);
