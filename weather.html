@@ -545,6 +545,28 @@
         return (slow + fast) * amp;
     }
 
+    // 偏差订正：用实测把模型拉回来一点
+    //   偏差 = 最近实测 − 模型在同一时刻的值
+    //   预报(t) = 模型(t) + 偏差 × e^(−t/τ)   （t 单位小时，τ 见调用处）
+    function wxBias(name, field, modelFn) {
+        var hs = (typeof HISTORY !== 'undefined' && HISTORY[name]) || [];
+        var nowMs = Date.now(), best = null, bd = Infinity, i;
+        for (i = 0; i < hs.length; i++) {
+            var val = field === 'p' ? hs[i].p : hs[i].v;
+            if (isNaN(val)) continue;
+            var dd = nowMs - hs[i].t;
+            if (dd < -600000 || dd > 3 * 3600000) continue;    // 只看最近 3 小时内、且不过期的
+            if (dd < bd) { bd = dd; best = { v: val, t: hs[i].t }; }
+        }
+        if (!best) return 0;
+        var when = new Date(best.t);
+        var mv = modelFn(when.getHours() + when.getMinutes() / 60, when);
+        if (!isFinite(mv)) return 0;
+        var b = best.v - mv;
+        // 偏差太离谱就当是脏数据，别让它把整条曲线拽歪
+        return Math.max(-6, Math.min(6, b));
+    }
+
     function tempAt(c, hour, date) {
         var mean = c.base + c.swing * seasonFactor(date);
         var amp = Math.max(1.8, c.vol * 1.5 + 2.4);
@@ -590,19 +612,26 @@
         //      有实测就从「现在」接着画，没实测就直接从 -6 开始铺模型
         var startI = 0;
         if (!nReal) {
+            var bT0 = wxBias(c.name, 'v', function (hh, when) { return tempAt(c, hh, when); });
             for (i = -BACK; i < 0; i++) {
                 var dh = new Date(now.getTime() + i * 3600000);
                 xs.push(i);
                 pts.push(tempAt(c, dh.getHours() + dh.getMinutes() / 60, dh) +
+                         bT0 * Math.exp(-Math.abs(i) / 6) +
                          wxJitter(c.name, i, Math.max(0.35, (c.swing || 6) * 0.10)));
             }
         }
-        var fAmp = Math.max(0.35, (c.swing || 6) * 0.10);   // 扰动幅度跟着该城的日温差走
+        // 用实测给预测做偏差订正（τ=6 小时）
+        var baseAmp = Math.max(0.35, (c.swing || 6) * 0.10);
+        var biasT = wxBias(c.name, 'v', function (hh, when) { return tempAt(c, hh, when); });
         for (i = startI; i <= AHEAD; i++) {
             var df = new Date(now.getTime() + i * 3600000);
             xs.push(i);
+            var decay = Math.exp(-Math.max(0, i) / 6);        // 越远越不信实测
+            // 抖动幅度：近处小（刚测过）、远处大（不确定）
+            var amp = baseAmp * (0.35 + 0.65 * (1 - decay)) * (i <= 0 ? 0.4 : 1);
             pts.push(tempAt(c, df.getHours() + df.getMinutes() / 60, df) +
-                     wxJitter(c.name, i, fAmp));
+                     biasT * decay + wxJitter(c.name, i, amp));
         }
         // 切分点：实测最后一个点也属于预测起点，所以虚线从 nReal-1 开始
         var splitAt = nReal ? nReal - 1 : 0;
@@ -997,10 +1026,13 @@
         // 右段：未来 18 小时，半日潮公式
         //   ⚠️ 公式里的 h 是【一天中的小时】，所以要用 (现在小时 + k) % 24
         var pAmp = 0.16;                     // 气压的扰动比温度小得多
+        var pModel = function (hh) { return pres + A * Math.cos(2 * Math.PI * (hh - 10) / 12); };
+        var biasP = wxBias(cityName || '', 'p', function (hh) { return pModel(hh); });
         for (i = 0; i <= AHEAD; i++) {
             var hh = ((nowH0 + i) % 24 + 24) % 24;
-            v = pres + A * Math.cos(2 * Math.PI * (hh - 10) / 12) +
-                wxJitter((cityName || '') + 'P', i, pAmp);
+            var dcp = Math.exp(-Math.max(0, i) / 8);          // 气压回归得慢一点
+            v = pModel(hh) + biasP * dcp +
+                wxJitter((cityName || '') + 'P', i, pAmp * (0.35 + 0.65 * (1 - dcp)));
             xs.push(i);
             pts.push(v);
         }
