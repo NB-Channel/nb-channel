@@ -302,7 +302,10 @@ html.beta.beta-home .friend .logo{
             width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
             display: flex; align-items: center; justify-content: center;
             font-size: 1.15rem; font-weight: 800; color: #fff;
-        }
+        
+    /* 默认底色：下面那串 :nth-child 只是色彩变化，不是必需品。
+       少了这一条，友商加到第 12 家就会出现白字白底（看着像图标丢了）—— 踩过。 */
+    background: linear-gradient(135deg, #64748b, #475569); }
 html.beta.beta-home .friend:nth-child(1) .logo{ background: linear-gradient(135deg, #60a5fa, #3b82f6); }
 html.beta.beta-home .friend:nth-child(2) .logo{ background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
 html.beta.beta-home .friend:nth-child(3) .logo{ background: linear-gradient(135deg, #34d399, #10b981); }
@@ -314,6 +317,8 @@ html.beta.beta-home .friend:nth-child(8) .logo{ background: linear-gradient(135d
 html.beta.beta-home .friend:nth-child(9) .logo{ background: linear-gradient(135deg, #2dd4bf, #14b8a6); }
 html.beta.beta-home .friend:nth-child(10) .logo{ background: linear-gradient(135deg, #c084fc, #a855f7); }
 html.beta.beta-home .friend:nth-child(11) .logo{ background: linear-gradient(135deg, #fda4af, #f43f5e); }
+html.beta.beta-home .friend:nth-child(12) .logo{ background: linear-gradient(135deg, #a3e635, #65a30d); }
+html.beta.beta-home .friend:nth-child(13) .logo{ background: linear-gradient(135deg, #fb923c, #ea580c); }
 html.beta.beta-home .friend .info{ flex: 1; min-width: 0; }
 html.beta.beta-home .friend .name{ font-size: .98rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 html.beta.beta-home .friend .name .arrow{ color: var(--ink-faint); font-size: .8rem; transition: all .25s ease; }

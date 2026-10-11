@@ -1,3 +1,8 @@
+// 友商数量：从下面的 friend-card 列表自动数 —— 别再手写数字了。
+//   ⚠️ 手写过三次都忘了改：tick_weather 的七个平行数组、
+//      友商图标的 nth-child 底色、这个计数。
+var __FRIEND_COUNT = 12;
+
 // ============================================================
 // js/ui-nav.js — 新版界面驱动（正式版，与 preview 效果完全一致）
 // 由 js/common.js 自动加载（全站生效，无需改页面）
@@ -565,7 +570,7 @@
         statBar.className = 'stat-bar';
         statBar.innerHTML = newHrefHtml(
             '<div class="stat-item"><div class="num">10w+</div><div class="label">B站粉丝</div></div>' +
-            '<div class="stat-item"><div class="num">11</div><div class="label">友商官网</div></div>' +
+            '<div class="stat-item"><div class="num">' + __FRIEND_COUNT + '</div><div class="label">友商官网</div></div>' +
             '<div class="stat-item"><div class="num">' + days + ' 天</div><div class="label">建站天数</div></div>' +
             '<div class="stat-item"><div class="num">11</div><div class="label">核心功能</div></div>');
 
@@ -599,7 +604,8 @@
             '<div class="friend-card"><div><div class="fc-name">UVS</div><div class="fc-note">友商官网</div></div><a href="https://yoyo-user-awa.github.io/UVS/" target="_blank" rel="noopener noreferrer">访问</a></div>' +
             '<div class="friend-card"><div><div class="fc-name">UwLS</div><div class="fc-note">友商官网</div></div><a href="https://3f7ceb4e.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">访问</a></div>' +
             '<div class="friend-card"><div><div class="fc-name">Oganesson</div><div class="fc-note">友商官网</div></div><a href="https://45d.cn/nb-og.top/" target="_blank" rel="noopener noreferrer">访问</a></div>' +
-            '<div class="friend-card"><div><div class="fc-name">SOT</div><div class="fc-note">友商官网</div></div><a href="https://78439049.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">访问</a></div>');
+            '<div class="friend-card"><div><div class="fc-name">SOT</div><div class="fc-note">友商官网</div></div><a href="https://78439049.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">访问</a></div>' +
+            '<div class="friend-card"><div><div class="fc-name">小琪</div><div class="fc-note">友商官网</div></div><a href="https://nbkejixiaoqi.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">访问</a></div>');
         var friendTitle = document.createElement('div');
         friendTitle.className = 'section-title';
         friendTitle.textContent = '🌐 友商链接';
@@ -616,7 +622,6 @@
         siteFooter.className = 'site-footer';
         siteFooter.innerHTML = newHrefHtml(
             '<div>© 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a></div>' +
-            '<div class="friend-card"><div><div class="fc-name">小琪</div><div class="fc-note">友商官网</div></div><a href="https://nbkejixiaoqi.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">访问</a></div>' +
             '<div>如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a></div>' +
             '<div>制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a></div>' +
             '<div style="font-size:0.78rem;">托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a> · 视频托管：<a href="https://imgbed.cn/" target="_blank" rel="noopener noreferrer">图床小镇</a></div>');
@@ -831,7 +836,7 @@
             '</header>' +
             '<div class="stats">' +
                 '<div class="stat"><div class="num">10w<small>+</small></div><div class="label">B站粉丝</div></div>' +
-                '<div class="stat"><div class="num">11</div><div class="label">友商官网</div></div>' +
+                '<div class="stat"><div class="num">' + __FRIEND_COUNT + '</div><div class="label">友商官网</div></div>' +
                 '<div class="stat"><div class="num" id="siteDays">--</div><div class="label">建站天数</div></div>' +
                 '<div class="stat"><div class="num">11</div><div class="label">核心功能</div></div>' +
             '</div>' +
