@@ -1,3 +1,14 @@
+# ============================================================
+# ⚠️ 服务器上的密钥文件，绝不能进公开仓库
+#    pythonanywhere/secrets_local.py 里放 API_KEY / SUPABASE_SERVICE_KEY
+#    其中 service_role key 能绕过所有权限 —— 泄漏等于全站被别人控制
+#    （文件本来就不该被跟踪，这里再挡一层，防止哪次 git add -A 手滑）
+# ============================================================
+pythonanywhere/secrets_local.py
+secrets_local.py
+.env
+*.env
+
 
 *.injectbak
 *.bak

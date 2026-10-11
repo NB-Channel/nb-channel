@@ -51,6 +51,18 @@ SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
 # 在 PythonAnywhere → Web → Environment variables 里加 SUPABASE_SERVICE_KEY。
 # 没配的话下面会自动退回 anon key，功能和现在完全一样。
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+
+# 兜底：环境变量读不到时，从同目录的 secrets_local.py 读
+#   （PythonAnywhere 部分套餐没有 Web 面板的 Environment variables，
+#     站长就在那儿；用法和下面的 API_KEY 兜底一样）
+#   ⚠️ secrets_local.py 只存在于服务器，已写进 .gitignore，不进公开仓库。
+#      这个 key 是 service_role，能绕过所有权限，泄漏等于全站被别人控制。
+if not SUPABASE_SERVICE_KEY:
+    try:
+        from secrets_local import SUPABASE_SERVICE_KEY as _SK  # noqa: E402
+        SUPABASE_SERVICE_KEY = (_SK or '').strip()
+    except Exception:
+        pass
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXT = re.compile(r'^[a-zA-Z0-9]{1,10}$')  # 扩展名白名单格式
 
