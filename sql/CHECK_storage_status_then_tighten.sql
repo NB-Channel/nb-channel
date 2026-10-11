@@ -25,7 +25,7 @@ SELECT policyname                  AS 策略名,
        cmd                         AS 操作,
        array_to_string(roles, ',') AS 角色,
        CASE WHEN cmd IN ('INSERT','UPDATE','DELETE')
-                 AND (roles && ARRAY['anon','public','authenticated'])
+                 AND (roles && ARRAY['anon','public','authenticated']::name[])   -- ⚠️ roles 是 name[]，必须转一下
             THEN '⚠️ 洞：公开角色能写'
             ELSE '' END            AS 判断
   FROM pg_policies
@@ -40,7 +40,7 @@ SELECT split_part(policyname, '_nb_', 1)                          AS 桶,
        string_agg(DISTINCT cmd, ' / ' ORDER BY cmd)               AS 允许的操作,
        string_agg(DISTINCT array_to_string(roles, ','), ' ')      AS 角色,
        CASE WHEN bool_or(cmd IN ('INSERT','UPDATE','DELETE'))
-                  AND bool_or(roles && ARRAY['anon','public','authenticated'])
+                  AND bool_or(roles && ARRAY['anon','public','authenticated']::name[])
             THEN '❌ 还能被公开角色写删' ELSE '✅ 只读' END        AS 结论
   FROM pg_policies
  WHERE schemaname = 'storage' AND tablename = 'objects'
