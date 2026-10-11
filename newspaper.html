@@ -424,6 +424,7 @@
     var body = document.getElementById('npBody');
     var toastEl = document.getElementById('npToast');
     var VIEW = 'free';
+    var CUR = null;          // 正在看的那一期（route 要用，漏了这句就会 ReferenceError）
 
     function me() {
         try {

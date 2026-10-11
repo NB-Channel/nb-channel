@@ -1987,6 +1987,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
     var body = document.getElementById('npBody');
     var toastEl = document.getElementById('npToast');
     var VIEW = 'free';
+    var CUR = null;          // 正在看的那一期（route 要用，漏了这句就会 ReferenceError）
 
     function me() {
         try {
