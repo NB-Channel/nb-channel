@@ -921,7 +921,15 @@
 
     window.addEventListener('hashchange', route);
 
-    route();
+    /* 初始路由 —— 这里踩过坑，别改回直接 route()：
+       刷新一个带 hash 的页面时，浏览器【有时在脚本跑完之后】才把 hash 恢复回去，
+       那时 route() 看到的是空 hash，就会渲染成列表页；而「恢复」本身不会触发
+       hashchange，于是就永远停在列表页上了（站长报的「刷新回选期页」就是它）。
+
+       所以：先等一拍再路由，load 之后再补一次；hashchange 照常监听。 */
+    setTimeout(route, 0);
+    window.addEventListener('load', route);
+    setTimeout(route, 400);
 })();
 </script>
 
