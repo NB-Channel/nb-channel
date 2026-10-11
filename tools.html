@@ -980,15 +980,28 @@
             const final = ints.map(v => v / g);
 
             // ── 输出 ──
+            //   ⚠️ 物种串里的电荷是私有区字符（不可见），显示前必须还原成 ^+ / ^- 记法，
+            //      否则会显示成「Ag + Cl = AgCl」，看着像电荷丢了（排查了半天）。
+            const showChg = (t) => t
+                .replace(/[\uE100-\uE1FF]/g, ch => {
+                    const v = ch.charCodeAt(0) - 0xE100;
+                    return v === 1 ? '^-' : '^' + v + '-';      // 1 价就写 ^-，别写成 ^1-
+                })
+                .replace(/[\uE000-\uE0FF]/g, ch => {
+                    const v = ch.charCodeAt(0) - 0xE000;
+                    return v === 1 ? '^+' : '^' + v + '+';
+                });
             const fmt = (i) => (final[i] === 1 ? '' : final[i]);
-            const L = leftRaw.map((t, i) => fmt(i) + t).join(' + ');
-            const R = rightRaw.map((t, i) => fmt(nL + i) + t).join(' + ');
-            // 电荷核对（给个说服力）
+            const L = leftRaw.map((t, i) => fmt(i) + showChg(t)).join(' + ');
+            const R = rightRaw.map((t, i) => fmt(nL + i) + showChg(t)).join(' + ');
+            // 电荷核对：分别算左右两边的总电荷（配平后两边应当相等）
             let lc = 0, rc = 0;
             for (let i = 0; i < cols; i++) { if (i < nL) lc += chgList[i] * final[i]; else rc += chgList[i] * final[i]; }
+            const sg = (v) => (v > 0 ? '+' + v : String(v));
             out.innerHTML = `✅ 配平结果：<span class="big">${L} = ${R}</span>` +
-                `<div class="calc-help" style="margin-top:8px">电荷核对：左边 ${lc >= 0 ? '+' : ''}${lc} ／ 右边 ${rc >= 0 ? '+' : ''}${rc}` +
-                (lc === rc ? ' ✅ 守恒' : ' ❌ 不守恒') + `</div>`;
+                `<div class="calc-help" style="margin-top:8px">电荷核对：左边 ${sg(lc)} ／ 右边 ${sg(rc)}` +
+                (lc === rc ? ' ✅ 守恒' : ' ❌ 不守恒') +
+                `　（含电荷的物种共 ${chgList.filter(v => v !== 0).length} 个）</div>`;
         } catch (e) {
             out.innerText = '❌ ' + e.message;
         }
