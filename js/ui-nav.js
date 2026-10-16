@@ -688,7 +688,11 @@ var __FRIEND_COUNT = 12;
         var link = document.createElement('link');
         link.id = 'uiBetaCss';
         link.rel = 'stylesheet';
-        link.href = 'css/beta.css?v=20260840';
+        // ⚠️ 这个版本号必须和 HTML 里静态引用的那个【一起改】，
+        //    否则 Beta 页面的 CSS 永远是缓存的旧版 ——
+        //    我改完 beta.css 却没改这里，导致站长那边看不出变化，白折腾一轮。
+        //    改的时候搜 'css/beta.css?v=' 把所有地方一起改。
+        link.href = 'css/beta.css?v=20261011';
         document.head.appendChild(link);
     }
 
