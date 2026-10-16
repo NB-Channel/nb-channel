@@ -743,19 +743,39 @@
         }
 
         // ── 便民信息 ──
-        services.forEach(function (s) {
-            h += '<section class="np-service">' +
-                   '<h4>' + esc(s.headline || '便民信息') + '</h4><ul>' +
-                   s.body.split('\n').filter(function (x) { return x.trim(); }).map(function (line) {
-                       var p2 = line.split(/→|->/);
-                       var name = npLinkify((p2[0] || '').trim());
-                       var val = p2.length > 1
-                           ? npLinkify(p2.slice(1).join('→').trim())
-                           : '';
-                       return '<li>' + name + (val ? '<span>' + val + '</span>' : '') + '</li>';
-                   }).join('') +
-                   '</ul></section>';
-        });
+        // ⚠️ 所有便民信息合成【一个】区块，固定标题「便民信息」。
+        //    以前是一条文章一个方框、拿文章标题当小标题，
+        //    结果标题显示成「化学工具」「天气瞎报」，而「便民信息」四个字压根没出现。
+        if (services.length) {
+            var svcItems = [];
+            services.forEach(function (s) {
+                var body = String(s.body == null ? '' : s.body).trim();
+                var title = String(s.headline == null ? '' : s.headline).trim();
+                if (body) {
+                    body.split('\n').filter(function (x) { return x.trim(); }).forEach(function (line) {
+                        line = line.trim();
+                        var p2 = line.split(/→|->/);
+                        if (p2.length > 1) {
+                            // 旧写法：正文里写「名字 → 值」
+                            svcItems.push({ name: npLinkify(p2[0].trim()),
+                                            val:  npLinkify(p2.slice(1).join('→').trim()) });
+                        } else {
+                            // 新写法：标题当项目名，正文当值
+                            svcItems.push({ name: npLinkify(title || line), val: npLinkify(title ? line : '') });
+                        }
+                    });
+                } else if (title) {
+                    svcItems.push({ name: npLinkify(title), val: '' });
+                }
+            });
+            if (svcItems.length) {
+                h += '<section class="np-service"><h4>便民信息</h4><ul>' +
+                     svcItems.map(function (it) {
+                         return '<li>' + it.name + (it.val ? '<span>' + it.val + '</span>' : '') + '</li>';
+                     }).join('') +
+                     '</ul></section>';
+            }
+        }
 
         // ── 付费刊解锁卡 ──
         if ((d.kind === 'paid') && !d.owned && (d.paid || []).length) {
@@ -801,6 +821,10 @@
         var src = String(a.body == null ? '' : a.body).trim();
         var looksImg = /^(https?:\/\/|images\/|\/|\.\/|data:image\/)/i.test(src) &&
                        /\.(png|jpe?g|gif|webp|svg|avif|bmp)(\?|#|$)/i.test(src);
+        // ⚠️ images/ 开头的要补成【根目录绝对路径】。
+        //    Beta 版页面在 /Beta/ 子目录里，相对路径会算成 /Beta/images/… → 404。
+        //    补成 /images/… 之后，根目录页和 Beta 页都能用。
+        if (looksImg && /^images\//i.test(src)) src = '/' + src;
         if (looksImg) {
             return '<figure class="np-figure">' +
                      '<img class="np-figimg" src="' + esc(src) + '" alt="' +
