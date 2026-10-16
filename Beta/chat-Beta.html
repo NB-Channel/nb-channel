@@ -1340,7 +1340,7 @@ html { -webkit-text-size-adjust: 100%; }
         currentUser.slotTitle = null;
         try {
             const [{ data: oFx }, { data: mFx }] = await Promise.all([
-                supabaseClient.rpc('get_active_shop_effects', { p_user_id: otherId , p_session: localStorage.getItem('nb_session')}),
+                supabaseClient.rpc('get_public_shop_effects', { p_user_id: otherId }),
                 supabaseClient.rpc('get_active_shop_effects', { p_user_id: currentUser.id , p_session: localStorage.getItem('nb_session')})
             ]);
             currentOther.bubbleFx = (oFx && oFx.success && oFx.chat_bubble) ? oFx.chat_bubble : null;

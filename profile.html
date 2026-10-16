@@ -518,7 +518,7 @@
         window.__titleSlotChosen = null;
         let bannerUrl = null;
         try {
-            const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: viewUid , p_session: localStorage.getItem('nb_session')});
+            const { data: fx } = await supabaseClient.rpc('get_public_shop_effects', { p_user_id: viewUid });
             if (fx && fx.success) {
             // 「个性签名扩展」这张卡：后端支持 200 字，前端输入框上限要跟着放开
             // ⚠️ 以前写死 maxlength="100"，买了这张卡也没用

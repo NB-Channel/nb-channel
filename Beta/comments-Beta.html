@@ -2452,7 +2452,7 @@ html { -webkit-text-size-adjust: 100%; }
         if (fxUserIds.length > 0) {
             await Promise.all(fxUserIds.map(async (uid) => {
                 try {
-                    const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: uid , p_session: localStorage.getItem('nb_session')});
+                    const { data: fx } = await supabaseClient.rpc('get_public_shop_effects', { p_user_id: uid });
                     if (fx && fx.success) {
                         shopFxMap[uid] = {
                             comment_color: fx.comment_color || null,
