@@ -899,6 +899,7 @@
 
     function route() {
         if (HASH_LOCK) return;
+        if (DRAFT_MODE && DRAFT_SHOWN) return;   // 草稿预览模式下不让路由顶掉画面
         var h = (location.hash || '').replace(/^#\/?/, '');   // 去掉开头的 # 和 /
         var seg = h.split('/').filter(function (x) { return x !== ''; });
 
@@ -921,6 +922,63 @@
     }
 
     window.addEventListener('hashchange', route);
+
+
+    /* ══════════════════════════════════════════════════════════
+       草稿预览模式（后台「实时预览」用）
+           newspaper.html?draft=1
+       进入方式只有这一个：URL 上带 ?draft=1。正常访问完全不受影响。
+       ══════════════════════════════════════════════════════════ */
+    var DRAFT_MODE = /[?&]draft=1(&|$)/.test(location.search);
+
+    function draftPull() {
+        try { return JSON.parse(localStorage.getItem('nb_news_draft') || 'null'); }
+        catch (e) { return null; }
+    }
+
+    function draftRender(d) {
+        if (!d || typeof d !== 'object') return false;
+        try {
+            DRAFT_SHOWN = true;
+            VIEW = 'issue';
+            CUR = d;
+            drawIssue();
+            return true;
+        } catch (e) {
+            DRAFT_SHOWN = false;
+            return false;
+        }
+    }
+
+    var DRAFT_SHOWN = false;
+
+    if (DRAFT_MODE) {
+        // 预览里点什么都不该跳走 —— 拦掉所有链接点击
+        document.addEventListener('click', function (e) {
+            var a = e.target && e.target.closest && e.target.closest('a');
+            if (a) { e.preventDefault(); e.stopPropagation(); }
+        }, true);
+
+        // ① 先用 localStorage 里现成的（后台可能已经写过）
+        var d0 = draftPull();
+        if (d0) draftRender(d0);
+
+        // ② 后台每次改内容就 postMessage 过来
+        window.addEventListener('message', function (ev) {
+            var m = ev && ev.data;
+            if (m && m.type === 'nb-news-draft') draftRender(m.issue);
+        });
+
+        // ③ 后台若是写 localStorage，storage 事件会自动来（同源的话）
+        window.addEventListener('storage', function (ev) {
+            if (ev.key === 'nb_news_draft') { var d = draftPull(); if (d) draftRender(d); }
+        });
+
+        // ④ 站在预览模式就别让正常路由把画面顶掉
+        window.addEventListener('hashchange', function (e) {
+            if (DRAFT_SHOWN) { e.stopPropagation(); }
+        }, true);
+    }
 
     /* 初始路由 —— 这里踩过坑，别改回直接 route()：
        刷新一个带 hash 的页面时，浏览器【有时在脚本跑完之后】才把 hash 恢复回去，
