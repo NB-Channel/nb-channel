@@ -1909,7 +1909,9 @@ html { -webkit-text-size-adjust: 100%; }
             const r = await supabaseClient.rpc('pay_dividend', {
                 p_user_id: currentUserId,
                 p_company_id: cid,
-                p_amount: amount
+                p_amount: amount,
+                // ⚠️ 壳签名里 p_session 没有默认值，漏了就找不到函数
+                p_session: localStorage.getItem('nb_session')
             });
             data = r.data; error = r.error;
         } catch (e) { error = e; }

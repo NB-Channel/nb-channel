@@ -872,7 +872,7 @@
             try {
                 const resp = await fetch('https://nbchannel.pythonanywhere.com/upload-banner', {
                     method: 'POST',
-                    headers: { 'X-User-Id': currentUser.id },
+                    headers: { 'X-User-Id': currentUser.id, 'X-Session': localStorage.getItem('nb_session') },
                     body: form
                 });
                 const result = await resp.json();
@@ -911,7 +911,7 @@
             try {
                 const resp = await fetch('https://nbchannel.pythonanywhere.com/upload-avatar', {
                     method: 'POST',
-                    headers: { 'X-User-Id': currentUser.id },
+                    headers: { 'X-User-Id': currentUser.id, 'X-Session': localStorage.getItem('nb_session') },
                     body: form
                 });
                 const result = await resp.json();
@@ -937,7 +937,7 @@
             try {
                 const resp = await fetch('https://nbchannel.pythonanywhere.com/remove-avatar', {
                     method: 'POST',
-                    headers: { 'X-User-Id': currentUser.id }
+                    headers: { 'X-User-Id': currentUser.id, 'X-Session': localStorage.getItem('nb_session') }
                 });
                 const result = await resp.json();
                 if (!resp.ok || !result.success) {
