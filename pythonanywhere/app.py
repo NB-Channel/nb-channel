@@ -200,11 +200,18 @@ ALLOWED_ORIGINS = {
     'https://www.nb-channel.top',
     'https://github.nb-channel.top',
     'https://cloudflare.nb-channel.top',
+    # ⚠️ edgeone 这个镜像一直没进名单 —— 实测它的页面调 /api/* 时
+    #    拿不到 CORS 头，凡是带 X-Session 的接口（上传头像、换头图、
+    #    发码转发…）全部失败。2026-10-16 补上。
+    'https://edgeone.nb-channel.top',
     'https://pythonanywhere.nb-channel.top',
     'https://netlify.nb-channel.top',          # Netlify 镜像站
     'https://nbchannel.pythonanywhere.com',
     'https://nb-channel.pages.dev',
     'https://nb-channel.netlify.app',          # Netlify 默认域名
+    # ⚠️ GitHub Pages 的原始域名。scf_mail_sender.py 的名单里有它，
+    #    这边之前漏了 —— 直接用 github.io 打开站点的人接口全调不通。
+    'https://nb-channel.github.io',
     # --- APP（Capacitor 打包，本地页面）---
     'https://localhost',                       # Capacitor 6 默认 androidScheme=https
     'http://localhost',
