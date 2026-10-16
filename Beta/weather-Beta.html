@@ -1790,6 +1790,19 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     }
 
     /* ── 曲线鼠标交互：按 x 位置反算时刻，显示该时刻的温度 ── */
+        // 滚动或改窗口时，图表会从鼠标底下滑走，同样不会触发 mouseleave ——
+    // 一并把悬停指示藏掉，免得留一个孤零零的点在图上。
+    (function () {
+        function hideAllHover() {
+            var gs = document.querySelectorAll('.wx-hover-g');
+            Array.prototype.forEach.call(gs, function (el) { el.style.display = 'none'; });
+            var ts = document.querySelectorAll('.wx-hover-tip');
+            Array.prototype.forEach.call(ts, function (el) { el.style.display = 'none'; });
+        }
+        window.addEventListener('scroll', hideAllHover, { passive: true });
+        window.addEventListener('resize', hideAllHover);
+    })();
+
     function bindChartHover() {
         var hits = document.querySelectorAll('.wx-chart-hit');
         Array.prototype.forEach.call(hits, function (hit) {
@@ -1888,6 +1901,20 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
             }
             hit.addEventListener('mousemove', move);
             hit.addEventListener('mouseleave', leave);
+            // ⚠️ 兜底：卡片 hover 会 translateY(-3px) 把图表从鼠标底下移开，
+            //    而【元素自己移开、鼠标不动】不会触发 mouseleave ——
+            //    结果就是指示点留在图上不走（站长报过）。
+            //    所以在卡片层再绑一个：鼠标离开卡片范围时，把这卡里所有指示都藏掉。
+            var cardEl = hit.closest('.wx-card') || hit.parentNode;
+            if (cardEl && !cardEl.__hoverGuard) {
+                cardEl.__hoverGuard = true;
+                cardEl.addEventListener('mouseleave', function () {
+                    var gs = cardEl.querySelectorAll('.wx-hover-g');
+                    Array.prototype.forEach.call(gs, function (el) { el.style.display = 'none'; });
+                    var ts = cardEl.querySelectorAll('.wx-hover-tip');
+                    Array.prototype.forEach.call(ts, function (el) { el.style.display = 'none'; });
+                });
+            }
             hit.addEventListener('touchmove', function (e) { move(e); }, { passive: true });
             hit.addEventListener('touchend', leave);
         });
