@@ -1310,7 +1310,7 @@ html { -webkit-text-size-adjust: 100%; }
 
     <h2>✏️ 编辑简介</h2>
     <div class="form-group">
-        <input type="text" id="bioInput" placeholder="一句话介绍自己（最多100字）" maxlength="100">
+        <input type="text" id="bioInput" placeholder="一句话介绍自己" maxlength="100">
         <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
             <button id="saveBioBtn">保存简介</button>
             <span id="bioStatus" style="font-size:0.8rem; color:var(--count-text);"></span>
@@ -1755,6 +1755,15 @@ function uiHref(p) { return (p && p.indexOf('login.html') === 0) ? '/' + p : p; 
         try {
             const { data: fx } = await supabaseClient.rpc('get_active_shop_effects', { p_user_id: viewUid , p_session: localStorage.getItem('nb_session')});
             if (fx && fx.success) {
+            // 「个性签名扩展」这张卡：后端支持 200 字，前端输入框上限要跟着放开
+            // ⚠️ 以前写死 maxlength="100"，买了这张卡也没用
+            window.__bioMax = (fx && fx.success && fx.bio_extend) ? 200 : 100;
+            (function () {
+                var el = document.getElementById('bioInput');
+                if (!el) return;
+                el.maxLength = window.__bioMax;
+                el.setAttribute('placeholder', '一句话介绍自己（最多' + window.__bioMax + '字）');
+            })();
                 if (fx.particle_fx) startParticleFx(fx.particle_fx);
                 if (fx.title_slot && fx.title_slot.count) {
                     window.__titleSlot = fx.title_slot.count;
