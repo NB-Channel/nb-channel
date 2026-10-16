@@ -913,6 +913,22 @@ html { -webkit-text-size-adjust: 100%; }
     /* 报纸正文里的真插图 */
     .np-figure .np-figimg { display: block; margin: 0 auto; max-width: 560px; width: 100%; height: auto;
         border-radius: 6px; border: 1px solid var(--card-border); background: var(--count-bg); }
+/* 插图点击放大 */
+.np-figimg { cursor: zoom-in; }
+#npZoom { display: none; position: fixed; inset: 0; z-index: 99999;
+    background: rgba(10,14,22,.88); padding: 24px; cursor: zoom-out;
+    align-items: center; justify-content: center; }
+#npZoom.on { display: flex; }
+#npZoom img { max-width: 96vw; max-height: 90vh; width: auto; height: auto;
+    border-radius: 8px; background: #fff;
+    box-shadow: 0 30px 70px -24px rgba(0,0,0,.75); }
+#npZoom .npz-x { position: absolute; top: 14px; right: 22px; color: #fff;
+    font-size: 1.7rem; line-height: 1; cursor: pointer; opacity: .75;
+    font-family: system-ui, sans-serif; }
+#npZoom .npz-x:hover { opacity: 1; }
+#npZoom .npz-t { position: absolute; left: 0; right: 0; bottom: 14px;
+    text-align: center; color: rgba(255,255,255,.72); font-size: .8rem;
+    font-family: system-ui, sans-serif; padding: 0 24px; }
 
         /* ── 次条区 ── */
         .np-second { padding: 22px 0; border-bottom: 1px solid var(--line); }
@@ -2242,6 +2258,37 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
     }
 
     /* 画这一期 —— 按改写前那版报纸的结构输出，所有页顺着往下排 */
+    /* ── 插图点击放大 ──
+       点 .np-figimg → 全屏浮层看原图；点浮层 / Esc / ✕ 关掉。
+       纯原生，不引库。 */
+    (function () {
+        function ensure() {
+            var b = document.getElementById('npZoom');
+            if (b) return b;
+            b = document.createElement('div');
+            b.id = 'npZoom';
+            b.innerHTML = '<span class="npz-x">&#10005;</span><img alt=""><div class="npz-t"></div>';
+            b.addEventListener('click', function () { b.classList.remove('on'); });
+            document.body.appendChild(b);
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' || e.keyCode === 27) b.classList.remove('on');
+            });
+            return b;
+        }
+        document.addEventListener('click', function (e) {
+            var el = e.target;
+            if (!el || !el.classList || !el.classList.contains('np-figimg')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var b = ensure();
+            var im = b.querySelector('img');
+            im.src = el.getAttribute('src') || '';
+            im.alt = el.getAttribute('alt') || '';
+            b.querySelector('.npz-t').textContent = el.getAttribute('alt') || '';
+            b.classList.add('on');
+        }, true);
+    })();
+
     function drawIssue() {
         var d = CUR;
         var total = d.pages || 1;
