@@ -974,10 +974,22 @@
             if (ev.key === 'nb_news_draft') { var d = draftPull(); if (d) draftRender(d); }
         });
 
+    var __NB_DRAFT_CSS__ = "\n    /* ── 草稿预览模式：只留报纸本体，把站点外壳藏掉 ──\n       （后台那个 iframe 里要的是「这一期长什么样」，\n         不是又看一遍导航栏和快捷入口） */\n    html.__nb-draft .top-nav,\n    html.__nb-draft .quick-nav,\n    html.__nb-draft .hero,\n    html.__nb-draft .vhero,\n    html.__nb-draft .nav,\n    html.__nb-draft .drawer,\n    html.__nb-draft .site-footer,\n    html.__nb-draft .footer,\n    html.__nb-draft .beta-announce,\n    html.__nb-draft .author-info,\n    html.__nb-draft #nbAnnounce,\n    html.__nb-draft .np-head,\n    html.__nb-draft .np-tabs,\n    html.__nb-draft .np-list,\n    html.__nb-draft .np-hero,\n    html.__nb-draft .wx-fab,\n    html.__nb-draft #backTop,\n    html.__nb-draft .float-tip { display: none !important; }\n\n    /* 收紧外层留白，让报纸占满 */\n    html.__nb-draft body { padding-top: 0 !important; margin: 0 !important; }\n    html.__nb-draft .container,\n    html.__nb-draft .np-main,\n    html.__nb-draft main { max-width: 100% !important; margin: 0 !important; padding: 8px !important; }\n\n    /* 只留报纸本体 */\n    html.__nb-draft .np-wrap { margin: 0 auto !important; }\n\n    /* 预览里不该有滚动条抢戏，给个细的 */\n    html.__nb-draft ::-webkit-scrollbar { width: 8px; height: 8px; }\n    html.__nb-draft ::-webkit-scrollbar-thumb { background: rgba(120,140,170,.45); border-radius: 8px; }\n";
+
         // ④ 站在预览模式就别让正常路由把画面顶掉
         window.addEventListener('hashchange', function (e) {
             if (DRAFT_SHOWN) { e.stopPropagation(); }
         }, true);
+
+        // ⑤ 藏掉站点外壳 —— 预览里要的是「这一期长什么样」，
+        //    不是又看一遍导航栏和快捷入口（站长截图反馈过）
+        document.documentElement.classList.add('__nb-draft');
+        (function () {
+            var st = document.createElement('style');
+            st.id = 'nbDraftCss';
+            st.textContent = __NB_DRAFT_CSS__;
+            (document.head || document.documentElement).appendChild(st);
+        })();
     }
 
     /* 初始路由 —— 这里踩过坑，别改回直接 route()：
