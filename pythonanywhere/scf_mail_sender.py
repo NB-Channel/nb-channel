@@ -232,8 +232,57 @@ def masked_email(e):
     return local[0] + ('***' if len(local) > 1 else '*') + '@' + dom
 
 
-@app.route('/', methods=['POST'])
+# ============================================================
+# v5 (2026-10-16) 函数自己回 CORS 头
+# ------------------------------------------------------------
+# 原因:有人报「iOS 上登录报错 TypeError: Load failed」。
+#
+#   查下来是【腾讯云 SCF 的函数 URL 那一层】还有一份自己的 CORS 白名单,
+#   而它填的是通配符 *.nb-channel.top —— 实测:
+#       https://github.nb-channel.top          ✅ 回 CORS 头
+#       https://test.nb-channel.top            ✅ 回(这个域名根本不存在,证明是通配符)
+#       https://根本不存在的域名.nb-channel.top  ✅ 回(连中文子域都放)
+#       https://nb-channel.top                 ❌ 不回 ← ⚠️ 裸域名!
+#       https://nb-channel.pages.dev           ❌ 不回
+#       https://nb-channel.github.io           ❌ 不回
+#
+#   通配符 *.xxx 【不匹配裸域名】xxx。于是从 nb-channel.top(官网导航页 ——
+#   最自然的入口)打开的页面,发码请求的响应【没有 Access-Control-Allow-Origin】,
+#   浏览器直接拦掉。Safari 对这种 CORS 失败报的就是
+#   「TypeError: Load failed」—— 和用户报的一模一样。
+#
+#   ⚠️ 而函数自己的 _origin_allowed() 是【放行】这些域名的 ——
+#      请求确实进了函数(返回「未知类型」而不是 403「来源不被允许」),
+#      只是响应头被网关那层漏掉了。
+#
+# 做法:函数自己把通过的 Origin 回显成 CORS 头,不依赖网关怎么配。
+#       同时接一下 OPTIONS,预检也不求人。
+#
+# 注意:不改变白名单逻辑 —— _origin_allowed() 一个字没动,
+#       utw.pages.dev 那种照样被 403 挡在外面。
+# ============================================================
+@app.after_request
+def _add_cors_headers(resp):
+    origin = (request.headers.get('Origin') or '').strip()
+    if origin and _origin_allowed(origin):
+        resp.headers['Access-Control-Allow-Origin'] = origin
+        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        resp.headers['Access-Control-Max-Age'] = '86400'
+        # Expose-Headers 本来网关会加,这里补一份以防万一
+        resp.headers['Access-Control-Expose-Headers'] = '*'
+    # 不管放不放行都带上 Vary,免得中间层把不同 Origin 的响应混着缓存
+    resp.headers['Vary'] = 'Origin'
+    return resp
+
+
+@app.route('/', methods=['POST', 'OPTIONS'])
 def index():
+    # ---------- 预检:直接放行,真正的白名单校验在下面 ----------
+    # CORS 头由上面的 after_request 统一补。
+    if request.method == 'OPTIONS':
+        return ('', 204)
+
     # ---------- Origin 白名单校验(第一道,也是最有效的一道) ----------
     origin = (request.headers.get('Origin') or '').strip()
     ip0 = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip() or \
