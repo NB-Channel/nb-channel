@@ -115,6 +115,9 @@
         .np-figure figcaption {
             margin-top: 8px; font-size: .75rem; color: var(--count-text);
         }
+    /* 报纸正文里的真插图 */
+    .np-figure .np-figimg { display: block; margin: 0 auto; max-width: 100%; height: auto;
+        border-radius: 6px; border: 1px solid var(--card-border); background: var(--count-bg); }
 
         /* ── 次条区 ── */
         .np-second { padding: 22px 0; border-bottom: 1px solid var(--card-border); }
@@ -792,6 +795,20 @@
     }
 
     function figureHtml(a) {
+        // 正文里填的是图片路径/链接 → 画真图
+        // ⚠️ 判断要严一点：「图 1：报刊社页面改版前后」这种说明文字
+        //    不能因为里面有个点就被当成文件名。
+        var src = String(a.body == null ? '' : a.body).trim();
+        var looksImg = /^(https?:\/\/|images\/|\/|\.\/|data:image\/)/i.test(src) &&
+                       /\.(png|jpe?g|gif|webp|svg|avif|bmp)(\?|#|$)/i.test(src);
+        if (looksImg) {
+            return '<figure class="np-figure">' +
+                     '<img class="np-figimg" src="' + esc(src) + '" alt="' +
+                       esc(a.headline || '插图') + '" loading="lazy">' +
+                     (a.headline ? '<figcaption>' + esc(a.headline) + '</figcaption>' : '') +
+                   '</figure>';
+        }
+        // 其它情况：还是虚线占位框（创刊号那篇就是这种）
         return '<figure class="np-figure">' +
                  '<div class="box">' + esc(a.body || '') + '</div>' +
                  (a.headline ? '<figcaption>' + esc(a.headline) + '</figcaption>' : '') +
