@@ -72,7 +72,7 @@ async function updateUnreadBadge() {
                 apikey: SUPABASE_ANON_KEY,
                 Authorization: 'Bearer ' + SUPABASE_ANON_KEY
             },
-            body: JSON.stringify({ p_user_id: user.id })
+            body: JSON.stringify({ p_user_id: user.id, p_session: localStorage.getItem('nb_session') })
         });
         if (!res.ok) return;
         const data = await res.json();
@@ -116,7 +116,7 @@ async function updateChatBadge() {
                 apikey: SUPABASE_ANON_KEY,
                 Authorization: 'Bearer ' + SUPABASE_ANON_KEY
             },
-            body: JSON.stringify({ p_user: user.id })
+            body: JSON.stringify({ p_user: user.id, p_session: localStorage.getItem('nb_session') })
         });
         if (!res.ok) return;
         const data = await res.json();

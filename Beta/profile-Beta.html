@@ -1982,7 +1982,7 @@ function uiHref(p) { return (p && p.indexOf('login.html') === 0) ? '/' + p : p; 
     async function renderHeatmap(uid) {
         const wrap = document.getElementById('homeHeatmap');
         wrap.innerHTML = '<div class="no-data" style="padding:10px;">加载签到数据...</div>';
-        const { data, error } = await supabaseClient.rpc('get_checkin_heatmap', { p_user_id: uid, p_days: 365 , p_session: localStorage.getItem('nb_session')});
+        const { data, error } = await supabaseClient.rpc('get_public_checkin_heatmap', { p_user_id: uid, p_days: 365 });
         if (error || !data || !data.success) {
             wrap.innerHTML = '';
             return;
