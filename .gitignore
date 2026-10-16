@@ -41,3 +41,8 @@ admin-local-secret*
 admin_local_bypass_key*
 *local-secret*
 *local_secret*
+
+# Python 编译缓存（py_compile / import 会生成）
+__pycache__/
+*.pyc
+*.pyo
