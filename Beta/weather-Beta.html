@@ -1183,7 +1183,7 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
             </div>
         </div>
         <div class="pd-stats">
-            <div class="pd-row"><span class="k">城市数</span><b>12 座</b></div>
+            <div class="pd-row"><span class="k">城市数</span><b id="wxCityCount">…</b></div>
             <div class="pd-row"><span class="k">刷新频率</span><b>每 10 秒</b></div>
             <div class="pd-row"><span class="k">数据项</span><b>温度 / 湿度 / 气压 / 能见度 / 空气 / 紫外线 / 风</b></div>
             <div class="pd-row"><span class="k">季节</span><b id="wxSeason">…</b></div>
@@ -1998,7 +1998,13 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
     }
 
     /* ── 空气质量柱状图：十六城横向对比，本城高亮 ── */
-    function aqiBars(me) {
+    
+    // 城市数（别再写死数字了 —— 这个数已经被写死过 6 次）
+    (function () {
+        var el = document.getElementById('wxCityCount');
+        if (el) el.textContent = CITIES.length + ' 座';
+    })();
+function aqiBars(me) {
         var W = 300, H = 92, PAD = 4;
         var bw = (W - PAD * 2) / CITIES.length;
         var max = 1, i;
@@ -2030,7 +2036,7 @@ html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,
                '" stroke="rgba(124,140,248,.25)" stroke-width="1"/>' +
                '<text x="2" y="' + (H - 8) + '" font-size="9" fill="rgba(124,140,248,.7)">1</text>' +
                '<text x="' + (W - 2) + '" y="' + (H - 8) + '" text-anchor="end" font-size="9" ' +
-               'fill="rgba(124,140,248,.7)">12 座</text></svg>';
+               'fill="rgba(124,140,248,.7)">' + CITIES.length + ' 座</text></svg>';
     }
 
     /* ── 风速罗盘：指针指向风的来向 ── */
