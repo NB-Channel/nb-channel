@@ -1303,13 +1303,13 @@ AI_MODELS = {
 #      AI_PRICE_PER_1K  每 1000 token 多少 NB 币（默认 10）
 #      AI_PRICE_MIN     每次最低消费（默认 1）
 #      AI_CHARGE_ADMIN  管理员要不要也扣（默认 0 = 不扣，方便自己测）
-AI_PRICE_PER_1K = _env_int('AI_PRICE_PER_1K', 500, 0, 100000000)
+AI_PRICE_PER_1K = _env_int('AI_PRICE_PER_1K', 200, 0, 100000000)
 AI_PRICE_MIN    = _env_int('AI_PRICE_MIN', 1, 0, 1000000)
 AI_CHARGE_ADMIN = _env_int('AI_CHARGE_ADMIN', 0, 0, 1) == 1
 
 # 模型倍率（贵的模型多收）
 AI_PRICE_MULT = {
-    # 站长定的倍率（基础价 500 NB / 1000 token）
+    # 站长定的倍率（基础价 200 NB / 1000 token）
     'deepseek-ai/DeepSeek-V4.1-Flash-1017':  1.0,   # 1000
     'deepseek-ai/DeepSeek-V4-Pro-0813':      1.5,   # 1500
     'Qwen/Qwen3.8-Flash-Next':               1.0,   # 1000
