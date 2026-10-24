@@ -1943,6 +1943,7 @@ def _api_ai_body():
     # 行情/投票/天气/小黑屋/公告），查不到就算了，不影响回答
     db_ctx = ''
     db_n = 0
+    db_src = []           # 命中的站内数据分组名
     if bool(data.get('site')):
         _terms = _db_terms(question)
         print('[AI-DB-TERMS] %s' % (_terms,), flush=True)
@@ -1964,6 +1965,7 @@ def _api_ai_body():
             })
         if dr.get('ok') and (dr.get('data') or {}).get('ok'):
             _d = (dr['data'].get('data') or {})
+            db_src = list(_d.keys()) if isinstance(_d, dict) else []
             db_ctx = _db_ctx_text(_d)
             db_n = len(_d) if isinstance(_d, dict) else 0
             if db_ctx:
@@ -1979,6 +1981,7 @@ def _api_ai_body():
     # 联网搜索：前端带 web:true 才搜。搜挂了就静默跳过，不影响回答
     web_ctx = ''
     web_n = 0
+    web_src = []          # 给前端列「来源链接」用
     if bool(data.get('web')):
         try:
             _hits = bing_search(question, 5)
@@ -1995,6 +1998,9 @@ def _api_ai_body():
                 _lines.append(_line)
             web_ctx = '\n'.join(_lines)
             web_n = len(_lines)
+            for _t, _d, _l in _hits[:6]:
+                if _t:
+                    web_src.append({'t': _t[:60], 'u': _l or ''})
             print('[AI-WEB-CTX] %d 条 / %d 字' % (web_n, len(web_ctx)), flush=True)
 
     # 站内检索带进来的资料（前端传的，长度在这里再截一次）
@@ -2151,6 +2157,8 @@ def _api_ai_body():
                 'web_n': web_n,
                 'site_n': site_n,
                 'db_n': db_n,
+                'db_src': db_src,
+                'web_src': web_src,
                 'effort': effort,
                 'fast': fast_mode,
                 'model_key': model_key,
@@ -2194,6 +2202,8 @@ def _api_ai_body():
         'model': model_id,
         'cost': cost,
         'balance': bal,
+        'db_src': db_src,
+        'web_src': web_src,
         # 内测期间为 true —— 前端可以显示一个「内测」角标
         'admin': is_admin,
     })

@@ -800,6 +800,47 @@ body.dark-mode .ai-notice.is-warn { color: #ff9c8a; }
 }
 .ai-conv:hover .ai-conv-del { opacity: .75; }
 .ai-conv-del:hover { background: rgba(220,60,60,.14); color: #dc3c3c; opacity: 1; }
+
+/* 参考来源（可折叠，默认收起） */
+.ai-src {
+    margin: 4px 0 6px;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    background: var(--count-bg);
+    font-size: .82rem;
+    overflow: hidden;
+}
+.ai-src > summary {
+    padding: 7px 10px;
+    cursor: pointer;
+    color: {{MUTE}};
+    list-style: none;
+    user-select: none;
+}
+.ai-src > summary::-webkit-details-marker { display: none; }
+.ai-src > summary::before { content: '▸ '; }
+.ai-src[open] > summary::before { content: '▾ '; }
+.ai-src[open] > summary { border-bottom: 1px solid var(--card-border); }
+.ai-src-body { padding: 8px 10px 10px; }
+.ai-src-h {
+    font-size: 11px;
+    color: {{MUTE}};
+    margin: 6px 0 4px;
+    opacity: .85;
+}
+.ai-src-h:first-child { margin-top: 0; }
+.ai-src ol { margin: 0 0 4px 18px; padding: 0; }
+.ai-src li { margin: 2px 0; line-height: 1.5; }
+.ai-src a { color: #3988f6; text-decoration: none; word-break: break-all; }
+.ai-src a:hover { text-decoration: underline; }
+.ai-src-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.ai-src-tags span {
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    color: {{MUTE}};
+    font-size: 11px;
+}
 </style>
 
 </head>
@@ -2018,9 +2059,9 @@ function webOn() {
         var on = siteOn();
         $site.className = on ? 'on' : '';
         $site.textContent = on ? '站内检索 · 开' : '站内检索 · 关';
-        $site.title = on
-            ? '会先在站内 800 条小知识里找相关资料，再一起发给 AI'
-            : '只用 AI 自己的知识，不查站内资料';
+        $site.title = siteOn()
+            ? '开启后会去站内数据库里查找相关资料，再一起发给 AI'
+            : '只用 AI 自己的知识回答，不查站内数据库';
     }
 
     function apiHistory() {
@@ -2275,6 +2316,71 @@ function webOn() {
                         ? ('已带上：' + real.join(' + '))
                         : '这次没带上任何参考资料';
                 }
+
+
+                /* ---- 参考来源（默认收起，像 DeepSeek 那样）---- */
+                try {
+                    var _ws = (ev.web_src || []).filter(function (x) { return x && x.t; });
+                    var _ds = (ev.db_src || []).filter(function (x) { return !!x; });
+                    if (_ws.length || _ds.length) {
+                        var det = document.createElement('details');
+                        det.className = 'ai-src';
+                        var sm = document.createElement('summary');
+                        var _parts = [];
+                        if (_ws.length) _parts.push(_ws.length + ' 个网页');
+                        if (_ds.length) _parts.push(_ds.length + ' 组站内数据');
+                        sm.textContent = '📎 参考来源（' + _parts.join(' · ') + '）';
+                        det.appendChild(sm);
+
+                        var bx = document.createElement('div');
+                        bx.className = 'ai-src-body';
+
+                        if (_ws.length) {
+                            var h1 = document.createElement('div');
+                            h1.className = 'ai-src-h';
+                            h1.textContent = '联网搜索（来源链接）';
+                            bx.appendChild(h1);
+                            var ol = document.createElement('ol');
+                            for (var wi = 0; wi < _ws.length; wi++) {
+                                var li = document.createElement('li');
+                                if (_ws[wi].u) {
+                                    var a = document.createElement('a');
+                                    a.setAttribute('href', _ws[wi].u);
+                                    a.setAttribute('target', '_blank');
+                                    a.setAttribute('rel', 'noopener noreferrer');
+                                    a.textContent = _ws[wi].t;
+                                    li.appendChild(a);
+                                } else {
+                                    li.textContent = _ws[wi].t;
+                                }
+                                ol.appendChild(li);
+                            }
+                            bx.appendChild(ol);
+                        }
+
+                        if (_ds.length) {
+                            var h2 = document.createElement('div');
+                            h2.className = 'ai-src-h';
+                            h2.textContent = '站内检索（相关信息）';
+                            bx.appendChild(h2);
+                            var tg = document.createElement('div');
+                            tg.className = 'ai-src-tags';
+                            for (var di = 0; di < _ds.length; di++) {
+                                var sp = document.createElement('span');
+                                sp.textContent = _ds[di];
+                                tg.appendChild(sp);
+                            }
+                            bx.appendChild(tg);
+                        }
+
+                        det.appendChild(bx);
+                        if (chipEl && chipEl.parentNode) {
+                            chipEl.parentNode.insertBefore(det, chipEl.nextSibling);
+                        } else {
+                            ui.wrap.insertBefore(det, ui.wrap.firstChild);
+                        }
+                    }
+                } catch (e) {}
 
                 if (typeof ev.left === 'number') {
                     $left.textContent = '今天还能问 ' + ev.left + ' 次'
