@@ -1303,7 +1303,7 @@ AI_MODELS = {
 #      AI_PRICE_PER_1K  每 1000 token 多少 NB 币（默认 10）
 #      AI_PRICE_MIN     每次最低消费（默认 1）
 #      AI_CHARGE_ADMIN  管理员要不要也扣（默认 0 = 不扣，方便自己测）
-AI_PRICE_PER_1K = _env_int('AI_PRICE_PER_1K', 10, 0, 1000000)
+AI_PRICE_PER_1K = _env_int('AI_PRICE_PER_1K', 30, 0, 1000000)
 AI_PRICE_MIN    = _env_int('AI_PRICE_MIN', 1, 0, 1000000)
 AI_CHARGE_ADMIN = _env_int('AI_CHARGE_ADMIN', 0, 0, 1) == 1
 
@@ -2032,6 +2032,34 @@ def _api_ai_body():
 
     usage_id = d.get('usage_id')
     left = d.get('left')
+
+    # ==== 余额门槛 ====
+    # 因为扣币是「答完再扣」，没有事前拦截，余额 0 的人会白嫖。
+    # 所以这里先查一次余额（p_amount=0 只查不扣）：
+    #   余额 <= 0 → 直接拒绝，并把刚用掉的额度退回去
+    # 管理员免扣，不受这条限制。
+    if AI_PRICE_PER_1K > 0 and not (is_admin and not AI_CHARGE_ADMIN):
+        _br = supa_rpc('ai_charge_coins', {
+            'p_user_id': uid, 'p_amount': 0, 'p_secret': MAIL_SECRET,
+        })
+        if _br.get('ok'):
+            _bd = _br.get('data') or {}
+            _bal = _bd.get('balance')
+            try:
+                _bal_f = float(_bal) if _bal is not None else None
+            except Exception:
+                _bal_f = None
+            if _bal_f is not None and _bal_f <= 0:
+                print('[AI-COIN-GATE] 余额 %s，拒绝' % _bal_f, flush=True)
+                if usage_id:
+                    supa_rpc('refund_ai_usage', {'p_id': usage_id, 'p_secret': MAIL_SECRET})
+                return jsonify({
+                    'ok': False,
+                    'poor': True,
+                    'balance': _bal_f,
+                    'message': ('你的 NB 币用完了（现在 %d 个），'
+                                '先去赚点币再来问吧' % int(_bal_f)),
+                })
 
     # ==== NB 币：答完再扣 ====
     # 用 NIM 返回的真实 usage；拿不到（比如中途断了）就按实际吐出来的字数估。
