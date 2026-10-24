@@ -1,0 +1,3431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <script>
+    /* ===== 跨子域名登录态同步（github. / cloudflare. / pythonanywhere. 之间互通）=====
+       localStorage 是按 origin 隔离的，两个子域名各存各的，所以要借 Cookie 中转。
+       Cookie 设 Domain=.nb-channel.top，所有子域名都能读到。
+
+       这里不改页面原本的任何代码 —— 而是劫持 localStorage 的读写：
+         · 页面登录时 setItem('nb_session', ...)  → 顺手写一份到 Cookie
+         · 页面登出时 removeItem('nb_session')    → 顺手把 Cookie 清掉
+         · 页面加载时 Cookie 有、本地没有          → 自动注入进 localStorage
+       所以那 57 处登录/登出代码一行都不用动。
+
+       ⚠️ 这意味着 *.nb-channel.top 下任何一个子域名都能读到这个令牌，
+          包括 product-storage 那个 Workers。将来新增子域名前先想清楚这件事。 */
+    (function () {
+        try {
+            var KEY_S = 'nb_session', KEY_U = 'nb_user';
+            var DOMAIN = '.nb-channel.top';
+            var MAXAGE = 30 * 86400;
+
+            // 只在 .nb-channel.top 域下才启用（本地开文件、或别的域名访问时保持原样）
+            // ⚠️ 2026-10-16 放宽：原来只认 nb-channel.top，
+        //    但 pythonanywhere.nb-channel.top 会【302 跳到】nbchannel.pythonanywhere.com，
+        //    pages.dev / github.io 也是常用入口 —— 那几个域名下这个补丁原本整个不生效。
+        if (!/(^|\.)nb-channel\.top$/.test(location.hostname) &&
+            location.hostname !== 'nbchannel.pythonanywhere.com' &&
+            location.hostname !== 'nb-channel.pages.dev' &&
+            location.hostname !== 'nb-channel.github.io') return;
+
+            function readCookie(n) {
+                var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]*)'));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+            function writeCookie(n, v) {
+                document.cookie = n + '=' + encodeURIComponent(v) + ';path=/;domain=' + DOMAIN +
+                                  ';max-age=' + MAXAGE + ';SameSite=Lax' +
+                                  (location.protocol === 'https:' ? ';Secure' : '');
+            }
+            function dropCookie(n) {
+                document.cookie = n + '=;path=/;domain=' + DOMAIN + ';max-age=0;SameSite=Lax' +
+                                  (location.protocol === 'https:' ? ';Secure' : '');
+            }
+
+            // ---- ① 页面加载时双向对齐 ----
+            [KEY_S, KEY_U].forEach(function (k) {
+                var c = readCookie(k), l = null;
+                try { l = localStorage.getItem(k); } catch (e) {}
+                if (l) {
+                    if (l !== c) writeCookie(k, l);            // 本地有 → 同步出去
+                } else if (c) {
+                    try { localStorage.setItem(k, c); } catch (e) {}   // 本地没有 → 采用 Cookie
+                }
+            });
+
+            // ---- ①.5 验一下令牌还活着没有（2026-10-16 补）----
+        // ⚠️ 退出登录之后，【别的子域名】的 localStorage 里可能还留着旧令牌。
+        //    上面那一步会把 Cookie 里的值注入回来，而它不验有效性 ——
+        //    于是一个已经退掉的令牌会被反复复活，页面以为「已登录」，
+        //    不显示登录入口，看着就像「退登之后登不回来」。
+        //    这里补一步：拿令牌去调一个需要会话的接口，鉴权失败就把两边都清干净。
+        setTimeout(function () {
+            var tok = null, u = null;
+            try { tok = localStorage.getItem(KEY_S); } catch (e) {}
+            try { u = JSON.parse(localStorage.getItem(KEY_U) || 'null'); } catch (e) {}
+            if (!tok || !u || !u.id) return;
+            fetch('https://pbaafgjkwdbwcmsikcmg.supabase.co/rest/v1/rpc/get_checkin_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg',
+                    'Authorization': 'Bearer sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+                },
+                body: JSON.stringify({ p_user_id: u.id, p_session: tok })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                var msg = (d && d.message) || '';
+                // 只有明确说「鉴权失败 / 会话无效」才动手 ——
+                // 其它错误（比如称号没查到）不能当令牌失效处理
+                if (d && d.success === false && /鉴权|会话/.test(msg)) {
+                    try { localStorage.removeItem(KEY_S); localStorage.removeItem(KEY_U); } catch (e) {}
+                    try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+                    setTimeout(function () { location.reload(); }, 60);
+                }
+            }).catch(function () {});
+        }, 1200);
+
+        // ---- ② 劫持写入：登录时同步到 Cookie ----
+            var _set = localStorage.setItem;
+            localStorage.setItem = function (k, v) {
+                try { if ((k === KEY_S || k === KEY_U) && v) writeCookie(k, v); } catch (e) {}
+                return _set.call(localStorage, k, v);
+            };
+
+            // ---- ③ 劫持删除：登出时同步清 Cookie ----
+            var _rm = localStorage.removeItem;
+            localStorage.removeItem = function (k) {
+                try { if (k === KEY_S || k === KEY_U) dropCookie(k); } catch (e) {}
+                return _rm.call(localStorage, k);
+            };
+
+            // ---- ④ 万一有人用 clear() ----
+            var _cl = localStorage.clear;
+            localStorage.clear = function () {
+                try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+                return _cl.call(localStorage);
+            };
+        } catch (e) {}
+    })();
+    </script>
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
+<meta name="description" content="NB频道评论区——友善交流、认真讨论,支持图片、视频、@提及与称号展示。">
+<meta property="og:title" content="评论区 · NB频道官网">
+<meta property="og:description" content="虚拟公司的股东们在这里开会。">
+<meta name="theme-color" content="#0f172a">
+<title>评论区 - NB频道官网</title>
+    <script>
+    (function () {
+        try {
+            var tt = localStorage.getItem('theme');
+            if (tt === 'dark' || (!tt && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script><style>:root {
+    --card-bg: #ffffff; --bg-color: #f7f8fa; --text-color: #1a1d23;
+    --card-border: #e8eaee; --count-text: #8b93a3; --status-border: #3b82f6;
+    --nav-btn-bg: #eef2f8; --nav-btn-text: #1a1d23;
+    --nav-btn-hover-bg: #3b82f6; --nav-btn-hover-text: #ffffff;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #f7f8fa;
+    --ink: #1a1d23;
+    --ink-soft: #5a6270;
+    --ink-faint: #8b93a3;
+    --line: #e8eaee;
+    --brand: #3b82f6;
+    --brand-deep: #2563eb;
+    --card: #ffffff;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+    --shadow-2: 0 2px 4px rgba(16,24,40,.05), 0 24px 48px -20px rgba(16,24,40,.18);
+}
+html.dark { color-scheme: dark; }
+html.dark {
+    --bg: #0a101f;
+    --ink: #e5eaf3;
+    --ink-soft: #9aa7bd;
+    --ink-faint: #64748b;
+    --line: rgba(148,163,184,.16);
+    --card: #101a2e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+    --shadow-2: 0 2px 6px rgba(0,0,0,.35), 0 28px 60px -24px rgba(0,0,0,.6);
+}
+html.dark .nav { background: rgba(10,16,31,.72); border-bottom-color: rgba(148,163,184,.12); }
+html.dark .nav.scrolled { background: rgba(10,16,31,.9); }
+html.dark .logo-img { filter: brightness(1.4) saturate(1.15); }
+html.dark .drawer { background: #0f1a30; }
+html.dark .drawer .d-close { background: rgba(255,255,255,.06); color: var(--ink); }
+html.dark .drawer a.d-item { color: var(--ink-soft); }
+html.dark .drawer a.d-item:hover, html.dark .drawer a.d-item.active { background: rgba(59,130,246,.14); color: #fff; }
+html.dark .drawer .d-brand { color: var(--ink); }
+html.dark .backtop { background: rgba(15,23,42,.85); color: #cbd5e1; border-color: rgba(148,163,184,.25); }
+html.dark .backtop:hover { background: var(--brand); color: #fff; }
+html.dark .footer-bottom { border-color: rgba(255,255,255,.06); }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+::selection { background: rgba(59,130,246,.22); }
+
+/* ============ 导航 ============ */
+.nav {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 64px;
+    background: rgba(255,255,255,.72);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+    border-bottom: 1px solid var(--line);
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; letter-spacing: .3px; margin-left: 12px; }
+.logo-img { display: block; height: 32px; width: auto; }
+.logo-text { color: var(--ink); }
+.nav-menu { display: flex; gap: 2px; }
+.nav-menu a {
+    position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); white-space: nowrap; transition: color .3s ease;
+}
+.nav-menu a:hover { color: var(--ink); }
+.nav-menu a.active { color: var(--brand); font-weight: 600; }
+.nav-menu a::after {
+    content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);
+}
+.nav-menu a:hover::after { transform: scaleX(1); }
+.nav-menu a.active::after { transform: scaleX(1); }
+.nav-menu a.nav-api { color: var(--brand); font-weight: 600; font-size: .86rem; }
+.nav-right-group { display: flex; align-items: center; gap: 10px; }
+.nav-auth-group { display: flex; gap: 8px; align-items: center; }
+.nav-clock {
+    display: flex; flex-direction: column; align-items: flex-end;
+    margin-right: 8px; flex-shrink: 0; user-select: none; line-height: 1.35;
+}
+.nav-clock .nc-time { font-size: 15.5px; font-weight: 800; letter-spacing: 1.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.nav-clock .nc-row { display: flex; align-items: baseline; gap: 6px; font-style: normal; }
+.nav-clock .nc-date { font-size: 10.5px; font-weight: 600; letter-spacing: .4px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.nav-clock .nc-label { font-size: 8.5px; font-weight: 600; letter-spacing: 2px; color: var(--ink-faint); }
+.nav-auth {
+    padding: 8px 18px; border-radius: 999px;
+    background: rgba(255,255,255,.6); color: var(--ink);
+    border: 1px solid var(--line);
+    font-size: .88rem; font-weight: 600; cursor: pointer;
+    transition: all .25s ease; white-space: nowrap;
+}
+.nav-auth:hover { background: #fff; border-color: rgba(59,130,246,.4); }
+.nav-auth.primary {
+    background: linear-gradient(135deg, var(--brand), #6366f1);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 8px 20px -8px rgba(59,130,246,.5);
+}
+.nav-auth.primary:hover { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; }
+html.dark .nav-auth { background: rgba(255,255,255,.05); color: var(--ink); border-color: rgba(148,163,184,.25); }
+html.dark .nav-auth:hover { background: rgba(255,255,255,.1); border-color: rgba(59,130,246,.5); }
+.theme-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--bg); cursor: pointer; font-size: .95rem;
+    display: flex; align-items: center; justify-content: center; transition: all .25s ease;
+}
+.theme-btn:hover { border-color: rgba(59,130,246,.4); transform: translateY(-1px); }
+.nav-burger {
+    display: none; width: 38px; height: 38px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: .95rem; cursor: pointer; color: var(--ink);
+    align-items: center; justify-content: center;
+}
+@media (max-width: 900px) { .nav-menu { display: none; } .nav-burger { display: flex; } .nav-clock, .nav-auth-group { display: none; } }
+
+/* ============ Hero(产品) ============ */
+.vhero {
+    position: relative; color: #fff; overflow: hidden;
+    padding: 110px 48px 150px;
+    background:
+        radial-gradient(760px 460px at 12% 4%, rgba(59,130,246,.16), transparent 62%),
+        radial-gradient(640px 420px at 96% 60%, rgba(139,92,246,.12), transparent 60%),
+        linear-gradient(168deg, #0b1220 0%, #101c33 58%, #1c1745 100%);
+}
+.vhero::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background-image: radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 72%);
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 72%);
+}
+.vhero-inner {
+    position: relative; z-index: 2; max-width: 1180px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.05fr .95fr; gap: 70px; align-items: center;
+}
+.hero-eyebrow {
+    display: block; font-size: 11px; font-weight: 400;
+    letter-spacing: 8px; color: rgba(255,255,255,.42); margin-bottom: 40px;
+}
+.vhero h1 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); font-weight: 800; letter-spacing: 8px; color: #fff; line-height: 1.12; }
+.vhero h1 .light { font-weight: 200; letter-spacing: 4px; color: #9cc0ff; }
+.vhero-sub {
+    margin: 34px 0 0; max-width: 470px;
+    font-size: .98rem; font-weight: 300; line-height: 2.15;
+    letter-spacing: .6px; color: rgba(255,255,255,.6);
+}
+.vhero-actions { margin-top: 48px; display: flex; gap: 44px; align-items: center; flex-wrap: wrap; }
+.hero-link {
+    font-size: .9rem; letter-spacing: 3px; font-weight: 600; color: #fff;
+    padding: 12px 2px; border-bottom: 1px solid rgba(255,255,255,.32);
+    transition: border-color .35s ease, color .35s ease;
+}
+.hero-link:hover { border-color: #7cb4ff; color: #7cb4ff; }
+/* 右侧统计卡 */
+.pd-stats {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 24px; padding: 10px 26px;
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.pd-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 13px 0; border-bottom: 1px dashed rgba(255,255,255,.1);
+}
+.pd-row:last-child { border-bottom: none; }
+.pd-row .k { font-size: .72rem; letter-spacing: 2.5px; color: rgba(255,255,255,.5); }
+.pd-row b { font-size: 1.12rem; font-weight: 700; color: #fff; letter-spacing: .5px; }
+.pd-row b small { font-size: .72rem; font-weight: 400; color: rgba(255,255,255,.55); letter-spacing: 1px; }
+.pd-tip { margin-top: 14px; font-size: .74rem; color: rgba(255,255,255,.4); letter-spacing: 1.2px; text-align: center; }
+.vhero-fade {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 1;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    pointer-events: none;
+}
+
+/* ============ 正文 ============ */
+.vwrap { max-width: 1080px; margin: 0 auto; padding: 70px 48px 60px; }
+.leadq { text-align: center; max-width: 760px; margin: 0 auto 80px; }
+.leadq h2 { font-size: clamp(1.5rem, 2.8vw, 2.1rem); font-weight: 800; line-height: 1.6; letter-spacing: 1px; }
+.leadq h2 em { font-style: normal; color: var(--brand); }
+.leadq h2 .thin { font-weight: 200; color: var(--ink-soft); }
+.leadq .sig { margin-top: 26px; font-size: .9rem; color: var(--ink-faint); letter-spacing: 3px; }
+.leadq .sig b { color: var(--ink); font-weight: 700; letter-spacing: 1px; }
+
+/* 产品网格 */
+.pd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.p-card {
+    background: var(--card); border-radius: var(--radius-lg); overflow: hidden;
+    border: 1px solid var(--line); box-shadow: var(--shadow-1);
+    display: flex; flex-direction: column;
+    transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease;
+}
+.p-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-2); }
+.p-media {
+    position: relative; aspect-ratio: 16 / 9.4; overflow: hidden;
+    background: linear-gradient(140deg, rgba(59,130,246,.12), rgba(139,92,246,.12));
+}
+.p-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .9s cubic-bezier(.16,1,.3,1); }
+.p-card:hover .p-media img { transform: scale(1.045); }
+.p-media .p-no {
+    position: absolute; top: 14px; left: 16px; z-index: 2;
+    font-size: 11px; font-weight: 700; letter-spacing: 3px; color: #fff;
+    background: rgba(10,16,31,.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2);
+}
+.p-body { padding: 22px 24px 24px; display: flex; flex-direction: column; flex: 1; }
+.p-body h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: 1px; margin-bottom: 9px; }
+.p-body .p-sub { font-size: .92rem; color: var(--ink-soft); line-height: 1.85; flex: 1; }
+.p-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.p-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: 999px;
+    font-size: .84rem; font-weight: 700; letter-spacing: .8px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
+    transition: all .25s ease;
+}
+.p-link:hover { border-color: var(--brand); color: var(--brand); transform: translateY(-1px); }
+.p-link.go { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; border-color: transparent; box-shadow: 0 8px 20px -8px rgba(59,130,246,.55); }
+.p-link.go:hover { color: #fff; box-shadow: 0 12px 26px -8px rgba(59,130,246,.6); }
+
+.p-note { text-align: center; color: var(--ink-faint); font-size: .82rem; letter-spacing: 1px; line-height: 2; padding: 26px 20px 0; }
+
+/* CTA */
+.cta {
+    text-align: center; padding: 84px 24px;
+    background: linear-gradient(170deg, #101c33 0%, #1c1745 100%);
+    color: #fff; margin-top: 70px;
+}
+.cta h2 { font-size: 1.7rem; font-weight: 800; letter-spacing: .5px; margin-bottom: 13px; }
+.cta p { color: rgba(255,255,255,.55); font-size: .93rem; font-weight: 300; margin-bottom: 32px; }
+.cta .cta-actions { display: flex; gap: 44px; justify-content: center; align-items: center; flex-wrap: wrap; }
+
+/* 页脚 */
+.footer { background: linear-gradient(180deg, #0f172a 0%, #0a0f1e 100%); color: #94a3b8; padding: 64px 48px 30px; }
+.footer-grid { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 44px; }
+.footer .brand { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; letter-spacing: .5px; }
+.footer .desc { font-size: .85rem; font-weight: 300; line-height: 2; margin-bottom: 20px; color: #7c8ba5; }
+.footer h5 { color: #e2e8f0; font-size: .88rem; font-weight: 700; margin-bottom: 18px; letter-spacing: 2px; }
+.footer a { display: block; color: #8fa0b8; font-size: .86rem; margin-bottom: 12px; transition: color .3s ease; }
+.footer a:hover { color: #fff; }
+.footer-bottom {
+    max-width: 1180px; margin: 44px auto 0; padding-top: 22px;
+    border-top: 1px solid rgba(255,255,255,.07);
+    font-size: .76rem; letter-spacing: 1px; color: #5b6a85; text-align: center;
+}
+
+/* 抽屉 */
+.drawer-mask { display: none; position: fixed; inset: 0; z-index: 9000; background: rgba(10,15,28,.5); }
+.drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 9001;
+    width: 300px; max-width: 84vw; background: #fff;
+    box-shadow: -20px 0 60px -30px rgba(0,0,0,.4);
+    transform: translateX(105%); transition: transform .35s cubic-bezier(.16,1,.3,1);
+    padding: 22px 20px; overflow-y: auto;
+}
+.drawer.open { transform: none; }
+.drawer .d-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.drawer .d-brand { font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.drawer .d-close { width: 36px; height: 36px; border-radius: 10px; border: none; background: var(--bg); font-size: .95rem; cursor: pointer; color: var(--ink); }
+.drawer a.d-item { display: block; padding: 12px 16px; border-radius: 12px; color: var(--ink-soft); font-size: .98rem; font-weight: 600; }
+.drawer a.d-item:hover, .drawer a.d-item.active { background: rgba(59,130,246,.1); color: var(--brand); }
+.drawer .d-auth { margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+.drawer .d-auth a { flex: 1; text-align: center; padding: 11px; border-radius: 999px; font-size: .9rem; font-weight: 600; }
+.drawer .d-auth .ga { background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
+.drawer .d-auth .gab { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; }
+
+/* 回到顶部 */
+.backtop {
+    position: fixed; right: 26px; bottom: 26px; z-index: 5000;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,.92); color: var(--brand);
+    border: 1px solid var(--line); cursor: pointer; font-size: 1.05rem;
+    opacity: 0; transform: translateY(12px); transition: all .3s ease;
+    box-shadow: var(--shadow-1);
+}
+.backtop.show { opacity: 1; transform: none; }
+.backtop:hover { background: var(--brand); color: #fff; }
+
+/* 入场 */
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+/* 响应式 */
+@media (max-width: 900px) {
+    .vhero { padding: 84px 24px 120px; }
+    .vwrap { padding: 56px 24px 40px; }
+    .footer { padding: 48px 24px 26px; }
+}
+@media (max-width: 760px) {
+    .nav { padding: 0 20px; }
+    .vhero { padding: 72px 20px 110px; }
+    .vhero-inner { grid-template-columns: 1fr; gap: 40px; }
+    .vhero h1 { font-size: 2.4rem; letter-spacing: 5px; }
+    .pd-stats { display: none; }
+    .vwrap { padding: 40px 20px 30px; }
+    .leadq { margin-bottom: 54px; }
+    .pd-grid { grid-template-columns: 1fr; }
+    .p-body { padding: 17px 18px 19px; }
+    .cta { margin-top: 50px; padding: 60px 20px; }
+    .footer-grid { grid-template-columns: 1fr; gap: 26px; }
+    .backtop { right: 18px; bottom: 18px; width: 42px; height: 42px; }
+}
+</style>
+<style>html.dark {
+    --card-bg: #101a2e; --bg-color: #0a101f; --text-color: #e5eaf3;
+    --card-border: rgba(148,163,184,.16); --count-text: #64748b; --status-border: #60a5fa;
+    --nav-btn-bg: rgba(255,255,255,.07); --nav-btn-text: #e5eaf3;
+    --nav-btn-hover-bg: #3b82f6; --nav-btn-hover-text: #ffffff;
+}
+
+/* ===== 评论区官网化打磨 ===== */
+.comment-section { max-width: 880px; margin: 22px auto 90px; padding: 26px 30px; background: var(--card); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow-1); }
+.comment-section .auth-bar { border-bottom-color: var(--line); }
+button { border-radius: 999px; }
+.sort-btn.active { background: var(--brand) !important; }
+.announcement-bar { border-left-color: var(--brand) !important; }
+
+            /* ===== 公告栏可折叠（新增）===== */
+            .announcement-bar .ab-head {
+                display: flex; align-items: center; justify-content: space-between;
+                gap: 12px;
+            }
+            .announcement-bar .ab-title { flex-shrink: 0; }
+            .announcement-bar .ab-toggle {
+                flex-shrink: 0; cursor: pointer; font-family: inherit;
+                font-size: 0.76rem; line-height: 1.9; padding: 1px 12px;
+                border-radius: 999px; border: 1px solid #ffd591;
+                background: rgba(255, 255, 255, .55); color: #a35b00;
+                transition: background .2s ease, color .2s ease, border-color .2s ease;
+            }
+            .announcement-bar .ab-toggle:hover {
+                background: #ff9800; color: #fff; border-color: #ff9800;
+            }
+            .announcement-bar .ab-body {
+                margin-top: 6px; white-space: pre-line; word-break: break-word;
+            }
+            .announcement-bar.collapsed .ab-body { display: none; }
+
+            html.dark .announcement-bar .ab-toggle {
+                background: rgba(255, 255, 255, .08); border-color: #664a1f; color: #ffb74d;
+            }
+            html.dark .announcement-bar .ab-toggle:hover {
+                background: #ff9800; color: #1a1208; border-color: #ff9800;
+            }
+
+textarea, .reply-form textarea, .edit-form textarea { border-radius: 12px; }
+.comment-author { color: var(--ink); }
+</style>
+    <style>
+        /* 基础样式（与原版相同，未作改动） */
+        .comment-section { max-width:800px; margin:40px auto; padding:20px; background:var(--card-bg); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+        .auth-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--card-border); }
+        button { background:var(--nav-btn-bg); color:var(--nav-btn-text); border:none; padding:6px 12px; border-radius:20px; cursor:pointer; }
+        button:hover { background:var(--nav-btn-hover-bg); color:white; }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000; }
+        .modal-content { background:var(--card-bg); padding:30px; border-radius:12px; max-width:400px; width:90%; }
+        .modal-content input { width:100%; padding:10px; margin:10px 0; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); }
+        .comment { border-bottom:1px solid var(--card-border); padding:15px 0; }
+        .comment-meta { display:flex; align-items:center; gap:15px; margin-bottom:8px; }
+        /* 称号横幅（名字下方） */
+        .comment-title { margin: 2px 0 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+        .comment-title img { height: 26px; width: auto; max-width: 200px; border-radius: 6px; display: block; }
+        .comment-title .comment-title-stars { font-size: 0.68rem; color: #ffb300; letter-spacing: 1px; font-weight: 600; }
+        .comment-author { font-weight:bold; }
+        .nb-rainbow {
+            background: linear-gradient(90deg, #ff6b6b, #ffb347, #ffe66d, #6bcb77, #4d96ff, #b57bff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent !important;
+        }
+        .comment-time { font-size:0.8rem; color:var(--count-text); }
+        .comment-content { margin:8px 0; white-space: pre-wrap; word-break: break-word; }
+        .comment-actions { display:flex; gap:10px; margin-top:8px; }
+        .toggle-btn, .reply-btn { background: none; border: none; color: var(--status-border); cursor: pointer; padding: 0; font-size: 0.85rem; margin-right: 10px; }
+        .toggle-btn:hover, .reply-btn:hover { text-decoration: underline; background: none; color: var(--nav-btn-hover-bg); }
+        .replies { margin-left: 30px; border-left: 2px solid var(--card-border); padding-left: 20px; margin-top: 10px; }
+        .reply-form { margin-top: 10px; margin-bottom: 10px; display: none; }
+        .reply-form textarea { width: 100%; padding: 8px; border: 1px solid var(--card-border); border-radius: 8px; background: var(--bg-color); color: var(--text-color); font-family: inherit; resize: vertical; }
+        .reply-form button { margin-top: 5px; }
+        .error { color:#ff6b6b; font-size:0.9rem; margin-top:5px; }
+        textarea { width:100%; padding:10px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg-color); color:var(--text-color); font-family:inherit; resize: vertical; }
+        .char-counter { text-align: right; font-size: 0.8rem; color: var(--count-text); margin-top: 5px; }
+        .new-comment-area { margin-bottom: 30px; }
+        /* 排序工具栏 */
+        /* 公告栏 */
+        .announcement-bar {
+            background: linear-gradient(135deg, #fff8e6, #fffdf5);
+            border: 1px solid #ffd591;
+            border-left: 4px solid #ff9800;
+            border-radius: 12px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            white-space: pre-line;
+            word-break: break-word;
+            color: var(--text-color);
+        }
+        html.dark .announcement-bar {
+            background: #2d2418;
+            border-color: #664a1f;
+            border-left-color: #ff9800;
+        }
+        .comment-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+        .toolbar-label { font-size: 0.85rem; color: var(--count-text); }
+        .toolbar-total { font-size: 0.8rem; color: var(--count-text); margin-left: auto; }
+        .sort-btn { background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none; padding: 5px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
+        .sort-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
+        .sort-btn.active { background: #00a1d6; color: white; }
+        /* 点赞/点踩 */
+        .comment-reactions { display: flex; gap: 6px; margin-top: 8px; }
+        .react-btn { background: none; border: 1px solid var(--card-border); border-radius: 20px; padding: 2px 10px; font-size: 0.8rem; cursor: pointer; color: var(--count-text); transition: 0.15s; }
+        .react-btn:hover { border-color: var(--status-border); color: var(--status-border); }
+        .react-btn.active-like { background: rgba(0,161,214,0.12); border-color: #00a1d6; color: #00a1d6; }
+        .react-btn.active-dislike { background: rgba(255,107,107,0.12); border-color: #ff6b6b; color: #ff6b6b; }
+        .react-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+        .edit-btn { background: none; border: none; color: var(--status-border); cursor: pointer; padding: 0; font-size: 0.85rem; margin-right: 10px; }
+        .edit-btn:hover { text-decoration: underline; background: none; color: var(--nav-btn-hover-bg); }
+        .edit-form textarea { width: 100%; padding: 8px; border: 1px solid var(--card-border); border-radius: 8px; background: var(--bg-color); color: var(--text-color); font-family: inherit; resize: vertical; }
+        .edit-form button { margin-top: 5px; margin-right: 8px; }
+        .floor-badge { font-size: 0.75rem; color: var(--count-text); margin-right: 8px; }
+        .account-btn { background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none; border-radius: 30px; padding: 10px 20px; font-size: 1rem; cursor: pointer; }
+        .account-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
+        .toggle-replies-btn { background: none; border: none; color: var(--status-border); cursor: pointer; font-size: 0.85rem; margin-top: 8px; padding: 0; }
+        .toggle-replies-btn:hover { text-decoration: underline; background: none; color: var(--nav-btn-hover-bg); }
+        .fixed-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+        .theme-toggle-fixed {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .theme-toggle-fixed:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        .back-to-top {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            border: 1px solid var(--card-border);
+            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+        }
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .back-to-top:hover {
+            background: var(--nav-btn-hover-bg);
+            color: var(--nav-btn-hover-text);
+        }
+        @media (max-width: 600px) {
+            .fixed-buttons {
+                bottom: 20px;
+                right: 20px;
+                gap: 10px;
+            }
+            .theme-toggle-fixed, .back-to-top {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
+        .verified-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            margin-left: 6px;
+            background: url('https://cdn-icons-png.flaticon.com/512/5272/5272895.png') no-repeat center;
+            background-size: contain;
+            vertical-align: middle;
+        }
+        .verified-emoji {
+            margin-left: 4px;
+            font-size: 1rem;
+        }
+        .report-btn {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+        .report-btn:hover {
+            text-decoration: underline;
+        }
+        .apology-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        /* 新增举报模态框样式 */
+        .report-modal textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        .pagination-bar button {
+    background: var(--nav-btn-bg);
+    color: var(--nav-btn-text);
+    border: 1px solid var(--card-border);
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.pagination-bar button:hover {
+    background: var(--nav-btn-hover-bg);
+    color: white;
+}
+.pagination-bar .active {
+    background: #00a1d6;
+    color: white;
+}
+        
+            .ui-fx-glow {
+            position: fixed; left: -999px; top: -999px; width: 240px; height: 240px;
+            border-radius: 50%; pointer-events: none; z-index: 9997;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(59,130,246,.18), rgba(139,92,246,.10) 45%, transparent 65%);
+            opacity: 0;
+        }
+
+
+        /* ===== Hero 入场动画(全站统一,与首页一致的错峰淡入) ===== */
+        @keyframes heroFadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+        .vhero .hero-eyebrow, .vhero h1, .vhero .vhero-sub, .vhero .vhero-actions,
+        .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules {
+            animation: heroFadeUp .95s cubic-bezier(.16,1,.3,1) both;
+        }
+        .vhero .hero-eyebrow { animation-delay: .08s; }
+        .vhero h1 { animation-delay: .2s; }
+        .vhero .vhero-sub { animation-delay: .34s; }
+        .vhero .vhero-actions { animation-delay: .48s; }
+        .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules { animation-delay: .32s; }
+        @media (prefers-reduced-motion: reduce) {
+            .vhero .hero-eyebrow, .vhero h1, .vhero .vhero-sub, .vhero .vhero-actions,
+            .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules { animation: none; }
+        }
+        html { scroll-behavior: smooth; }
+        [id] { scroll-margin-top: 86px; }
+
+
+/* ===== 「更多功能」下拉(动画与原菜单项完全一致) ===== */
+.nav-more { position: relative; display: flex; align-items: center; }
+.nav-more-btn {
+    position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); background: none; border: none; cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+    transition: color .3s ease;
+}
+.nav-more-btn::after {
+    content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);
+}
+.nav-more-btn:hover { color: var(--ink); }
+.nav-more-btn:hover::after { transform: scaleX(1); }
+.nav-more.open .nav-more-btn { color: var(--ink); }
+.nav-more.open .nav-more-btn::after { transform: scaleX(1); }
+.nav-more-btn.active { color: var(--brand); font-weight: 600; }
+.nav-more-btn.active::after { transform: scaleX(1); }
+.nav-more-panel {
+    display: none; position: absolute; top: calc(100% + 12px); right: 0;
+    min-width: 178px; padding: 8px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 18px 44px -20px rgba(15,23,42,.42);
+    z-index: 300;
+}
+.nav-more.open .nav-more-panel { display: block; }
+.nav-more-panel a {
+    display: block; padding: 9px 12px; border-radius: 9px;
+    font-size: .88rem; color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+    transition: background .18s ease, color .18s ease;
+}
+.nav-more-panel a:hover { background: rgba(59,130,246,.1); color: var(--brand); }
+html.dark .nav-more-panel { background: #0f1a30; border-color: rgba(148,163,184,.22); }
+html.dark .nav-more-panel a:hover { background: rgba(59,130,246,.2); color: #fff; }
+
+/* ===== 移动端:也显示这条菜单栏(左右滑动看全部),不再只靠汉堡 ===== */
+@media (max-width: 900px) {
+    .nav { padding: 0 12px; gap: 6px; }
+    .nav-logo { flex: 0 0 auto; margin-left: 0; }
+    .nav-menu {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: flex-start;
+        gap: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+        /* 右侧渐隐,提示还能往右滑 */
+        -webkit-mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+        mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+    }
+    .nav-menu::-webkit-scrollbar { display: none; }
+    .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 11px; font-size: .86rem; letter-spacing: .2px; }
+    .nav-menu > a::after, .nav-menu .nav-more-btn::after { left: 11px; right: 11px; }
+    .nav-right-group { flex: 0 0 auto; gap: 6px; }
+    .theme-btn { width: 38px; height: 38px; border-radius: 11px; font-size: 1rem; }
+    .nav-burger { flex: 0 0 auto; }
+    /* 下拉面板在手机上居中一点,避免贴边被裁 */
+    .nav-more-panel { right: auto; left: 0; }
+}
+@media (max-width: 420px) {
+    .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 9px; font-size: .82rem; }
+    .nav-logo .logo-img { height: 28px; }
+}
+
+/* ===== 移动端 / APP 适配增强 ===== */
+/* 1) 安全区:APP 全屏运行时,刘海屏/底部横条不再压住内容 */
+body {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+}
+.nav { padding-top: env(safe-area-inset-top, 0); }
+.footer { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.backtop { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.drawer { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.nav-more-panel { max-height: 70vh; overflow-y: auto; }
+.d-modal, .modal-content, .cam-modal > div, .custom-modal > div {
+    max-height: 86vh; overflow-y: auto;
+}
+
+/* 2) 触摸体验 */
+a, button, [onclick], .sort-btn, .d-item {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+html { -webkit-text-size-adjust: 100%; }
+
+/* 3) 手机上输入框字号统一 16px:
+      小于 16px 时 iOS/部分安卓 WebView 聚焦会自动放大整页(最常见的不适配感来源) */
+@media (max-width: 900px) {
+    input:not([type=checkbox]):not([type=radio]), textarea, select {
+        font-size: 16px !important;
+    }
+    /* 关键操作按钮的最小可点区域(不影响小图标按钮) */
+    button:not(.d-close):not(.nav-burger):not(.theme-btn):not(.backtop):not(.react-btn):not(.reply-btn):not(.edit-btn):not(.delete-btn):not(.report-btn):not(.sort-btn),
+    .btn, .hero-btn, .vhero-actions a {
+        min-height: 38px;
+    }
+    /* 表格:已有横向滚动容器的保持,没有的自动兜底 */
+    .table-wrap, .scroll-x, .stock-table-wrap { -webkit-overflow-scrolling: touch; }
+    /* 长文本防溢出 */
+    .comment-content, .bn-reason, .d-item, .pd-tip { word-break: break-word; overflow-wrap: anywhere; }
+}
+
+/* 4) APP(独立窗口)下:去掉选中高亮与长按菜单的干扰,正文更接近原生 */
+@media (display-mode: standalone) {
+    a, button { -webkit-user-select: none; user-select: none; }
+    .comment-content { -webkit-user-select: text; user-select: text; }
+    .backtop { display: none; }   /* APP 里用系统返回键更自然 */
+}
+
+/* ===== 手机上「更多功能」下拉的处理 =====
+   原因:窄屏导航菜单是横向滚动的,而「更多功能」排在菜单最右端,
+        初始位置在屏幕外;且菜单的 overflow 会把弹出面板裁掉。
+   处理:手机上隐藏这个下拉(核心功能在 ☰ 抽屉里都有),平板/桌面保持可用。 */
+@media (max-width: 900px) {
+    .nav-more { display: none !important; }
+    .nav-more-panel { display: none !important; }
+}
+/* 平板/桌面:面板靠右弹出时留出边距,避免贴边 */
+@media (min-width: 901px) {
+    .nav-more-panel { max-width: calc(100vw - 24px); }
+}
+
+
+/* ===== 评论富文本:粗体 / 斜体 / 行内代码(不动链接颜色) ===== */
+.comment-content b, .comment-content strong { font-weight: 800; }
+.comment-content i, .comment-content em { font-style: italic; opacity: .95; }
+.comment-content code {
+    padding: 1px 6px; border-radius: 6px;
+    background: rgba(120,120,120,.14);
+    font-family: ui-monospace, Consolas, monospace; font-size: .92em;
+}
+.md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
+.md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
+</style>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/images/app-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NB频道">
+<meta name="application-name" content="NB频道">
+<!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
+<link rel="stylesheet" href="../css/themes.css?v=35">
+<script src="../js/theme.js?v=9"></script>
+</head>
+<body>
+<nav class="nav">
+    <a class="nav-logo" href="index-Beta.html"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"></a>
+    <div class="nav-menu">
+        <a href="index-Beta.html">首页</a>
+        <a href="videos-Beta.html">视频</a>
+        <a href="about-Beta.html">关于</a>
+        <a href="rules-Beta.html">用户守则</a>
+        <a href="changelog-Beta.html">更新日志</a>
+        <a href="product-Beta.html" class="active">我的产品</a>
+        <a href="APP-Beta.html">软件/APP</a>
+        <a href="index-Beta.html#friends">友商</a>
+        <a class="nav-api" href="/api-sdk/" target="_blank" rel="noopener noreferrer" title="NB频道 API 文档">API<i>↗</i></a>
+        <div class="nav-more">
+            <button class="nav-more-btn" type="button">更多功能 ▾</button>
+            <div class="nav-more-panel">
+                <a href="stock-Beta.html">📈 虚拟股票</a>
+                <a href="messages-Beta.html">🔔 消息中心</a>
+                <a href="chat-Beta.html">👥 好友 / 私信</a>
+                <a href="bank-Beta.html">🏦 NB银行</a>
+                <a href="shop-Beta.html">🛍️ NB商店</a>
+                <a href="backpack-Beta.html">🎒 我的背包</a>
+                <a href="titles-Beta.html">🏅 称号大全</a>
+                <a href="achievements-Beta.html">🏆 成就墙</a>
+                <a href="lottery-Beta.html">📅 签到 · 转盘</a>
+                <a href="lottery_records-Beta.html">🎰 抽奖记录</a>
+                <a href="weather-Beta.html">🌦️ 天气瞎报</a>
+                <a href="newspaper-Beta.html">📰 NB报刊社</a>
+                <a href="tools-Beta.html">🔧 工具</a>
+                <a href="product_share-Beta.html">📦 作品分享</a>
+                <a href="comments-Beta.html">💬 评论区</a>
+                <a href="ban-Beta.html">🚫 小黑屋</a>
+                <a href="feedback-Beta.html">🐞 漏洞/建议</a><a href="pricing-Beta.html">💰 模型 &amp; 价格</a>
+                <a href="vote-Beta.html">🗳️ 投票中心</a>
+            </div>
+        </div>
+    </div>
+    <div class="nav-right-group">
+        <div class="nav-clock" id="navClock" title="北京时间（UTC+8）">
+            <span class="nc-time" id="bjTime">--:--:--</span>
+            <span class="nc-row"><i class="nc-date" id="bjDate">----.--.--</i><em class="nc-label">北京时间</em></span>
+        </div>
+        <button class="theme-btn" id="themeBtn" aria-label="切换夜间模式">🌙</button>
+        <div class="nav-auth-group" id="betaAuthGroup">
+            <a class="nav-auth" id="betaProfileBtn" href="#">👤 个人中心</a>
+            <a class="nav-auth primary" id="betaAuthBtn" href="#">登录 / 注册</a>
+        </div>
+    </div>
+    <button class="nav-burger" id="navBurger" aria-label="打开菜单">☰</button>
+    <!-- 扫码:手机端右上角,在汉堡(☰)的右边。只在 APP 里显示 —— 网页端调不动摄像头。
+         整段自包含(自带样式/脚本),不依赖本页既有的 CSS 变量和导航结构。 -->
+    <a class="nav-scan" id="navScanBtn" href="scan-Beta.html" aria-label="扫一扫" title="扫一扫"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5V6a3 3 0 0 1 3-3h2.5"/><path d="M15.5 3H18a3 3 0 0 1 3 3v2.5"/><path d="M21 15.5V18a3 3 0 0 1-3 3h-2.5"/><path d="M8.5 21H6a3 3 0 0 1-3-3v-2.5"/><path d="M3.2 12h17.6"/></svg></a>
+    <style>
+      .nav-scan{display:none;width:42px;height:42px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.7);border:1px solid var(--line,#e2e8f0);color:var(--ink,#0f172a);align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent}
+      .nav-scan svg{width:21px;height:21px;display:block}
+      .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
+      html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
+      @media (max-width:900px){.nav-scan{display:flex}}
+    </style>
+    <script>/* 扫码入口只在 APP 里显示。旧版 APP 也显示 —— 点进去 scan-Beta.html 会提示他更新 */
+    (function(){try{if(!/NBChannelApp/i.test(navigator.userAgent||"")){var b=document.getElementById("navScanBtn");if(b)b.style.display="none";}}catch(e){}})();</script>
+
+</nav>
+<script>
+// ===== 在 APP 里隐藏导航菜单的 emoji =====
+// 站长要求：APP 的「更多功能」下拉菜单不要 emoji，网页端保留原样。
+//
+// APP 是 Capacitor 套壳，加载的就是本站 —— 改 HTML 会两边一起改，
+// 所以只能按 UA 区分（APP 在 UA 里注入了 NBChannelApp）。
+// 判断写法与上面「扫一扫」那段保持一致。
+(function () {
+    var isApp = false;
+    try { isApp = /NBChannelApp/i.test(navigator.userAgent || ''); } catch (e) {}
+    if (!isApp) return;              // 浏览器里 —— emoji 保持原样
+
+    // 代理对（U+1F000 以上）+ BMP 符号区 + 变体选择符 + 零宽连接符，连同后面的空格一起剥掉
+    var LEAD = /^(?:[\u2190-\u21FF\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]|[\uD83C-\uDBFF][\uDC00-\uDFFF])+\s*/;
+
+    function strip() {
+        try {
+            var as = document.querySelectorAll('.nav-more-panel a, .drawer a');
+            // ⚠️ 桌面下拉(.nav-more-panel)在手机上被 CSS 藏了，手机走的是
+            //    汉堡抽屉(.drawer)。两个都要处理，否则 APP 里会漏。
+            for (var i = 0; i < as.length; i++) {
+                var t = as[i].textContent || '';
+                var n = t.replace(LEAD, '');
+                if (n !== t) as[i].textContent = n;
+            }
+        } catch (e) {}
+    }
+    strip();
+    setTimeout(strip, 400);    // 导航若是后渲染的，补两次
+    setTimeout(strip, 1500);
+})();
+
+// ===== 导航「更多功能」下拉 =====
+(function () {
+    var box = document.querySelector('.nav-more');
+    if (!box) return;
+    var btn = box.querySelector('.nav-more-btn');
+    btn.addEventListener('click', function (e) { e.stopPropagation(); box.classList.toggle('open'); });
+    document.addEventListener('click', function () { box.classList.remove('open'); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') box.classList.remove('open'); });
+    var here = (location.pathname.split('/').pop() || '').toLowerCase();
+    if (here && box.querySelector('.nav-more-panel a[href="' + here + '"]')) btn.classList.add('active');
+})();
+</script>
+
+<!-- Hero -->
+<header class="vhero">
+    <div class="vhero-inner">
+        <div class="hero-copy">
+            <span class="hero-eyebrow">COMMUNITY · WHERE THE COMPANY MEETS</span>
+            <h1>评论<span class="light">区</span></h1>
+            <p class="vhero-sub">虚拟公司的"股东大会"——友善发言、认真讨论,支持图片、视频、@提及与称号展示</p>
+            <div class="vhero-actions">
+                <a class="hero-link" href="#comments">参与讨论 ↓</a>
+                <a class="hero-link" href="index-Beta.html">返回首页 ↗</a>
+            </div>
+        </div>
+        <div class="pd-stats">
+            <div class="pd-row"><span class="k">登录</span><b>全站统一账号</b></div>
+            <div class="pd-row"><span class="k">支持</span><b>图片 · 视频 · @提及</b></div>
+            <div class="pd-row"><span class="k">展示</span><b>称号 · 公司 · 徽章</b></div>
+            <div class="pd-row"><span class="k">规则</span><b>友善交流 · 违规举报</b></div>
+        </div>
+    </div>
+    <div class="vhero-fade"></div>
+</header>
+
+
+<div class="comment-section" id="comments">
+        <!-- 公告栏（内容在 Supabase admin_config 表，key=announcement） -->
+        <div id="announcementBar" class="announcement-bar" style="display:none;">
+                <div class="ab-head">
+                    <span class="ab-title">📢 <strong>公告</strong></span>
+                    <button type="button" class="ab-toggle" id="announceToggle" aria-expanded="true" aria-controls="announceBody">收起 ▾</button>
+                </div>
+                <div class="ab-body" id="announceBody"></div>
+            </div>
+
+        <div class="auth-bar">
+            <span id="user-status">未登录</span>
+        </div>
+
+        <div id="new-comment-area" class="new-comment-area" style="display: none;">
+            <textarea id="comment-text" rows="3" placeholder="写下你的评论... (最多200字，图片约占41字)" maxlength="200"></textarea>
+            <div class="md-tip">支持格式:<code>**粗体**</code> <code>*斜体*</code> <code>`代码`</code> <code>[文字](链接)</code> · 也可直接粘贴网址</div>
+            <div class="char-counter"><span id="char-count">0</span>/200</div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+                <button type="button" id="btn-comment-image" title="发图片（相册/拍照）" style="background:none; border:1px solid var(--card-border); border-radius:8px; padding:6px 12px; cursor:pointer; font-size:0.95rem;">📷 图片</button>
+                <button id="submit-comment" style="margin-left:auto;">发布评论</button>
+            </div>
+            <input type="file" id="comment-image-input" accept="image/*" style="display:none;">
+            <input type="file" id="comment-cam-input" accept="image/*" capture="environment" style="display:none;">
+        </div>
+
+        <!-- 排序工具栏 -->
+        <div class="comment-toolbar">
+            <span class="toolbar-label">排序：</span>
+            <button id="sortLatestBtn" class="sort-btn active">🕐 最新</button>
+            <button id="sortHotBtn" class="sort-btn">🔥 最热</button>
+            <a class="sort-btn" href="ban-Beta.html" title="违规账号公示" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px;">🚫 小黑屋</a>
+            <span class="toolbar-total" id="toolbarTotal"></span>
+        </div>
+
+        <div id="comment-list"></div>
+    </div>
+
+<!-- 弹窗 -->
+<!-- 图片来源菜单（body 级，避免容器 backdrop-filter 破坏 fixed 定位） -->
+<div class="ctx-menu" id="commentImgSrcMenu" style="position:fixed; z-index:30000; min-width:170px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,0.3); padding:6px; display:none;">
+    <div class="ctx-item" data-src="album" style="padding:9px 14px; border-radius:8px; cursor:pointer; font-size:0.88rem; color:var(--text-color); white-space:nowrap;">🖼️ 从相册选择</div>
+    <div class="ctx-item" data-src="camera" style="padding:9px 14px; border-radius:8px; cursor:pointer; font-size:0.88rem; color:var(--text-color); white-space:nowrap;">📷 拍照</div>
+    <div class="ctx-item" data-src="video" style="padding:9px 14px; border-radius:8px; cursor:pointer; font-size:0.88rem; color:var(--text-color); white-space:nowrap;">🎥 拍视频</div>
+</div>
+<!-- 拍照弹窗（body 级） -->
+<div class="cam-modal" id="commentCamModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:20000; justify-content:center; align-items:center;">
+    <div class="cam-box" style="background:var(--card-bg); border-radius:20px; padding:20px; width:min(420px,92vw); text-align:center;">
+        <h3 style="margin:0 0 12px; color:var(--text-color);">📷 拍照</h3>
+        <video id="commentCamVideo" autoplay playsinline muted style="width:100%; max-height:52vh; border-radius:12px; background:#000; object-fit:contain; transform:scaleX(-1);"></video>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:12px;">
+            <button id="commentCamShoot" style="border:none; border-radius:30px; padding:10px 26px; cursor:pointer; font-size:0.95rem; background:var(--nav-btn-hover-bg); color:#fff;">📸 拍照</button>
+            <button id="commentCamClose" class="gray" style="border:none; border-radius:30px; padding:10px 26px; cursor:pointer; font-size:0.95rem; background:var(--nav-btn-bg); color:var(--nav-btn-text);">取消</button>
+        </div>
+    </div>
+</div>
+<!-- 录制视频弹窗（body 级） -->
+<div class="cam-modal" id="commentRecModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:20000; justify-content:center; align-items:center;">
+    <div class="cam-box" style="background:var(--card-bg); border-radius:20px; padding:20px; width:min(420px,92vw); text-align:center;">
+        <h3 style="margin:0 0 12px; color:var(--text-color);">🎥 录视频</h3>
+        <video id="commentRecVideo" autoplay playsinline muted style="width:100%; max-height:52vh; border-radius:12px; background:#000; object-fit:contain;"></video>
+        <div style="font-size:1rem; font-weight:700; color:#e74c3c; margin-top:10px; font-variant-numeric:tabular-nums;" id="commentRecTimer">00:00</div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:12px;">
+            <button id="commentRecStart" style="border:none; border-radius:30px; padding:10px 26px; cursor:pointer; font-size:0.95rem; background:#e74c3c; color:#fff;">● 开始录制</button>
+            <button id="commentRecSend" style="display:none; border:none; border-radius:30px; padding:10px 26px; cursor:pointer; font-size:0.95rem; background:#4caf50; color:#fff;">📤 发送</button>
+            <button id="commentRecCancel" style="border:none; border-radius:30px; padding:10px 26px; cursor:pointer; font-size:0.95rem; background:var(--nav-btn-bg); color:var(--nav-btn-text);">取消</button>
+        </div>
+    </div>
+</div>
+<input type="file" id="comment-video-input" accept="video/*" style="display:none;">
+<div id="login-modal" class="modal">
+    <div class="modal-content">
+        <h3>登录 / 注册</h3>
+        <p style="font-size:.88rem; line-height:1.85; color:var(--count-text); margin:8px 0 18px;">
+            为保证账号安全,登录与注册统一使用<b>邮箱验证码</b>验证,请前往登录页完成。
+        </p>
+        <button id="do-login">前往登录 / 注册</button>
+        <button id="close-login">取消</button>
+    </div>
+</div>
+
+<div id="register-modal" class="modal">
+    <div class="modal-content">
+        <h3>注册</h3>
+        <input type="text" id="reg-username" placeholder="用户名（1-20字）" maxlength="20">
+        <input type="password" id="reg-password" placeholder="密码">
+        <input type="password" id="reg-password2" placeholder="确认密码">
+        <div id="register-error" class="error"></div>
+        <button id="do-register">注册</button>
+        <button id="close-register">取消</button>
+    </div>
+</div>
+
+<div id="message-modal" class="modal message-modal">
+    <div class="modal-content">        <h3 id="message-title">提示</h3>
+        <p id="message-text"></p>
+        <button id="message-close">确定</button>
+    </div>
+</div>
+
+<div id="confirm-modal" class="modal confirm-modal">
+    <div class="modal-content">
+        <h3 id="confirm-title">确认</h3>
+        <p id="confirm-text"></p>
+        <button id="confirm-ok">确定</button>
+        <button id="confirm-cancel">取消</button>
+    </div>
+</div>
+
+<!-- 新增举报模态框 -->
+<div id="report-modal" class="modal report-modal">
+    <div class="modal-content">
+        <h3>举报评论</h3>
+        <textarea id="report-reason" rows="3" placeholder="请填写举报原因（例如：辱骂、广告、冒充等）" maxlength="100"></textarea>
+        <div class="char-counter"><span id="report-char-count">0</span>/100</div>
+        <label class="report-block-opt">
+            <input type="checkbox" id="report-also-block">
+            <span>同时屏蔽该作者(不再显示 TA 的评论)</span>
+        </label>
+        <button id="submit-report">提交举报</button>
+        <button id="close-report">取消</button>
+    </div>
+</div>
+
+<div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
+    © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
+    如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a><br>
+    制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
+    托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a> <br>     资源致谢：<a href="https://www.jsdelivr.com/" target="_blank" rel="noopener noreferrer">jsDelivr</a> · <a href="https://supabase.com/" target="_blank" rel="noopener noreferrer">Supabase</a> · <a href="https://www.flaticon.com/" target="_blank" rel="noopener noreferrer">Flaticon</a> · <a href="https://www.ax1x.com/" target="_blank" rel="noopener noreferrer">聚合图床</a> · <a href="https://www.ipify.org/" target="_blank" rel="noopener noreferrer">ipify</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    // ==================== Supabase 配置 ====================
+    const SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 图片上传（PythonAnywhere 后端）+ 公开桶 URL
+    const API_BASE = 'https://nbchannel.pythonanywhere.com';
+    const IMG_BASE = SUPABASE_URL + '/storage/v1/object/public/images/';
+
+
+    let currentUser = null;
+    const pagePath = 'nb_comments';
+    const COMMENTS_PER_PAGE = 15;  // 每页显示15条主评论
+    let currentPage = 1;           // 当前页码
+    let totalComments = 0;         // 主评论数(分页用)
+    let totalAllComments = 0;      // 全部评论数含回复(显示用)         // 评论总数
+    let allMainComments = [];      // 所有主评论（不含回复）
+    let allRepliesMap = new Map(); // 所有回复，按 parent_id 分组
+    let verifiedUsernames = [];
+    let pendingReportCommentId = null;
+    var blockedUserIds = {};      // 我屏蔽的用户(评论区不再显示他们的评论)
+    async function loadBlockedUsers() {
+        if (!currentUser) return;
+        try {
+            var r = await supabaseClient.rpc('get_blocked_users', {
+                p_user_id: currentUser.id,
+                p_session: localStorage.getItem('nb_session')
+            });
+            var arr = (r && r.data) || [];
+            if (!Array.isArray(arr)) arr = arr.users || arr.blocked || [];
+            blockedUserIds = {};
+            arr.forEach(function (x) {
+                var id = (typeof x === 'string') ? x : (x.blocked_id || x.user_id || x.id);
+                if (id) blockedUserIds[id] = true;
+            });
+        } catch (e) { /* 失败就不过滤 */ }
+    }
+    let highlightApplied = false;
+    let pendingHighlightId = null;
+    let commentSort = 'latest';    // 排序方式：latest=最新 hot=最热
+    let reactionAgg = {};          // comment_id -> {likes, dislikes}
+    let myReactions = {};          // comment_id -> 1|-1（当前用户的选择）
+    let shopFxMap = {};            // user_id -> {comment_color, nickname_color}（商店道具效果）
+    let commentsCache = null;      // 评论数据缓存（翻页/切排序不重复拉取，写操作后失效）
+
+    // DOM 元素
+    const userStatusSpan = document.getElementById('user-status');
+    const commentListDiv = document.getElementById('comment-list');
+    const newCommentArea = document.getElementById('new-comment-area');
+    const commentText = document.getElementById('comment-text');
+    const submitCommentBtn = document.getElementById('submit-comment');
+    const charCountSpan = document.getElementById('char-count');
+
+    // 举报模态框元素
+    const reportModal = document.getElementById('report-modal');
+    const reportReason = document.getElementById('report-reason');
+    const reportCharCountSpan = document.getElementById('report-char-count');
+    const submitReportBtn = document.getElementById('submit-report');
+    const closeReportBtn = document.getElementById('close-report');
+
+    if (commentText) {
+        commentText.addEventListener('input', () => {
+            charCountSpan.innerText = commentText.value.length;
+            const lines = commentText.value.split(/\r\n|\r|\n/).length;
+            if (lines > 10) {
+                const truncated = commentText.value.split(/\r\n|\r|\n/).slice(0, 10).join('\n');
+                commentText.value = truncated;
+                charCountSpan.innerText = commentText.value.length;
+                showMessage('提示', '评论最多只能有10行');
+            }
+        });
+
+        commentText.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const currentLines = commentText.value.split(/\r\n|\r|\n/).length;
+                if (currentLines >= 10) {
+                    e.preventDefault();
+                    showMessage('提示', '评论最多只能有10行，不能再添加新行');
+                }
+            }
+        });
+    }
+    // 发图片：相册/拍照 → 上传到 images 公开桶，在光标处插入 [img]key[/img] 标记
+    const commentImageBtn = document.getElementById('btn-comment-image');
+    const commentImageInput = document.getElementById('comment-image-input');
+    const commentCamInput = document.getElementById('comment-cam-input');
+    const commentImgSrcMenu = document.getElementById('commentImgSrcMenu');
+    if (commentImageBtn && commentImageInput) {
+        const uploadCommentImage = async (file) => {
+            if (!file) return;
+            if (!currentUser) { showMessage('提示', '请先登录'); return; }
+            if (file.size > 5 * 1024 * 1024) { showMessage('提示', '图片不能超过 5MB'); return; }
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const resp = await fetch(API_BASE + '/upload-image', {
+                    method: 'POST',
+                    headers: { 'X-User-Id': currentUser.id , 'X-Session': localStorage.getItem('nb_session') || ''},
+                    body: fd
+                });
+                const result = await resp.json();
+                if (!result.success) { showMessage('提示', result.message || '图片上传失败'); return; }
+                // 在光标处插入标记
+                const marker = `[img]${result.key}[/img]`;
+                const start = commentText.selectionStart != null ? commentText.selectionStart : commentText.value.length;
+                const end = commentText.selectionEnd != null ? commentText.selectionEnd : start;
+                commentText.value = commentText.value.slice(0, start) + marker + commentText.value.slice(end);
+                commentText.dispatchEvent(new Event('input'));
+                commentText.focus();
+            } catch (e) {
+                showMessage('提示', '图片上传失败：' + e.message + '\n（请确认 PythonAnywhere 后端已 Reload）');
+            }
+        };
+
+        // 来源菜单
+        commentImageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            commentImgSrcMenu.style.display = 'block';
+            commentImgSrcMenu.style.left = Math.min(rect.left, window.innerWidth - 190) + 'px';
+            commentImgSrcMenu.style.top = (rect.bottom + 6) + 'px';
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#commentImgSrcMenu') && !e.target.closest('#btn-comment-image')) {
+                commentImgSrcMenu.style.display = 'none';
+            }
+        });
+        commentImgSrcMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('.ctx-item');
+            if (!item) return;
+            e.stopPropagation();
+            // 先触发（保持用户手势激活），再隐藏菜单
+            const menu = commentImgSrcMenu;
+            if (item.dataset.src === 'album') {
+                commentImageInput.click();
+                menu.style.display = 'none';
+            } else if (item.dataset.src === 'camera') {
+                // 同步判断是否支持 getUserMedia：不支持就直接调原生相机 input（同步手势内）
+                const canCam = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+                if (!canCam) {
+                    if (commentCamInput) commentCamInput.click();
+                    menu.style.display = 'none';
+                } else {
+                    menu.style.display = 'none';
+                    openCommentCamera(uploadCommentImage);
+                }
+            } else if (item.dataset.src === 'video') {
+                // 录视频：不支持 getUserMedia 时 fallback 到视频文件选择
+                const canCam = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+                if (!canCam) {
+                    const vInput = document.getElementById('comment-video-input');
+                    if (vInput) vInput.click();
+                    menu.style.display = 'none';
+                } else {
+                    menu.style.display = 'none';
+                    openCommentVideoRecorder(uploadCommentVideo);
+                }
+            }
+        });
+
+        commentImageInput.addEventListener('change', async () => {
+            const file = commentImageInput.files[0];
+            commentImageInput.value = '';
+            await uploadCommentImage(file);
+        });
+        // 原生相机 fallback
+        if (commentCamInput) {
+            commentCamInput.addEventListener('change', async () => {
+                const file = commentCamInput.files[0];
+                commentCamInput.value = '';
+                await uploadCommentImage(file);
+            });
+        }
+    }
+
+    // ========== 评论区摄像头拍照（电脑/手机都支持） ==========
+    async function openCommentCamera(onDone) {
+        const modal = document.getElementById('commentCamModal');
+        const video = document.getElementById('commentCamVideo');
+        const shootBtn = document.getElementById('commentCamShoot');
+        const closeBtn = document.getElementById('commentCamClose');
+        let stream = null;
+
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('unsupported');
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        } catch (err) {
+            // getUserMedia 失败（权限拒绝/无摄像头/非HTTPS）：提示后 fallback 原生相机。
+            const useNative = confirm('无法调用摄像头（可能未授权或设备不可用）。\n是否改用系统相机/文件选择器？');
+            if (useNative && commentCamInput) commentCamInput.click();
+            return;
+        }
+
+        modal.style.display = 'flex';
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+
+        const cleanup = () => {
+            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            video.srcObject = null;
+            modal.style.display = 'none';
+            shootBtn.onclick = null;
+            closeBtn.onclick = null;
+        };
+
+        shootBtn.onclick = () => {
+            // canvas 截帧 → jpeg blob → File（与预览一致：左右镜像）
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+                cleanup();
+                if (!blob) { showMessage('提示', '拍照失败，请重试'); return; }
+                const file = new File([blob], 'camera_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                onDone(file);
+            }, 'image/jpeg', 0.88);
+        };
+        closeBtn.onclick = cleanup;
+    }
+
+    // ========== 评论区录制视频（MediaRecorder，带声音） ==========
+    async function openCommentVideoRecorder(onDone) {
+        const modal = document.getElementById('commentRecModal');
+        const video = document.getElementById('commentRecVideo');
+        const startBtn = document.getElementById('commentRecStart');
+        const sendBtn = document.getElementById('commentRecSend');
+        const cancelBtn = document.getElementById('commentRecCancel');
+        const timerEl = document.getElementById('commentRecTimer');
+        let stream = null;
+        let recorder = null;
+        let chunks = [];
+        let timerId = null;
+        let seconds = 0;
+        let recordedBlob = null;
+
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('unsupported');
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
+        } catch (err) {
+            const useNative = confirm('无法调用摄像头/麦克风（可能未授权或设备不可用）。\n是否改用系统相机/文件选择器？');
+            if (useNative) {
+                const vInput = document.getElementById('comment-video-input');
+                if (vInput) vInput.click();
+            }
+            return;
+        }
+
+        modal.style.display = 'flex';
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+
+        const cleanup = () => {
+            if (timerId) { clearInterval(timerId); timerId = null; }
+            if (recorder && recorder.state !== 'inactive') { try { recorder.stop(); } catch (e) {} }
+            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            video.srcObject = null;
+            modal.style.display = 'none';
+            startBtn.style.display = '';
+            sendBtn.style.display = 'none';
+            startBtn.innerText = '● 开始录制';
+            timerEl.innerText = '00:00';
+            startBtn.onclick = null;
+            sendBtn.onclick = null;
+            cancelBtn.onclick = null;
+            recorder = null;
+        };
+
+        const pickMime = () => {
+            const candidates = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+            for (const m of candidates) {
+                if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+            }
+            return '';
+        };
+
+        startBtn.onclick = () => {
+            if (!recorder || recorder.state === 'inactive') {
+                chunks = [];
+                seconds = 0;
+                timerEl.innerText = '00:00';
+                const mime = pickMime();
+                try {
+                    recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+                } catch (e) {
+                    recorder = new MediaRecorder(stream);
+                }
+                recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+                recorder.onstop = () => {
+                    const type = (recorder && recorder.mimeType) || 'video/webm';
+                    recordedBlob = new Blob(chunks, { type: type });
+                    startBtn.innerText = '🔁 重新录制';
+                    sendBtn.style.display = '';
+                };
+                recorder.start();
+                startBtn.innerText = '⏹ 停止录制';
+                timerId = setInterval(() => {
+                    seconds++;
+                    const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+                    const ss = String(seconds % 60).padStart(2, '0');
+                    timerEl.innerText = `${mm}:${ss}`;
+                    if (seconds >= 60 && recorder && recorder.state === 'recording') {
+                        recorder.stop();
+                        clearInterval(timerId);
+                        timerId = null;
+                    }
+                }, 1000);
+            } else {
+                recorder.stop();
+                clearInterval(timerId);
+                timerId = null;
+            }
+        };
+
+        sendBtn.onclick = () => {
+            if (!recordedBlob) return;
+            if (recordedBlob.size > 50 * 1024 * 1024) { showMessage('提示', '视频不能超过 50MB'); return; }
+            const ext = (recordedBlob.type || '').includes('mp4') ? 'mp4' : 'webm';
+            const file = new File([recordedBlob], 'video_' + Date.now() + '.' + ext, { type: recordedBlob.type });
+            cleanup();
+            onDone(file);
+        };
+        cancelBtn.onclick = cleanup;
+    }
+
+    // 评论区视频上传 → 光标处插入 [video]key[/video]
+    async function uploadCommentVideo(file) {
+        if (!file) return;
+        if (!currentUser) { showMessage('提示', '请先登录'); return; }
+        if (file.size > 50 * 1024 * 1024) { showMessage('提示', '视频不能超过 50MB'); return; }
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+            const resp = await fetch(API_BASE + '/upload-video', {
+                method: 'POST',
+                headers: { 'X-User-Id': currentUser.id , 'X-Session': localStorage.getItem('nb_session') || ''},
+                body: fd
+            });
+            const result = await resp.json();
+            if (!result.success) { showMessage('提示', result.message || '视频上传失败'); return; }
+            const marker = `[video]${result.key}[/video]`;
+            const start = commentText.selectionStart != null ? commentText.selectionStart : commentText.value.length;
+            const end = commentText.selectionEnd != null ? commentText.selectionEnd : start;
+            commentText.value = commentText.value.slice(0, start) + marker + commentText.value.slice(end);
+            commentText.dispatchEvent(new Event('input'));
+            commentText.focus();
+        } catch (e) {
+            showMessage('提示', '视频上传失败：' + e.message + '\n（请确认 PythonAnywhere 后端已 Reload）');
+        }
+    }
+
+    // 视频文件选择 fallback
+    const commentVideoInput = document.getElementById('comment-video-input');
+    if (commentVideoInput) {
+        commentVideoInput.addEventListener('change', async () => {
+            const file = commentVideoInput.files[0];
+            commentVideoInput.value = '';
+            await uploadCommentVideo(file);
+        });
+    }
+
+    if (reportReason) {
+        reportReason.addEventListener('input', () => {
+            reportCharCountSpan.innerText = reportReason.value.length;
+        });
+    }
+
+    // 弹窗函数
+    const messageModal = document.getElementById('message-modal');
+    const messageTitle = document.getElementById('message-title');
+    const messageText = document.getElementById('message-text');
+    const messageClose = document.getElementById('message-close');
+    function showMessage(title, msg, callback) {
+        messageTitle.innerText = title;
+        messageText.innerText = msg;
+        messageModal.style.display = 'flex';
+        const closeHandler = () => {
+            messageModal.style.display = 'none';
+            messageClose.removeEventListener('click', closeHandler);
+            if (callback) callback();
+        };
+        messageClose.addEventListener('click', closeHandler);
+    }
+
+    const confirmModal = document.getElementById('confirm-modal');
+    const confirmTitle = document.getElementById('confirm-title');
+    const confirmText = document.getElementById('confirm-text');
+    const confirmOk = document.getElementById('confirm-ok');
+    const confirmCancel = document.getElementById('confirm-cancel');
+    function showConfirm(title, msg, onConfirm, onCancel) {
+        confirmTitle.innerText = title;
+        confirmText.innerText = msg;
+        confirmModal.style.display = 'flex';
+        const okHandler = () => {
+            confirmModal.style.display = 'none';
+            confirmOk.removeEventListener('click', okHandler);
+            confirmCancel.removeEventListener('click', cancelHandler);
+            if (onConfirm) onConfirm();
+        };
+        const cancelHandler = () => {
+            confirmModal.style.display = 'none';
+            confirmOk.removeEventListener('click', okHandler);
+            confirmCancel.removeEventListener('click', cancelHandler);
+            if (onCancel) onCancel();
+        };
+        confirmOk.addEventListener('click', okHandler);
+        confirmCancel.addEventListener('click', cancelHandler);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        // 注意：必须同时转义双引号/单引号，否则含引号的评论会截断 data-full 等属性
+        return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    // 转义后把 http(s) 链接变成可点击的超链接
+    function linkify(str) {
+        if (!str) return '';
+        return str.replace(/(https?:\/\/[^\s<>"']+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#00a1d6; text-decoration:underline;">$1</a>');
+    }
+
+    function renderContentWithMentions(text) {
+        if (!text) return '';
+        let escaped = escapeHtml(text);
+        // 用户可能直接粘贴控制字符,先剥掉,避免伪造占位符
+        escaped = escaped.replace(/[\u0000\u0001]/g, '');
+
+        // 所有会生成 HTML 的替换都先存成占位符,最后统一还原。
+        // 必须这样做:@提及高亮是纯文本替换,如果直接跑在已生成的 HTML 上,
+        // 会把 <a href="https://mj.mj@a"> 属性里的 @a 也换成 <span>,撑坏标签导致整块渲染崩掉。
+        const stash = [];
+        const hold = (html) => '\u0000' + (stash.push(html) - 1) + '\u0001';
+
+        // ===== 精简 Markdown:粗体 / 斜体 / 行内代码 / 文字链接 =====
+        // 注意:必须先 escapeHtml 再解析,避免 XSS
+        escaped = escaped.replace(/\[([^\]\n]{1,40})\]\((https?:\/\/[^\s)]{1,300})\)/g,
+            (m, label, url) => hold('<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'));
+        escaped = escaped.replace(/\*\*([^*\n]{1,120})\*\*/g, '<b>$1</b>');
+        escaped = escaped.replace(/(^|[^*])\*([^*\n]{1,120})\*(?!\*)/g, '$1<i>$2</i>');
+        escaped = escaped.replace(/`([^`\n]{1,120})`/g, '<code>$1</code>');
+
+        // ===== 裸链接 → 蓝色可点击(走占位符,避免被 @提及规则误伤) =====
+        escaped = escaped.replace(/(https?:\/\/[^\s<>"']+)/g, (url) =>
+            hold('<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:#00a1d6; text-decoration:underline;">' + url + '</a>'));
+
+        // ===== [img]key[/img] / [video]key[/video] =====
+        escaped = escaped.replace(/\[img\]([a-zA-Z0-9_.\-]+)\[\/img\]/g, (m, key) =>
+            hold(`<img src="${IMG_BASE}${key}" alt="图片" onclick="window.open('${IMG_BASE}${key}','_blank')" style="max-width:260px; max-height:260px; border-radius:10px; margin:6px 0; display:block; cursor:zoom-in;">`));
+        escaped = escaped.replace(/\[video\]([a-zA-Z0-9_.\-]+)\[\/video\]/g, (m, key) =>
+            hold(`<video src="${IMG_BASE}${key}" controls preload="metadata" style="max-width:260px; max-height:300px; border-radius:10px; margin:6px 0; display:block; background:#000;"></video>`));
+
+        // ===== @提及高亮:此时串里只剩纯文本 + 占位符,不会误伤标签属性 =====
+        // 按真实用户名列表匹配:名字长的优先,避免 @AWM 抢走 @AWM(新号) 的前缀
+        if (cachedUsernames && cachedUsernames.length) {
+            const names = cachedUsernames.slice().sort((a, b) => b.length - a.length);
+            const pattern = names
+                .map(n => '@' + escapeHtml(n).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+                .join('|');
+            if (pattern) {
+                escaped = escaped.replace(new RegExp(pattern, 'g'), m => `<span style="color:#00a1d6; font-weight:500;">${m}</span>`);
+            }
+        }
+
+        // ===== 还原占位符 =====
+        return escaped.replace(/\u0000(\d+)\u0001/g, (m, i) => stash[Number(i)] || '');
+    }
+
+    // 获取认证用户列表
+    async function fetchVerifiedUsers() {
+        const { data, error } = await supabaseClient
+            .from('verified_users')
+            .select('profiles(username)');
+        if (error) {
+            console.error('获取认证用户列表失败', error);
+            return [];
+        }
+        return data.map(item => item.profiles.username);
+    }
+
+    // ==================== @提及自动补全 ====================
+    let cachedUsernames = null;
+    let mentionDropdown = null;
+
+    async function fetchUsernames() {
+        if (cachedUsernames) return cachedUsernames;
+        const { data, error } = await supabaseClient
+            .from('profiles')
+            .select('username')
+            .order('username');
+        if (error) {
+            console.error('获取用户名列表失败', error);
+            return [];
+        }
+        cachedUsernames = data.map(item => item.username);
+        return cachedUsernames;
+    }
+
+    function createDropdown() {
+        if (mentionDropdown) return mentionDropdown;
+        const div = document.createElement('div');
+        div.style.cssText = `
+            position: absolute;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 150px;
+            display: none;
+        `;
+        document.body.appendChild(div);
+        mentionDropdown = div;
+        return div;
+    }
+
+    function showDropdown(textarea, filterText) {
+        const dropdown = createDropdown();
+        dropdown.innerHTML = '';
+        const filtered = cachedUsernames.filter(u => u.toLowerCase().includes(filterText.toLowerCase()));
+        if (filtered.length === 0) {
+            dropdown.style.display = 'none';
+            return;
+        }
+        filtered.forEach(username => {
+            const item = document.createElement('div');
+            item.textContent = username;
+            item.style.cssText = `
+                padding: 6px 12px;
+                cursor: pointer;
+                font-size: 0.9rem;
+                color: var(--text-color);
+            `;
+            item.onmouseover = () => item.style.backgroundColor = 'var(--count-bg)';
+            item.onmouseout = () => item.style.backgroundColor = '';
+            item.onclick = () => {
+                const cursorPos = textarea.selectionStart;
+                const textBefore = textarea.value.substring(0, cursorPos);
+                const lastAtIndex = textBefore.lastIndexOf('@');
+                if (lastAtIndex !== -1) {
+                    const beforeAt = textarea.value.substring(0, lastAtIndex);
+                    const afterCursor = textarea.value.substring(cursorPos);
+                    const newText = beforeAt + '@' + username + ' ' + afterCursor;
+                    textarea.value = newText;
+                    textarea.selectionStart = textarea.selectionEnd = beforeAt.length + username.length + 2;
+                    textarea.focus();
+                    hideDropdown();
+                    textarea.dispatchEvent(new Event('input'));
+                }
+            };
+            dropdown.appendChild(item);
+        });
+        dropdown.style.display = 'block';
+        const rect = textarea.getBoundingClientRect();
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.top = (rect.bottom + 2) + 'px';
+        dropdown.style.width = Math.min(rect.width, 300) + 'px';
+    }
+
+    function hideDropdown() {
+        if (mentionDropdown) {
+            mentionDropdown.style.display = 'none';
+            mentionDropdown.innerHTML = '';
+        }
+    }
+
+    function initMentionAutocomplete(textarea) {
+        if (!textarea) return;
+        textarea.removeEventListener('input', mentionInputHandler);
+        textarea.addEventListener('input', mentionInputHandler);
+        document.addEventListener('click', function(e) {
+            if (mentionDropdown && mentionDropdown.style.display !== 'none' && !mentionDropdown.contains(e.target) && e.target !== textarea) {
+                hideDropdown();
+            }
+        });
+    }
+
+    function mentionInputHandler(e) {
+        const textarea = e.target;
+        const cursorPos = textarea.selectionStart;
+        const text = textarea.value;
+        const before = text.substring(0, cursorPos);
+        const lastAtIndex = before.lastIndexOf('@');
+        if (lastAtIndex !== -1 && (cursorPos === lastAtIndex + 1 || !before.substring(lastAtIndex + 1).includes(' '))) {
+            const keyword = before.substring(lastAtIndex + 1);
+            fetchUsernames().then(() => {
+                showDropdown(textarea, keyword);
+            });
+        } else {
+            hideDropdown();
+        }
+    }
+
+    // ---------- 评论树构建与渲染（两层嵌套）----------
+    function buildCommentTree(comments) {
+        const map = new Map();
+        const roots = [];
+        comments.forEach(c => {
+            map.set(c.id, { ...c, replies: [] });
+        });
+        comments.forEach(c => {
+            const node = map.get(c.id);
+            if (c.parent_id && map.has(c.parent_id)) {
+                map.get(c.parent_id).replies.push(node);
+            } else {
+                roots.push(node);
+            }
+        });
+        roots.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        roots.forEach(node => {
+            node.replies.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        });
+        return roots;
+    }
+
+    function renderCommentNode(node, isReply = false) {
+        const author = node.profiles?.username || '匿名';
+        // 头像：有 avatar_url 用真实头像，否则用内嵌默认头像（灰色人像，无需上传文件）
+        const avatarUrl = node.profiles?.avatar_url || 'data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%2744%27%20height=%2744%27%3E%3Crect%20width=%2744%27%20height=%2744%27%20fill=%27%23b0bec5%27/%3E%3Ccircle%20cx=%2722%27%20cy=%2717%27%20r=%278%27%20fill=%27%23eceff1%27/%3E%3Cpath%20d=%27M8%2040c2-8%208-12%2014-12s12%204%2014%2012z%27%20fill=%27%23eceff1%27/%3E%3C/svg%3E';
+        const avatarHtml = `<img src="${avatarUrl}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;" alt="">`;
+        const fullText = node.content;
+        const isLong = fullText.length > 50;
+        let displayText, toggleButton = '';
+        if (isLong) {
+            const shortText = fullText.substring(0, 50) + '...';
+            displayText = shortText;
+            toggleButton = `<button class="toggle-btn" data-id="${node.id}" data-state="collapsed">展开</button>`;
+        } else {
+            displayText = fullText;
+        }
+
+        const showReplyBtn = !isReply;
+        let repliesHtml = '';
+        let toggleRepliesBtn = '';
+
+        if (!isReply && node.replies.length > 0) {
+            const directRepliesCount = node.replies.length;
+            if (directRepliesCount > 3) {
+                const firstReply = node.replies[0];
+                const restReplies = node.replies.slice(1);
+                const firstReplyHtml = renderCommentNode(firstReply, true);
+                const restHtml = restReplies.map(child => renderCommentNode(child, true)).join('');
+                repliesHtml = firstReplyHtml;
+                repliesHtml += `<div class="hidden-replies" style="display:none;">${restHtml}</div>`;
+                toggleRepliesBtn = `<button class="toggle-replies-btn" data-id="${node.id}" data-state="collapsed">展开所有回复</button>`;
+            } else {
+                repliesHtml = node.replies.map(child => renderCommentNode(child, true)).join('');
+            }
+        }
+
+        let verifiedBadge = '';
+        if (verifiedUsernames.includes(author)) {
+            verifiedBadge = '<img src="https://s41.ax1x.com/2026/04/05/peNSL5t.png" style="width:24px;height:24px; margin-left:6px; margin-top: -3px; vertical-align: middle;">';
+        }
+
+        let companyTag = '';
+        const companyInfo = window.companyMap?.get(node.user_id);
+        if (companyInfo) {
+            const companyName = escapeHtml(companyInfo.company_name);
+            if (companyInfo.verified) {
+                companyTag = `<span style="color:#4caf50; margin-left:8px; font-size:0.8rem;">✅ 已认证虚拟公司：${companyName}</span>`;
+            } else {
+                companyTag = `<span style="color:#f44336; margin-left:8px; font-size:0.8rem;">⚠️ 未认证虚拟公司：${companyName}</span>`;
+            }
+        }
+
+        // 佩戴称号横幅（名字下方：横幅图 + 图下方"称号名 · 星级"）
+        let titleTag = '';
+        const titleInfo = window.titleMap?.get(node.user_id);
+        if (titleInfo && titleInfo._img) {
+            titleTag = `<div class="comment-title"><img src="${titleInfo._img}" alt="${escapeHtml(titleInfo.name)}" title="点击查看称号大全" style="cursor:pointer;" onclick="location.href='titles-Beta.html'" onerror="this.style.display='none'"><span class="comment-title-stars">称号：${escapeHtml(titleInfo.name)} · ${'★'.repeat(Math.min(titleInfo.stars || 1, 5))}</span></div>`;
+        }
+        // 展示位称号（商店道具 title_slot，主页与评论区都展示第二个称号）
+        const fxSlot = (shopFxMap[node.user_id] && shopFxMap[node.user_id].slot_title) || null;
+        if (fxSlot && fxSlot.image_url) {
+            const base = window.location.origin + '/';
+            const sImg = /^https?:/.test(fxSlot.image_url) ? fxSlot.image_url : base + fxSlot.image_url;
+            titleTag += `<div class="comment-title"><img src="${sImg}" alt="" title="展示位称号" style="cursor:pointer;" onclick="location.href='titles-Beta.html'" onerror="this.style.display='none'"><span class="comment-title-stars">展示位：${escapeHtml(fxSlot.name)} · ${'★'.repeat(Math.min(fxSlot.stars || 1, 5))}</span></div>`;
+        }
+
+        let reportButton = '';
+        if (currentUser) {
+            reportButton = `<button class="report-btn" data-id="${node.id}" data-author-id="${node.user_id}">举报</button>`;
+        }
+
+        // 点赞/点踩（楼层与计数）
+        const floorBadge = (!isReply && node.floor) ? `<span class="floor-badge">#${node.floor}</span>` : '';
+        const reacts = reactionAgg[node.id] || { likes: 0, dislikes: 0 };
+        const myReact = currentUser ? (myReactions[node.id] || 0) : 0;
+        const likeClass = myReact === 1 ? 'active-like' : '';
+        const dislikeClass = myReact === -1 ? 'active-dislike' : '';
+        const editButton = (currentUser && currentUser.id === node.user_id)
+            ? `<button class="edit-btn" data-id="${node.id}">编辑</button>` : '';
+
+        // 商店道具：昵称颜色 / 评论颜色
+        const fx = shopFxMap[node.user_id] || {};
+        const nameStyle = fx.nickname_color && fx.nickname_color !== 'rainbow'
+            ? ` style="color:${fx.nickname_color};"` : '';
+        const nameClass = fx.nickname_color === 'rainbow' ? ' class="nb-rainbow"' : '';
+        const contentStyle = fx.comment_color
+            ? ` style="color:${fx.comment_color};"` : '';
+
+        return `
+            <div class="comment" data-id="${node.id}" data-uid="${node.user_id}">
+                <div class="comment-meta">
+                    ${floorBadge}
+                    ${avatarHtml}<a class="comment-author" href="profile-Beta.html?username=${encodeURIComponent(author)}" style="text-decoration:none;${nameStyle}"${nameClass} title="查看主页">${escapeHtml(author)}</a>${verifiedBadge}${companyTag}
+                    <span class="comment-time">${new Date(node.created_at).toLocaleString()}</span>
+                </div>
+                ${titleTag}
+                <div class="comment-content" data-full="${escapeHtml(fullText)}" data-short="${escapeHtml(displayText)}"${contentStyle}>${renderContentWithMentions(displayText)}</div>
+                ${toggleButton ? `<div class="toggle-btn-container">${toggleButton}</div>` : ''}
+                <div class="comment-actions">
+                    ${showReplyBtn ? `<button class="reply-btn" data-id="${node.id}">回复</button>` : ''}
+                    ${editButton}
+                    ${currentUser && currentUser.id === node.user_id ? `<button class="delete-btn" data-id="${node.id}">删除</button>` : ''}
+                    ${reportButton}
+                </div>
+                <div class="comment-reactions">
+                    <button class="react-btn ${likeClass}" data-id="${node.id}" data-reaction="1">👍 <span class="like-count">${reacts.likes}</span></button>
+                    <button class="react-btn ${dislikeClass}" data-id="${node.id}" data-reaction="-1">👎 <span class="dislike-count">${reacts.dislikes}</span></button>
+                </div>
+                <div class="reply-form" id="reply-form-${node.id}" style="display:none;">
+                    <textarea rows="2" placeholder="写下你的回复... (最多200字)" maxlength="200"></textarea>
+                    <div class="char-counter"><span>0</span>/200</div>
+                    <button class="submit-reply" data-id="${node.id}">提交回复</button>
+                    <button class="cancel-reply" data-id="${node.id}">取消</button>
+                </div>
+                <div class="replies" id="replies-${node.id}">
+                    ${repliesHtml}
+                    ${toggleRepliesBtn ? `<div class="toggle-replies-btn-container">${toggleRepliesBtn}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    // 懒加载分页：目标页未加载时先从数据库拉取（单 RPC 只返回一页）
+    async function renderCommentsForPage(page) {
+        if (page !== currentPage) {
+            currentPage = page;
+            commentListDiv.innerHTML = '<p style="text-align:center; color:var(--count-text);">加载中...</p>';
+            await fetchComments(page);
+            return;   // fetchComments 内部会渲染
+        }
+        renderLoadedPage(page);
+    }
+
+    // 渲染已加载的当前页数据（懒加载：allMainComments 只含当前页）
+    function renderLoadedPage(page) {
+        currentPage = page;
+        const pageMainComments = allMainComments;
+        const start = (page - 1) * COMMENTS_PER_PAGE;
+        const tree = pageMainComments.map((main, idx) => {
+            const replies = allRepliesMap.get(main.id) || [];
+            // 楼层号：按排序后的全局位置计算
+            return { ...main, replies: replies, floor: start + idx + 1 };
+        });
+        renderComments(tree);
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const totalPages = Math.max(1, Math.ceil(totalComments / COMMENTS_PER_PAGE));
+        if (totalPages <= 1) {
+            const oldPagination = document.querySelector('.pagination-bar');
+            if (oldPagination) oldPagination.remove();
+            return;
+        }
+
+        const oldPagination = document.querySelector('.pagination-bar');
+        if (oldPagination) oldPagination.remove();
+
+        const paginationDiv = document.createElement('div');
+        paginationDiv.className = 'pagination-bar';
+        paginationDiv.style.cssText = 'display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px; flex-wrap:wrap;';
+
+        if (currentPage > 1) {
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '‹ 上一页';
+            prevBtn.style.cssText = 'background:var(--nav-btn-bg); color:var(--nav-btn-text); border:1px solid var(--card-border); padding:5px 12px; border-radius:6px; cursor:pointer;';
+            prevBtn.onmouseover = () => { prevBtn.style.background = 'var(--nav-btn-hover-bg)'; prevBtn.style.color = 'white'; };
+            prevBtn.onmouseout = () => { prevBtn.style.background = 'var(--nav-btn-bg)'; prevBtn.style.color = 'var(--nav-btn-text)'; };
+            prevBtn.onclick = () => renderCommentsForPage(currentPage - 1);
+            paginationDiv.appendChild(prevBtn);
+        }
+
+        let startPage = Math.max(1, currentPage - 3);
+        let endPage = Math.min(totalPages, currentPage + 3);
+        if (endPage - startPage < 6) {
+            if (startPage === 1) endPage = Math.min(totalPages, 7);
+            else if (endPage === totalPages) startPage = Math.max(1, totalPages - 6);
+        }
+
+        if (startPage > 1) {
+            const firstBtn = document.createElement('button');
+            firstBtn.textContent = '1';
+            firstBtn.style.cssText = 'background:var(--nav-btn-bg); color:var(--nav-btn-text); border:1px solid var(--card-border); padding:5px 12px; border-radius:6px; cursor:pointer;';
+            firstBtn.onmouseover = () => { firstBtn.style.background = 'var(--nav-btn-hover-bg)'; firstBtn.style.color = 'white'; };
+            firstBtn.onmouseout = () => { firstBtn.style.background = 'var(--nav-btn-bg)'; firstBtn.style.color = 'var(--nav-btn-text)'; };
+            firstBtn.onclick = () => renderCommentsForPage(1);
+            paginationDiv.appendChild(firstBtn);
+            if (startPage > 2) {
+                const dot = document.createElement('span');
+                dot.textContent = '…';
+                dot.style.cssText = 'padding:0 4px; color:var(--count-text);';
+                paginationDiv.appendChild(dot);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            if (i === currentPage) {
+                btn.style.cssText = 'background:#00a1d6; color:white; border:1px solid #00a1d6; padding:5px 12px; border-radius:6px; cursor:pointer; font-weight:bold;';
+            } else {
+                btn.style.cssText = 'background:var(--nav-btn-bg); color:var(--nav-btn-text); border:1px solid var(--card-border); padding:5px 12px; border-radius:6px; cursor:pointer;';
+                btn.onmouseover = () => { btn.style.background = 'var(--nav-btn-hover-bg)'; btn.style.color = 'white'; };
+                btn.onmouseout = () => { btn.style.background = 'var(--nav-btn-bg)'; btn.style.color = 'var(--nav-btn-text)'; };
+                btn.onclick = () => renderCommentsForPage(i);
+            }
+            paginationDiv.appendChild(btn);
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const dot = document.createElement('span');
+                dot.textContent = '…';
+                dot.style.cssText = 'padding:0 4px; color:var(--count-text);';
+                paginationDiv.appendChild(dot);
+            }
+            const lastBtn = document.createElement('button');
+            lastBtn.textContent = totalPages;
+            lastBtn.style.cssText = 'background:var(--nav-btn-bg); color:var(--nav-btn-text); border:1px solid var(--card-border); padding:5px 12px; border-radius:6px; cursor:pointer;';
+            lastBtn.onmouseover = () => { lastBtn.style.background = 'var(--nav-btn-hover-bg)'; lastBtn.style.color = 'white'; };
+            lastBtn.onmouseout = () => { lastBtn.style.background = 'var(--nav-btn-bg)'; lastBtn.style.color = 'var(--nav-btn-text)'; };
+            lastBtn.onclick = () => renderCommentsForPage(totalPages);
+            paginationDiv.appendChild(lastBtn);
+        }
+
+        if (currentPage < totalPages) {
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = '下一页 ›';
+            nextBtn.style.cssText = 'background:var(--nav-btn-bg); color:var(--nav-btn-text); border:1px solid var(--card-border); padding:5px 12px; border-radius:6px; cursor:pointer;';
+            nextBtn.onmouseover = () => { nextBtn.style.background = 'var(--nav-btn-hover-bg)'; nextBtn.style.color = 'white'; };
+            nextBtn.onmouseout = () => { nextBtn.style.background = 'var(--nav-btn-bg)'; nextBtn.style.color = 'var(--nav-btn-text)'; };
+            nextBtn.onclick = () => renderCommentsForPage(currentPage + 1);
+            paginationDiv.appendChild(nextBtn);
+        }
+
+        const info = document.createElement('span');
+        info.textContent = `共 ${totalComments} 条评论`;
+        info.style.cssText = 'font-size:0.85rem; color:var(--count-text); margin-left:12px;';
+        paginationDiv.appendChild(info);
+
+        const commentSection = document.querySelector('.comment-section');
+        commentSection.appendChild(paginationDiv);
+    }
+
+    function renderComments(comments) {
+        if (!comments || comments.length === 0) {
+            commentListDiv.innerHTML = '<p>暂无评论，快来抢沙发！</p>';
+            return;
+        }
+
+        let tree;
+        if (comments[0] && comments[0].replies !== undefined) {
+            tree = comments;
+        } else {
+            tree = buildCommentTree(comments);
+        }
+
+        const html = tree.map(node => renderCommentNode(node, false)).join('');
+        commentListDiv.innerHTML = html;
+
+        // ---- 事件绑定 ----
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const commentDiv = btn.closest('.comment');
+                const contentDiv = commentDiv.querySelector('.comment-content');
+                const isCollapsed = btn.dataset.state === 'collapsed';
+                if (isCollapsed) {
+                    contentDiv.innerHTML = renderContentWithMentions(contentDiv.dataset.full);
+                    btn.innerText = '折叠';
+                    btn.dataset.state = 'expanded';
+                } else {
+                    contentDiv.innerHTML = renderContentWithMentions(contentDiv.dataset.short);
+                    btn.innerText = '展开';
+                    btn.dataset.state = 'collapsed';
+                }
+            };
+        });
+
+        document.querySelectorAll('.toggle-replies-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const commentId = btn.dataset.id;
+                const repliesDiv = document.getElementById(`replies-${commentId}`);
+                const hiddenDiv = repliesDiv.querySelector('.hidden-replies');
+                const isCollapsed = btn.dataset.state === 'collapsed';
+                if (isCollapsed) {
+                    if (hiddenDiv) hiddenDiv.style.display = 'block';
+                    btn.innerText = '折叠所有回复';
+                    btn.dataset.state = 'expanded';
+                } else {
+                    if (hiddenDiv) hiddenDiv.style.display = 'none';
+                    btn.innerText = '展开所有回复';
+                    btn.dataset.state = 'collapsed';
+                }
+            };
+        });
+
+        document.querySelectorAll('.reply-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const commentId = btn.dataset.id;
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                if (replyForm) {
+                    replyForm.style.display = replyForm.style.display === 'block' ? 'none' : 'block';
+                    const textarea = replyForm.querySelector('textarea');
+                    if (textarea) {
+                        textarea.value = '';
+                        const counter = replyForm.querySelector('.char-counter span');
+                        if (counter) counter.innerText = '0';
+                        initMentionAutocomplete(textarea);
+                    }
+                }
+            };
+        });
+
+        document.querySelectorAll('.cancel-reply').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const commentId = btn.dataset.id;
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                if (replyForm) replyForm.style.display = 'none';
+            };
+        });
+
+        document.querySelectorAll('.submit-reply').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                if (isPostingReply) return;
+                const parentId = btn.dataset.id;
+                const parentDiv = document.querySelector(`.comment[data-id="${parentId}"]`);
+                if (!parentDiv) return;
+                const replyForm = document.getElementById(`reply-form-${parentId}`);
+                const textarea = replyForm.querySelector('textarea');
+                let content = textarea.value.trim();
+                if (!content) { showMessage('提示', '回复内容不能为空'); return; }
+                if (content.length > 200) { showMessage('提示', '回复内容不能超过200字'); return; }
+                if (!currentUser) { showMessage('提示', '请先登录'); return; }
+
+                const BAD_WORDS = ["操你妈", "傻逼", "垃圾", "废物", "脑残", "智障", "滚", "去死", "sb", "nmsl", "炸服务器",
+                    "他妈", "特么", "尼玛", "妈逼", "操蛋", "王八蛋", "混蛋", "杂种", "狗日的", "法克", "fuck", "shit", "bitch",
+                    "黑鬼", "白皮猪", "支那", "台巴子", "回子", "圣母婊", "娘炮", "人妖",
+                    "五毛", "美分", "带节奏", "洗地", "脑残粉", "水军", "喷子", "网暴",
+                    "卖淫", "嫖娼", "约炮", "裸聊", "毒品", "海洛因", "办证", "加微信", "兼职刷单", "返利",
+                    "垃圾频道", "SB频道", "脑残UP" ,"gay" ,"Gay" ,"GAY"];
+                let containsBadWord = false;
+                for (const word of BAD_WORDS) {
+                    if (content.includes(word)) {
+                        containsBadWord = true;
+                        break;
+                    }
+                }
+                if (containsBadWord) {
+                    showMessage('提示', '您的回复包含违禁词，禁止发布');
+                    return;
+                }
+
+                isPostingReply = true;
+                try {
+                    const { data, error } = await supabaseClient.rpc('insert_comment', {
+                        p_page_path: pagePath,
+                        p_user_id: currentUser.id,
+                        p_content: content,
+                        p_parent_id: parseInt(parentId)
+                    ,
+                p_session: localStorage.getItem('nb_session')});
+                    if (error) {
+                        showMessage('错误', '回复失败: ' + error.message);
+                    } else if (!data.success) {
+                        showMessage('错误', data.message);
+                    } else {
+                        replyForm.style.display = 'none';
+                        const savedPage = currentPage;
+                        // 先重新加载数据，然后强制跳转到保存的页码
+                        commentsCache = null;   // 有新回复，缓存失效
+                        await fetchComments();
+                        renderCommentsForPage(savedPage);
+                    }
+                } finally {
+                    isPostingReply = false;
+                }
+            };
+        });
+
+        // 举报按钮
+        document.querySelectorAll('.report-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const commentId = btn.dataset.id;
+                pendingReportCommentId = parseInt(commentId);
+                // 记下被举报评论的作者,供"同时屏蔽该作者"用
+                (function () {
+                    var _el = document.querySelector('.comment[data-id="' + commentId + '"]');
+                    var _uid = _el ? _el.dataset.uid : null;
+                    var _a = _el ? _el.querySelector('.comment-author') : null;
+                    window.__nbReportTarget = _uid ? { id: _uid, name: _a ? _a.textContent.trim() : '' } : null;
+                })();
+                reportReason.value = '';
+                reportCharCountSpan.innerText = '0';
+                reportModal.style.display = 'flex';
+            };
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.onclick = () => {
+                const commentId = btn.dataset.id;
+                showConfirm('确认删除', '确定要删除这条评论吗？（其下的所有回复将一并删除）', async () => {
+                    await deleteComment(commentId);
+                });
+            };
+        });
+
+        // 点赞/点踩
+        document.querySelectorAll('.react-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                if (!currentUser) { showMessage('提示', '请先登录'); return; }
+                const commentId = parseInt(btn.dataset.id);
+                const reaction = parseInt(btn.dataset.reaction);
+                btn.disabled = true;
+                const { data, error } = await supabaseClient.rpc('toggle_comment_reaction', {
+                    p_user_id: currentUser.id,
+                    p_comment_id: commentId,
+                    p_reaction: reaction
+                ,
+                p_session: localStorage.getItem('nb_session')});
+                btn.disabled = false;
+                if (error) { showMessage('错误', error.message); return; }
+                if (!data.success) { showMessage('提示', data.message); return; }
+
+                // 更新本地状态：再点相同按钮=取消，否则切换
+                if (myReactions[commentId] === reaction) myReactions[commentId] = 0;
+                else myReactions[commentId] = reaction;
+                reactionAgg[commentId] = { likes: data.likes, dislikes: data.dislikes };
+
+                // 局部刷新该评论的点赞按钮 UI（无需重新渲染整页）
+                const commentDiv = document.querySelector(`.comment[data-id="${commentId}"]`);
+                if (commentDiv) {
+                    const likeBtn = commentDiv.querySelector('.react-btn[data-reaction="1"]');
+                    const dislikeBtn = commentDiv.querySelector('.react-btn[data-reaction="-1"]');
+                    if (likeBtn) {
+                        likeBtn.querySelector('.like-count').innerText = data.likes;
+                        likeBtn.classList.toggle('active-like', myReactions[commentId] === 1);
+                    }
+                    if (dislikeBtn) {
+                        dislikeBtn.querySelector('.dislike-count').innerText = data.dislikes;
+                        dislikeBtn.classList.toggle('active-dislike', myReactions[commentId] === -1);
+                    }
+                }
+            };
+        });
+
+        // 编辑自己的评论
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const commentId = btn.dataset.id;
+                const commentDiv = document.querySelector(`.comment[data-id="${commentId}"]`);
+                if (!commentDiv) return;
+                const contentDiv = commentDiv.querySelector('.comment-content');
+                if (!contentDiv) return;
+                const fullText = contentDiv.dataset.full || '';
+
+                const editForm = document.createElement('div');
+                editForm.className = 'edit-form';
+                const textarea = document.createElement('textarea');
+                textarea.rows = 2;
+                textarea.maxLength = 200;
+                textarea.value = fullText;
+                const counter = document.createElement('div');
+                counter.className = 'char-counter';
+                counter.innerHTML = '<span>' + fullText.length + '</span>/200';
+                const saveBtn = document.createElement('button');
+                saveBtn.textContent = '保存';
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = '取消';
+                editForm.appendChild(textarea);
+                editForm.appendChild(counter);
+                editForm.appendChild(saveBtn);
+                editForm.appendChild(cancelBtn);
+
+                // 行数上限：超过 10 行就截断（服务端也有一道，这里是当场提示）
+                textarea.addEventListener('input', () => {
+                    const lines = textarea.value.split(/\r\n|\r|\n/);
+                    if (lines.length > 10) {
+                        textarea.value = lines.slice(0, 10).join('\n');
+                        showMessage('提示', '评论最多只能有10行');
+                    }
+                    counter.querySelector('span').innerText = textarea.value.length;
+                });
+                textarea.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && textarea.value.split(/\r\n|\r|\n/).length >= 10) {
+                        e.preventDefault();
+                        showMessage('提示', '评论最多只能有10行，不能再添加新行');
+                    }
+                });
+
+                saveBtn.onclick = async () => {
+                    const newContent = textarea.value.trim();
+                    if (!newContent) { showMessage('提示', '内容不能为空'); return; }
+                    if (newContent.length > 200) { showMessage('提示', '内容不能超过200字'); return; }
+                    // 修改也要查行数 —— 以前只有发表框查，改成 100 行都能存进去
+                    if (newContent.split(/\r\n|\r|\n/).length > 10) {
+                        showMessage('提示', '评论最多只能有10行');
+                        return;
+                    }
+                    const { data, error } = await supabaseClient.rpc('update_comment', {
+                        p_user_id: currentUser.id,
+                        p_comment_id: parseInt(commentId),
+                        p_content: newContent
+                    ,
+                p_session: localStorage.getItem('nb_session')});
+                    if (error) { showMessage('错误', error.message); return; }
+                    if (!data.success) { showMessage('提示', data.message); return; }
+                    const savedPage = currentPage;
+                    commentsCache = null;   // 评论已编辑，缓存失效
+                    await fetchComments();
+                    renderCommentsForPage(savedPage);
+                };
+                cancelBtn.onclick = () => {
+                    const savedPage = currentPage;
+                    fetchComments().then(() => renderCommentsForPage(savedPage));
+                };
+
+                contentDiv.replaceWith(editForm);
+            };
+        });
+
+        document.querySelectorAll('.reply-form textarea').forEach(textarea => {
+            const counterSpan = textarea.closest('.reply-form').querySelector('.char-counter span');
+            textarea.addEventListener('input', () => {
+                const lines = textarea.value.split(/\r\n|\r|\n/);
+                if (lines.length > 10) {
+                    textarea.value = lines.slice(0, 10).join('\n');
+                    showMessage('提示', '评论最多只能有10行');
+                }
+                counterSpan.innerText = textarea.value.length;
+            });
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && textarea.value.split(/\r\n|\r|\n/).length >= 10) {
+                    e.preventDefault();
+                    showMessage('提示', '评论最多只能有10行，不能再添加新行');
+                }
+            });
+            initMentionAutocomplete(textarea);
+        });
+
+        if (pendingHighlightId) {
+            const highlightId = pendingHighlightId;
+            pendingHighlightId = null;
+            setTimeout(() => {
+                const target = document.querySelector(`.comment[data-id="${highlightId}"]`);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.style.backgroundColor = 'var(--status-bg)';
+                    target.style.transition = 'background 0.3s ease';
+                    target.style.borderRadius = '8px';
+                    setTimeout(() => {
+                        target.style.backgroundColor = '';
+                        target.style.borderRadius = '';
+                    }, 3000);
+                }
+            }, 500);
+        }
+    }
+
+    // 提交举报（模态框确认）
+    async function submitReport() {
+        if (!pendingReportCommentId) return;
+        const reason = reportReason.value.trim();
+        if (!reason) {
+            showMessage('提示', '请填写举报原因');
+            return;
+        }
+        if (reason.length > 100) {
+            showMessage('提示', '举报原因不能超过100字');
+            return;
+        }
+        if (!currentUser) {
+            showMessage('提示', '请先登录再举报');
+            reportModal.style.display = 'none';
+            return;
+        }
+
+        // ⚠️ 整条链路收进一个 RPC：登录校验 + 限频 + 查重 + 写入，原子完成。
+        //    以前是前端自己拼好几步，其中限频依赖的 report_attempts 表
+        //    压根不存在 —— 查询报错被 catch 吞掉，所以限频从来没生效过；
+        //    而且它数的是前端传上去的 IP，伪造一下就能绕过。
+        //    现在 IP 由服务端从请求头自己读，前端伪造不了。
+        const { data: _rep, error: reportError } = await supabaseClient.rpc('submit_comment_report', {
+            p_user_id: currentUser.id,
+            p_comment_id: pendingReportCommentId,
+            p_reason: reason,
+            p_session: localStorage.getItem('nb_session')
+        });
+        if (reportError) {
+            console.error('举报失败', reportError);
+            showMessage('错误', '举报失败，请稍后重试');
+            reportModal.style.display = 'none';
+            return;
+        }
+        if (!_rep || !_rep.ok) {
+            showMessage('提示', (_rep && _rep.reason) || '举报失败，请稍后重试');
+            reportModal.style.display = 'none';
+            return;
+        }
+
+        showMessage('提示', '举报已提交，我们会尽快处理');
+        reportModal.style.display = 'none';
+        pendingReportCommentId = null;
+    }
+
+    async function deleteComment(commentId) {
+        if (!currentUser) return;
+        const { data, error } = await supabaseClient.rpc('delete_comment_cascade', {
+            p_user_id: currentUser.id,
+            p_comment_id: commentId
+        ,
+                p_session: localStorage.getItem('nb_session')});
+        if (error) {
+            showMessage('错误', '删除失败: ' + error.message);
+        } else if (!data.success) {
+            showMessage('提示', data.message);
+        } else {
+            const savedPage = currentPage;
+            commentsCache = null;   // 评论已删除，缓存失效
+            await fetchComments();
+            renderCommentsForPage(savedPage);
+        }
+    }
+
+    async function fetchComments(page) {
+        if (currentUser && !Object.keys(blockedUserIds).length) await loadBlockedUsers();
+        let targetPage = page !== undefined ? page : currentPage;
+
+        // ===== highlight 跳转：先定位目标评论所在页码，再拉该页数据 =====
+        // （懒加载下数据只含当前页，必须先用 RPC 算出页码）
+        // 注意：不立即删除 URL 里的 highlight 参数！common.js 可能还在异步
+        // 重定向（旧版→-new），提前 replaceState 会丢参数导致 -new 页面无法
+        // 跳转。URL 清理延迟到滚动完成后（见 renderComments 末尾）。
+        const urlHighlight = new URLSearchParams(window.location.search).get('highlight');
+        if (urlHighlight) {
+            const targetId = parseInt(urlHighlight);
+            if (targetId) {
+                const { data: locData, error: locErr } = await supabaseClient
+                    .rpc('get_comment_page_number', {
+                        p_page_path: pagePath,
+                        p_comment_id: targetId,
+                        p_page_size: COMMENTS_PER_PAGE
+                    });
+                if (!locErr && locData && locData.success) {
+                    targetPage = locData.page;
+                }
+                pendingHighlightId = targetId;
+            } else {
+                pendingHighlightId = null;
+            }
+        } else {
+            pendingHighlightId = null;
+        }
+
+        // 用户名列表（@提及用）与评论数据并行拉取（互不依赖）
+        const user = (function () { try { return JSON.parse(localStorage.getItem('nb_user')); } catch (e) { return null; } })();
+        const [uv] = await Promise.all([
+            fetchVerifiedUsers().then(u => u).catch(() => []),
+            fetchUsernames().catch(() => null)
+        ]);
+        verifiedUsernames = uv || verifiedUsernames || [];
+
+        // ===== 终极优化：单个 RPC 返回整页数据（主评论+回复+点赞+公司+称号） =====
+        const { data: rpcData, error: rpcErr } = await supabaseClient
+            .rpc('get_comment_page', {
+                p_page_path: pagePath,
+                p_page: targetPage,
+                p_page_size: COMMENTS_PER_PAGE,
+                p_viewer_id: user ? user.id : null
+            });
+        if (rpcErr || !rpcData || !rpcData.success) {
+            console.error('get_comment_page 失败:', rpcErr);
+            return;
+        }
+
+        let rows = rpcData.comments || [];
+        // 过滤掉被我屏蔽的用户的评论
+        if (Object.keys(blockedUserIds).length) {
+            rows = rows.filter(function (r) { return !blockedUserIds[r.user_id]; });
+        }
+
+        totalComments = rpcData.total || 0;
+        totalAllComments = rpcData.total_all || rpcData.total || 0;
+
+        // RPC 返回扁平字段：映射为渲染器需要的 profiles 结构
+        for (const r of rows) {
+            r.profiles = { username: r.author_name, avatar_url: r.author_avatar };
+        }
+
+        // 拆分主评论与回复
+        const mainComments = rows.filter(r => !r.parent_id);
+        const replies = rows.filter(r => r.parent_id);
+
+        // ===== RPC 已返回全部数据：直接填充渲染所需结构 =====
+        window.companyMap = new Map();
+        window.titleMap = new Map();
+        reactionAgg = {};
+        myReactions = {};
+        const TITLE_BASE = window.location.origin + '/';
+        for (const r of rows) {
+            // 点赞
+            reactionAgg[r.id] = { likes: r.likes || 0, dislikes: r.dislikes || 0 };
+            if (currentUser) {
+                if (r.my_like) myReactions[r.id] = 1;
+                else if (r.my_dislike) myReactions[r.id] = -1;
+            }
+            // 公司徽章
+            if (r.company_name) {
+                window.companyMap.set(r.user_id, { company_name: r.company_name, verified: r.company_verified });
+            }
+            // 称号
+            if (r.title_name) {
+                window.titleMap.set(r.user_id, {
+                    title_key: r.title_key,
+                    name: r.title_name,
+                    image_url: r.title_image,
+                    icon: r.title_icon,
+                    stars: r.title_stars,
+                    _img: /^https?:/.test(r.title_image || '') ? r.title_image : TITLE_BASE + r.title_image
+                });
+            }
+        }
+
+        // ===== 商店道具效果：批量拉取本页作者（评论色/昵称色/展示位称号） =====
+        shopFxMap = {};
+        const fxUserIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))];
+        if (fxUserIds.length > 0) {
+            await Promise.all(fxUserIds.map(async (uid) => {
+                try {
+                    const { data: fx } = await supabaseClient.rpc('get_public_shop_effects', { p_user_id: uid });
+                    if (fx && fx.success) {
+                        shopFxMap[uid] = {
+                            comment_color: fx.comment_color || null,
+                            nickname_color: fx.nickname_color || null,
+                            slot_title: (fx.title_slot && fx.title_slot.slot_title) || null
+                        };
+                    }
+                } catch (e) { /* 忽略单个失败 */ }
+            }));
+        }
+
+        // 排序：最新（默认）或最热（点赞数-点踩数，RPC 已返回当前页点赞数据）
+        if (commentSort === 'hot') {
+            mainComments.sort((a, b) => {
+                const hotA = (reactionAgg[a.id]?.likes || 0) - (reactionAgg[a.id]?.dislikes || 0);
+                const hotB = (reactionAgg[b.id]?.likes || 0) - (reactionAgg[b.id]?.dislikes || 0);
+                if (hotB !== hotA) return hotB - hotA;
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+        } else {
+            mainComments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        const repliesMap = new Map();
+        replies.forEach(reply => {
+            if (!repliesMap.has(reply.parent_id)) {
+                repliesMap.set(reply.parent_id, []);
+            }
+            repliesMap.get(reply.parent_id).push(reply);
+        });
+        for (const [parentId, replyList] of repliesMap) {
+            replyList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        // 懒加载：allMainComments 只存当前已加载的这一页
+        allMainComments = mainComments;
+        allRepliesMap = repliesMap;
+
+        const toolbarTotal = document.getElementById('toolbarTotal');
+        if (toolbarTotal) toolbarTotal.innerText = `共 ${totalAllComments} 条评论`;
+
+        // 数据已加载完成：直接渲染当前页
+        renderLoadedPage(targetPage);
+    }
+
+    let isPostingComment = false;   // 防连点：发布评论中锁定，避免手滑重复发布
+    let isPostingReply = false;     // 防连点：回复提交中锁定
+    async function postComment() {
+        if (isPostingComment) return;
+        if (!currentUser) { showMessage('提示', '请先登录'); return; }
+        let content = commentText.value.trim();
+        if (!content) { showMessage('提示', '评论内容不能为空'); return; }
+        if (content.length > 200) { showMessage('提示', '评论内容不能超过200字'); return; }
+
+        const BAD_WORDS = ["操你妈", "傻逼", "垃圾", "废物", "脑残", "智障", "滚", "去死", "sb", "nmsl", "炸服务器",
+                "他妈", "特么", "尼玛", "妈逼", "操蛋", "王八蛋", "混蛋", "杂种", "狗日的", "法克", "fuck", "shit", "bitch",
+                "黑鬼", "白皮猪", "支那", "台巴子", "回子", "圣母婊", "娘炮", "人妖",
+                "五毛", "美分", "带节奏", "洗地", "脑残粉", "水军", "喷子", "网暴",
+                "卖淫", "嫖娼", "约炮", "裸聊", "毒品", "海洛因", "办证", "加微信", "兼职刷单", "返利",
+                "垃圾频道", "SB频道", "脑残UP" ,"gay" ,"Gay" ,"GAY"];
+        let containsBadWord = false;
+        for (const word of BAD_WORDS) {
+            if (content.includes(word)) {
+                containsBadWord = true;
+                break;
+            }
+        }
+        if (containsBadWord) {
+            showMessage('提示', '您的评论包含违禁词，禁止发布');
+            return;
+        }
+
+        isPostingComment = true;
+        try {
+            const { data, error } = await supabaseClient.rpc('insert_comment', {
+                p_page_path: pagePath,
+                p_user_id: currentUser.id,
+                p_content: content,
+                p_parent_id: null
+            ,
+                p_session: localStorage.getItem('nb_session')});
+
+            if (error) {
+                showMessage('错误', '发表失败: ' + error.message);
+                return;
+            }
+            if (!data.success) {
+                showMessage('错误', data.message);
+                return;
+            }
+
+            commentText.value = '';
+            charCountSpan.innerText = '0';
+            const savedPage = currentPage;
+            commentsCache = null;   // 有新评论，缓存失效
+            await fetchComments();
+            renderCommentsForPage(savedPage);
+        } finally {
+            isPostingComment = false;
+        }
+    }
+
+    async function getClientIP() {
+        const services = [
+            'https://icanhazip.com',
+            'https://api.ipify.org?format=text'
+        ];
+        for (const url of services) {
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    const ip = await response.text();
+                    return ip.trim();
+                }
+            } catch (e) {
+                console.warn(`IP service ${url} failed:`, e);
+            }
+        }
+        throw new Error('无法获取IP地址');
+    }
+
+    async function register(username, password, password2) {
+        if (password !== password2) throw new Error('两次输入的密码不一致');
+        if (password.length < 4) throw new Error('密码长度至少4位');
+
+        let ip = null;
+        try {
+            ip = await getClientIP();
+            if (!ip) throw new Error('无法获取IP');
+        } catch (err) {
+            console.error('获取IP失败，拒绝注册', err);
+            throw new Error('无法验证注册限制，请稍后重试或联系管理员');
+        }
+
+        const { data: canReg, error: checkError } = await supabaseClient.rpc('can_register', { ip });
+        if (checkError) {
+            console.error('检查注册限制失败', checkError);
+            throw new Error('无法验证注册限制，请稍后重试');
+        }
+        if (!canReg) throw new Error('您的IP今日注册次数已达上限（3次），请明天再试');
+
+        const { data: userId, error: regError } = await supabaseClient.rpc('register_user', {
+            input_username: username,
+            input_password: password
+        });
+        if (regError) throw new Error(regError.message);
+        if (!userId) throw new Error('用户名已存在');
+
+        const { error: recordError } = await supabaseClient.rpc('record_registration', { ip });
+        if (recordError) {
+            console.error('记录注册失败', recordError);
+        }
+        return userId;
+    }
+
+    // ⚠️ 已废弃:原来这里直接调 login_user2(只要用户名+密码就签发登录令牌),
+    // 等于绕过邮箱验证码,与主登录页的安全级别不一致,已停用。
+    // 现在登录统一跳转 login-Beta.html 走邮箱验证码流程。保留同名函数只为兜底提示,
+    // 避免别处误调用时又绕回旧路径。
+    async function login() {
+        throw new Error('请点击「前往登录 / 注册」,通过邮箱验证码登录');
+    }
+
+    async function updateUsername(newUsername, oldPassword) {
+        const { data: userId, error: loginError } = await supabaseClient.rpc('login_user', {
+            input_username: currentUser.username,
+            input_password: oldPassword
+        });
+        if (loginError || !userId) throw new Error('密码错误');
+        const { data: existing } = await supabaseClient
+            .from('profiles')
+            .select('id')
+            .eq('username', newUsername)
+            .neq('id', currentUser.id)
+            .maybeSingle();
+        if (existing) throw new Error('用户名已被占用');
+        const { error: updateError } = await supabaseClient
+            .from('profiles')
+            .update({ username: newUsername })
+            .eq('id', currentUser.id);
+        if (updateError) throw updateError;
+        return { success: true };
+    }
+
+    async function updatePassword(oldPassword, newPassword, newPassword2) {
+        if (newPassword !== newPassword2) throw new Error('新密码两次输入不一致');
+        if (newPassword.length < 4) throw new Error('新密码长度至少4位');
+        const { data: userId, error: loginError } = await supabaseClient.rpc('login_user', {
+            input_username: currentUser.username,
+            input_password: oldPassword
+        });
+        if (loginError || !userId) throw new Error('旧密码错误');
+        const { data, error } = await supabaseClient.rpc('update_password', {
+            user_id: currentUser.id,
+            old_password: oldPassword,
+            new_password: newPassword
+        , p_session: localStorage.getItem('nb_session')});
+        if (error) throw error;
+        if (!data.success) throw new Error(data.message);
+        return data;
+    }
+
+    async function loadUser() {
+        const stored = localStorage.getItem('nb_user');
+        if (stored) {
+            try {
+                const user = JSON.parse(stored);
+                const { data: profile, error } = await supabaseClient
+                    .from('profiles')
+                    .select('id, username, is_banned, banned_reason')
+                    .eq('id', user.id)
+                    .maybeSingle();
+                if (error) throw error;
+                if (!profile) {
+                    localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session');
+                    showMessage('提示', '登录信息已失效，请重新登录');
+                    currentUser = null;
+                    userStatusSpan.innerHTML = `<a href="login-Beta.html?redirect=${encodeURIComponent(window.location.href)}" style="background:none; border:none; color:var(--status-border); cursor:pointer;">登录</a> / <a href="login-Beta.html?register=1&redirect=${encodeURIComponent(window.location.href)}" style="background:none; border:none; color:var(--status-border); cursor:pointer;">注册</a>`;
+                    newCommentArea.style.display = 'none';
+                    fetchComments();
+                    return;
+                }
+                if (profile.is_banned) {
+                    userStatusSpan.innerHTML = `您的账号已被封禁，原因：${profile.banned_reason || '多次违规'} <button class="apology-btn" id="apologyBtn">找我解封</button>`;
+                    document.getElementById('apologyBtn').onclick = () => {
+                        window.location.href = 'https://message.bilibili.com/?spm_id_from=333.1387.0.0#/whisper/mid3493259582114264';
+                    };
+                    newCommentArea.style.display = 'none';
+                    fetchComments();
+                    return;
+                }
+                currentUser = { id: profile.id, username: profile.username };
+                userStatusSpan.innerHTML = `欢迎，${escapeHtml(currentUser.username)} <button id="logout-btn">退出</button>`;
+                document.getElementById('logout-btn').onclick = () => {
+                    localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session');
+                    location.reload();
+                };
+                newCommentArea.style.display = 'block';
+                fetchComments();
+
+                const mainTextarea = document.getElementById('comment-text');
+                if (mainTextarea) {
+                    setTimeout(() => {
+                        initMentionAutocomplete(mainTextarea);
+                    }, 100);
+                }
+                return;
+            } catch(e) {
+                console.error(e);
+            }
+        }
+        currentUser = null;
+        userStatusSpan.innerHTML = `<a href="login-Beta.html?redirect=${encodeURIComponent(window.location.href)}" style="background:none; border:none; color:var(--status-border); cursor:pointer;">登录</a> / <a href="login-Beta.html?register=1&redirect=${encodeURIComponent(window.location.href)}" style="background:none; border:none; color:var(--status-border); cursor:pointer;">注册</a>`;
+        newCommentArea.style.display = 'none';
+        fetchComments();
+    }
+
+    // 模态框事件绑定
+    closeReportBtn.onclick = () => {
+        reportModal.style.display = 'none';
+        pendingReportCommentId = null;
+    };
+    submitReportBtn.onclick = submitReport;
+    // ===== 举报成功后:若勾选了"同时屏蔽该作者",写入屏蔽列表并移除其评论 =====
+    window.__nbBlockAfterReport = async function () {
+        var box = document.getElementById('report-also-block');
+        var tgt = window.__nbReportTarget;
+        if (box) { var checked = box.checked; box.checked = false; }
+        if (!checked || !currentUser || !tgt || !tgt.id || tgt.id === currentUser.id) return;
+        try {
+            await supabaseClient.rpc('block_user', {
+                p_user_id: currentUser.id,
+                p_target: tgt.id,
+                p_session: localStorage.getItem('nb_session')
+            });
+            blockedUserIds[tgt.id] = true;
+            document.querySelectorAll('.comment').forEach(function (el) {
+                if (el.dataset.uid === tgt.id) el.remove();
+            });
+            showMessage('已屏蔽', '已同时屏蔽 ' + (tgt.name || '该作者') + ',不再显示 TA 的评论');
+        } catch (e) { /* 屏蔽失败不影响举报 */ }
+    };
+    // 举报提交是异步的,错开一点再执行屏蔽(且只在真的提交成功时才提示)
+    submitReportBtn.addEventListener('click', function () {
+        setTimeout(function () { window.__nbBlockAfterReport(); }, 900);
+    });
+
+    // 弹窗绑定
+    const loginModal = document.getElementById('login-modal');
+    const registerModal = document.getElementById('register-modal');
+
+    // 登录/注册弹窗的"取消"按钮关闭弹窗
+    document.getElementById('close-login').onclick = () => { loginModal.style.display = 'none'; };
+    document.getElementById('close-register').onclick = () => { registerModal.style.display = 'none'; };
+
+    // 登录统一走登录页(必须邮箱验证码),这里不再做就地密码登录:
+    // 之前这里直接调 login_user2 只需用户名+密码就签发登录令牌,等于绕过了邮箱验证码,
+    // 和主登录页的安全级别不一致,已改成跳转统一入口。
+    document.getElementById('do-login').onclick = () => {
+        location.href = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
+    };
+
+    document.getElementById('do-register').onclick = async () => {
+        // 注册统一走新版流程(必须邮箱验证码),直接跳转登录页的注册入口
+        location.href = 'login-Beta.html?register=1&redirect=' + encodeURIComponent(location.href);
+        return;
+        // 清洗零宽字符（防伪装同名）
+        const username = document.getElementById('reg-username').value.trim().replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '').trim();
+        // 用户名只能包含中文、字母、数字和常用符号
+        if (!/^[\u4e00-\u9fa5a-zA-Z0-9_.+~!?,:;#%^*()\[\]=★☆♪♫♥❤✿❀※·×÷±≈≠≤≥∞°←→↑↓▲△▼▽●○◆◇■□-]+$/.test(username)) {
+            document.getElementById('register-error').innerText = '用户名只能包含中文、字母、数字和常用符号';
+            return;
+        }
+        const password = document.getElementById('reg-password').value;
+        const password2 = document.getElementById('reg-password2').value;
+        const errorDiv = document.getElementById('register-error');
+        if (!username || !password) {
+            errorDiv.innerText = '请填写完整信息';
+            return;
+        }
+        try {
+            await register(username, password, password2);
+            registerModal.style.display = 'none';
+            showMessage('提示', '注册成功！请登录');
+        } catch (err) {
+            errorDiv.innerText = err.message;
+        }
+    };
+
+    // ========== 公告栏（内容在 admin_config 表，key=announcement） ==========
+    async function fetchAnnouncement() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('admin_config')
+                .select('value')
+                .eq('key', 'announcement')
+                .maybeSingle();
+            const bar = document.getElementById('announcementBar');
+            if (!bar) return;
+            if (error || !data || !data.value || !data.value.trim()) {
+                bar.style.display = 'none';
+                return;
+            }
+            var body = document.getElementById('announceBody');
+                if (body) body.innerHTML = linkify(escapeHtml(data.value));
+                applyAnnounceCollapsed();
+            bar.style.display = 'block';
+        } catch (e) {
+            console.warn('公告加载失败', e);
+        }
+
+
+        // ===== 公告栏可折叠 =====
+        var ANNOUNCE_KEY = 'nb_announce_collapsed';
+        function applyAnnounceCollapsed() {
+            var bar = document.getElementById('announcementBar');
+            var btn = document.getElementById('announceToggle');
+            if (!bar || !btn) return;
+            var off = false;
+            try { off = localStorage.getItem(ANNOUNCE_KEY) === '1'; } catch (e) {}
+            bar.classList.toggle('collapsed', off);
+            btn.setAttribute('aria-expanded', off ? 'false' : 'true');
+            btn.textContent = off ? '展开 ▸' : '收起 ▾';
+        }
+        (function () {
+            var btn = document.getElementById('announceToggle');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                var bar = document.getElementById('announcementBar');
+                var off = !bar.classList.contains('collapsed');
+                try { localStorage.setItem(ANNOUNCE_KEY, off ? '1' : '0'); } catch (e) {}
+                applyAnnounceCollapsed();
+            });
+        })();
+    }
+
+    submitCommentBtn.onclick = postComment;
+    fetchAnnouncement();
+
+    // 排序切换
+    function switchSort(mode) {
+        if (commentSort === mode) return;
+        commentSort = mode;
+        document.getElementById('sortLatestBtn').classList.toggle('active', mode === 'latest');
+        document.getElementById('sortHotBtn').classList.toggle('active', mode === 'hot');
+        fetchComments();
+    }
+    document.getElementById('sortLatestBtn').onclick = () => switchSort('latest');
+    document.getElementById('sortHotBtn').onclick = () => switchSort('hot');
+
+    loadUser();
+
+</script>
+<footer class="footer">
+    <div class="footer-grid">
+        <div>
+            <div class="brand"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span class="logo-text">NB频道</span></div>
+            <p class="desc">NB频道（NoBook频道）——热爱理科（和作死）的 UP主建立的虚拟公司。化学物理实验、日常作死、虚拟经济，一个有趣的数字世界</p>
+        </div>
+        <div>
+            <h5>功能</h5>
+            <a href="stock-Beta.html">虚拟股票</a><a href="bank-Beta.html">NB银行</a><a href="/comments-beta.html">评论区</a><a href="shop-Beta.html">NB商店</a><a href="tools-Beta.html">工具</a><a href="titles-Beta.html">称号系统</a>
+        </div>
+        <div>
+            <h5>友商</h5>
+            <a href="https://orgent.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">Orgent（已注销）</a>
+            <a href="https://45d.cn/AWM/" target="_blank" rel="noopener noreferrer">AWM</a>
+            <a href="https://fafat.uuk.pp.ua/" target="_blank" rel="noopener noreferrer">Fafat</a>
+            <a href="https://nb-qx.top/" target="_blank" rel="noopener noreferrer">Lemon（齐喜）</a>
+            <a href="https://gaohantu.cn/" target="_blank" rel="noopener noreferrer">GaoHanTu</a>
+            <a href="https://utw.pages.dev" target="_blank" rel="noopener noreferrer">Utw</a>
+            <a href="https://pipetrainingcamp.github.io/" target="_blank" rel="noopener noreferrer">PTC（GoodPTC）</a>
+            <a href="https://yoyo-user-awa.github.io/UVS/" target="_blank" rel="noopener noreferrer">UVS</a>
+            <a href="https://3f7ceb4e.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">UwLS</a>
+            <a href="https://45d.cn/nb-og.top/" target="_blank" rel="noopener noreferrer">Oganesson</a>
+            <a href="https://78439049.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">SOT</a>
+        </div>
+        <div>
+            <h5>联系</h5>
+            <a href="mailto:nbchannel@163.com">nbchannel@163.com</a><a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">B站：NB搞事局</a><a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top</a>
+        </div>
+    </div>
+    <div class="footer-bottom">© 2026 NB频道 · 虚拟公司 · 制作：NB搞事局 · 由 GitHub Pages / Cloudflare / PythonAnywhere 提供支持</div><div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div>
+</footer><div class="drawer-mask" id="drawerMask"></div>
+<aside class="drawer" id="drawer">
+    <div class="d-head">
+        <span class="d-brand"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span class="logo-text">NB频道</span></span>
+        <button class="d-close" id="drawerClose" aria-label="关闭菜单">✕</button>
+    </div>
+        <a class="d-item" href="vote-Beta.html">投票中心</a>
+        <a class="d-item" href="stock-Beta.html">虚拟股票</a>
+        <a class="d-item" href="messages-Beta.html">消息中心</a>
+        <a class="d-item" href="chat-Beta.html">好友 / 私信</a>
+        <a class="d-item" href="bank-Beta.html">NB银行</a>
+        <a class="d-item" href="shop-Beta.html">NB商店</a>
+        <a class="d-item" href="backpack-Beta.html">我的背包</a>
+        <a class="d-item" href="titles-Beta.html">称号大全</a>
+        <a class="d-item" href="achievements-Beta.html">成就墙</a>
+        <a class="d-item" href="lottery-Beta.html">签到 · 转盘</a>
+        <a class="d-item" href="lottery_records-Beta.html">抽奖记录</a>
+        <a class="d-item" href="weather-Beta.html">天气瞎报</a>
+        <a class="d-item" href="newspaper-Beta.html">NB报刊社</a>
+        <a class="d-item" href="tools-Beta.html">工具</a>
+        <a class="d-item" href="product_share-Beta.html">作品分享</a>
+        <a class="d-item" href="comments-Beta.html">评论区</a>
+        <a class="d-item" href="ban-Beta.html">小黑屋</a>
+        <a class="d-item" href="pricing-Beta.html">💰 模型 &amp; 价格</a>
+    <div class="d-auth">
+        <a class="ga" id="dProfileBtn" href="#">个人中心</a>
+        <a class="gab" id="dAuthBtn" href="#">登录 / 注册</a>
+    </div>
+</aside><button class="backtop" id="backTop" aria-label="回到顶部">↑</button>
+<script>
+    function bindAuthPair(pbEl, abEl) {
+        if (!pbEl && !abEl) return;
+        var storedU = null;
+        try { storedU = JSON.parse(localStorage.getItem('nb_user')); } catch (e) {}
+        if (storedU && storedU.id) {
+            if (abEl) {
+                abEl.textContent = '登出账号';
+                abEl.onclick = function () { localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session'); location.reload(); };
+            }
+            if (pbEl) {
+                pbEl.textContent = '👤 ' + (storedU.username || storedU.name || '个人中心');
+                pbEl.href = 'profile-Beta.html';
+            }
+        } else {
+            var loginHref = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
+            if (abEl) { abEl.href = loginHref; abEl.textContent = '登录 / 注册'; }
+            if (pbEl) { pbEl.href = loginHref; pbEl.textContent = '👤 个人中心'; }
+        }
+    }
+    bindAuthPair(document.getElementById('betaProfileBtn'), document.getElementById('betaAuthBtn'));
+    bindAuthPair(document.getElementById('dProfileBtn'), document.getElementById('dAuthBtn'));
+
+    // ===== 导航栏北京时间(与全站一致) =====
+    (function () {
+        var tEl = document.getElementById('bjTime');
+        var dEl = document.getElementById('bjDate');
+        if (!tEl) return;
+        var fmtT = new Intl.DateTimeFormat('zh-CN', {
+            timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit',
+            second: '2-digit', hour12: false, hourCycle: 'h23'
+        });
+        var fmtD = new Intl.DateTimeFormat('zh-CN', {
+            timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit',
+            day: '2-digit', weekday: 'short'
+        });
+        function tick() {
+            var now = new Date();
+            tEl.textContent = fmtT.format(now);
+            if (dEl) dEl.textContent = fmtD.format(now).replace(/\//g, '.');
+        }
+        tick();
+        setInterval(tick, 1000);
+    })();
+
+    // ===== 导航滚动态 + 回到顶部 =====
+    (function () {
+        var nav = document.querySelector('.nav');
+        var backTop = document.getElementById('backTop');
+        function onScroll() {
+            var y = window.scrollY || document.documentElement.scrollTop;
+            if (nav) nav.classList.toggle('scrolled', y > 10);
+            if (backTop) backTop.classList.toggle('show', y > 700);
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+        if (backTop) backTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    })();
+
+    // ===== 夜间模式切换 =====
+    (function () {
+        var btn = document.getElementById('themeBtn');
+        var root = document.documentElement;
+        function isDark() { return root.classList.contains('dark'); }
+        function render() {
+            if (btn) { btn.textContent = isDark() ? '☀️' : '🌙'; btn.title = isDark() ? '切换到日间模式' : '切换到夜间模式'; }
+        }
+        function apply(dark) {
+            root.classList.toggle('dark', dark);
+            try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+            render();
+        }
+        if (btn) btn.addEventListener('click', function () {
+            var dark = !isDark();
+            if (document.startViewTransition) {
+                try { document.startViewTransition(function () { apply(dark); }); } catch (e) { apply(dark); }
+            } else apply(dark);
+        });
+        render();
+    })();
+
+    // ===== 移动端抽屉 =====
+    (function () {
+        var burger = document.getElementById('navBurger');
+        var drawer = document.getElementById('drawer');
+        var mask = document.getElementById('drawerMask');
+        var closeBtn = document.getElementById('drawerClose');
+        if (!burger || !drawer || !mask) return;
+        function open() { drawer.classList.add('open'); mask.style.display = 'block'; document.body.classList.add('locked'); }
+        function close() { drawer.classList.remove('open'); mask.style.display = 'none'; document.body.classList.remove('locked'); }
+        burger.addEventListener('click', open);
+        closeBtn.addEventListener('click', close);
+        mask.addEventListener('click', close);
+        drawer.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', close); });
+    })();
+
+    // ===== 防查看代码(反调试,静默无提示) =====
+    (function () {
+        var DEV = window.__allowDevTools ||
+                  /(?:^|[?&#])dev=1(?=&|#|$)/.test(location.href) ||
+                  /#dev\b/.test(location.hash);
+        if (DEV) return;
+        document.addEventListener('keydown', function (e) {
+            var k = e.keyCode || e.which;
+            var ctrl = e.ctrlKey || e.metaKey;
+            if (k === 123 || e.key === 'F12' ||
+                (ctrl && e.shiftKey && (k === 73 || k === 74 || k === 67)) ||
+                (ctrl && k === 85)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+        document.addEventListener('contextmenu', function (e) { e.preventDefault(); return false; });
+        setInterval(function () { debugger; }, 600);
+    })();
+</script>
+<script>
+    // ===== 鼠标/触摸特效:跟随光晕 + 点击波纹与彩色粒子(鼠标 + 触屏都启用) =====
+    (function () {
+        var mqFine = window.matchMedia ? window.matchMedia('(pointer: fine)') : null;
+        var isFine = !!(mqFine && mqFine.matches);
+        var canTouch = ('ontouchstart' in window) ||
+            !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+        var glow = document.createElement('div');
+        glow.className = 'ui-fx-glow';
+        document.body.appendChild(glow);
+        var gx = -999, gy = -999, tx = -999, ty = -999;
+        var colors = ['#3b82f6', '#8b5cf6', '#6366f1', '#06b6d4', '#f59e0b'];
+        var lastTouch = 0, glowTimer = null;
+
+        // 光晕跟手:有精确指针(鼠标)就跟鼠标,否则跟手指
+        if (isFine) {
+            document.addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; });
+            document.addEventListener('mouseenter', function () { glow.style.opacity = '1'; });
+            document.addEventListener('mouseleave', function () { glow.style.opacity = '0'; });
+        }
+        if (canTouch) {
+            document.addEventListener('touchstart', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                if (gx < -100) { gx = tx; gy = ty; }   // 首次别从屏幕角落滑过来
+                glow.style.opacity = '1';
+                if (glowTimer) { clearTimeout(glowTimer); glowTimer = null; }
+                lastTouch = Date.now();
+                burst(t.clientX, t.clientY, 6, 0.75);
+            }, { passive: true });
+            document.addEventListener('touchmove', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                glow.style.opacity = '1';
+            }, { passive: true });
+            document.addEventListener('touchend', function () {
+                if (glowTimer) clearTimeout(glowTimer);
+                glowTimer = setTimeout(function () { glow.style.opacity = '0'; }, 380);
+            }, { passive: true });
+            document.addEventListener('touchcancel', function () { glow.style.opacity = '0'; }, { passive: true });
+        }
+
+        var lx = -1e9, ly = -1e9;
+        (function loop() {
+            var k = isFine ? 0.14 : 0.32;   // 手指跟得紧一些
+            gx += (tx - gx) * k;
+            gy += (ty - gy) * k;
+            // 静止时跳过写入:避免每帧重复改 style 白白触发样式计算
+            if (Math.abs(gx - lx) > 0.2 || Math.abs(gy - ly) > 0.2) {
+                glow.style.left = gx + 'px';
+                glow.style.top = gy + 'px';
+                lx = gx; ly = gy;
+            }
+            requestAnimationFrame(loop);
+        })();
+
+        // ===== 点击波纹 + 彩色粒子 =====
+        function burst(x, y, count, scale) {
+            var ring = document.createElement('div');
+            ring.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:12px; height:12px; border:2px solid rgba(59,130,246,.75); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%);';
+            document.body.appendChild(ring);
+            setTimeout(function () { if (ring.parentNode) ring.remove(); }, 900);
+            try {
+                ring.animate([
+                    { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9 },
+                    { transform: 'translate(-50%,-50%) scale(' + (5.5 * scale) + ')', opacity: 0 }
+                ], { duration: 600, easing: 'ease-out', fill: 'forwards' });
+            } catch (err) { ring.remove(); }
+            for (var i = 0; i < count; i++) {
+                var p = document.createElement('div');
+                var size = 4 + Math.random() * 6;
+                var ang = Math.random() * Math.PI * 2;
+                var dist = (28 + Math.random() * 52) * scale;
+                p.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:' + size + 'px; height:' + size + 'px; border-radius:50%; background:' + colors[i % colors.length] + '; pointer-events:none; z-index:9999;';
+                document.body.appendChild(p);
+                var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+                var dur = 500 + Math.random() * 250;
+                setTimeout(function (el) {
+                    return function () { if (el.parentNode) el.remove(); };
+                }(p), dur + 250);
+                try {
+                    p.animate([
+                        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+                        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(0.1)', opacity: 0 }
+                    ], { duration: dur, easing: 'cubic-bezier(0.15,0.8,0.25,1)', fill: 'forwards' });
+                } catch (err) { p.remove(); }
+            }
+        }
+        // 鼠标点击
+        document.addEventListener('click', function (e) {
+            if (Date.now() - lastTouch < 800) return;   // 触摸后浏览器会补发 click,去重
+            burst(e.clientX, e.clientY, 8, 1);
+        });
+    })();
+</script>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
+
+<script>
+    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
+    (function () {
+        function applyBal() {
+            var u = null, t = null;
+            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
+            if (!u || !u.id || !t) return;
+            var el = document.getElementById('balanceDisplay') ||
+                     document.getElementById('balanceSpan') ||
+                     document.getElementById('tradeBalance');
+            if (!el) return;
+            var sb = null;
+            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
+            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
+            if (!sb) return;
+            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
+                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
+            }).catch(function () {});
+        }
+        var tries = 0;
+        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
+    })();
+</script>
+
+
+<script>
+// ===== APP 自更新(仅 APP 内生效) =====
+(function () {
+    var ua = navigator.userAgent || '';
+    var m = /NBChannelApp\/([0-9.]+)/i.exec(ua);
+    if (!m) return;                       // 不是 APP 环境,不打扰网页用户
+    var localVer = m[1];
+    var APK = '/download/NBChannel.apk';
+
+    function cmp(a, b) {
+        var x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+        for (var i = 0; i < 3; i++) { var p = x[i] || 0, q = y[i] || 0; if (p !== q) return p - q; }
+        return 0;
+    }
+
+    var checking = false;
+    function check(manual) {
+        if (checking) return;
+        checking = true;
+        fetch('/download/version.json?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(function (info) {
+                checking = false;
+                if (!info || !info.versionName) throw new Error('版本信息不完整');
+                if (cmp(info.versionName, localVer) > 0) showBar(info, manual);
+                else if (manual) toast('✅ 已是最新版 v' + localVer);
+            })
+            .catch(function (e) {
+                checking = false;
+                if (manual) toast('检查更新失败:' + e.message + '\n请检查网络后重试');
+            });
+    }
+
+    // ---- 底部更新条 ----
+    function showBar(info, manual) {
+        if (document.getElementById('nbUpdateBar')) return;
+        var bar = document.createElement('div');
+        bar.id = 'nbUpdateBar';
+        bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;' +
+            'padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));' +
+            'background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;' +
+            'display:flex;align-items:center;gap:10px;font-size:.86rem;' +
+            'box-shadow:0 -8px 28px rgba(0,0,0,.3);';
+        bar.innerHTML =
+            '<div style="flex:1;line-height:1.6;min-width:0;">' +
+                '<b>发现新版本 v' + info.versionName + '</b><br>' +
+                '<span style="opacity:.9;font-size:.78rem;">当前 v' + localVer + ' · ' +
+                (info.note || '修复与优化') + '</span>' +
+            '</div>' +
+            '<button id="nbUpdGo" style="background:#fff;color:#3b82f6;border:none;border-radius:999px;' +
+                'padding:9px 18px;font-weight:800;font-family:inherit;font-size:.86rem;cursor:pointer;white-space:nowrap;">立即更新</button>' +
+            '<button id="nbUpdNo" style="background:transparent;border:none;color:#fff;opacity:.75;' +
+                'font-size:1.05rem;cursor:pointer;padding:4px 6px;">✕</button>';
+        document.body.appendChild(bar);
+        document.getElementById('nbUpdNo').onclick = function () { bar.remove(); };
+        document.getElementById('nbUpdGo').onclick = function () {
+            var b = this;
+            b.textContent = '下载中…'; b.disabled = true; b.style.opacity = '.8';
+            location.href = info.url || APK;
+            setTimeout(function () { b.textContent = '立即更新'; b.disabled = false; b.style.opacity = '1'; }, 12000);
+        };
+    }
+
+    // ---- 轻提示 ----
+    function toast(msg) {
+        var t = document.createElement('div');
+        t.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;' +
+            'background:rgba(15,23,42,.94);color:#fff;padding:14px 20px;border-radius:14px;' +
+            'font-size:.86rem;line-height:1.7;max-width:80vw;text-align:center;white-space:pre-line;' +
+            'box-shadow:0 12px 36px rgba(0,0,0,.4);';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 2600);
+    }
+
+    // ---- 在导航「更多功能」下拉 + 手机抽屉里注入入口 ----
+    function inject() {
+        var panel = document.querySelector('.nav-more-panel');
+        if (panel && !panel.querySelector('[data-nb-upd]')) {
+            var a = document.createElement('a');
+            a.href = 'javascript:void(0)';
+            a.setAttribute('data-nb-upd', '1');
+            a.textContent = '🔄 检查更新';
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                var more = document.querySelector('.nav-more');
+                if (more) more.classList.remove('open');
+                check(true);
+            });
+            panel.insertBefore(a, panel.firstChild);
+        }
+        var authBox = document.querySelector('.drawer .d-auth');
+        if (authBox && !document.querySelector('[data-nb-upd-d]')) {
+            var d = document.createElement('a');
+            d.className = 'd-item';
+            d.href = 'javascript:void(0)';
+            d.setAttribute('data-nb-upd-d', '1');
+            d.textContent = '🔄 检查更新(v' + localVer + ')';
+            d.addEventListener('click', function (e) { e.preventDefault(); check(true); });
+            authBox.parentNode.insertBefore(d, authBox);
+        }
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
+    else inject();
+    setTimeout(inject, 1200);      // 兜底:导航是脚本渲染时再试一次
+
+    // 启动自动查一次,之后每 30 分钟
+    setTimeout(function () { check(false); }, 2000);
+    setInterval(function () { check(false); }, 30 * 60 * 1000);
+
+})();
+</script>
+
+<script>
+/* ===== Android 上让 B站链接优先打开 B站 APP ===== */
+(function () {
+    try {
+        if (!/Android/i.test(navigator.userAgent)) return;   // 只在安卓上改,桌面/iPhone 保持原样
+        function toIntent(href) {
+            var m = href.match(/space\.bilibili\.com\/(\d+)/);
+            if (!m) return null;
+            // intent:// 是安卓专属协议:能打开 APP 就打开,打不开就回退到 browser_fallback_url
+            return 'intent://space/' + m[1] + '#Intent;scheme=bilibili;package=tv.danmaku.bili' +
+                   ';S.browser_fallback_url=' + encodeURIComponent(href) + ';end';
+        }
+        function patch() {
+            var links = document.querySelectorAll('a[href*="space.bilibili.com"]');
+            for (var i = 0; i < links.length; i++) {
+                var a = links[i];
+                if (a.dataset.nbIntent) continue;
+                var it = toIntent(a.getAttribute('href') || a.href);
+                if (it) { a.setAttribute('href', it); a.dataset.nbIntent = '1'; }
+            }
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', patch);
+        else patch();
+        setTimeout(patch, 1500);
+    } catch (e) {}
+})();
+
+/* ===== 双击视频铺满屏幕 ===== */
+(function () {
+    try {
+        var style = document.createElement('style');
+        style.textContent =
+            'video.nb-fs{position:fixed!important;left:0!important;top:0!important;' +
+            'width:100vw!important;height:100vh!important;max-width:100vw!important;' +
+            'max-height:100vh!important;margin:0!important;border-radius:0!important;' +
+            'z-index:99999!important;background:#000!important;object-fit:contain!important;}' +
+            'body.nb-fs-lock{overflow:hidden!important;}';
+        document.head.appendChild(style);
+
+        var current = null;
+        function exit() {
+            if (!current) return;
+            current.classList.remove('nb-fs');
+            document.body.classList.remove('nb-fs-lock');
+            current = null;
+        }
+        function enter(v) {
+            exit();
+            v.classList.add('nb-fs');
+            document.body.classList.add('nb-fs-lock');
+            current = v;
+            try { v.play(); } catch (e) {}
+        }
+        // 双击:进/出全屏
+        document.addEventListener('dblclick', function (e) {
+            var v = e.target && e.target.closest ? e.target.closest('video') : null;
+            if (!v) return;
+            e.preventDefault();
+            if (current === v) exit(); else enter(v);
+        }, true);
+        // 全屏状态下点空白处/按 Esc 退出
+        document.addEventListener('click', function (e) {
+            if (current && !(e.target.closest && e.target.closest('video'))) exit();
+        }, true);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') exit(); });
+        // 页面切换/尺寸变化时兜底
+        window.addEventListener('resize', function () { if (current) exit(); });
+    } catch (e) {}
+})();
+</script>
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261001-35F0ACF5A98E
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDAxLTM1RjBBQ0Y1QTk4RQ";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="../js/science-tips.js?v=26"></script>
+<script src="../js/pomodoro.js?v=7" defer></script>
+</body>
+</html>

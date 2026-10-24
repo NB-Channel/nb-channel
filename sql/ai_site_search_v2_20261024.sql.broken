@@ -1,0 +1,175 @@
+-- ============================================================
+-- AI 站内数据库查询 v2 —— 修「整句话当子串匹配，永远查不到」
+--
+-- v1 的两个问题：
+--   ① 匹配条件写的是 to_jsonb(t)::text ilike '%' || p_q || '%'
+--      p_q 是用户原话「U系现在多少度」，表里不可能出现这一整句
+--      → 永远 0 条
+--   ② 那段 execute format(...) 用了多行字符串隐式拼接，
+--      括号没对齐，直接 42601 mismatched parentheses
+--
+-- v2 改法：
+--   1. 新增 p_terms text[]：云函数把原话拆成一批词组（中文二元组）
+--      命中条件改成「整句命中 或 任意词组命中」
+--   2. 动态 SQL 改用 $q$ 模板 + replace()，不用 format()，
+--      也就不用再跟 '' 转义和括号较劲
+--   3. 十张表合成一个循环，单表出错不影响整体
+--
+-- ⚠️ 开头先 DROP 掉旧的 3 参数版本，避免 PostgREST 重载歧义
+-- ============================================================
+
+drop function if exists public.ai_site_search(text, text, int);
+drop function if exists public.ai_site_search(text, text, int, text[]);
+
+create or replace function public.ai_site_search(
+    p_q      text,
+    p_secret text,
+    p_limit  int    default 2,
+    p_terms  text[] default null
+) returns json
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+    v_val  text;
+    v_q    text;
+    v_lim  text;
+    v_out  jsonb := '{}'::jsonb;
+    v_rows jsonb;
+    v_pred text;
+    v_sql  text;
+    v_tpl  text;
+    idx    int;
+    tbl    text;
+    lbl    text;
+    tbls   text[] := array[
+        'news_articles', 'news_issues', 'shop_items', 'titles', 'achievements',
+        'polls', 'user_companies', 'stock_latest', 'market_meta', 'weather_state',
+        'growth_fund_config'
+    ];
+    labels text[] := array[
+        '报纸文章', '报纸期号', '商店道具', '称号', '成就',
+        '投票', '公司', '最新价', '市场参数', '天气', '成长基金'
+    ];
+begin
+    -- 密钥校验
+    select value into v_val from public.admin_settings where key = 'mail_secret';
+    if v_val is null or length(v_val) < 8 or p_secret is null or v_val <> p_secret then
+        return json_build_object('ok', false, 'reason', 'secret');
+    end if;
+
+    v_q := btrim(coalesce(p_q, ''));
+    if length(v_q) < 1 then
+        return json_build_object('ok', true, 'empty', true, 'data', v_out);
+    end if;
+    if length(v_q) > 80 then
+        v_q := left(v_q, 80);
+    end if;
+    v_lim := least(greatest(coalesce(p_limit, 2), 1), 5)::text;
+
+    -- 命中条件：整句命中，或者任意一个词组命中
+    v_pred := $p$(to_jsonb(t)::text ilike '%' || $1 || '%')
+             or ($2 is not null and exists (
+                   select 1 from unnest($2) as tt
+                    where to_jsonb(t)::text ilike '%' || tt || '%'))$p$;
+
+    -- 查询模板：TBL / PRED / LIM 三处替换
+    v_tpl := $q$
+        select coalesce(jsonb_agg(x), '[]'::jsonb)
+          from (select (to_jsonb(t) - 'user_id' - 'owner_id' - 'email'
+                        - 'password' - 'password_hash' - 'ip') as x
+                  from public.TBL t
+                 where (PRED)
+                 limit LIM) s
+    $q$;
+
+    -- ---------- 常见内容表：循环查 ----------
+    for idx in 1 .. array_length(tbls, 1) loop
+        tbl := tbls[idx];
+        lbl := labels[idx];
+        if to_regclass('public.' || tbl) is null then
+            continue;
+        end if;
+        begin
+            v_sql := replace(replace(replace(v_tpl,
+                        'TBL',  quote_ident(tbl)),
+                        'PRED', v_pred),
+                        'LIM',  v_lim);
+            execute v_sql into v_rows using v_q, p_terms;
+            if v_rows is not null and jsonb_array_length(v_rows) > 0 then
+                v_out := v_out || jsonb_build_object(lbl, v_rows);
+            end if;
+        exception when others then null;
+        end;
+    end loop;
+
+    -- ---------- 市场交易设置：问交易规则时才带 ----------
+    begin
+        if to_regclass('public.stock_settings') is not null
+           and (v_q ~ '(手续费|规则|涨跌|交易|股票|怎么|多少|限制)'
+                or coalesce(array_to_string(p_terms, ' '), '')
+                   ~ '(手续费|规则|涨跌|交易|股票|限制)') then
+            execute 'select coalesce(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) from public.stock_settings t limit 4'
+              into v_rows;
+            if v_rows is not null and jsonb_array_length(v_rows) > 0 then
+                v_out := v_out || jsonb_build_object('交易设置', v_rows);
+            end if;
+        end if;
+    exception when others then null;
+    end;
+
+    -- ---------- 小黑屋：只给用户名和原因 ----------
+    begin
+        select coalesce(jsonb_agg(jsonb_build_object('username', t.username,
+                                                     'reason',  t.banned_reason)), '[]'::jsonb)
+          into v_rows
+          from public.profiles t
+         where t.is_banned = true
+           and (coalesce(t.username, '') ilike '%' || v_q || '%'
+                or coalesce(t.banned_reason, '') ilike '%' || v_q || '%'
+                or (p_terms is not null and exists (
+                      select 1 from unnest(p_terms) as tt
+                       where coalesce(t.username, '')     ilike '%' || tt || '%'
+                          or coalesce(t.banned_reason, '') ilike '%' || tt || '%')))
+         limit 3;
+        if v_rows is not null and jsonb_array_length(v_rows) > 0 then
+            v_out := v_out || jsonb_build_object('小黑屋', v_rows);
+        end if;
+    exception when others then null;
+    end;
+
+    -- ---------- 全站公告：admin_config 只白名单这两个 key ----------
+    begin
+        select coalesce(jsonb_agg(jsonb_build_object('key', t.key, 'value', t.value)), '[]'::jsonb)
+          into v_rows
+          from public.admin_config t
+         where t.key in ('announcement', 'lottery_daily_limit');
+        if v_rows is not null and jsonb_array_length(v_rows) > 0 then
+            v_out := v_out || jsonb_build_object('全站配置', v_rows);
+        end if;
+    exception when others then null;
+    end;
+
+    return json_build_object(
+        'ok', true,
+        'groups', (select count(*) from jsonb_object_keys(v_out)),
+        'data', v_out);
+end;
+$fn$;
+
+grant execute on function public.ai_site_search(text, text, int, text[]) to anon, authenticated;
+
+-- ------------------------------------------------------------
+-- 自检：应该 search_overloads = 1，stats_overloads = 1
+--       params 里有 p_q / p_secret / p_limit / p_terms
+-- ------------------------------------------------------------
+select
+    (select count(*) from information_schema.routines
+      where routine_schema = 'public' and routine_name = 'ai_site_search') as search_overloads,
+    (select count(*) from information_schema.routines
+      where routine_schema = 'public' and routine_name = 'ai_site_stats')  as stats_overloads,
+    (select array_agg(p.parameter_name order by p.ordinal_position)
+       from information_schema.parameters p
+       join information_schema.routines r on r.specific_name = p.specific_name
+      where r.routine_schema = 'public' and r.routine_name = 'ai_site_search') as params;

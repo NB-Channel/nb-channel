@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<script>
+/* ===== 跨子域名登录态同步（github. / cloudflare. / pythonanywhere. 之间互通）=====
+   localStorage 是按 origin 隔离的，两个子域名各存各的，所以要借 Cookie 中转。
+   Cookie 设 Domain=.nb-channel.top，所有子域名都能读到。
+
+   这里不改页面原本的任何代码 —— 而是劫持 localStorage 的读写：
+     · 页面登录时 setItem('nb_session', ...)  → 顺手写一份到 Cookie
+     · 页面登出时 removeItem('nb_session')    → 顺手把 Cookie 清掉
+     · 页面加载时 Cookie 有、本地没有          → 自动注入进 localStorage
+   所以那 57 处登录/登出代码一行都不用动。
+
+   ⚠️ 这意味着 *.nb-channel.top 下任何一个子域名都能读到这个令牌，
+      包括 product-storage 那个 Workers。将来新增子域名前先想清楚这件事。 */
+(function () {
+    try {
+        var KEY_S = 'nb_session', KEY_U = 'nb_user';
+        var DOMAIN = '.nb-channel.top';
+        var MAXAGE = 30 * 86400;
+
+        // 只在 .nb-channel.top 域下才启用（本地开文件、或别的域名访问时保持原样）
+        // ⚠️ 2026-10-16 放宽：原来只认 nb-channel.top，
+        //    但 pythonanywhere.nb-channel.top 会【302 跳到】nbchannel.pythonanywhere.com，
+        //    pages.dev / github.io 也是常用入口 —— 那几个域名下这个补丁原本整个不生效。
+        if (!/(^|\.)nb-channel\.top$/.test(location.hostname) &&
+            location.hostname !== 'nbchannel.pythonanywhere.com' &&
+            location.hostname !== 'nb-channel.pages.dev' &&
+            location.hostname !== 'nb-channel.github.io') return;
+
+        function readCookie(n) {
+            var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        }
+        function writeCookie(n, v) {
+            document.cookie = n + '=' + encodeURIComponent(v) + ';path=/;domain=' + DOMAIN +
+                              ';max-age=' + MAXAGE + ';SameSite=Lax' +
+                              (location.protocol === 'https:' ? ';Secure' : '');
+        }
+        function dropCookie(n) {
+            document.cookie = n + '=;path=/;domain=' + DOMAIN + ';max-age=0;SameSite=Lax' +
+                              (location.protocol === 'https:' ? ';Secure' : '');
+        }
+
+        // ---- ① 页面加载时双向对齐 ----
+        [KEY_S, KEY_U].forEach(function (k) {
+            var c = readCookie(k), l = null;
+            try { l = localStorage.getItem(k); } catch (e) {}
+            if (l) {
+                if (l !== c) writeCookie(k, l);            // 本地有 → 同步出去
+            } else if (c) {
+                try { localStorage.setItem(k, c); } catch (e) {}   // 本地没有 → 采用 Cookie
+            }
+        });
+
+        // ---- ①.5 验一下令牌还活着没有（2026-10-16 补）----
+        // ⚠️ 退出登录之后，【别的子域名】的 localStorage 里可能还留着旧令牌。
+        //    上面那一步会把 Cookie 里的值注入回来，而它不验有效性 ——
+        //    于是一个已经退掉的令牌会被反复复活，页面以为「已登录」，
+        //    不显示登录入口，看着就像「退登之后登不回来」。
+        //    这里补一步：拿令牌去调一个需要会话的接口，鉴权失败就把两边都清干净。
+        setTimeout(function () {
+            var tok = null, u = null;
+            try { tok = localStorage.getItem(KEY_S); } catch (e) {}
+            try { u = JSON.parse(localStorage.getItem(KEY_U) || 'null'); } catch (e) {}
+            if (!tok || !u || !u.id) return;
+            fetch('https://pbaafgjkwdbwcmsikcmg.supabase.co/rest/v1/rpc/get_checkin_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg',
+                    'Authorization': 'Bearer sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+                },
+                body: JSON.stringify({ p_user_id: u.id, p_session: tok })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                var msg = (d && d.message) || '';
+                // 只有明确说「鉴权失败 / 会话无效」才动手 ——
+                // 其它错误（比如称号没查到）不能当令牌失效处理
+                if (d && d.success === false && /鉴权|会话/.test(msg)) {
+                    try { localStorage.removeItem(KEY_S); localStorage.removeItem(KEY_U); } catch (e) {}
+                    try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+                    setTimeout(function () { location.reload(); }, 60);
+                }
+            }).catch(function () {});
+        }, 1200);
+
+        // ---- ② 劫持写入：登录时同步到 Cookie ----
+        var _set = localStorage.setItem;
+        localStorage.setItem = function (k, v) {
+            try { if ((k === KEY_S || k === KEY_U) && v) writeCookie(k, v); } catch (e) {}
+            return _set.call(localStorage, k, v);
+        };
+
+        // ---- ③ 劫持删除：登出时同步清 Cookie ----
+        var _rm = localStorage.removeItem;
+        localStorage.removeItem = function (k) {
+            try { if (k === KEY_S || k === KEY_U) dropCookie(k); } catch (e) {}
+            return _rm.call(localStorage, k);
+        };
+
+        // ---- ④ 万一有人用 clear() ----
+        var _cl = localStorage.clear;
+        localStorage.clear = function () {
+            try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+            return _cl.call(localStorage);
+        };
+    } catch (e) {}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f172a">
+<title>扫码登录确认 - NB频道</title>
+<script>
+    // 和全站一样:先按本地存的主题给 html 加 dark,避免闪一下白屏
+    (function () {
+        try {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #f7f8fa; --ink: #1a1d23; --ink-soft: #5a6270; --ink-faint: #8b93a3;
+    --line: #e8eaee; --brand: #3b82f6; --brand-deep: #2563eb; --card: #ffffff;
+    --radius-lg: 20px; --radius-md: 14px;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+}
+html.dark { color-scheme: dark;
+    --bg: #0a101f; --ink: #e5eaf3; --ink-soft: #9aa7bd; --ink-faint: #64748b;
+    --line: rgba(148,163,184,.16); --card: #101a2e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+}
+body {
+    background: var(--bg); color: var(--ink); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 22px 16px calc(22px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust: 100%;
+}
+.wrap { width: 100%; max-width: 420px; }
+.brand { display: flex; align-items: center; gap: 9px; justify-content: center; margin-bottom: 18px; }
+.brand .dot {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: #fff; font-weight: 800; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+}
+.brand b { font-size: 1.05rem; letter-spacing: .5px; }
+.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1); padding: 24px 20px;
+}
+h1 { font-size: 1.16rem; margin-bottom: 6px; text-align: center; }
+.sub { font-size: .86rem; color: var(--ink-soft); text-align: center; line-height: 1.8; }
+.badge {
+    display: inline-block; padding: 3px 11px; border-radius: 999px;
+    font-size: .74rem; font-weight: 700; letter-spacing: .5px;
+}
+.b-ok   { background: rgba(34,197,94,.14);  color: #15803d; }
+.b-warn { background: rgba(245,158,11,.16); color: #b45309; }
+.b-err  { background: rgba(231,76,60,.13);  color: #b91c1c; }
+.b-info { background: rgba(59,130,246,.13); color: #1d4ed8; }
+html.dark .b-ok   { color: #4ade80; }
+html.dark .b-warn { color: #fbbf24; }
+html.dark .b-err  { color: #f87171; }
+html.dark .b-info { color: #93c5fd; }
+
+.dev {
+    border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: 14px 16px; margin: 18px 0; background: var(--bg);
+}
+.dev-row { display: flex; justify-content: space-between; gap: 14px; padding: 6px 0; font-size: .88rem; }
+.dev-row + .dev-row { border-top: 1px dashed var(--line); }
+.dev-row .k { color: var(--ink-faint); flex: none; }
+.dev-row .v { font-weight: 700; text-align: right; word-break: break-all; }
+
+.warn {
+    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.32);
+    color: #b45309; border-radius: var(--radius-md);
+    padding: 11px 14px; font-size: .84rem; line-height: 1.85; margin-bottom: 16px;
+}
+html.dark .warn { color: #fbbf24; }
+
+button {
+    width: 100%; border: none; border-radius: 999px; padding: 14px 18px;
+    font-size: 1rem; font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+button:active { transform: translateY(1px); }
+.btn-main { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff;
+            box-shadow: 0 8px 20px -8px rgba(34,197,94,.6); }
+.btn-ghost { background: transparent; color: var(--ink-soft);
+             border: 1px solid var(--line); margin-top: 10px; }
+.btn-blue { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+            box-shadow: 0 8px 20px -8px rgba(59,130,246,.6); }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+.who {
+    text-align: center; font-size: .86rem; color: var(--ink-soft);
+    margin-top: 16px; line-height: 1.9;
+}
+.who b { color: var(--ink); }
+.foot { text-align: center; font-size: .74rem; color: var(--ink-faint); margin-top: 18px; line-height: 1.8; }
+.hide { display: none !important; }
+.spin {
+    width: 22px; height: 22px; border-radius: 50%; margin: 18px auto 6px;
+    border: 3px solid var(--line); border-top-color: var(--brand);
+    animation: sp .8s linear infinite;
+}
+@keyframes sp { to { transform: rotate(360deg); } }
+</style>
+<!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
+<link rel="stylesheet" href="../css/themes.css?v=35">
+<script src="../js/theme.js?v=9"></script>
+</head>
+<body>
+<div class="wrap">
+
+    <!-- 微信/QQ 内置浏览器的坑：登录状态和手机浏览器不互通 -->
+    <div id="wxWarn" class="warn hide" style="margin-bottom:14px;">
+        ⚠️ <b>你是在微信 / QQ 里打开的这个页面。</b><br>
+        如果你刚才是用微信「扫一扫」扫的二维码，那么这里登录的是它们<b>内置的浏览器</b>，
+        和你手机上真正的浏览器不是一回事。<br>
+        想给电脑授权的话现在也能点确认；但如果你想顺便在手机浏览器上也登录好，
+        请点右上角「···」→<b>在浏览器打开</b>再来一次。
+    </div>
+
+    <div class="brand"><span class="dot">NB</span><b>NB频道</b></div>
+
+    <!-- ============ 加载中 ============ -->
+    <div class="card" id="pLoading">
+        <div class="spin"></div>
+        <div class="sub">正在校验二维码…</div>
+    </div>
+
+    <!-- ============ 出错 ============ -->
+    <div class="card hide" id="pError">
+        <h1>😵 无法确认</h1>
+        <p class="sub" id="errMsg" style="margin-bottom:18px;"></p>
+        <button class="btn-blue" onclick="location.reload()">重新加载</button>
+        <button class="btn-ghost" onclick="location.href='index-Beta.html'">回首页</button>
+    </div>
+
+    <!-- ============ 手机还没登录 ============ -->
+    <div class="card hide" id="pNeedLogin">
+        <h1>🔐 请先登录</h1>
+        <p class="sub" style="margin-bottom:18px;">
+            扫码登录是「用手机上已登录的账号，给电脑授权」。<br>
+            所以要先在<b>这台手机</b>上登录一次你的 NB频道 账号。
+        </p>
+        <button class="btn-blue" id="goLogin">去登录 / 注册</button>
+    </div>
+
+    <!-- ============ 要确认 ============ -->
+    <div class="card hide" id="pConfirm">
+        <h1>🖥️ 有设备请求登录</h1>
+        <p class="sub">确认后，下面这台设备会登录成你的账号</p>
+
+        <div class="dev">
+            <div class="dev-row"><span class="k">浏览器</span><span class="v" id="dvUa">--</span></div>
+            <div class="dev-row"><span class="k">IP</span><span class="v" id="dvIp">--</span></div>
+            <div class="dev-row"><span class="k">请求时间</span><span class="v" id="dvTime">--</span></div>
+        </div>
+
+        <div class="warn" id="dvWarn">
+            ⚠️ <b>只有「你自己正在电脑上操作」这一种情况，才点下面的确认。</b><br>
+            <b>除此之外，任何人发二维码让你扫，都是盗号</b> ——
+            不管他说自己是客服、管理员、官方还是卖家，
+            一律直接点「不是我，取消」。<br>
+            点之前先核对上面的 IP：不是你自己的网络，就别点。
+        </div>
+
+        <button class="btn-main" id="btnOk">✅ 确认登录</button>
+        <button class="btn-ghost" id="btnNo">不是我，取消</button>
+
+        <div class="who">当前账号：<b id="myName">--</b></div>
+    </div>
+
+    <!-- ============ 成功 / 已取消 ============ -->
+    <div class="card hide" id="pDone">
+        <h1 id="doneTitle">✅ 已确认</h1>
+        <p class="sub" id="doneMsg" style="margin-bottom:18px;"></p>
+        <button class="btn-blue" onclick="location.href='index-Beta.html'">回首页</button>
+    </div>
+
+    <div class="foot">NB频道 · 扫码登录<br>本页只用于确认登录，不会读取或保存任何密码</div>
+</div>
+
+<script>
+    // ===== supabase-js 双源加载(和全站一致:jsDelivr → unpkg) =====
+    (function () {
+        var srcs = [
+            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+            'https://unpkg.com/@supabase/supabase-js@2'
+        ];
+        function load(i) {
+            if (i >= srcs.length) { window.__sbFailed = true; return; }
+            var s = document.createElement('script');
+            s.src = srcs[i];
+            s.onload = function () { window.__sbReady = true; };
+            s.onerror = function () { load(i + 1); };
+            document.head.appendChild(s);
+        }
+        load(0);
+    })();
+</script>
+
+<script>
+/* ============================================================
+   扫码登录 · 手机端确认页
+   ------------------------------------------------------------
+   ⚠️ 三个页面很容易搞混,先说清这是哪一个:
+
+     qr-login-Beta.html  ← 本页。方向 A：手机授权电脑
+                            手机【已登录】,扫电脑上的二维码,点确认 → 电脑登录
+
+     qr-grant-Beta.html    方向 B：电脑授权设备
+                            电脑【已登录】,生成二维码给人扫
+     qr-claim-Beta.html    方向 B：设备领取
+                            手机/别的设备扫上面那个码,点确认 → 这台设备登录
+
+   本页调的服务端接口：qr_login_scan / qr_login_confirm
+   ------------------------------------------------------------
+   设计要点（为什么这么写）:
+     1. 【只是"授权"，不是"登录"】
+        手机上必须自己已经登录着，才能给别人授权。
+        所以这里校验的是手机端自己的会话(_user_ok) ——
+        没登录的人确认不了。
+     2. 【确认前先给人看"是谁在请求"】
+        扫码登录有一个天然的攻击面:别人可以把二维码发给你,
+        骗你扫码替他登录(业内叫 QRLJacking)。
+        挡不住"用户自己点了确认",但可以让他在点之前看清楚:
+        请求方的 IP / 浏览器 / 时间。陌生设备就不该点。
+        ⚠️ 浏览器那一行是电脑端传上来的,可以伪造;
+           IP 是服务端自己读的,伪造不了 —— 所以以 IP 为准。
+     3. 【本页拿不到任何密钥】
+        二维码里只有 code。真正领会话令牌要 code + secret,
+        而 secret 只在电脑端手里,永远不进这个页面。
+        所以就算有人把二维码截走,也只能"替他确认一次",
+        拿不到最后的令牌。
+   ============================================================ */
+(function () {
+    'use strict';
+
+    var SB_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    var SB_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+
+    var el = function (id) { return document.getElementById(id); };
+    var code = (new URLSearchParams(location.search).get('c') || '')
+                .replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+
+    // 微信 / QQ / 支付宝内置浏览器检测。
+    // 这些内置浏览器的 localStorage 和系统浏览器不互通，不提示的话
+    // 用户会以为功能坏了（详见页面顶部那段说明）。
+    (function () {
+        var ua = '';
+        try { ua = navigator.userAgent || ''; } catch (e) {}
+        if (/MicroMessenger|QQ\/|QQBrowser|AlipayClient|Weibo|DingTalk/i.test(ua)) {
+            var w = el('wxWarn');
+            if (w) w.classList.remove('hide');
+        }
+    })();
+
+    function show(id) {
+        ['pLoading', 'pError', 'pNeedLogin', 'pConfirm', 'pDone'].forEach(function (p) {
+            el(p).classList.toggle('hide', p !== id);
+        });
+    }
+    function fail(msg) {
+        el('errMsg').textContent = msg;
+        show('pError');
+    }
+
+    // 浏览器字符串 → 人看的
+    function uaText(ua) {
+        if (!ua) return '未知设备';
+        var os = /Windows/i.test(ua) ? 'Windows'
+               : /Android/i.test(ua) ? 'Android'
+               : /iPhone|iPad|iPod/i.test(ua) ? 'iOS'
+               : /Mac OS X/i.test(ua) ? 'macOS'
+               : /CrOS/i.test(ua) ? 'ChromeOS'
+               : /Linux/i.test(ua) ? 'Linux' : '未知系统';
+        var br = /Edg\//i.test(ua) ? 'Edge'
+               : /OPR\/|Opera/i.test(ua) ? 'Opera'
+               : /Firefox\//i.test(ua) ? 'Firefox'
+               : /Chrome\//i.test(ua) ? 'Chrome'
+               : /Safari\//i.test(ua) ? 'Safari' : '未知浏览器';
+        return br + ' · ' + os;
+    }
+
+    // ---------- IP 归属地 ----------
+    // 让"这台设备是不是我自己的"更好判断 —— 裸 IP 大多数人看不懂。
+    // 翻译表照搬后台（Website backend.html），保持两边显示口径一致。
+    var GEO_CN_COUNTRY = { CN:'中国', HK:'中国香港', MO:'中国澳门', TW:'中国台湾', US:'美国', JP:'日本', KR:'韩国', SG:'新加坡' };
+    var GEO_CN_REGION = { AH:'安徽', BJ:'北京', CQ:'重庆', FJ:'福建', GS:'甘肃', GD:'广东', GX:'广西', GZ:'贵州',
+        HI:'海南', HE:'河北', HA:'河南', HB:'湖北', HN:'湖南', JL:'吉林', JS:'江苏', JX:'江西', LN:'辽宁',
+        NM:'内蒙古', NX:'宁夏', QH:'青海', SD:'山东', SX:'山西', SN:'陕西', SH:'上海', SC:'四川',
+        TJ:'天津', XZ:'西藏', XJ:'新疆', YN:'云南', ZJ:'浙江' };
+    var GEO_CN_CITY = { Beijing:'北京', Shanghai:'上海', Guangzhou:'广州', Shenzhen:'深圳', Hangzhou:'杭州',
+        Nanjing:'南京', Wuhan:'武汉', Chengdu:'成都', Tianjin:'天津', Chongqing:'重庆', Suzhou:'苏州', Changsha:'长沙',
+        Xiamen:'厦门', Hohhot:'呼和浩特', Zhengzhou:'郑州', Jinan:'济南', Qingdao:'青岛', Dalian:'大连',
+        Shenyang:'沈阳', Harbin:'哈尔滨', Changchun:'长春', Shijiazhuang:'石家庄', Taiyuan:'太原',
+        Hefei:'合肥', Nanchang:'南昌', Fuzhou:'福州', Kunming:'昆明', Guiyang:'贵阳', Nanning:'南宁',
+        Haikou:'海口', Lanzhou:'兰州', Xining:'西宁', Yinchuan:'银川', Urumqi:'乌鲁木齐', Lhasa:'拉萨',
+        Wuxi:'无锡', Ningbo:'宁波', Wenzhou:'温州', Foshan:'佛山', Dongguan:'东莞', Zhuhai:'珠海', Yantai:'烟台' };
+
+    function geoCN(cc, rc, region, city) {
+        var cn = GEO_CN_COUNTRY[cc] || null;
+        var rn = rc ? GEO_CN_REGION[String(rc).toUpperCase()] : null;
+        var cname = city ? (GEO_CN_CITY[city] || null) : null;
+        // 省份优先用翻译，其次原文；城市同理
+        var prov = rn || region || '';
+        var cty  = cname || city || '';
+        var parts = [];
+        if (cn) parts.push(cn);
+        if (prov) parts.push(prov);
+        // 省市同名（北京/上海/天津/重庆、以及东京这种）时别显示两遍
+        if (cty && cty !== prov) parts.push(cty);
+        if (!parts.length) return [region, city].filter(Boolean).join(' ');
+        return parts.join(' · ');
+    }
+
+    function showGeo(ip) {
+        var box = el('dvIp');
+        if (!ip || !box) return;
+        // 内网/回环地址没什么可查的
+        if (/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip) || ip === '::1') return;
+        // 主源 ipwho.is；它偶尔限流，所以备一个 ipapi.co（实测 api.vore.top 已不可用）
+        var urls = [
+            { u: 'https://ipwho.is/' + encodeURIComponent(ip),           src: 'ipwho' },
+            { u: 'https://ipapi.co/' + encodeURIComponent(ip) + '/json/', src: 'ipapi' }
+        ];
+        (function tryNext(k) {
+            if (k >= urls.length) return;      // 两个源都失败就保持裸 IP，不打扰用户
+            fetch(urls[k].u).then(function (r) { return r.json(); }).then(function (j) {
+                var name = '';
+                if (j && j.success && j.country_code) {
+                    name = geoCN(j.country_code, j.region_code, j.region, j.city);
+                } else if (j && j.country_code && !j.error) {
+                    // ipapi.co 的形状：{country_code, region_code, region, city}
+                    name = geoCN(j.country_code, j.region_code, j.region, j.city);
+                }
+                if (name) box.textContent = ip + '（' + name + '）';
+                else tryNext(k + 1);
+            }).catch(function () { tryNext(k + 1); });
+        })(0);
+    }
+
+    function rpc(fn, body) {
+        return fetch(SB_URL + '/rest/v1/rpc/' + fn, {
+            method: 'POST',
+            headers: {
+                apikey: SB_KEY,
+                Authorization: 'Bearer ' + SB_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body || {})
+        }).then(function (r) {
+            if (!r.ok) throw new Error('接口请求失败 HTTP ' + r.status);
+            return r.json();
+        });
+    }
+
+    function waitSb(cb) {
+        var n = 0;
+        (function loop() {
+            if (window.__sbReady || n++ > 60) { cb(); return; }
+            if (window.__sbFailed) { cb(); return; }
+            setTimeout(loop, 100);
+        })();
+    }
+
+    // 手机端自己的登录状态
+    function me() {
+        var u = null, t = null;
+        try {
+            u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+            t = localStorage.getItem('nb_session');
+        } catch (e) {}
+        if (!u || !u.id || !t) return null;
+        return { id: u.id, username: u.username, token: t };
+    }
+
+    function boot() {
+        if (!code || code.length !== 16) {
+            fail('二维码里的信息不完整。请回到电脑上重新生成一张。');
+            return;
+        }
+
+        var who = me();
+        if (!who) {
+            el('goLogin').onclick = function () {
+                location.href = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
+            };
+            show('pNeedLogin');
+            return;
+        }
+        el('myName').textContent = who.username || '(未知)';
+
+        waitSb(function () {
+            rpc('qr_login_scan', { p_code: code }).then(function (d) {
+                if (!d || !d.ok) {
+                    fail((d && d.reason) || '二维码无效');
+                    return;
+                }
+                el('dvUa').textContent   = uaText(d.ua);
+                el('dvIp').textContent   = d.ip || '未知';
+                el('dvTime').textContent = d.created_at || '--';
+                // ⭐ 补上归属地：光看 106.35.202.35 没几个人反应得过来是哪儿，
+                //    显示成「内蒙古 · 呼和浩特」才能一眼判断这是不是自己的电脑。
+                showGeo(d.ip);
+                show('pConfirm');
+
+                var busy = false;
+                function done(approve) {
+                    if (busy) return;
+                    busy = true;
+                    el('btnOk').disabled = true;
+                    el('btnNo').disabled = true;
+                    rpc('qr_login_confirm', {
+                        p_code: code, p_user_id: who.id,
+                        p_session: who.token, p_approve: approve
+                    }).then(function (r) {
+                        if (!r || !r.ok) {
+                            busy = false;
+                            el('btnOk').disabled = false;
+                            el('btnNo').disabled = false;
+                            fail((r && r.reason) || '确认失败');
+                            return;
+                        }
+                        el('doneTitle').textContent = approve ? '✅ 已确认登录' : '🚫 已取消';
+                        el('doneMsg').innerHTML = approve
+                            ? '电脑上会自动登录成 <b>' + (who.username || '') + '</b>。<br>现在可以关掉这一页了。'
+                            : '已经取消，电脑上不会登录。';
+                        show('pDone');
+                    }).catch(function (e) { fail(e.message); });
+                }
+                el('btnOk').onclick = function () { done(true); };
+                el('btnNo').onclick = function () { done(false); };
+            }).catch(function (e) { fail(e.message); });
+        });
+    }
+
+    boot();
+})();
+</script>
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261001-6F073D5DE24C
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDAxLTZGMDczRDVERTI0Qw";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="../js/science-tips.js?v=26"></script>
+<script src="../js/pomodoro.js?v=7" defer></script>
+</body>
+</html>

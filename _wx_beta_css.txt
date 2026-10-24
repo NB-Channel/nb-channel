@@ -1,0 +1,124 @@
+/* ══════════════════════════════════════════════════════
+   天气瞎报 · 卡片样式
+   设计：温度定色 → 卡片左上角一层淡色晕开，左边一条温度色条，
+        右上角一个大天气图标。悬停轻微浮起。
+   ══════════════════════════════════════════════════════ */
+.wx-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(282px, 1fr));
+    gap: 18px;
+}
+
+.wx-card {
+    position: relative;
+    padding: 20px 20px 18px 24px;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background:
+        linear-gradient(165deg, var(--tc-soft) 0%, rgba(255,255,255,0) 55%),
+        var(--card);
+    box-shadow: 0 6px 20px -14px rgba(16,24,40,.22);
+    transition: transform .28s cubic-bezier(.2,.8,.3,1), box-shadow .28s;
+}
+.wx-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 36px -18px rgba(16,24,40,.34);
+}
+/* 左侧温度色条 */
+.wx-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--tc);
+    transition: background .5s;
+}
+
+/* ── 头部：城市名 · 天气状态 ── */
+.wx-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+}
+.wx-city { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.wx-ico { font-size: 1.05rem; font-style: normal; flex: none; }
+.wx-nm {
+    font-size: 1.03rem; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wx-cond {
+    display: flex; align-items: center; gap: 5px; flex: none;
+    font-size: .76rem; color: var(--ink-faint);
+}
+.wx-cond i { font-size: 1.5rem; font-style: normal; line-height: 1; }
+.wx-cond em { font-style: normal; }
+
+/* ── 城市简介 ── */
+.wx-note-in {
+    margin: 7px 0 15px;
+    font-size: .75rem; line-height: 1.65;
+    color: var(--ink-faint);
+}
+
+/* ── 温度 ── */
+.wx-temp {
+    display: flex; align-items: baseline; gap: 3px;
+    margin-bottom: 17px;
+}
+.wx-c {
+    font-size: 2.9rem; font-weight: 800; line-height: 1;
+    letter-spacing: -1.5px; color: var(--brand);
+    font-variant-numeric: tabular-nums;
+}
+.wx-u { font-size: 1.05rem; font-weight: 700; color: var(--brand); }
+.wx-f {
+    margin-left: auto; font-size: .79rem;
+    color: var(--ink-faint); font-variant-numeric: tabular-nums;
+}
+
+/* ── 指标 ── */
+.wx-rows {
+    margin: 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px;
+}
+.wx-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 8px; font-size: .78rem;
+}
+.wx-row dt { color: var(--ink-faint); white-space: nowrap; }
+.wx-row dd {
+    margin: 0; font-weight: 600; color: var(--ink);
+    text-align: right; font-variant-numeric: tabular-nums;
+}
+.wx-row-wide {
+    grid-column: 1 / -1;
+    padding-top: 10px; margin-top: 3px;
+    border-top: 1px dashed var(--line);
+}
+
+@media (max-width: 560px) {
+    .wx-grid { grid-template-columns: 1fr; }
+    .wx-c { font-size: 2.5rem; }
+}
+
+/* 官网模式：倒计时条与页脚说明 */
+.wx-main { max-width: 1180px; margin: 0 auto; padding: 0 20px 60px; }
+.wx-tickbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 14px 18px; margin-bottom: 22px;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+}
+.wx-tb-txt { font-size: .84rem; white-space: nowrap; color: var(--ink-soft); }
+.wx-tb-bar { flex: 1; min-width: 140px; height: 6px; border-radius: 99px;
+             background: rgba(148,163,184,.2); overflow: hidden; }
+.wx-tb-bar i { display: block; height: 100%; width: 0%;
+               background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+               border-radius: 99px; transition: width .25s linear; }
+#refreshNow {
+    background: var(--brand); color: #fff; border: none; border-radius: 30px;
+    padding: 7px 16px; font-size: .84rem; cursor: pointer; transition: .2s;
+}
+#refreshNow:hover { opacity: .88; }
+.wx-note { text-align: center; margin-top: 26px; font-size: .82rem;
+           color: var(--ink-faint); line-height: 2; }
+html.dark .wx-card { box-shadow: 0 6px 20px -14px rgba(0,0,0,.5); }
+html.dark .wx-tickbar { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28); }

@@ -1,0 +1,263 @@
+name: Build Android APK
+
+# 触发方式:
+#   1) 手动:仓库 → Actions → Build Android APK → Run workflow
+#   2) 推送时自动:改动 app/ 目录或本文件
+# 构建产物会:
+#   ① 发布到 Releases(带版本号存档)
+#   ② 自动提交到网站 download/ → 国内可直连下载
+#   ③ 生成 download/version.json → APP 启动时用它检查更新
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION_CODE: ${{ github.run_number }}
+      # 兜底简介:正常情况下 apply.mjs 会自动从 Beta/changelog-Beta.html 里
+      # 提取当前版本的简介(标题 · 第一个要点),这里只在提取失败时使用。
+      APP_RELEASE_NOTE: 修复与优化,详见更新日志
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 版本号从 app/version.txt 读取(想改版本就改那个文件,不用动 workflow)
+      # versionCode 用 run_number 保证单调递增(安卓靠它判断新旧),versionName 是给人看的
+      - name: Resolve version
+        id: ver
+        run: |
+          V=$(tr -d '\n\r ' < app/version.txt)
+          if [ -z "$V" ]; then V="1.0.1"; fi
+          echo "name=$V" >> $GITHUB_OUTPUT
+          echo "APP_VERSION_NAME=$V" >> $GITHUB_ENV
+          echo "版本号 name=$V  code=$APP_VERSION_CODE"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # ⚠️ 别改回 android-actions/setup-android@v3:
+      #    它内部会跑 `sdkmanager tools`,而 Google 已经把 tools 包下架了 →
+      #    sdkmanager 退出码 1,构建在第 6 步就死,后面全部 skipped。
+      #    (2026-09-15 起全球范围爆的,跟本仓库的代码无关。)
+      #    GitHub 的 ubuntu runner 镜像本来就预装了 Android SDK,直接用现成的,
+      #    这一步不联网安装任何 SDK 组件。
+      - name: Setup Android SDK
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK" ]; then
+            echo "❌ 找不到预装的 Android SDK: $SDK"
+            exit 1
+          fi
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "✅ Android SDK = $SDK"
+          echo "--- platforms ---";     ls "$SDK/platforms"     2>/dev/null || echo "(空)"
+          echo "--- build-tools ---";   ls "$SDK/build-tools"   2>/dev/null || echo "(空)"
+          echo "--- cmdline-tools ---"; ls "$SDK/cmdline-tools" 2>/dev/null || echo "(空)"
+          echo "--- licenses ---";      ls "$SDK/licenses"      2>/dev/null || echo "(空)"
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm install --no-audit --no-fund
+
+      # UA 里带上版本号 → 网页端可据此判断"当前 APP 版本"并提示更新
+      - name: Tag UA with version
+        working-directory: app
+        run: |
+          node -e "
+            const fs=require('fs');
+            const c=JSON.parse(fs.readFileSync('capacitor.config.json','utf8'));
+            c.appendUserAgent='NBChannelApp/${APP_VERSION_NAME}';
+            fs.writeFileSync('capacitor.config.json', JSON.stringify(c,null,2));
+            console.log('appendUserAgent =', c.appendUserAgent);
+          "
+
+      - name: Add Android platform
+        working-directory: app
+        run: npx cap add android
+
+      # 注入自定义原生代码:下载接管 + 自动安装 + 版本号
+      - name: Inject native code
+        working-directory: app
+        run: node android-overrides/apply.mjs
+
+      - name: Generate app icons & splash
+        working-directory: app
+        continue-on-error: true
+        run: npx --yes @capacitor/assets generate --android --iconBackgroundColor '#0f172a' --splashBackgroundColor '#0f172a'
+
+      - name: Capacitor sync
+        working-directory: app
+        run: npx cap sync android
+
+      # ---- 固定签名(签名标识 nb-channelAPP) ----
+      # 为什么必须固定:GitHub Actions 每次都是全新的 runner,gradle 找不到
+      # debug.keystore 就现场生成一个新的 → 每次签名都不同 → 用户升级时报
+      # 「更新包与已安装应用签名不一致」而装不上。
+      #
+      # 密钥放哪:优先读 GitHub Secrets 里的 ANDROID_KEYSTORE_BASE64(推荐,
+      # 仓库里看不到私钥);过渡期回退到仓库里的 app/keystore/debug.keystore;
+      # 两者都没有才临时生成(签名会变,已装用户需卸载重装)。
+      - name: Use fixed signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          KEYSTORE=app/keystore/debug.keystore
+          mkdir -p app/keystore ~/.android
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "✅ 签名密钥来自 GitHub Secret(仓库里没有私钥)"
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$KEYSTORE"
+          elif [ -f "$KEYSTORE" ]; then
+            echo "⚠️ 签名密钥来自仓库文件,建议迁移到 GitHub Secrets 后删除该文件"
+          else
+            echo "⚠️ 未找到签名密钥,临时生成一个(签名会变,已装用户需卸载重装)"
+            keytool -genkeypair -v -keystore "$KEYSTORE" \
+              -alias nb-channelapp -keyalg RSA -keysize 2048 -validity 10950 \
+              -storepass android -keypass android \
+              -dname "CN=nb-channelAPP,O=NBChannel,C=CN"
+          fi
+          cp "$KEYSTORE" ~/.android/debug.keystore
+          echo "✅ 签名密钥就绪(别名 nb-channelapp / 所有者 CN=nb-channelAPP)"
+
+      # Gradle 默认的 debug 签名写死了 keyAlias "androiddebugkey",
+      # 这里显式改成 nb-channelapp,并给 release 也配上同一把密钥
+      # (必须放在 cap sync 之后,否则会被 sync 覆盖)
+      - name: Configure signing & release build
+        run: |
+          GRADLE=app/android/app/build.gradle
+          if grep -q "NB频道:固定签名" "$GRADLE"; then
+            echo "签名配置已存在,跳过"
+          else
+            cat app/android-overrides/signing.gradle >> "$GRADLE"
+            echo "✅ 已写入签名与 release 构建配置"
+          fi
+          # 扫码依赖(zxing)。同样必须放 sync 之后 —— 理由见 scanner.gradle 顶部注释
+          if grep -q "zxing-android-embedded" "$GRADLE"; then
+            echo "扫码依赖已存在,跳过"
+          else
+            cat app/android-overrides/scanner.gradle >> "$GRADLE"
+            echo "✅ 已写入扫码依赖"
+          fi
+          # 构建前自检:MainActivity 里用了 zxing,依赖就必须在
+          if grep -q "com.journeyapps.barcodescanner" app/android-overrides/MainActivity.java \
+             && ! grep -q "zxing-android-embedded" "$GRADLE"; then
+            echo "❌ MainActivity 里用了 zxing 但 build.gradle 里没有依赖,构建会失败"
+            exit 1
+          fi
+
+      # 通知权限 + 后台任务 Service 必须等 cap sync 之后再注入,否则会被覆盖
+      - name: Inject notification service
+        working-directory: app
+        run: node android-overrides/manifest.mjs
+
+      # 这里不再提交密钥进仓库:密钥优先来自 GitHub Secrets,
+      # 过渡期用仓库里已有的文件,两者都没有才临时生成(日志会警告)。
+
+      # 用 release 构建:debug 包带 debuggable=true,别人插上电脑就能导出
+      # APP 私有数据(含网页登录令牌),正式包必须是 release。
+      - name: Build release APK
+        working-directory: app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Collect APK
+        run: |
+          mkdir -p out download
+          APK=app/android/app/build/outputs/apk/release/app-release.apk
+          ls -lh "$APK"
+          cp "$APK" "out/NB频道-v${APP_VERSION_NAME}.apk"
+          cp "$APK" "download/NBChannel.apk"
+          echo "---- 本次 APK 的签名指纹(以后每次都应相同) ----"
+          keytool -printcert -jarfile download/NBChannel.apk | head -6 || true
+          # 兜底:确保 version.json 一定存在,否则"发布到网站"那步会因找不到文件整体失败
+          if [ ! -f download/version.json ]; then
+            printf '{\n  "version": %s,\n  "versionName": "%s",\n  "url": "https://github.nb-channel.top/download/NBChannel.apk",\n  "apkSize": "约 5MB",\n  "note": "%s",\n  "updatedAt": "%s"\n}\n' \
+              "${APP_VERSION_CODE}" "${APP_VERSION_NAME}" "${APP_RELEASE_NOTE}" "$(date +%F)" > download/version.json
+            echo "已兜底生成 version.json"
+          fi
+          echo "--- download/ ---"
+          ls -lh out/ download/
+          echo "--- version.json ---"
+          cat download/version.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NB频道-APK
+          path: out/*.apk
+
+      # 发布到 Release:tag 固定为 app-latest → Releases 列表永远只有一条(不再每次堆积)
+      # 版本号写在标题和说明里;要下载具体版本请看版本号与构建时间
+      - name: Publish to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: NB频道 APP v${{ steps.ver.outputs.name }}
+          body: |
+            ## NB频道 安卓客户端 v${{ steps.ver.outputs.name }}
+
+            **安装方法**:下载下面的 APK → 手机上点开安装 →
+            提示"未知来源"时允许一次即可。
+
+            - 内容与 https://github.nb-channel.top/Beta/index-Beta.html 完全一致
+            - **网站更新后 APP 自动同步**,只有外壳变化才需要更新 APP
+            - 国内直连下载(推荐):https://github.nb-channel.top/download/NBChannel.apk
+            - 已安装旧版的用户:APP 会自己提示更新,点一下就能装
+            - iPhone 用户:用 Safari 打开官网 → 分享 → 添加到主屏幕,效果相同
+
+            构建信息:versionCode ${{ env.APP_VERSION_CODE }} · 构建于 ${{ github.run_started_at }}
+          files: out/*.apk
+          draft: false
+          prerelease: false
+          make_latest: true
+
+      # 清理历史 Release:每次构建都发一条会让列表越来越长,这里只保留 app-latest
+      - name: Clean old APP releases
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const rels = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+            let cleaned = 0;
+            for (const r of rels.data) {
+              if (r.tag_name === 'app-latest') continue;
+              try {
+                await github.rest.repos.deleteRelease({ owner, repo, release_id: r.id });
+                try { await github.rest.git.deleteRef({ owner, repo, ref: `tags/${r.tag_name}` }); } catch (e) {}
+                core.info(`已清理旧版本: ${r.tag_name}`);
+                cleaned++;
+              } catch (e) {
+                core.warning(`清理 ${r.tag_name} 失败: ${e.message}`);
+              }
+            }
+            core.info(cleaned ? `共清理 ${cleaned} 条历史 Release` : '没有需要清理的历史 Release');
+
+
+      # 把 APK 与 version.json 提交进仓库 → 网站直接对外提供(国内可直连)
+      - name: Publish APK to website
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: 'download/NBChannel.apk download/version.json'
+          commit_message: "自动发布 APP v${{ steps.ver.outputs.name }} [skip ci]"
+          commit_user_name: github-actions[bot]
+          commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_options: '--no-verify'
+          push_options: '--force-with-lease'
+          skip_dirty_check: false

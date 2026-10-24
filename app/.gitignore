@@ -1,0 +1,10 @@
+# Capacitor / Android 构建产物(不进仓库,由 GitHub Actions 云端生成)
+app/node_modules/
+app/android/
+app/www/index.html.bak
+app/.gradle/
+app/out/
+*.apk
+*.aab
+.idea/
+local.properties

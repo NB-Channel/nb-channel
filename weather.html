@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>天气瞎报 - NB频道</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ui-new.css">
+    <link rel="stylesheet" href="css/classic.css">
+    <!-- 官网模式皮肤(仅html.beta选择器生效;静态加载避免样式闪跳) -->
+    <link rel="stylesheet" href="css/beta.css?v=20261011" id="uiBetaCss">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script id="uiBootGuard">
+(function () {
+    try {
+        // 经典模式(可选):localStorage nb_classic=1 时加 classic 类(第一帧前生效,零闪跳)
+        var m = localStorage.getItem('nb_ui_mode');
+        try { var qp = new URLSearchParams(location.search).get('ui'); if (qp === 'new' || qp === 'classic' || qp === 'beta') m = qp; } catch (e) {}
+        if (m === 'classic' || (m !== 'beta' && localStorage.getItem('nb_classic') === '1')) document.documentElement.classList.add('classic');
+        else if (m === 'beta') document.documentElement.classList.add('beta');
+        // 纯新UI:隐藏 body,等待 ui-nav.js 注入完成后解除(首帧即完整新UI,零闪跳)
+        document.documentElement.classList.add('ui-boot-new');
+        var st = document.createElement('style');
+        st.id = 'uiBootHide';
+        st.textContent = 'html.ui-boot-new body{visibility:hidden}';
+        document.head.appendChild(st);
+        setTimeout(function () {
+            document.documentElement.classList.remove('ui-boot-new');
+            var s = document.getElementById('uiBootHide');
+            if (s) s.remove();
+        }, 3500);
+    } catch (e) {}
+})();
+</script><script src="js/common.js?v=20260845"></script>
+    <script src="js/ui-nav.js?v=20261011"></script>
+    <style>
+        body { padding: 34px 16px 120px; background: var(--bg-color); }
+
+        .wx-wrap { padding: 0 4px; }
+
+        /* ── 顶部标题区 ── */
+        .wx-hero {
+            background: var(--card-bg);
+            border-radius: 30px;
+            padding: 28px 26px 24px;
+            box-shadow: 0 20px 35px -14px rgba(0,0,0,.22);
+            margin-bottom: 22px;
+        }
+        .wx-hero h1 { margin: 0 0 8px; font-size: 1.75rem; color: var(--status-border); }
+        .wx-hero .sub { color: var(--count-text); font-size: .92rem; line-height: 1.9; }
+
+        /* 刷新倒计时条 */
+        .wx-tick {
+            margin-top: 18px;
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .wx-tick .bar {
+            flex: 1; min-width: 160px; height: 7px; border-radius: 99px;
+            background: var(--count-bg); overflow: hidden;
+        }
+        .wx-tick .bar i {
+            display: block; height: 100%; width: 0%;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            border-radius: 99px;
+            transition: width .25s linear;
+        }
+        .wx-tick .txt { font-size: .82rem; color: var(--count-text); white-space: nowrap; }
+        .wx-tick button {
+            background: var(--nav-btn-bg); color: var(--nav-btn-text);
+            border: 1px solid var(--card-border); border-radius: 30px;
+            padding: 7px 16px; font-size: .84rem; cursor: pointer; transition: .2s;
+        }
+        .wx-tick button:hover { background: var(--nav-btn-hover-bg); color: #fff; }
+
+        /* ── 城市卡片网格 ── */
+/* ══════════════════════════════════════════════════════
+   天气瞎报 · 卡片样式
+   设计：温度定色 → 卡片左上角一层淡色晕开，左边一条温度色条，
+        右上角一个大天气图标。悬停轻微浮起。
+   ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   天气瞎报 · 一行一个城市
+   三栏：城市 | 温度 | 指标。窄屏自动竖排。
+   ══════════════════════════════════════════════════════ */
+.wx-grid { display: flex; flex-direction: column; gap: 14px; }
+
+.wx-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) 160px minmax(0, 2.7fr);
+    align-items: center;
+    gap: 22px;
+    padding: 22px 26px 22px 30px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+    background:
+        linear-gradient(120deg, var(--tc-soft) 0%, rgba(255,255,255,0) 42%),
+        var(--card-bg);
+    box-shadow: 0 6px 20px -14px rgba(16,24,40,.22);
+    transition: transform .24s cubic-bezier(.2,.8,.3,1), box-shadow .24s;
+}
+.wx-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 34px -18px rgba(16,24,40,.32);
+}
+/* 左侧温度色条 */
+.wx-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+    background: var(--tc);
+    transition: background .5s;
+}
+
+/* ── 第一栏：城市 ── */
+.wx-who { min-width: 0; }
+.wx-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.wx-city { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.wx-ico { font-size: 1.3rem; font-style: normal; flex: none; }
+.wx-nm {
+    font-size: 1.18rem; font-weight: 800; color: var(--text-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wx-cond {
+    display: inline-flex; align-items: center; gap: 4px; flex: none;
+    font-size: .8rem; font-weight: 600; color: var(--count-text);
+    background: var(--count-bg);
+    border-radius: 99px; padding: 2px 10px 2px 6px;
+}
+.wx-cond i { font-size: 1.05rem; font-style: normal; line-height: 1; }
+.wx-cond em { font-style: normal; }
+.wx-note-in {
+    margin: 0; font-size: .78rem; line-height: 1.7;
+    color: var(--count-text);
+}
+
+/* ── 第二栏：温度 ── */
+.wx-temp {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    padding-left: 22px;
+    border-left: 1px dashed var(--card-border);
+}
+.wx-c {
+    font-size: 3.4rem; font-weight: 800; line-height: 1;
+    letter-spacing: -2px; color: var(--status-border);
+    font-variant-numeric: tabular-nums;
+}
+.wx-c .wx-u {
+    font-size: 1.3rem; font-weight: 700; letter-spacing: 0;
+    margin-left: 2px; color: var(--status-border);
+}
+.wx-f {
+    font-size: .86rem; font-weight: 600;
+    color: var(--count-text); font-variant-numeric: tabular-nums;
+}
+
+/* ── 第三栏：五项指标横排 ── */
+.wx-rows {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.wx-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.wx-row dt {
+    font-size: .74rem; color: var(--count-text); white-space: nowrap;
+}
+.wx-row dd {
+    margin: 0; font-size: 1.34rem; font-weight: 800; line-height: 1.2;
+    color: var(--text-color); font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.wx-row dd .u {
+    font-size: .78rem; font-weight: 600; color: var(--count-text);
+    margin-left: 3px;
+}
+/* 风向风力那格文字长，单独小一号 */
+
+.wx-row-wide dd { font-size: 1.06rem; }
+.wx-row-wide dd .u { font-size: .78rem; }
+
+/* 空气质量的颜色由 JS 挂类，这里只保证加粗 */
+.wx-row dd.aq-good, .wx-row dd.aq-mid, .wx-row dd.aq-bad,
+.wx-row dd.aq-worse, .wx-row dd.aq-awful { font-weight: 800; }
+
+/* ── 窄屏：竖排 ── */
+@media (max-width: 1000px) {
+    .wx-card { grid-template-columns: 1fr; gap: 16px; padding: 20px 20px 20px 26px; }
+    .wx-temp {
+        flex-direction: row; align-items: baseline; gap: 10px;
+        padding-left: 0; padding-top: 14px;
+        border-left: none; border-top: 1px dashed var(--card-border);
+    }
+    .wx-c { font-size: 2.9rem; }
+    .wx-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+    .wx-c { font-size: 2.4rem; }
+    .wx-row dd { font-size: 1.28rem; }
+}
+
+    
+    /* ── 卡片里的 24 小时温度曲线 ── */
+    .wx-row-chart { grid-column: 1 / -1; display: block; margin-top: 4px; }
+    .wx-chart-box {
+        position: relative; width: 100%;
+        padding: 8px 34px 12px 34px;
+        border-top: 1px dashed var(--card-border);
+    }
+    .wx-chart { display: block; width: 100%; height: 84px; }
+    .wx-chart-tip {
+        position: absolute; left: 34px; bottom: -2px;
+        font-size: .68rem; color: var(--count-text); letter-spacing: .5px;
+    }
+    .wx-chart-lo, .wx-chart-hi {
+        position: absolute; font-size: .72rem; font-weight: 700;
+        color: var(--count-text); font-variant-numeric: tabular-nums; z-index: 1;
+    }
+    .wx-chart-lo { left: 4px;  bottom: 10px; }
+    .wx-chart-hi { left: 4px;  top: 8px; }
+
+        /* 本页容器放宽（style.css 里 .container 是 1200px）。
+           内联样式在 link 之后，所以只影响本页。 */
+        .container { max-width: 1560px; }
+        .wx-wrap { max-width: 1560px; margin: 0 auto; }
+
+    /* ── 图表区：温度曲线 + 三张小图 ── */
+    .wx-row-charts { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin-top: 2px; }
+    .wx-mini-box {
+        border: 1px solid var(--card-border); border-radius: 8px;
+        padding: 8px 10px 6px; background: rgba(124,140,248,.04);
+    }
+    .wx-mini-box h5 {
+        margin: 0 0 6px; font-size: .72rem; font-weight: 700; letter-spacing: .5px;
+        color: var(--count-text);
+    }
+    .wx-mini { display: block; width: 100%; height: 92px; color: var(--count-text); }
+    .wx-mini-sq { width: 92px; height: 92px; margin: 0 auto; }
+
+    /* ── 曲线热区 + 悬停气泡 ── */
+    .wx-chart-hit {
+        position: absolute; left: 34px; right: 34px; top: 0; bottom: 0;
+        cursor: crosshair; z-index: 2;
+    }
+    .wx-chart-tipbox {
+        position: fixed; z-index: 9999; display: none; pointer-events: none;
+        transform: translateX(-50%);
+        padding: 5px 10px; border-radius: 8px;
+        background: rgba(30,41,59,.94); color: #fff;
+        font-size: .78rem; font-weight: 600; letter-spacing: .3px;
+        white-space: nowrap; box-shadow: 0 6px 18px -6px rgba(0,0,0,.5);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ── 三张小图的热区 ── */
+    .wx-mini-hit { position: relative; cursor: crosshair; }
+    .wx-hit { cursor: crosshair; }
+</style>
+</head>
+<body>
+<script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
+
+<div class="container">
+    <h1>📺 NB频道官网</h1>
+    <div class="author-info" id="authorInfo">UP主：NB搞事局（原NB实验室-作死）</div>
+
+    <nav class="top-nav"><a class="nav-logo" href="index.html">NB频道</a><div class="nav-menu"><a href="index.html" class="nav-btn">首页</a><a href="videos.html" class="nav-btn">视频</a><a href="about.html" class="nav-btn">关于</a><a href="rules.html" class="nav-btn">用户守则</a><a href="changelog.html" class="nav-btn">更新日志</a><a href="product.html" class="nav-btn">我的产品</a><a href="APP.html" class="nav-btn">软件/APP下载</a>
+            <a href="pricing.html" class="nav-btn">💰 模型 &amp; 价格</a></div><div class="nav-right"><button id="profileBtn" class="profile-btn">个人中心</button><button id="authButton" class="auth-btn">登录/注册</button></div></nav>
+
+    <div class="quick-nav"><span style="font-size:0.85rem; color:var(--count-text);">快捷入口：</span><a href="comments-beta.html" class="nav-btn">💬 评论区</a><a href="Virtual stock.html" class="nav-btn">📈 NB虚拟股票</a><a href="chat.html" class="nav-btn">👥 好友</a><a href="product_share.html" class="nav-btn">🛍️ 作品分享</a><a href="messages.html" class="nav-btn">🔔 消息</a><a href="tools.html" class="nav-btn">🔬 化学工具</a><a href="titles.html" class="nav-btn">🏅 称号</a><a href="bank.html" class="nav-btn">🏦 NB银行</a><a href="shop.html" class="nav-btn">🛍️ NB商店</a><a href="backpack.html" class="nav-btn">🎒 背包</a><a href="weather.html" class="nav-btn">🌦️ 天气瞎报</a><a href="newspaper.html" class="nav-btn">📰 NB报刊社</a></div>
+
+    <div class="hero" id="uiPageBanner" style="position:relative; overflow:hidden; background:linear-gradient(135deg, #00a1d6 0%, #0a84c1 45%, #6c5ce7 100%); border-radius:24px; padding:36px 28px; text-align:center; margin-bottom:24px; box-shadow:0 18px 40px -12px rgba(0,161,214,0.5);">
+        <div style="position:absolute; top:-60px; right:-60px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,0.08);"></div>
+        <div style="position:absolute; bottom:-80px; left:-40px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,0.06);"></div>
+        <h1 style="font-size:1.9rem; font-weight:900; color:#fff; margin:0; text-shadow:0 2px 8px rgba(0,0,0,0.2);">🌦️ 天气瞎报</h1>
+        <div style="font-size:0.95rem; opacity:0.92; color:#fff; margin-top:6px;">📺 NB频道 · 虚拟公司 · 官网</div>
+    </div>
+<div class="wx-wrap">
+
+    <div class="wx-hero">
+        <p class="sub">
+            NB频道虚拟公司下属十六座城市的实时气象 —— <b>全是编的，别当真</b>。<br>
+            数据按真实季节走（现在是<span id="seasonTxt">…</span>），每 10 秒刷新一次。
+        </p>
+        <div class="wx-tick">
+            <span class="txt">下次刷新</span>
+            <div class="bar"><i id="tickBar"></i></div>
+            <span class="txt" id="tickNum">10.0s</span>
+            <button id="refreshNow">🔄 立刻刷新</button>
+            <span class="txt" id="clockTxt"></span>
+            <span id="wxSrc" style="font-size:.82rem;color:var(--count-text);white-space:nowrap;"></span>
+        </div>
+    </div>
+
+    <div class="wx-grid" id="wxGrid"></div>
+
+    <div class="wx-foot">
+        本页所有气象数据由随机数生成，与任何真实地点、真实天气无关 · 单位：温度 °C / °F · 气压 kPa · 能见度 km
+    </div>
+</div>
+</div>
+
+<div style="margin-top:20px; text-align:center; font-size:0.85rem; color:var(--count-text); line-height:2.1;">
+    © 2026 NB频道 · 虚拟公司 · <a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top（导航页）</a> · <a href="https://github.nb-channel.top" target="_blank" rel="noopener noreferrer">github站</a> · <a href="https://cloudflare.nb-channel.top" target="_blank" rel="noopener noreferrer">cloudflare站</a> · <a href="https://edgeone.nb-channel.top" target="_blank" rel="noopener noreferrer">edgeone站</a> · <a href="https://pythonanywhere.nb-channel.top" target="_blank" rel="noopener noreferrer">pythonanywhere站</a><br>
+    如有任何问题或建议，请联系：<a href="mailto:nbchannel@163.com">nbchannel@163.com</a> 或 <a href="mailto:NBchannel@163.com">NBchannel@163.com</a><br>
+    制作：<a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">NB搞事局（原NB实验室-作死）</a><br>
+    托管：<a href="https://github.com/" target="_blank" rel="noopener noreferrer">Github</a> · <a href="https://www.cloudflare-cn.com/developer-platform/products/pages/" target="_blank" rel="noopener noreferrer">Cloudflare</a> · <a href="https://edgeone.ai/products/pages" target="_blank" rel="noopener noreferrer">EdgeOne</a> · <a href="https://www.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">PythonAnywhere</a>
+<div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div></div>
+
+<div class="fixed-buttons">
+    <button class="theme-toggle-fixed" id="themeToggleFixed" onclick="toggleTheme()">🌙</button>
+    <div class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   天气瞎报 —— 十六座城市的气象生成器
+   ══════════════════════════════════════════════════════════════════
+
+   设计要点
+
+   ① 按真实季节走
+      用当天在一年中的第几天算一个「季节系数」：
+          season = -cos(2π × (第几天 - 15) / 365.25)
+      1 月中旬 = -1（最冷），7 月中旬 = +1（最热），春秋 = 0 附近。
+      每座城市的实际温度 = 年均基准 + 季节振幅 × 季节系数 + 随机抖动。
+      振幅大的城市四季分明，振幅小的（比如机房）全年差不多。
+
+   ② 数据之间互相关联，不是各自乱随
+      温度高 → 湿度低、气压略低
+      湿度高 + 空气差 → 能见度低
+      这样看起来才像一份真的气象数据，而不是六个独立随机数。
+
+   ③ 每 10 秒变一次
+      不是整批跳变，而是每座城市在上一轮的基础上小幅游走
+      （随机游走），所以数值是连续变化的，不会突然从 5°C 跳到 30°C。
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+    'use strict';
+
+    var REFRESH_MS = 10000;
+
+    /* 十六座城市。base = 年均基准温度，swing = 季节振幅，
+       vol = 每轮抖动幅度，其余是各自的基准值 */
+    var CITIES = [
+        { name: 'NB频道总部', ico: '🏢', base: 22, swing: 2, vol: .4, lat: 30, uvK: 1.0, peak: 14,
+          hum: 45, aqi: 22, vis: 28, note: '总部不打烊，数据不走样' },
+
+        { name: 'U系', ico: '🪐', base: 12, swing: 26, vol: 3.2, lat: 15, uvK: 1.1, peak: 15,
+          hum: 30, aqi: 24, vis: 42, note: '从 U 星发来的，可能有点偏' },
+
+        { name: 'AWM市', ico: '🎯', base: 6, swing: 14, vol: 1.4, lat: 38, uvK: 1.22, peak: 13,
+          hum: 62, aqi: 20, vis: 48, note: '枪法不虚发，天气不虚报' },
+
+        { name: 'Lemon市', ico: '🍋', base: 20, swing: 9, vol: 1.0, lat: 24, uvK: 0.98, peak: 15.5,
+          hum: 58, aqi: 26, vis: 26, note: '柠檬酸一点，日子甜一点' },
+
+        { name: 'Oganesson市', ico: '☢️', base: 34, swing: 8, vol: 2.6, lat: 22, uvK: 1.05, peak: 14.5,
+          hum: 22, aqi: 38, vis: 30, note: '元素排最后，热度排第一' },
+
+        { name: 'Fafat市', ico: '🌫️', base: 17, swing: 11, vol: 1.2, lat: 31, uvK: 0.96, peak: 15.5,
+          hum: 72, aqi: 34, vis: 22, note: '功能做得全，天气也周全' },
+
+        { name: 'GC3市', ico: '🏗️', base: 15, swing: 12, vol: 1.1, lat: 32, uvK: 0.95, peak: 13.5,
+          hum: 52, aqi: 42, vis: 26, note: '产品不将就，天气不凑合' },
+
+        { name: 'UVS市', ico: '☀️', base: 25, swing: 10, vol: .9, lat: 35, uvK: 1.18, peak: 13,
+          hum: 34, aqi: 18, vis: 50, note: '紫外线最强，心情最亮' },
+
+        { name: 'UWSF市', ico: '🌬️', base: 13, swing: 15, vol: 1.6, lat: 28, uvK: 1.0, peak: 14,
+          hum: 55, aqi: 21, vis: 38, note: '市值往上长，风也往上长' },
+
+        { name: 'PTC市', ico: '🔥', base: 27, swing: 7, vol: 1.3, lat: 33, uvK: 0.97, peak: 14.5,
+          hum: 40, aqi: 30, vis: 28, note: '加热不马虎，天气不认输' },
+
+        { name: '5U市', ico: '🎈', base: 18, swing: 13, vol: 1.2, lat: 26, uvK: 1.02, peak: 15,
+          hum: 60, aqi: 32, vis: 25, note: '细节做得足，天气也靠谱' },
+
+        { name: 'Ubn市', ico: '🌃', base: 16, swing: 12, vol: 1.0, lat: 29, uvK: 0.9, peak: 16,
+          hum: 64, aqi: 36, vis: 24, note: '夜里不打盹，白天不迟到' },
+
+        { name: '3ty市', ico: '🛰️', base: 24, swing: 10, vol: 1.3, lat: 27, uvK: 1.04, peak: 14.5,
+          hum: 52, aqi: 28, vis: 33, note: '一个人一座城，预报照样准' },
+        { name: 'Mn(NO3)2市', ico: '🧪', base: 20, swing: 12, vol: 1.5, lat: 30, uvK: 1.0, peak: 14.5,
+          hum: 48, aqi: 25, vis: 36, note: '式子配得平，天气报得准' },
+        { name: 'AWST市', ico: '🌏', base: 23, swing: 11, vol: 1.2, lat: 28, uvK: 1.02, peak: 14.5,
+          hum: 55, aqi: 30, vis: 30, note: '八小时时差，天气不差' },
+        { name: '小琪市', ico: '🌸', base: 21, swing: 12, vol: 1.3, lat: 30, uvK: 1.0, peak: 14.5,
+          hum: 58, aqi: 26, vis: 32, note: '小城不大，天气不差' }
+    ];
+
+    var DIRS = ['北', '东北偏北', '东北', '东北偏东', '东', '东南偏东', '东南', '东南偏南',
+                '南', '西南偏南', '西南', '西南偏西', '西', '西北偏西', '西北', '西北偏北'];
+
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+    function f2c(f) { return (f - 32) * 5 / 9; }
+
+    /* 季节系数：-1 = 隆冬，+1 = 盛夏 */
+    function seasonFactor(d) {
+        var start = new Date(d.getFullYear(), 0, 0);
+        var doy = Math.floor((d - start) / 86400000);
+        return -Math.cos(2 * Math.PI * (doy - 15) / 365.25);
+    }
+
+    /* ── 季节 ──────────────────────────────────────────────────
+       按【日期】定位 24 节气，再由节气推季节名。
+
+       ⚠️ 这里曾经有个 bug：原来只按 seasonFactor 的【数值】起名，
+          而四月和十月的数值都接近 0，于是十月也被叫成「春秋之交」。
+          那个数值是温度曲线（-cos 型），必须配上方向才能定季节。
+          改成按日期算之后，十月十日在寒露与霜降之间 → 深秋。
+       ──────────────────────────────────────────────────────── */
+    var TERMS = [
+        [1, 5, '小寒'], [1, 20, '大寒'], [2, 4, '立春'], [2, 19, '雨水'],
+        [3, 6, '惊蛰'], [3, 21, '春分'], [4, 5, '清明'], [4, 20, '谷雨'],
+        [5, 6, '立夏'], [5, 21, '小满'], [6, 6, '芒种'], [6, 21, '夏至'],
+        [7, 7, '小暑'], [7, 23, '大暑'], [8, 8, '立秋'], [8, 23, '处暑'],
+        [9, 8, '白露'], [9, 23, '秋分'], [10, 8, '寒露'], [10, 24, '霜降'],
+        [11, 8, '立冬'], [11, 22, '小雪'], [12, 7, '大雪'], [12, 22, '冬至']
+    ];
+    var TERM_SEASON = [
+        '隆冬', '隆冬', '初春', '初春', '仲春', '仲春', '暮春', '暮春',
+        '初夏', '初夏', '仲夏', '仲夏', '盛夏', '盛夏', '初秋', '初秋',
+        '仲秋', '仲秋', '深秋', '深秋', '初冬', '初冬', '寒冬', '寒冬'
+    ];
+
+    function seasonTerm(d) {
+        var m = d.getMonth() + 1, day = d.getDate();
+        var idx = TERMS.length - 1;          // 1 月 5 日之前算上一年的冬至
+        for (var i = 0; i < TERMS.length; i++) {
+            if (m > TERMS[i][0] || (m === TERMS[i][0] && day >= TERMS[i][1])) idx = i;
+            else break;
+        }
+        return { term: TERMS[idx][2], season: TERM_SEASON[idx] };
+    }
+
+    /* 季节那句话说白了就是「现在是深秋（寒露）」 */
+    function seasonLabel(d) {
+        var t = seasonTerm(d);
+        return t.season + ' · ' + t.term;
+    }
+
+    /* ── 紫外线指数 ──────────────────────────────────────────────
+       按真实物理算，不是拍脑袋给的数：
+
+           太阳赤纬   decl = 23.44° × sin(2π(doy-81)/365.25)      ← 季节
+           时角       ha   = 15° × (小时 - 12)                     ← 时刻
+           太阳高度角 sinH = sin(lat)sin(decl) + cos(lat)cos(decl)cos(ha)
+           晴空 UV    = 12 × sinH^2.42                            ← 公认近似式
+           最终 UV    = 晴空 UV × 城市系数 × 云量系数
+
+       所以它是【实时】的：清晨低、正午高、太阳落山归零；
+       冬天整体压低，夏天抬起来；高原城市（AWM）比同纬度更强。
+       ──────────────────────────────────────────────────────── */
+    function uvCloud(t) {
+        if (t.indexOf('雷') >= 0) return .30;
+        if (t.indexOf('雪') >= 0) return .35;
+        if (t.indexOf('雨') >= 0) return .28;
+        if (t.indexOf('霾') >= 0) return .55;   // ⚠️ 补：原来匹配不到关键字会返回 1.0
+        if (t.indexOf('雾') >= 0) return .45;   // ⚠️ 补：同上，雾霾天紫外线该更弱
+        if (t.indexOf('阴') >= 0) return .35;
+        if (t.indexOf('间') >= 0) return .85;   // 晴间多云
+        if (t.indexOf('多云') >= 0) return .62;
+        return 1.0;                             // 晴
+    }
+
+    function uvIndex(c, condText, d) {
+        var start = new Date(d.getFullYear(), 0, 0);
+        var doy = Math.floor((d - start) / 86400000);
+        var decl = 23.44 * Math.sin(2 * Math.PI * (doy - 81) / 365.25);
+        var hours = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+        var ha = 15 * (hours - 12);
+        var latR = c.lat * Math.PI / 180,
+            decR = decl * Math.PI / 180,
+            haR = ha * Math.PI / 180;
+        var sinH = Math.sin(latR) * Math.sin(decR) +
+                   Math.cos(latR) * Math.cos(decR) * Math.cos(haR);
+        if (sinH <= 0.02) return 0;             // 太阳在地平线下
+        var clear = 11.2 * Math.pow(sinH, 2.42);
+        return Math.max(0, Math.min(12, clear * (c.uvK || 1) * uvCloud(condText || '')));
+    }
+
+    function uvGrade(v) {
+        if (v < 3) return { t: '弱', c: '' };
+        if (v < 6) return { t: '中等', c: '' };
+        if (v < 8) return { t: '强', c: 'lv-warn' };
+        if (v < 11) return { t: '很强', c: 'lv-bad' };
+        return { t: '极强', c: 'lv-bad' };
+    }
+
+    /* ── 24 小时温度曲线 ────────────────────────────────────────
+       和实时温度同一个公式：
+           日均值  mean = base + swing × seasonFactor(日期)
+           日内    T(h) = mean + A × cos(2π(h-14)/24)
+       峰值 14:00、谷值 02:00 —— 气温日变化的常用近似。
+       振幅按各城市的 vol 折算，再给个下限，免得平坦的城市画成直线。
+       ──────────────────────────────────────────────────────── */
+    /* ── 历史数据 ──────────────────────────────────────────────
+       数据库里 weather_history 每 10 分钟存一条/城。
+       页面把它拉下来，某城点数够了就画真实曲线，否则退回模型曲线。
+       ⚠️ 这张表是新建的，从建好那一刻才开始积累 ——
+          刚上线时会先显示模型推算，攒够 6 个点（约 1 小时）自动切过来。
+       ──────────────────────────────────────────────────────── */
+    var HISTORY = {};          // city -> [{ t: 毫秒, v: 温度 }]
+    var HIST_AT = 0;           // 上次拉取时间
+
+    function applyHistory(rows) {
+        var m = {};
+        (rows || []).forEach(function (r) {
+            var c = r.city;
+            if (!m[c]) m[c] = [];
+            var ts = Date.parse(r.at);
+            if (isNaN(ts)) return;
+            // v = 温度，p = 气压（气压趋势图要用实测，不能再只靠公式推）
+            m[c].push({ t: ts, v: parseFloat(r.temp_c), p: parseFloat(r.pressure) });
+        });
+        // 按时间排序
+        Object.keys(m).forEach(function (c) {
+            m[c].sort(function (a, b) { return a.t - b.t; });
+        });
+        HISTORY = m;
+        HIST_AT = Date.now();
+    }
+
+    function pullHistory() {
+        if (!sb || !sb.rpc) return;
+        sb.rpc('get_weather_history', { p_hours: 24 }).then(function (res) {
+            if (res && res.data && res.data.length) { applyHistory(res.data); render(); }
+        }).catch(function () { /* 表还没建好或没数据，静默退回模型曲线 */ });
+    }
+
+    /* ── 给预测加真实感的小工具 ──────────────────────────────
+       预测 = 模型值 + 慢波动 + 小抖动
+       两层都用确定性伪随机（种子 = 城市 + 时刻），所以同一城市同一时刻
+       每次算出来一样 —— 不会一闪一闪 —— 但曲线不再像教科书正弦。
+       这不是真预报，只是让「预测」看着可信一点。 */
+    function wxSeed(str) {
+        var h = 0, i;
+        for (i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) | 0; }
+        return h;
+    }
+    function wxRand(seed) {
+        var x = Math.sin(seed * 12.9898) * 43758.5453;
+        return (x - Math.floor(x)) * 2 - 1;                 // -1 ~ 1
+    }
+    // 预测的温度扰动：amp 是幅度（℃），hourIdx 是从现在起的第几小时
+    function wxJitter(name, hourIdx, amp) {
+        var s = wxSeed(name);
+        var slow = wxRand(s + Math.floor(hourIdx / 3) * 7.3) * 0.62;   // 3 小时尺度的天气过程
+        var fast = wxRand(s + hourIdx * 3.7 + 91) * 0.38;              // 每小时的小抖动
+        return (slow + fast) * amp;
+    }
+
+    // 偏差订正：用实测把模型拉回来一点
+    //   偏差 = 最近实测 − 模型在同一时刻的值
+    //   预报(t) = 模型(t) + 偏差 × e^(−t/τ)   （t 单位小时，τ 见调用处）
+    function wxBias(name, field, modelFn) {
+        var hs = (typeof HISTORY !== 'undefined' && HISTORY[name]) || [];
+        var nowMs = Date.now(), best = null, bd = Infinity, i;
+        for (i = 0; i < hs.length; i++) {
+            var val = field === 'p' ? hs[i].p : hs[i].v;
+            if (isNaN(val)) continue;
+            var dd = nowMs - hs[i].t;
+            if (dd < -600000 || dd > 3 * 3600000) continue;    // 只看最近 3 小时内、且不过期的
+            if (dd < bd) { bd = dd; best = { v: val, t: hs[i].t }; }
+        }
+        if (!best) return 0;
+        var when = new Date(best.t);
+        var mv = modelFn(when.getHours() + when.getMinutes() / 60, when);
+        if (!isFinite(mv)) return 0;
+        var b = best.v - mv;
+        // 偏差太离谱就当是脏数据，别让它把整条曲线拽歪
+        return Math.max(-6, Math.min(6, b));
+    }
+
+    function tempAt(c, hour, date) {
+        var mean = c.base + c.swing * seasonFactor(date);
+        var amp = Math.max(1.8, c.vol * 1.5 + 2.4);
+        // 各城的最高温出现时刻不同：内陆/干燥早（13 时前后），沿海/湿润晚（15~16 时）
+        var pk = (c.peak === undefined) ? 14 : c.peak;
+        var base = amp * Math.cos(2 * Math.PI * (hour - pk) / 24);
+        // 二阶谐波：真实气温是【升温快、降温慢】的不对称曲线，不是纯正弦。
+        // 没有这一项的话，十六张图各自归一化之后形状会完全一样。
+        var harm = amp * 0.22 * Math.cos(4 * Math.PI * (hour - pk - 1.6) / 24);
+        return mean + base + harm;
+    }
+
+    function tempChart(c, now) {
+        var W = 900, H = 84, PAD = 10, PADB = 16;
+        var lo = Infinity, hi = -Infinity;
+        var nowH = now.getHours() + now.getMinutes() / 60;
+        // 横轴 -6 ~ +18（0 = 现在）；BACK / AHEAD 在下面定义，这里用常量
+        var BK = 6, AH = 18;
+        function X(hh) { return PAD + (W - PAD * 2) * ((hh + BK) / (BK + AH)); }
+        function Y(v) { return PAD + (H - PAD - PADB) * (1 - (v - lo) / (hi - lo)); }
+
+        // ── 横轴：过去 6 小时 ~ 未来 18 小时，0 = 现在 ──
+        var BACK = 6, AHEAD = 18;
+        var hist = HISTORY[c.name] || [];
+        var pts = [], i, h, t, xs = [];
+        var nReal = 0;                       // pts 里前几个是实测（用来切实线/虚线）
+
+        // 左段：过去 6 小时的实测。采样点太少就不画实测（只给预测）
+        var real = [];
+        for (i = 0; i < hist.length; i++) {
+            if (isNaN(hist[i].v)) continue;
+            var off = (hist[i].t - now.getTime()) / 3600000;
+            if (off < -BACK || off > 0.25) continue;
+            real.push({ x: off, y: hist[i].v });
+        }
+        real.sort(function (a, b) { return a.x - b.x; });
+        if (real.length >= 2) {
+            for (i = 0; i < real.length; i++) { xs.push(real[i].x); pts.push(real[i].y); }
+            nReal = real.length;
+        }
+
+        // 右段：未来 18 小时的模型预测，每小时一个点
+        //      有实测就从「现在」接着画，没实测就直接从 -6 开始铺模型
+        var startI = 0;
+        if (!nReal) {
+            var bT0 = wxBias(c.name, 'v', function (hh, when) { return tempAt(c, hh, when); });
+            for (i = -BACK; i < 0; i++) {
+                var dh = new Date(now.getTime() + i * 3600000);
+                xs.push(i);
+                pts.push(tempAt(c, dh.getHours() + dh.getMinutes() / 60, dh) +
+                         bT0 * Math.exp(-Math.abs(i) / 6) +
+                         wxJitter(c.name, i, Math.max(0.35, (c.swing || 6) * 0.10)));
+            }
+        }
+        // 用实测给预测做偏差订正（τ=6 小时）
+        var baseAmp = Math.max(0.35, (c.swing || 6) * 0.10);
+        var biasT = wxBias(c.name, 'v', function (hh, when) { return tempAt(c, hh, when); });
+        for (i = startI; i <= AHEAD; i++) {
+            var df = new Date(now.getTime() + i * 3600000);
+            xs.push(i);
+            var decay = Math.exp(-Math.max(0, i) / 6);        // 越远越不信实测
+            // 抖动幅度：近处小（刚测过）、远处大（不确定）
+            var amp = baseAmp * (0.35 + 0.65 * (1 - decay)) * (i <= 0 ? 0.4 : 1);
+            pts.push(tempAt(c, df.getHours() + df.getMinutes() / 60, df) +
+                     biasT * decay + wxJitter(c.name, i, amp));
+        }
+        // 切分点：实测最后一个点也属于预测起点，所以虚线从 nReal-1 开始
+        var splitAt = nReal ? nReal - 1 : 0;
+
+        for (i = 0; i < pts.length; i++) {
+            if (pts[i] < lo) lo = pts[i];
+            if (pts[i] > hi) hi = pts[i];
+        }
+        if (!pts.length) { lo = 0; hi = 1; pts = [0, 1]; xs = [-BACK, AHEAD]; }
+        if (hi - lo < 1) { hi = lo + 1; }
+
+        // 实线（实测段）+ 虚线（预测段）
+        var dReal = '', dFcast = '';
+        for (i = 0; i < pts.length; i++) {
+            var seg = (i ? ' L' : 'M') + X(xs[i]).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+            if (i <= splitAt) dReal += seg;
+            else dFcast += seg;
+        }
+        // d 仍然保留（= 全段），下游用它算填充区和悬停兜底
+        var d = dReal + (dFcast ? ' ' + dFcast.replace('M', 'L') : '');
+        var x0 = xs[0], x1 = xs[xs.length - 1];
+        // 曲线下方填一层淡色
+        var area = d + ' L' + X(x1).toFixed(1) + ' ' + (H - PADB) + ' L' + X(x0).toFixed(1) + ' ' + (H - PADB) + ' Z';
+        // 当前时刻的点
+
+        // 时刻刻度 + 两条网格线（让曲线有参照，不至于看着像没数据）
+        var grid = '';
+        for (i = -BK; i <= AH; i += 6) {
+            var gx = X(i).toFixed(1);
+            var lab = (i === 0) ? '现在' : ((i > 0 ? '+' : '') + i + '时');
+            grid += '<line x1="' + gx + '" y1="' + (H - PADB) + '" x2="' + gx + '" y2="' + (H - PADB + 3) +
+                    '" stroke="rgba(124,140,248,.45)" stroke-width="1"/>' +
+                    '<text x="' + gx + '" y="' + (H - 4) + '" text-anchor="middle" font-size="9" ' +
+                    'fill="rgba(124,140,248,.8)">' + lab + '</text>';
+        }
+        // 「现在」那条竖虚线 —— 实测和预测的分界
+        grid += '<line x1="' + X(0).toFixed(1) + '" y1="' + PAD + '" x2="' + X(0).toFixed(1) +
+                '" y2="' + (H - PADB) + '" stroke="rgba(124,140,248,.42)" stroke-width="1" ' +
+                'stroke-dasharray="3 3"/>';
+        [lo, hi].forEach(function (vv) {
+            var gy = Y(vv).toFixed(1);
+            grid += '<line x1="' + PAD + '" y1="' + gy + '" x2="' + (W - PAD) + '" y2="' + gy +
+                    '" stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="3 4"/>';
+        });
+
+        var curT = pts[splitAt];
+        var curX = 0;                        // 横轴的 0 就是「现在」
+        var srcTxt = (nReal ? ('过去 6 小时实测 · ' + nReal + ' 个采样') : '过去 6 小时没采到样')
+                   + ' · 未来 18 小时预测';
+        return '<svg class="wx-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
+               'data-src="' + srcTxt + '" ' +
+               'role="img" aria-label="24 小时温度曲线">' +
+                 '<defs><linearGradient id="cg' + c.name.replace(/[^\w]/g, '') + '" x1="0" y1="0" x2="1" y2="0">' +
+                   '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
+                 '</linearGradient></defs>' +
+                 grid +
+                 '<path d="' + area + '" fill="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" opacity=".14"/>' +
+                 '<path d="' + dReal + '" fill="none" stroke="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" ' +
+                   'stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+                 (dFcast ? '<path d="' + dFcast + '" fill="none" stroke="url(#cg' + c.name.replace(/[^\w]/g, '') + ')" ' +
+                   'stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" ' +
+                   'stroke-dasharray="5 4" opacity=".75"/>' : '') +
+                 '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="6" ' +
+                   'fill="#7c8cf8" opacity=".18"/>' +
+                 '<circle cx="' + X(curX).toFixed(1) + '" cy="' + Y(curT).toFixed(1) + '" r="3.2" ' +
+                   'fill="#fff" stroke="#7c8cf8" stroke-width="2"/>' +
+                 '<text x="' + (X(curX) + 8).toFixed(1) + '" y="' + (Y(curT) - 6).toFixed(1) + '" ' +
+                   'font-size="10" font-weight="700" fill="#7c8cf8">现在</text>' +
+                 // 鼠标悬停时的高亮点（初始藏起来，交互时由 JS 移动）
+                 '<g class="wx-hover-g" style="display:none">' +
+                   '<line class="wx-hover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PADB) +
+                     '" stroke="rgba(124,140,248,.5)" stroke-width="1" stroke-dasharray="3 3"/>' +
+                   '<circle class="wx-hover-dot" cx="0" cy="0" r="3.6" fill="#7c8cf8" ' +
+                     'stroke="#fff" stroke-width="1.8"/>' +
+                 '</g>' +
+               '</svg>';
+
+    }
+
+    /* ── 曲线鼠标交互：按 x 位置反算时刻，显示该时刻的温度 ── */
+        // 滚动或改窗口时，图表会从鼠标底下滑走，同样不会触发 mouseleave ——
+    // 一并把悬停指示藏掉，免得留一个孤零零的点在图上。
+    (function () {
+        function hideAllHover() {
+            var gs = document.querySelectorAll('.wx-hover-g');
+            Array.prototype.forEach.call(gs, function (el) { el.style.display = 'none'; });
+            var ts = document.querySelectorAll('.wx-hover-tip');
+            Array.prototype.forEach.call(ts, function (el) { el.style.display = 'none'; });
+        }
+        window.addEventListener('scroll', hideAllHover, { passive: true });
+        window.addEventListener('resize', hideAllHover);
+    })();
+
+    function bindChartHover() {
+        var hits = document.querySelectorAll('.wx-chart-hit');
+        Array.prototype.forEach.call(hits, function (hit) {
+            if (hit.__bound) return;
+            hit.__bound = true;
+            var box = hit.parentNode;
+            var svg = box.querySelector('svg.wx-chart');
+            var g = box.querySelector('.wx-hover-g');
+            var line = box.querySelector('.wx-hover-line');
+            var dot = box.querySelector('.wx-hover-dot');
+            var city = null;
+            for (var i = 0; i < CITIES.length; i++) {
+                if (CITIES[i].name === hit.getAttribute('data-city')) { city = CITIES[i]; break; }
+            }
+            if (!svg || !g || !city) return;
+            // 把数据来源写到曲线下方那行说明里（实际记录 / 模型推算）
+            var tipTxt = box.querySelector('.wx-chart-tip');
+            var srcTxt2 = svg.getAttribute('data-src');
+            if (tipTxt && srcTxt2) { tipTxt.textContent = '气温走势 · ' + srcTxt2; }
+
+            function move(ev) {
+                var r = svg.getBoundingClientRect();
+                var x = (ev.clientX !== undefined ? ev.clientX : ev.touches[0].clientX) - r.left;
+                var ratio = Math.max(0, Math.min(1, x / r.width));
+                // 横轴是 -6 ~ +18（0 = 现在），和 tempChart 里的 BK/AH 对应
+                var BKH = 6, AHH = 18;
+                var hour = ratio * (BKH + AHH) - BKH;      // -6 ~ +18
+                var hist2 = HISTORY[city.name] || [];
+                var temp;
+                if (hour <= 0) {
+                    // 过去：在实测里找时刻最接近的那个点
+                    var want = Date.now() + hour * 3600 * 1000;
+                    var best = null, bd = Infinity;
+                    for (var q = 0; q < hist2.length; q++) {
+                        var dd = Math.abs(hist2[q].t - want);
+                        if (dd < bd) { bd = dd; best = hist2[q]; }
+                    }
+                    temp = best ? best.v : tempAt(city, ((hour % 24) + 24) % 24, new Date());
+                } else {
+                    // 未来：走模型预测
+                    var dh2 = new Date(Date.now() + hour * 3600 * 1000);
+                    temp = tempAt(city, dh2.getHours() + dh2.getMinutes() / 60, dh2);
+                }
+                // 换算到 viewBox 坐标。
+                // ⚠️ lo/hi 必须在这里【自己重算】—— 之前想从 svg 上读，
+                //    但 tempChart 是把它们挂在一个游离的 div 上的（从没进 DOM），
+                //    于是 lo/hi 是 undefined → vy 算成 NaN → 圆点卡在顶上不动。
+                // ⚠️ lo/hi 必须和 tempChart 里算的完全一致，否则圆点位置会错。
+                //    tempChart 的范围 = 过去 6 小时的实测 + 未来 18 小时的预测，
+                //    这里就照着重算一遍（不能只算实测，那样会偏）。
+                var lo = Infinity, hi = -Infinity;
+                var hh2 = HISTORY[city.name] || [];
+                var nowMs = Date.now();
+                for (var k2 = 0; k2 < hh2.length; k2++) {
+                    if (isNaN(hh2[k2].v)) continue;
+                    var off2 = (hh2[k2].t - nowMs) / 3600000;
+                    if (off2 < -BKH || off2 > 0.25) continue;
+                    if (hh2[k2].v < lo) lo = hh2[k2].v;
+                    if (hh2[k2].v > hi) hi = hh2[k2].v;
+                }
+                for (var k = 0; k <= AHH; k++) {
+                    var dfx = new Date(nowMs + k * 3600000);
+                    var tv = tempAt(city, dfx.getHours() + dfx.getMinutes() / 60, dfx);
+                    if (tv < lo) lo = tv;
+                    if (tv > hi) hi = tv;
+                }
+                if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 1; }
+                if (hi - lo < 1) { hi = lo + 1; }
+                if (hi - lo < .4) hi = lo + .4;
+                var vx = 10 + (900 - 20) * ratio;
+                var vy = 10 + (84 - 10 - 16) * (1 - (temp - lo) / (hi - lo));
+                line.setAttribute('x1', vx); line.setAttribute('x2', vx);
+                dot.setAttribute('cx', vx); dot.setAttribute('cy', vy);
+                g.style.display = '';
+                // 气泡
+                var tip = document.getElementById('wxChartTip');
+                if (!tip) {
+                    tip = document.createElement('div');
+                    tip.id = 'wxChartTip';
+                    tip.className = 'wx-chart-tipbox';
+                    document.body.appendChild(tip);
+                }
+                var hh = Math.floor(hour), mm = Math.round((hour - hh) * 60);
+                if (mm === 60) { hh += 1; mm = 0; }
+                tip.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm +
+                                  '　' + temp.toFixed(1) + '°C';
+                tip.style.display = 'block';
+                var br = box.getBoundingClientRect();
+                tip.style.left = (br.left + br.width * ratio) + 'px';
+                tip.style.top = (br.top - 30) + 'px';
+            }
+            function leave() {
+                g.style.display = 'none';
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            }
+            hit.addEventListener('mousemove', move);
+            hit.addEventListener('mouseleave', leave);
+            // ⚠️ 兜底：卡片 hover 会 translateY(-3px) 把图表从鼠标底下移开，
+            //    而【元素自己移开、鼠标不动】不会触发 mouseleave ——
+            //    结果就是指示点留在图上不走（站长报过）。
+            //    所以在卡片层再绑一个：鼠标离开卡片范围时，把这卡里所有指示都藏掉。
+            var cardEl = hit.closest('.wx-card') || hit.parentNode;
+            if (cardEl && !cardEl.__hoverGuard) {
+                cardEl.__hoverGuard = true;
+                cardEl.addEventListener('mouseleave', function () {
+                    var gs = cardEl.querySelectorAll('.wx-hover-g');
+                    Array.prototype.forEach.call(gs, function (el) { el.style.display = 'none'; });
+                    var ts = cardEl.querySelectorAll('.wx-hover-tip');
+                    Array.prototype.forEach.call(ts, function (el) { el.style.display = 'none'; });
+                });
+            }
+            hit.addEventListener('touchmove', function (e) { move(e); }, { passive: true });
+            hit.addEventListener('touchend', leave);
+        });
+    }
+
+    /* ── 三张小图的悬停提示（和温度曲线共用同一个气泡） ──
+       [data-tip]    静态文字：鼠标进就显示
+       [data-track]  跟随 x 取值：按位置反算时刻/气压                                */
+    function bindMiniHover() {
+        function tipEl() {
+            var tip = document.getElementById('wxChartTip');
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.id = 'wxChartTip';
+                tip.className = 'wx-chart-tipbox';
+                document.body.appendChild(tip);
+            }
+            return tip;
+        }
+        function place(tip, ev, el) {
+            var r = (el || ev.currentTarget).getBoundingClientRect();
+            var cx = (ev.clientX !== undefined) ? ev.clientX : (r.left + r.width / 2);
+            tip.style.left = cx + 'px';
+            tip.style.top = (r.top - 30) + 'px';
+            tip.style.display = 'block';
+        }
+
+        // 静态提示
+        Array.prototype.forEach.call(document.querySelectorAll('[data-tip]'), function (el) {
+            if (el.__tipBound) return;
+            el.__tipBound = true;
+            var txt = el.getAttribute('data-tip') || '';
+            function on(ev) { var tip = tipEl(); tip.textContent = txt; place(tip, ev, el); }
+            el.addEventListener('mouseenter', on);
+            el.addEventListener('mousemove', on);
+            el.addEventListener('mouseleave', function () {
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            });
+        });
+
+        // 跟随取值的（气压趋势线）
+        Array.prototype.forEach.call(document.querySelectorAll('[data-track="pres"]'), function (el) {
+            if (el.__trkBound) return;
+            el.__trkBound = true;
+            var pres = parseFloat(el.getAttribute('data-pres')) || 101.3;
+            var svg = el.querySelector('svg');
+            var g = el.querySelector('.wx-phover-g');
+            var line = el.querySelector('.wx-phover-line');
+            var dot = el.querySelector('.wx-phover-dot');
+            var A = 1.4;
+            var BK = 6, AH = 18;
+            function val(h) { return pres + A * Math.cos(2 * Math.PI * (h - 10) / 12); }
+            function on(ev) {
+                var r = svg.getBoundingClientRect();
+                var cx = (ev.clientX !== undefined) ? ev.clientX : (r.left + r.width / 2);
+                var ratio = Math.max(0, Math.min(1, (cx - r.left) / r.width));
+                // 横轴是 -6 ~ +18（0 = 现在）
+                var off = ratio * (BK + AH) - BK;
+                var nowH0 = parseFloat(svg.getAttribute('data-nowh'));
+                if (isNaN(nowH0)) { var nd = new Date(); nowH0 = nd.getHours() + nd.getMinutes() / 60; }
+                var hod = ((nowH0 + off) % 24 + 24) % 24;      // 一天中的小时（公式要这个）
+                var v = val(hod);
+                // 过去那段优先取实测（和图上的锯齿对齐）
+                if (off <= 0) {
+                    var cn = svg.getAttribute('data-city');
+                    var hs = (typeof HISTORY !== 'undefined' && HISTORY[cn]) || [];
+                    var want = Date.now() + off * 3600000;
+                    var best = null, bd = Infinity;
+                    for (var q = 0; q < hs.length; q++) {
+                        if (isNaN(hs[q].p)) continue;
+                        var dd = Math.abs(hs[q].t - want);
+                        if (dd < bd) { bd = dd; best = hs[q]; }
+                    }
+                    if (best && bd < 45 * 60000) v = best.p;
+                }
+                // 换算到 viewBox 坐标（W=300, H=92, PAD=8）
+                var vx = 8 + (300 - 16) * ratio;
+                // ⚠️ lo/hi 必须和图里算的一致 —— 从 SVG 的 data- 上读，
+                //    不能再自己 pres±A 推（图现在是「实测+预测」的动态范围）
+                var lo = parseFloat(svg.getAttribute('data-lo'));
+                var hi = parseFloat(svg.getAttribute('data-hi'));
+                if (!isFinite(lo) || !isFinite(hi) || hi - lo < .001) { lo = pres - A; hi = pres + A; }
+                var vy = 8 + (92 - 16) * (1 - (v - lo) / (hi - lo));
+                if (g && line && dot) {
+                    line.setAttribute('x1', vx); line.setAttribute('x2', vx);
+                    dot.setAttribute('cx', vx); dot.setAttribute('cy', vy);
+                    g.style.display = '';
+                }
+                var tip = tipEl();
+                var abs = new Date(Date.now() + off * 3600000);
+                var hh = abs.getHours(), mm = abs.getMinutes();
+                tip.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm +
+                                  (off > 0.5 ? '（预测）' : '') +
+                                  '　' + v.toFixed(1) + ' kPa';
+                place(tip, ev, el);
+            }
+            function off() {
+                if (g) g.style.display = 'none';
+                var tip = document.getElementById('wxChartTip');
+                if (tip) tip.style.display = 'none';
+            }
+            el.addEventListener('mousemove', on);
+            el.addEventListener('mouseleave', off);
+            el.addEventListener('touchmove', function (e) { on(e); }, { passive: true });
+            el.addEventListener('touchend', off);
+        });
+    }
+
+    /* ── 空气质量柱状图：十六城横向对比，本城高亮 ── */
+    function aqiBars(me) {
+        var W = 300, H = 92, PAD = 4;
+        var bw = (W - PAD * 2) / CITIES.length;
+        var max = 1, i;
+        for (i = 0; i < CITIES.length; i++) { if (state[i].aqi > max) max = state[i].aqi; }
+        var g = '';
+        for (i = 0; i < CITIES.length; i++) {
+            var v = state[i].aqi;
+            var bh = Math.max(3, (H - 30) * (v / max));
+            var x = PAD + i * bw + bw * .18;
+            var y = H - 22 - bh;
+            var w = bw * .64;
+            var isMe = (CITIES[i].name === me);
+            var col = isMe ? '#7c8cf8' : 'rgba(124,140,248,.30)';
+            g += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) +
+                 '" height="' + bh.toFixed(1) + '" rx="1.6" fill="' + col + '"/>' +
+                 // 透明热区：整根柱子高度都可命中，悬停出提示
+                 '<rect class="wx-hit" x="' + (PAD + i * bw).toFixed(1) + '" y="0" width="' + bw.toFixed(1) +
+                 '" height="' + H + '" fill="transparent" ' +
+                 'data-tip="' + CITIES[i].name + ' · AQI ' + Math.round(v) + ' · ' +
+                 aqiLevel(Math.round(v)).t + '"/>';
+            if (isMe) {
+                g += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y - 2).toFixed(1) +
+                     '" text-anchor="middle" font-size="8" font-weight="700" fill="#7c8cf8">' +
+                     Math.round(v) + '</text>';
+            }
+        }
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="wx-mini" preserveAspectRatio="none">' + g +
+               '<line x1="0" y1="' + (H - 21) + '" x2="' + W + '" y2="' + (H - 21) +
+               '" stroke="rgba(124,140,248,.25)" stroke-width="1"/>' +
+               '<text x="2" y="' + (H - 8) + '" font-size="9" fill="rgba(124,140,248,.7)">1</text>' +
+               '<text x="' + (W - 2) + '" y="' + (H - 8) + '" text-anchor="end" font-size="9" ' +
+               'fill="rgba(124,140,248,.7)">' + CITIES.length + ' 座</text></svg>';
+    }
+
+    /* ── 风速罗盘：指针指向风的来向 ── */
+    function windCompass(dirIdx, force) {
+        var S = 92, C = S / 2, R = 35;
+        // dirIdx 是 16 方位，0 = 北，顺时针
+        var ang = (dirIdx / 16) * 360;
+        var g = '<circle cx="' + C + '" cy="' + C + '" r="' + R + '" fill="none" ' +
+                'stroke="rgba(124,140,248,.35)" stroke-width="1.2"/>' +
+                '<circle cx="' + C + '" cy="' + C + '" r="' + (R - 9) + '" fill="none" ' +
+                'stroke="rgba(124,140,248,.16)" stroke-width="1" stroke-dasharray="2 3"/>';
+        // 四个方位字
+        var labs = [['N', 0, -1], ['E', 1, 0], ['S', 0, 1], ['W', -1, 0]];
+        for (var i = 0; i < 4; i++) {
+            g += '<text x="' + (C + labs[i][1] * (R + 6)) + '" y="' + (C + labs[i][2] * (R + 6) + 3) +
+                 '" text-anchor="middle" font-size="7.5" font-weight="700" ' +
+                 'fill="rgba(124,140,248,.75)">' + labs[i][0] + '</text>';
+        }
+        // 刻度
+        for (var k = 0; k < 16; k++) {
+            var a = (k / 16) * 2 * Math.PI - Math.PI / 2;
+            var r1 = R - (k % 4 === 0 ? 6 : 3), r2 = R - 1;
+            g += '<line x1="' + (C + Math.cos(a) * r1).toFixed(1) + '" y1="' + (C + Math.sin(a) * r1).toFixed(1) +
+                 '" x2="' + (C + Math.cos(a) * r2).toFixed(1) + '" y2="' + (C + Math.sin(a) * r2).toFixed(1) +
+                 '" stroke="rgba(124,140,248,.4)" stroke-width="1"/>';
+        }
+        // 指针（从中心指向风的来向）
+        var ar = (ang - 90) * Math.PI / 180;
+        var px = C + Math.cos(ar) * (R - 8), py = C + Math.sin(ar) * (R - 8);
+        g += '<line x1="' + C + '" y1="' + C + '" x2="' + px.toFixed(1) + '" y2="' + py.toFixed(1) +
+             '" stroke="url(#wcg)" stroke-width="2.4" stroke-linecap="round"/>' +
+             '<circle cx="' + C + '" cy="' + C + '" r="3" fill="#7c8cf8"/>' +
+             '<text x="' + C + '" y="' + (C + 16) + '" text-anchor="middle" font-size="9" ' +
+             'font-weight="800" fill="currentColor">' + force.toFixed(1) + '</text>';
+        return '<svg viewBox="0 0 ' + S + ' ' + S + '" class="wx-mini wx-mini-sq">' +
+               '<defs><linearGradient id="wcg" x1="0" y1="0" x2="1" y2="1">' +
+               '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
+               '</linearGradient></defs>' + g + '</svg>';
+    }
+
+    /* ── 气压趋势线 ──
+       ⚠️ 数据库里【没有历史气压】，这条是按物理规律推的：
+          气压半日潮 P(h) = P̄ + A·cos(2π(h-10)/12)
+          —— 10 点和 22 点各一个高值、4 点和 16 点各一个低值，
+             低纬振幅约 1~3 hPa。不是实测历史。 */
+    function presCurve(pres, cityName) {
+        var W = 300, H = 92, PAD = 8;
+        var A = 1.4;
+        var BACK = 6, AHEAD = 18;
+        var pts = [], xs = [], i, v, lo = Infinity, hi = -Infinity;
+        var nReal = 0;
+        var nowMs = Date.now();
+        var nowD = new Date();
+        var nowH0 = nowD.getHours() + nowD.getMinutes() / 60;
+
+        // 左段：过去 6 小时的实测气压（HISTORY 里存的 p）
+        var hist = (typeof HISTORY !== 'undefined' && HISTORY[cityName]) || [];
+        var real = [];
+        for (i = 0; i < hist.length; i++) {
+            if (isNaN(hist[i].p)) continue;
+            var off = (hist[i].t - nowMs) / 3600000;
+            if (off < -BACK || off > 0.25) continue;
+            real.push({ x: off, y: hist[i].p });
+        }
+        real.sort(function (a, b) { return a.x - b.x; });
+        if (real.length >= 2) {
+            for (i = 0; i < real.length; i++) { xs.push(real[i].x); pts.push(real[i].y); }
+            nReal = real.length;
+        }
+
+        // 右段：未来 18 小时，半日潮公式
+        //   ⚠️ 公式里的 h 是【一天中的小时】，所以要用 (现在小时 + k) % 24
+        var pAmp = 0.16;                     // 气压的扰动比温度小得多
+        var pModel = function (hh) { return pres + A * Math.cos(2 * Math.PI * (hh - 10) / 12); };
+        var biasP = wxBias(cityName || '', 'p', function (hh) { return pModel(hh); });
+        for (i = 0; i <= AHEAD; i++) {
+            var hh = ((nowH0 + i) % 24 + 24) % 24;
+            var dcp = Math.exp(-Math.max(0, i) / 8);          // 气压回归得慢一点
+            v = pModel(hh) + biasP * dcp +
+                wxJitter((cityName || '') + 'P', i, pAmp * (0.35 + 0.65 * (1 - dcp)));
+            xs.push(i);
+            pts.push(v);
+        }
+        // 没实测的话，左段也用公式铺上（那样整条都是预测）
+        if (!nReal) {
+            xs = []; pts = [];
+            for (i = -BACK; i <= AHEAD; i++) {
+                var hh2 = ((nowH0 + i) % 24 + 24) % 24;
+                xs.push(i);
+                pts.push(pres + A * Math.cos(2 * Math.PI * (hh2 - 10) / 12) +
+                         wxJitter((cityName || '') + 'P', i, 0.16));
+            }
+        }
+        var splitAt = nReal ? nReal - 1 : Math.round(BACK);
+        for (i = 0; i < pts.length; i++) {
+            if (pts[i] < lo) lo = pts[i];
+            if (pts[i] > hi) hi = pts[i];
+        }
+        if (hi - lo < .4) hi = lo + .4;
+        function X(h) { return PAD + (W - PAD * 2) * ((h + BACK) / (BACK + AHEAD)); }
+        function Y(v) { return PAD + (H - PAD * 2) * (1 - (v - lo) / (hi - lo)); }
+        var nowV = pts[splitAt];
+        var dReal = '', dFcast = '', d = '', area = '';
+        for (i = 0; i < pts.length; i++) {
+            var seg = (i ? ' L' : 'M') + X(xs[i]).toFixed(1) + ' ' + Y(pts[i]).toFixed(1);
+            if (i <= splitAt) dReal += seg; else dFcast += seg;
+        }
+        d = dReal + (dFcast ? ' ' + dFcast.replace('M', 'L') : '');
+        area = d + ' L' + X(xs[xs.length - 1]).toFixed(1) + ' ' + (H - PAD) +
+               ' L' + X(xs[0]).toFixed(1) + ' ' + (H - PAD) + ' Z';
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="wx-mini" preserveAspectRatio="none" ' +
+               'data-lo="' + lo + '" data-hi="' + hi + '" data-pres="' + pres + '" ' +
+               'data-city="' + (cityName || '') + '" data-nowh="' + nowH0 + '" ' +
+               'data-real="' + (nReal ? '1' : '0') + '">' +
+               '<defs><linearGradient id="pcg" x1="0" y1="0" x2="1" y2="0">' +
+               '<stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/>' +
+               '</linearGradient></defs>' +
+               '<path d="' + area + '" fill="url(#pcg)" opacity=".14"/>' +
+               // 「现在」的竖虚线 —— 实测 / 预测的分界
+               '<line x1="' + X(0).toFixed(1) + '" y1="' + PAD + '" x2="' + X(0).toFixed(1) +
+                 '" y2="' + (H - PAD) + '" stroke="rgba(124,140,248,.4)" stroke-width="1" stroke-dasharray="3 3"/>' +
+               '<path d="' + dReal + '" fill="none" stroke="url(#pcg)" stroke-width="1.5" ' +
+               'vector-effect="non-scaling-stroke" stroke-linejoin="round"/>' +
+               (dFcast ? '<path d="' + dFcast + '" fill="none" stroke="url(#pcg)" stroke-width="1.5" ' +
+               'vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-dasharray="5 4" opacity=".72"/>' : '') +
+               '<circle cx="' + X(0).toFixed(1) + '" cy="' + Y(nowV).toFixed(1) + '" r="3.4" ' +
+               'fill="#fff" stroke="#7c8cf8" stroke-width="1.8"/>' +
+               '<g class="wx-phover-g" style="display:none">' +
+                 '<line class="wx-phover-line" x1="0" y1="' + PAD + '" x2="0" y2="' + (H - PAD) +
+                   '" stroke="rgba(124,140,248,.5)" stroke-width="1" stroke-dasharray="3 3"/>' +
+                 '<circle class="wx-phover-dot" cx="0" cy="0" r="3.2" fill="#7c8cf8" ' +
+                   'stroke="#fff" stroke-width="1.6"/>' +
+               '</g>' +
+               '<text x="' + PAD + '" y="' + (PAD + 8) + '" font-size="9" font-weight="700" ' +
+               'fill="rgba(124,140,248,.85)">' + hi.toFixed(1) + '</text>' +
+               '<text x="' + PAD + '" y="' + (H - PAD + 2) + '" font-size="9" font-weight="700" ' +
+               'fill="rgba(124,140,248,.6)">' + lo.toFixed(1) + '</text>' +
+               '</svg>';
+    }
+
+    /* 空气质量的六档（照国标那套说法，图个像） */
+    function aqiLevel(a) {
+        if (a <= 50)  return { t: '优',       c: 'aq-good'  };
+        if (a <= 100) return { t: '良',       c: 'aq-mid'   };
+        if (a <= 150) return { t: '轻度污染',  c: 'aq-bad'   };
+        if (a <= 200) return { t: '中度污染',  c: 'aq-worse' };
+        return              { t: '重度污染',  c: 'aq-awful' };
+    }
+
+    /* 温度 → 卡片竖条的颜色（蓝 → 青 → 绿 → 橙 → 红） */
+    function tempColor(c) {
+        if (c <= -10) return '#1e40af';
+        if (c <= 0)   return '#0ea5e9';
+        if (c <= 10)  return '#14b8a6';
+        if (c <= 20)  return '#22c55e';
+        if (c <= 28)  return '#f59e0b';
+        if (c <= 35)  return '#f97316';
+        return '#dc2626';
+    }
+
+    /* 每座城市当前的状态（随机游走的起点） */
+    var state = CITIES.map(function (c) {
+        return {
+            temp: c.base + c.swing * seasonFactor(new Date()),
+            aqi: c.aqi,
+            hum: c.hum,
+            vis: c.vis,
+            dir: Math.floor(Math.random() * 16),
+            force: rnd(1, 4),
+            pres: 101.3
+        };
+    });
+
+    function step(d) {
+        var sf = seasonFactor(d);
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+
+            /* ① 温度：往「季节应有值」慢慢靠，再加抖动 —— 随机游走，不会突变 */
+            var target = c.base + c.swing * sf;
+            s.temp += (target - s.temp) * .35 + rnd(-c.vol, c.vol);
+            s.temp = clamp(s.temp, -55, 60);
+
+            /* ② 湿度：温度偏高就偏干，偏低就偏湿 */
+            var humTarget = c.hum - (s.temp - c.base) * 1.1;
+            s.hum += (humTarget - s.hum) * .3 + rnd(-3, 3);
+            s.hum = clamp(s.hum, 5, 100);
+
+            /* ③ 空气质量：湿度大、风小的时候更容易堆积 */
+            var aqiTarget = c.aqi + (s.hum - 50) * .35 + (4 - s.force) * 5;
+            s.aqi += (aqiTarget - s.aqi) * .25 + rnd(-7, 7);
+            s.aqi = clamp(s.aqi, 8, 320);
+
+            /* ④ 气压：温度高则略低，再小抖 */
+            var presTarget = 101.3 - (s.temp - 15) * .085;
+            s.pres += (presTarget - s.pres) * .3 + rnd(-.35, .35);
+            s.pres = clamp(s.pres, 87, 108);
+
+            /* ⑤ 能见度：湿度和空气差都会压低它 */
+            var visTarget = c.vis * (1 - (s.hum - 55) / 190) - s.aqi / 45;
+            s.vis += (visTarget - s.vis) * .3 + rnd(-1.2, 1.2);
+            s.vis = clamp(s.vis, .2, 60);
+
+            /* ⑥ 风：慢慢转向、慢慢变大变小 */
+            s.dir = (s.dir + (Math.random() < .3 ? (Math.random() < .5 ? 1 : 15) : 0)) % 16;
+            s.force += rnd(-.45, .45);
+            s.force = clamp(s.force, .2, 12);
+        });
+    }
+
+    function windName(f) {
+        if (f < .3) return { t: '无风', lv: 0 };
+        if (f < 1.6) return { t: '软风', lv: 1 };
+        if (f < 3.4) return { t: '轻风', lv: 2 };
+        if (f < 5.5) return { t: '微风', lv: 3 };
+        if (f < 8.0) return { t: '和风', lv: 4 };
+        if (f < 10.8) return { t: '清风', lv: 5 };
+        if (f < 13.9) return { t: '强风', lv: 6 };
+        return { t: '疾风', lv: 7 };
+    }
+
+    var grid = document.getElementById('wxGrid');
+    var bar = document.getElementById('tickBar');
+    var num = document.getElementById('tickNum');
+    var clock = document.getElementById('clockTxt');
+
+/* 天气状态：一份天气预报总得说晴还是雨 */
+    function condition(s, c) {
+        if (s.temp <= 0 && s.hum >= 65) return { i: '🌨️', t: '小雪' };
+        if (s.temp <= 0)               return { i: '❄️', t: '晴冷' };
+        if (s.vis < 6)                 return { i: '🌫️', t: '有雾' };
+        if (s.aqi > 120)               return { i: '😷', t: '霾' };
+        if (s.hum >= 88)               return { i: '🌧️', t: '小雨' };
+        if (s.hum >= 78)               return { i: '☁️', t: '多云' };
+        if (s.temp >= 33)              return { i: '🔥', t: '酷热' };
+        if (s.hum <= 38)               return { i: '☀️', t: '晴' };
+        return { i: '⛅', t: '晴间多云' };
+    }
+
+    function render() {
+        var html = '';
+        CITIES.forEach(function (c, i) {
+            var s = state[i];
+            var cT = s.temp, fT = cT * 9 / 5 + 32;
+            var lv = aqiLevel(Math.round(s.aqi));
+            var w = windName(s.force);
+            var cd = condition(s, c);
+                var uv = uvIndex(c, cd.t, new Date());
+                var ug = uvGrade(uv);
+                var _tp = [];
+                for (var _h = 0; _h <= 24; _h++) { _tp.push(tempAt(c, _h, new Date())); }
+                var tLo = Math.min.apply(null, _tp), tHi = Math.max.apply(null, _tp);
+
+            html +=
+              '<article class="wx-card" style="--tc:' + tempColor(cT) + ';--tc-soft:' + tempColor(cT) + '1f">' +
+                '<div class="wx-who">' +
+                '<header class="wx-head">' +
+                  '<span class="wx-city"><i class="wx-ico">' + c.ico + '</i>' +
+                    '<b class="wx-nm">' + c.name + '</b></span>' +
+                  '<span class="wx-cond"><i>' + cd.i + '</i><em>' + cd.t + '</em></span>' +
+                '</header>' +
+                '<p class="wx-note-in">' + c.note + '</p>' +
+                '</div>' +
+                '<div class="wx-temp">' +
+                  '<span class="wx-c">' + cT.toFixed(1) + '<span class="wx-u">°C</span></span>' +
+                  '<span class="wx-f">= ' + fT.toFixed(1) + ' °F</span>' +
+                '</div>' +
+                '<dl class="wx-rows">' +
+                  '<div class="wx-row"><dt>💧 湿度</dt><dd>' +
+                    Math.round(s.hum) + '<span class="u">%</span></dd></div>' +
+                  '<div class="wx-row"><dt>🧭 气压</dt><dd>' +
+                    s.pres.toFixed(1) + '<span class="u">kPa</span></dd></div>' +
+                  '<div class="wx-row"><dt>👁 能见度</dt><dd>' +
+                    s.vis.toFixed(1) + '<span class="u">km</span></dd></div>' +
+                  '<div class="wx-row"><dt>🍃 空气质量</dt><dd class="' + lv.c + '">' +
+                    Math.round(s.aqi) + '<span class="u">' + lv.t + '</span></dd></div>' +
+                  '<div class="wx-row"><dt>☀️ 紫外线</dt><dd class="' + ug.c + '">' +
+                    uv.toFixed(1) + '<span class="u">' + ug.t + '</span></dd></div>' +
+                  '<div class="wx-row"><dt>🌬 风向风力</dt><dd>' +
+                    DIRS[s.dir] + ' ' + w.lv + ' 级' +
+                    '<span class="u">' + s.force.toFixed(1) + ' m/s</span></dd></div>' +
+                                    '<div class="wx-row wx-row-chart"><div class="wx-chart-box">' +
+                    tempChart(c, new Date()) +
+                    '<span class="wx-chart-tip">最近 24 小时气温</span>' +
+                    '<span class="wx-chart-lo">' + tLo.toFixed(0) + '°</span>' +
+                    '<span class="wx-chart-hi">' + tHi.toFixed(0) + '°</span>' +
+                    '<div class="wx-chart-hit" data-city="' + c.name + '"></div>' +
+                  '</div></div>' +
+                  '<div class="wx-row wx-row-charts">' +
+                      '<div class="wx-mini-box"><h5>🍃 空气质量对比</h5>' + aqiBars(c.name) + '</div>' +
+                      '<div class="wx-mini-box"><h5>🌬 风速罗盘</h5>' +
+                        '<div class="wx-mini-hit" data-tip="' + DIRS[s.dir] + '风 · ' + w.lv +
+                        ' 级 · ' + s.force.toFixed(1) + ' m/s">' + windCompass(s.dir, s.force) + '</div></div>' +
+                      '<div class="wx-mini-box"><h5>🧭 气压趋势</h5>' +
+                        '<div class="wx-mini-hit wx-pres-hit" data-track="pres" data-pres="' + s.pres + '">' +
+                        presCurve(s.pres, s.name) + '</div></div>' +
+                  '</div>' +
+                '</dl>' +
+              '</article>';
+        });
+        grid.innerHTML = html;
+        bindChartHover();   // 曲线交互（每次重绘后重新绑）
+        bindMiniHover();    // 三张小图的悬停提示
+    }
+
+    /* ── 倒计时进度条 ── */
+        /* ── 数据来源 ──────────────────────────────────────────────
+       气象数据存在数据库里（weather_state 表，由 market_tick_loop
+       每 10 秒推进一轮），前端调 get_weather 拿 ——
+       这样所有人同一时刻看到的是同一份，不会两个人对不上。
+
+       拿不到就退回本地算法（下面那套随机游走），页面不会空着。 */
+    var sb = null;
+    try {
+        if (window.supabase) {
+            sb = window.supabase.createClient(
+                'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+                'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg');
+        }
+    } catch (e) { sb = null; }
+
+    var srcTag = document.getElementById('wxSrc');
+    var srvAt = 0;          // 服务端数据的时间戳（用于显示「几秒前更新」）
+    var FROM_SERVER = false;
+
+    function applyServer(rows) {
+        rows.forEach(function (r) {
+            for (var k = 0; k < CITIES.length; k++) {
+                if (CITIES[k].name === r.city) {
+                    var st = state[k];
+                    st.temp  = parseFloat(r.temp_c);
+                    st.hum   = parseFloat(r.humidity);
+                    st.pres  = parseFloat(r.pressure);
+                    st.vis   = parseFloat(r.visibility);
+                    st.aqi   = parseFloat(r.aqi);
+                    st.dir   = parseInt(r.wind_dir, 10);
+                    st.force = parseFloat(r.wind_force);
+                    break;
+                }
+            }
+        });
+        FROM_SERVER = true;
+        // 记下服务端这次的更新时间，好在页面上显示「几秒前更新」
+        var at = rows[0] && rows[0].updated_at;
+        if (at) { try { srvAt = new Date(at).getTime(); } catch (e) {} }
+    }
+
+
+    /* ── 刷新节奏 ──────────────────────────────────────────────
+       一个定时器管到底：进度条走到 100% 的【同一时刻】就发起刷新，
+       然后把条子归零。不要把「条子」和「取数」分成两套定时器 ——
+       那样两边周期会越走越偏，看起来就像条子和数据对不上。
+
+       取数成功 → 用服务端那份覆盖
+       取数失败 → 本地走一轮，页面不会卡住
+       ──────────────────────────────────────────────────────── */
+    var t0 = Date.now();
+    var busy = false;
+
+    function refresh() {
+        if (busy) return;
+        busy = true;
+        if (!sb || !sb.rpc) {
+            step(new Date()); render(); FROM_SERVER = false;
+            busy = false;
+            return;
+        }
+        sb.rpc('get_weather').then(function (res) {
+            if (res && res.data && res.data.length) applyServer(res.data);
+            else { step(new Date()); FROM_SERVER = false; }
+            render();
+        }).catch(function () {
+            step(new Date()); render(); FROM_SERVER = false;
+        }).then(function () { busy = false; });
+    }
+
+    function loop() {
+        var el = Date.now() - t0;
+        if (el >= REFRESH_MS) {
+            t0 = Date.now();                 // 先归零和刷新同一时刻
+            bar.style.width = '0%';
+            num.textContent = (REFRESH_MS / 1000).toFixed(1) + 's';
+            refresh();
+        } else {
+            bar.style.width = (el / REFRESH_MS * 100).toFixed(1) + '%';
+            num.textContent = Math.max(0, (REFRESH_MS - el) / 1000).toFixed(1) + 's';
+        }
+    }
+
+    function clockUi() {
+        var d = new Date();
+        clock.textContent = d.toLocaleTimeString('zh-CN', { hour12: false }) + ' 观测';
+        if (srcTag) {
+            if (!FROM_SERVER || !srvAt) { srcTag.textContent = '· 本地推算'; }
+            else {
+                var age = Math.max(0, Math.round((Date.now() - srvAt) / 1000));
+                srcTag.textContent = '· 服务端数据';
+                srcTag.title = '这份数据是 ' + age + ' 秒前从服务端取的';
+            }
+        }
+    }
+
+    document.getElementById('seasonTxt').textContent =
+        seasonLabel(new Date());
+    document.getElementById('refreshNow').onclick = function () { t0 = Date.now(); bar.style.width = '0%'; refresh(); };
+
+    step(new Date()); render();      // 先本地渲染，不等网络
+    refresh();                       // 同时问服务端要那一份
+    clockUi();
+    pullHistory();                   // 拉一次历史（曲线优先用它）
+    setInterval(pullHistory, 300000); // 历史变化慢，5 分钟一次就够
+    setInterval(loop, 100);          // 进度条与刷新共用一个定时器
+    setInterval(clockUi, 1000);
+
+    /* 手机上切到后台再回来时，别让它停在旧数据上 */
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) { t0 = Date.now(); refresh(); }
+    });
+})();
+</script>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261010-WX0000000001
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDEwLVdYMDAwMDAwMDAwMQ";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="js/science-tips.js?v=26"></script>
+</body>
+</html>

@@ -1,0 +1,2123 @@
+# -*- coding: utf-8 -*-
+"""
+NB频道 - PythonAnywhere 一体化 Flask 应用
+====================================================
+功能：
+  GET  /                网站本体（静态文件服务，需配置 SITE_DIR）
+  POST /upload          上传作品（存 S3，multipart/form-data + 头 X-User-Id）
+  POST /upload-image    上传图片（评论区/私信用，存 images 公开桶）
+  POST /upload-video    上传视频（评论区/私信用，存 images 公开桶，≤50MB）
+  POST /download        下载/购买作品（JSON + 头 X-User-Id；body 可选 pay_type: nb|market、company_id）
+  GET  /files/<key>     从 S3 代理下载文件（附件方式）
+  POST /webhook         GitHub push 后自动 git pull 同步代码
+  GET  /health          健康检查
+
+部署前必读：pythonanywhere/README.md
+依赖：pip install flask supabase boto3
+"""
+import os
+import re
+import io
+import math
+import csv
+import json
+import uuid
+import hmac
+import hashlib
+import ipaddress
+import datetime
+import subprocess
+import threading
+import urllib.request
+import secrets
+import time
+
+from flask import Flask, request, jsonify, send_from_directory, Response
+from supabase import create_client, Client
+
+try:
+    import boto3
+    from botocore.client import Config as BotoConfig
+    from botocore.exceptions import ClientError as BotoClientError
+except ImportError:
+    boto3 = None
+
+# ==================== 配置 ====================
+SUPABASE_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co'
+SUPABASE_ANON_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+
+# service_role key —— 【只从环境变量读，绝不写进代码或仓库】。
+# 它绕过 RLS，等于数据库的万能钥匙；泄露出去别人能改任何数据。
+# 在 PythonAnywhere → Web → Environment variables 里加 SUPABASE_SERVICE_KEY。
+# 没配的话下面会自动退回 anon key，功能和现在完全一样。
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+
+# 兜底：环境变量读不到时，从同目录的 secrets_local.py 读
+#   （PythonAnywhere 部分套餐没有 Web 面板的 Environment variables，
+#     站长就在那儿；用法和下面的 API_KEY 兜底一样）
+#   ⚠️ secrets_local.py 只存在于服务器，已写进 .gitignore，不进公开仓库。
+#      这个 key 是 service_role，能绕过所有权限，泄漏等于全站被别人控制。
+if not SUPABASE_SERVICE_KEY:
+    try:
+        from secrets_local import SUPABASE_SERVICE_KEY as _SK  # noqa: E402
+        SUPABASE_SERVICE_KEY = (_SK or '').strip()
+    except Exception:
+        pass
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+ALLOWED_EXT = re.compile(r'^[a-zA-Z0-9]{1,10}$')  # 扩展名白名单格式
+
+# 防连点：user_id -> 最近一次上传时间戳（进程内，防止手滑连点产生重复作品）
+_upload_guard = {}
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')  # 兼容旧版本地存储（新文件全部走 S3）
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# ==================== 作品下载直链的签名 ====================
+# 背景：/files/<key> 以前是裸链接 —— 只要知道 key 谁都能下载。
+#       而 products 表里就存着这个 key（file_url），一旦这张表被匿名读走，
+#       付费作品就等于白送（2026-09-28 实测确认可以）。
+#
+# 所以下载直链改成「临时签名」：
+#   /download 在确认过身份之后（作者本人 / 免费 / 已购买 / 扣款成功）
+#   才签发一条带过期时间与签名的链接；/files/<key> 只认这种链接。
+#
+# 为什么凭证放在查询参数里而不是请求头：前端是 window.open(file_url)，
+# 浏览器直接打开链接，带不了自定义头。
+FILE_URL_TTL = 600   # 签名链接有效期（秒）
+
+
+def _load_file_secret():
+    """签名密钥：优先环境变量；没有就在磁盘上落一个随机值。
+
+    ⚠️ 这个仓库是公开的，密钥绝不能硬编码进源码。
+    """
+    env = os.environ.get('FILE_URL_SECRET', '').strip()
+    if env:
+        return env
+    path = os.path.join(BASE_DIR, '.file_url_secret')
+    try:
+        if os.path.isfile(path):
+            with open(path, 'r') as fp:
+                got = fp.read().strip()
+            if got:
+                return got
+        got = secrets.token_hex(32)
+        with open(path, 'w') as fp:
+            fp.write(got)
+        try:
+            os.chmod(path, 0o600)
+        except Exception:
+            pass
+        return got
+    except Exception:
+        # 磁盘不可写时的兜底：至少别让功能挂掉
+        return hashlib.sha256((BASE_DIR or 'nb').encode()).hexdigest()
+
+
+FILE_URL_SECRET = _load_file_secret()
+
+
+def _file_sig(key, exp):
+    return hmac.new(FILE_URL_SECRET.encode(), ('%s|%d' % (key, exp)).encode(),
+                    hashlib.sha256).hexdigest()[:32]
+
+
+def _file_sig_ok(key, exp, sig):
+    """校验下载直链的签名与有效期。"""
+    try:
+        exp_i = int(exp)
+    except (TypeError, ValueError):
+        return False
+    if exp_i < time.time():
+        return False
+    return hmac.compare_digest(_file_sig(key, exp_i), str(sig or ''))
+
+
+def _sign_file_key(key):
+    """给存储 key 签发一条临时下载直链。"""
+    exp = int(time.time()) + FILE_URL_TTL
+    return '%s/files/%s?e=%d&s=%s' % (request.host_url.rstrip('/'), key, exp, _file_sig(key, exp))
+
+
+def _sign_product_url(file_url):
+    """把库里存的 file_url 换成带签名的临时直链；不是本代理链接就原样返回。"""
+    if not file_url:
+        return file_url
+    m = re.search(r'/files/([a-f0-9]{32}(?:\.[a-zA-Z0-9]{1,10})?)', str(file_url))
+    if not m:
+        return file_url
+    return _sign_file_key(m.group(1))
+
+
+# 网站静态文件目录（git 仓库目录，供 / 和 /webhook 使用）
+SITE_DIR = os.environ.get('SITE_DIR', '/home/nbchannel/nb-channel')
+# GitHub webhook secret（与 GitHub 仓库 Webhooks 配置保持一致；不配置则跳过校验）
+GITHUB_WEBHOOK_SECRET = os.environ.get('GITHUB_WEBHOOK_SECRET', '')
+
+# ---------- S3 存储配置（从环境变量读取，密钥不要写进代码/仓库） ----------
+S3_ENDPOINT = os.environ.get('S3_ENDPOINT', 'https://s3.cstcloud.cn')
+S3_REGION = os.environ.get('S3_REGION', 'us-east-1')
+S3_BUCKET = os.environ.get('S3_BUCKET', 'nb-products')
+S3_ACCESS_KEY = os.environ.get('S3_ACCESS_KEY', '')
+S3_SECRET_KEY = os.environ.get('S3_SECRET_KEY', '')
+
+s3_client = None
+if boto3 is not None and S3_ACCESS_KEY and S3_SECRET_KEY:
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=S3_ENDPOINT,
+        region_name=S3_REGION,
+        aws_access_key_id=S3_ACCESS_KEY,
+        aws_secret_access_key=S3_SECRET_KEY,
+        config=BotoConfig(proxies={}),  # 禁用代理（关键）
+    )
+
+app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+# Storage 专用客户端。
+# ⚠️ 为什么单独开一个、而不是把上面那个换成 service_role：
+#    service_role 绕过 RLS —— 整个客户端都换掉的话，
+#    那些「本来靠 RLS 过滤」的查询会返回全部数据，直接漏数据。
+#    所以只让 storage.from_() 走这个客户端，普通查询照旧用 anon。
+# 没配 SUPABASE_SERVICE_KEY 时它就是上面那个对象，零行为变化。
+if SUPABASE_SERVICE_KEY:
+    sb_storage: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    print('[NB] Storage 客户端已切换到 service_role（绕过 RLS）')
+else:
+    sb_storage: Client = supabase
+    print('[NB] 未配置 SUPABASE_SERVICE_KEY，Storage 继续用 anon key')
+
+# 允许的跨域来源
+# ⚠️ 这个白名单是防"私自部署"的第一道闸：别人把站点扒走部署到自己的域名后，
+#    浏览器发来的 Origin 不在名单里，就拿不到 CORS 头，接口直接调不通
+#    （界面能打开，但登录、评论、买卖全废）。
+ALLOWED_ORIGINS = {
+    'https://nb-channel.top',
+    'https://www.nb-channel.top',
+    'https://github.nb-channel.top',
+    'https://cloudflare.nb-channel.top',
+    # ⚠️ edgeone 这个镜像一直没进名单 —— 实测它的页面调 /api/* 时
+    #    拿不到 CORS 头，凡是带 X-Session 的接口（上传头像、换头图、
+    #    发码转发…）全部失败。2026-10-16 补上。
+    'https://edgeone.nb-channel.top',
+    'https://pythonanywhere.nb-channel.top',
+    'https://netlify.nb-channel.top',          # Netlify 镜像站
+    'https://nbchannel.pythonanywhere.com',
+    'https://nb-channel.pages.dev',
+    'https://nb-channel.netlify.app',          # Netlify 默认域名
+    # ⚠️ GitHub Pages 的原始域名。scf_mail_sender.py 的名单里有它，
+    #    这边之前漏了 —— 直接用 github.io 打开站点的人接口全调不通。
+    'https://nb-channel.github.io',
+    # --- APP（Capacitor 打包，本地页面）---
+    'https://localhost',                       # Capacitor 6 默认 androidScheme=https
+    'http://localhost',
+    'capacitor://localhost',                   # 旧版 Capacitor
+    # --- 本地调试 ---
+    'http://127.0.0.1:8000',
+    'http://127.0.0.1:8080',
+    'http://localhost:8000',
+    'http://localhost:8080',
+    'null',                                    # file:// 直接打开页面时浏览器给的是字符串 null
+}
+
+def _cors_headers():
+    origin = request.headers.get('Origin', '')
+    allow = origin if origin in ALLOWED_ORIGINS else ''
+
+    # ⚠️ 原来这里是 `allow if allow else '*'` —— 不在白名单时反而回一个 *，
+    #    等于白名单完全失效，任何网站都能调这些接口。
+    #    现在不在名单里就【不回】Access-Control-Allow-Origin 头，
+    #    浏览器自己会拦下跨域请求。
+    h = {
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Session',
+        'Access-Control-Max-Age': '86400',
+        'Vary': 'Origin',
+    }
+    if allow:
+        h['Access-Control-Allow-Origin'] = allow
+    else:
+        # 留个记录，方便看是谁在盗用接口（不影响正常请求）
+        try:
+            if origin:
+                app.logger.warning('CORS 拒绝：Origin=%s Path=%s UA=%s',
+                                   origin, request.path,
+                                   (request.headers.get('User-Agent') or '')[:120])
+        except Exception:
+            pass
+    return h
+
+@app.after_request
+def after_request(resp):
+    for k, v in _cors_headers().items():
+        resp.headers[k] = v
+    return resp
+
+# ==================== 工具函数 ====================
+
+# 需要会话令牌的下游 RPC：后端代理调用时必须把前端令牌透传下去，
+# 否则这些 RPC 的令牌校验会失败（它们已不接受"只给 user_id"的调用）
+_SESSION_RPCS = {
+    'update_avatar_url', 'set_profile_banner',
+    'create_product', 'edit_product', 'delete_product',
+    'download_product', 'purchase_product',
+}
+
+
+def _session_token():
+    """前端登录后拿到的会话令牌（由 X-Session 头传入）。"""
+    return (request.headers.get('X-Session', '') or '').strip()
+
+
+def get_user_id():
+    """校验 X-User-Id + X-Session 后才认人。返回 (user_id, error_msg)。
+
+    只信任 X-User-Id 等于谁都能冒充（那个头客户端随便填），
+    所以必须同时验证会话令牌确实属于该用户。
+    """
+    uid = request.headers.get('X-User-Id', '').strip()
+    if not uid:
+        return None, '缺少 X-User-Id 请求头'
+    tok = _session_token()
+    if not tok:
+        return None, '缺少登录令牌,请重新登录后再试'
+    data, err = rpc('verify_session', {'p_user_id': uid, 'p_session': tok})
+    if err:
+        return None, '后端数据库连接失败: %s' % err
+    if data is not True:
+        return None, '登录已失效,请重新登录'
+    return uid, None
+
+
+def safe_filename(original_name):
+    """生成安全的存储文件名：uuid + 白名单扩展名。"""
+    ext = ''
+    if '.' in original_name:
+        cand = original_name.rsplit('.', 1)[1]
+        if ALLOWED_EXT.match(cand):
+            ext = '.' + cand.lower()
+    return str(uuid.uuid4().hex) + ext
+
+
+def rpc(name, params):
+    """调用 Supabase RPC，返回 (data, error)。
+
+    对于已加令牌校验的下游 RPC，自动把前端会话令牌带上。
+    """
+    try:
+        if isinstance(params, dict) and name in _SESSION_RPCS:
+            params = dict(params)
+            params.setdefault('p_session', _session_token())
+        res = supabase.rpc(name, params).execute()
+        return res.data, None
+    except Exception as e:
+        return None, str(e)
+
+
+# 作品标题/简介违禁词（与数据库 bad_words 词库一致，防绕过前端）
+_BAD_WORDS = [
+    '操你妈', '傻逼', '废物', '脑残', '智障', 'nmsl', '吃屎', '大粪',
+    '蟑螂', '臭水沟', '屁水', '呕吐物', '全家肉沫', '强酸', '甲醇',
+    '放射性', '寄生虫', '尿液', '引战', '造谣', '骂给', '当给',
+    '无家可归', '乱封号', 'gay', 'fuck', 'shit', 'bitch',
+    '支那', '黑鬼', '白皮猪', '台巴子', '网暴', '喷子', '垃圾', '去死',
+    '他妈', '尼玛', '妈逼', '操蛋', '王八蛋', '混蛋', '杂种', '狗日的',
+    '法克', '卖淫', '嫖娼', '约炮', '裸聊', '毒品', '海洛因', '办证',
+    '加微信', '兼职刷单', '返利', '垃圾频道', 'SB频道', '脑残UP',
+]
+
+def _has_bad_words(text):
+    """检测文本是否含违禁词（大小写不敏感）。"""
+    if not text:
+        return False
+    low = text.lower()
+    for w in _BAD_WORDS:
+        if w.lower() in low:
+            return True
+    return False
+
+
+# ==================== 接口 ====================
+
+# ---------- B站粉丝实时同步(首页数据条;需在 PythonAnywhere 出站白名单加入 api.bilibili.com) ----------
+BILI_UID = 3493259582114264              # NB搞事局(原NB实验室-作死)
+BILI_FANS_TTL = 30                        # 进程内缓存秒数:30s 内不重复请求 B站
+_bili_fans_cache = {'ts': 0.0, 'data': None}
+_bili_fans_lock = threading.Lock()
+
+
+def _fetch_bili_fans():
+    """抓取 B站粉丝数(带 60s 缓存与锁)。返回 (data, error)。"""
+    now = datetime.datetime.now().timestamp()
+    if _bili_fans_cache['data'] and now - _bili_fans_cache['ts'] < BILI_FANS_TTL:
+        return _bili_fans_cache['data'], None
+    with _bili_fans_lock:
+        now = datetime.datetime.now().timestamp()
+        if _bili_fans_cache['data'] and now - _bili_fans_cache['ts'] < BILI_FANS_TTL:
+            return _bili_fans_cache['data'], None
+        url = 'https://api.bilibili.com/x/relation/stat?vmid=%d' % BILI_UID
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+            'Referer': 'https://www.bilibili.com/',
+            'Accept': 'application/json',
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                payload = json.loads(resp.read().decode('utf-8'))
+        except Exception as e:
+            return None, str(e)
+        if not isinstance(payload, dict) or payload.get('code') != 0 or not payload.get('data'):
+            return None, 'bilibili api code=%s' % (payload.get('code') if isinstance(payload, dict) else 'bad-resp')
+        data = {
+            'follower': int(payload['data'].get('follower') or 0),
+            'updated_at': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        }
+        _bili_fans_cache['ts'] = datetime.datetime.now().timestamp()
+        _bili_fans_cache['data'] = data
+        return data, None
+
+
+@app.route('/api/bili-fans')
+def api_bili_fans():
+    """公开只读:当前 B站粉丝数。首页每 30s 轮询,无需刷新即可看到数字变化。
+    限流见 limit_public_endpoints(每 IP 每分钟 120 次)。
+
+    2026-09-25:显式声明可缓存 30 秒。
+    原因:本端点不加 Key(首页要调),又没有 Cache-Control 头时 Cloudflare
+    是否缓存属未定义行为 —— 被刷时每个请求都会打回源站,而 PythonAnywhere
+    免费版每请求约 1.1 秒 worker 开销,一个 setInterval(fetch,1000) 就能
+    把 worker 占满。这里声明 max-age/s-maxage=30 后,配合 Cloudflare 的
+    Cache Rule(Eligible for cache),边缘就能直接应答,源站每 30 秒才见一次。
+    数据本身 30 秒才更新一次,所以内容完全不变。
+    """
+    data, err = _fetch_bili_fans()
+    # 上游失败但有历史值时也返回缓存,同样按 30s 缓存(避免故障期间被刷穿)
+    if data or _bili_fans_cache['data']:
+        stale = not data
+        body = dict(data or _bili_fans_cache['data'])
+        if stale:
+            body['stale'] = True
+        resp = jsonify({'success': True, **body})
+        resp.headers['Cache-Control'] = 'public, max-age=30, s-maxage=30'
+        return resp
+    return _err('UPSTREAM_ERROR', 'B站接口暂时不可用: %s' % err, 502)
+
+
+@app.route('/health')
+def health():
+    return jsonify({'ok': True, 'time': datetime.datetime.now().isoformat()})
+
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    # 防连点兜底：同一用户 10 秒内重复上传直接拒绝（前端已锁按钮，这里是双保险）
+    _now = datetime.datetime.now().timestamp()
+    _last = _upload_guard.get(str(user_id), 0)
+    if _now - _last < 10:
+        return jsonify({'success': False, 'message': '操作太快了，请稍候 10 秒再试'}), 429
+    _upload_guard[str(user_id)] = _now
+
+    title = (request.form.get('title') or '').strip()
+    description = (request.form.get('description') or '').strip()
+    price_str = (request.form.get('price') or '0').strip()
+    file = request.files.get('file')
+
+    if not title:
+        return jsonify({'success': False, 'message': '请输入作品标题'}), 400
+    if len(title) > 20:
+        return jsonify({'success': False, 'message': '标题不能超过20字'}), 400
+    if title.count('\n') >= 2:
+        return jsonify({'success': False, 'message': '标题最多2行'}), 400
+    if len(description) > 100:
+        return jsonify({'success': False, 'message': '简介不能超过100字'}), 400
+    if description.count('\n') >= 10:
+        return jsonify({'success': False, 'message': '简介最多10行'}), 400
+    if _has_bad_words(title) or _has_bad_words(description):
+        return jsonify({'success': False, 'message': '标题或简介包含违禁词，禁止发布'}), 400
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'message': '请选择要上传的文件'}), 400
+
+    try:
+        price = int(price_str)
+    except ValueError:
+        return jsonify({'success': False, 'message': '定价必须是数字'}), 400
+    if price < 0 or price > 999999999:
+        return jsonify({'success': False, 'message': '价格需在 0~999999999 之间'}), 400
+
+    # 大小校验（Flask 的 MAX_CONTENT_LENGTH 超限会抛 413，这里再兜底）
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_FILE_SIZE:
+        return jsonify({'success': False, 'message': '文件不能超过 50 MB'}), 400
+
+    # ---------- 存储：Supabase Storage（products 私有桶，下载走 /files/<key> 代理） ----------
+    key = safe_filename(file.filename)
+    file_bytes = file.read()   # supabase-py upload 需要 bytes，不接受文件流
+    try:
+        sb_storage.storage.from_('products').upload(key, file_bytes, {
+            'content-type': file.mimetype or 'application/octet-stream'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': '上传到存储失败: %s' % e}), 500
+    file_url = request.host_url.rstrip('/') + '/files/' + key
+
+    data, rpc_err = rpc('create_product', {
+        'p_user_id': user_id,
+        'p_title': title,
+        'p_description': description,
+        'p_price': price,
+        'p_file_url': file_url,
+        'p_file_name': file.filename,
+        'p_file_size': size,
+        'p_mime_type': file.mimetype or '',
+    })
+    if rpc_err or not data or data.get('success') is not True:
+        # 数据库写入失败时清理已上传的文件，避免孤儿文件
+        try:
+            sb_storage.storage.from_('products').remove([key])
+        except Exception:
+            pass
+        msg = (rpc_err or (data and data.get('message')) or '写入数据库失败，请检查 SQL 脚本是否已执行')
+        return jsonify({'success': False, 'message': msg}), 500
+
+    return jsonify({'success': True, 'message': '发布成功', 'product_id': data.get('id')})
+
+
+@app.route('/upload-avatar', methods=['POST'])
+def upload_avatar():
+    """上传头像：X-User-Id 请求头 + multipart 文件。存 avatars 公开桶，更新 profiles.avatar_url。"""
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'message': '请选择图片文件'}), 400
+
+    # 大小限制：头像不超过 2MB
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > 2 * 1024 * 1024:
+        return jsonify({'success': False, 'message': '头像图片不能超过 2MB'}), 400
+
+    # 只允许常见图片格式
+    mime = (file.mimetype or '').lower()
+    ext_map = {'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp'}
+    ext = ext_map.get(mime)
+    if not ext:
+        return jsonify({'success': False, 'message': '仅支持 JPG/PNG/GIF/WebP 图片'}), 400
+
+    # 每次上传生成唯一文件名（避免覆盖冲突：upload 同 key 会 409、update 会被 RLS 拦）
+    # 格式：user_<id>_<时间戳>.<ext>，新头像上传后更新 avatar_url 指向新文件
+    key = 'user_%s_%d%s' % (str(user_id), int(datetime.datetime.now().timestamp() * 1000), ext)
+    file_bytes = file.read()   # supabase-py upload 需要 bytes，不接受文件流
+    try:
+        sb_storage.storage.from_('avatars').upload(key, file_bytes, {
+            'content-type': mime
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': '头像上传失败: %s' % e}), 500
+
+    avatar_url = SUPABASE_URL.rstrip('/') + '/storage/v1/object/public/avatars/' + key
+    # 走 SECURITY DEFINER RPC 更新 profiles（anon 无 UPDATE profiles 权限）
+    data, rpc_err = rpc('update_avatar_url', {'p_user_id': user_id, 'p_url': avatar_url})
+    if rpc_err or not data or data.get('success') is not True:
+        # 地址保存失败时清理刚上传的文件，避免孤儿文件
+        try:
+            sb_storage.storage.from_('avatars').remove([key])
+        except Exception:
+            pass
+        return jsonify({'success': False, 'message': '头像地址保存失败: %s' % (rpc_err or '未知错误')}), 500
+
+    # 清理该用户的旧头像文件（保留刚上传的；删除策略已配置）
+    try:
+        prefix = 'user_%s' % str(user_id)
+        old_rows = _exec_rows(sb_storage.storage.from_('avatars').list('', {}))
+        for old in old_rows:
+            old_name = old.get('name') or ''
+            if old_name.startswith(prefix) and old_name != key:
+                sb_storage.storage.from_('avatars').remove([old_name])
+    except Exception:
+        pass   # 清理失败不影响头像使用
+
+    return jsonify({'success': True, 'avatar_url': avatar_url, 'message': '头像上传成功'})
+
+
+@app.route('/upload-banner', methods=['POST'])
+def upload_banner():
+    """上传主页头图（profile_skin 道具）：X-User-Id + multipart 文件。
+    存 avatars 公开桶，更新 profile_skin 道具的 settings.banner。"""
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'message': '请选择图片文件'}), 400
+
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > 5 * 1024 * 1024:
+        return jsonify({'success': False, 'message': '头图不能超过 5MB'}), 400
+
+    mime = (file.mimetype or '').lower()
+    ext_map = {'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp'}
+    ext = ext_map.get(mime)
+    if not ext:
+        return jsonify({'success': False, 'message': '仅支持 JPG/PNG/GIF/WebP 图片'}), 400
+
+    key = 'banner_%s_%d%s' % (str(user_id), int(datetime.datetime.now().timestamp() * 1000), ext)
+    file_bytes = file.read()
+    try:
+        sb_storage.storage.from_('avatars').upload(key, file_bytes, {'content-type': mime})
+    except Exception as e:
+        return jsonify({'success': False, 'message': '头图上传失败: %s' % e}), 500
+
+    banner_url = SUPABASE_URL.rstrip('/') + '/storage/v1/object/public/avatars/' + key
+    data, rpc_err = rpc('set_profile_banner', {'p_user_id': user_id, 'p_url': banner_url})
+    if rpc_err or not data or data.get('success') is not True:
+        try:
+            sb_storage.storage.from_('avatars').remove([key])
+        except Exception:
+            pass
+        return jsonify({'success': False, 'message': '头图保存失败: %s' % (rpc_err or '未知错误')}), 500
+
+    # 清理旧头图
+    try:
+        prefix = 'banner_%s' % str(user_id)
+        old_rows = _exec_rows(sb_storage.storage.from_('avatars').list('', {}))
+        for old in old_rows:
+            old_name = old.get('name') or ''
+            if old_name.startswith(prefix) and old_name != key:
+                sb_storage.storage.from_('avatars').remove([old_name])
+    except Exception:
+        pass
+
+    return jsonify({'success': True, 'banner_url': banner_url, 'message': '头图上传成功'})
+
+
+@app.route('/upload-image', methods=['POST'])
+def upload_image():
+    """上传图片（评论区/私信用）：存 images 公开桶，返回 key + 完整 URL。
+    消息/评论中存短标记 [img]<key>[/img]，前端渲染时拼公开 URL。"""
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'message': '请选择图片文件'}), 400
+
+    # 大小限制：5MB
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > 5 * 1024 * 1024:
+        return jsonify({'success': False, 'message': '图片不能超过 5MB'}), 400
+
+    # 只允许常见图片格式
+    mime = (file.mimetype or '').lower()
+    ext_map = {'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp'}
+    ext = ext_map.get(mime)
+    if not ext:
+        return jsonify({'success': False, 'message': '仅支持 JPG/PNG/GIF/WebP 图片'}), 400
+
+    # 唯一短 key：i_<毫秒时间戳>_<8位随机hex>.<ext>（标记存进消息/评论时占字少）
+    key = 'i_%d_%s%s' % (int(datetime.datetime.now().timestamp() * 1000), uuid.uuid4().hex[:8], ext)
+    file_bytes = file.read()   # supabase-py upload 需要 bytes，不接受文件流
+    try:
+        sb_storage.storage.from_('images').upload(key, file_bytes, {'content-type': mime})
+    except Exception as e:
+        return jsonify({'success': False, 'message': '图片上传失败: %s' % e}), 500
+
+    url = SUPABASE_URL.rstrip('/') + '/storage/v1/object/public/images/' + key
+    return jsonify({'success': True, 'key': key, 'url': url, 'message': '图片上传成功'})
+
+
+@app.route('/upload-video', methods=['POST'])
+def upload_video():
+    """上传视频（评论区/私信用）：存 images 公开桶，返回 key + 完整 URL。
+    消息/评论中存短标记 [video]<key>[/video]，前端渲染时拼公开 URL。"""
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'message': '请选择视频文件'}), 400
+
+    # 大小限制：50MB（与作品上传一致）
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_FILE_SIZE:
+        return jsonify({'success': False, 'message': '视频不能超过 50MB'}), 400
+
+    # 只允许常见视频格式
+    mime = (file.mimetype or '').lower()
+    ext_map = {'video/mp4': '.mp4', 'video/webm': '.webm', 'video/quicktime': '.mov',
+               'video/x-msvideo': '.avi', 'video/x-matroska': '.mkv'}
+    ext = ext_map.get(mime)
+    if not ext:
+        return jsonify({'success': False, 'message': '仅支持 MP4/WebM/MOV/AVI/MKV 视频'}), 400
+
+    # 唯一短 key：v_<毫秒时间戳>_<8位随机hex>.<ext>
+    key = 'v_%d_%s%s' % (int(datetime.datetime.now().timestamp() * 1000), uuid.uuid4().hex[:8], ext)
+    file_bytes = file.read()
+    try:
+        sb_storage.storage.from_('images').upload(key, file_bytes, {'content-type': mime})
+    except Exception as e:
+        return jsonify({'success': False, 'message': '视频上传失败: %s' % e}), 500
+
+    url = SUPABASE_URL.rstrip('/') + '/storage/v1/object/public/images/' + key
+    return jsonify({'success': True, 'key': key, 'url': url, 'message': '视频上传成功'})
+
+
+# 称号图片上传：改用 pythonanywhere/upload_titles.py 脚本批量上传（英文key文件名），
+# 本路由已废弃删除（admin-titles.html 已移除）。
+
+
+@app.route('/remove-avatar', methods=['POST'])
+def remove_avatar():
+    """移除头像：清空 avatar_url，并删除该用户的头像文件。"""
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    # 清空 avatar_url（走 RPC）
+    data, rpc_err = rpc('update_avatar_url', {'p_user_id': user_id, 'p_url': ''})
+    if rpc_err or not data or data.get('success') is not True:
+        return jsonify({'success': False, 'message': '移除失败: %s' % (rpc_err or '未知错误')}), 500
+
+    # 删除该用户的头像文件（尽力而为）
+    try:
+        prefix = 'user_%s' % str(user_id)
+        old_rows = _exec_rows(sb_storage.storage.from_('avatars').list('', {}))
+        for old in old_rows:
+            old_name = old.get('name') or ''
+            if old_name.startswith(prefix):
+                sb_storage.storage.from_('avatars').remove([old_name])
+    except Exception:
+        pass
+
+    return jsonify({'success': True, 'message': '头像已移除'})
+
+
+def _storage_key_from_url(file_url):
+    """从 file_url（形如 https://host/files/<key>）提取存储 key。"""
+    if not file_url:
+        return None
+    parts = file_url.rstrip('/').split('/')
+    key = parts[-1]
+    return key if re.match(r'^[a-f0-9]{32}(\.[a-zA-Z0-9]{1,10})?$', key) else None
+
+
+@app.route('/edit-product', methods=['POST'])
+def edit_product():
+    """编辑自己的作品：标题/简介/定价，可选替换文件。"""
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    try:
+        product_id = int(request.form.get('product_id'))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': '无效的作品 ID'}), 400
+
+    title = (request.form.get('title') or '').strip()
+    description = (request.form.get('description') or '').strip()
+    price_str = (request.form.get('price') or '0').strip()
+
+    if not title:
+        return jsonify({'success': False, 'message': '请输入作品标题'}), 400
+    if len(title) > 20:
+        return jsonify({'success': False, 'message': '标题不能超过20字'}), 400
+    if title.count('\n') >= 2:
+        return jsonify({'success': False, 'message': '标题最多2行'}), 400
+    if len(description) > 100:
+        return jsonify({'success': False, 'message': '简介不能超过100字'}), 400
+    if description.count('\n') >= 10:
+        return jsonify({'success': False, 'message': '简介最多10行'}), 400
+    if _has_bad_words(title) or _has_bad_words(description):
+        return jsonify({'success': False, 'message': '标题或简介包含违禁词，禁止发布'}), 400
+    try:
+        price = int(price_str)
+    except ValueError:
+        return jsonify({'success': False, 'message': '定价必须是数字'}), 400
+    if price < 0 or price > 999999999:
+        return jsonify({'success': False, 'message': '价格需在 0~999999999 之间'}), 400
+
+    # 校验作者身份 + 拿旧文件信息
+    try:
+        rows = _exec_rows(
+            supabase.table('products').select('id, file_url').eq('id', product_id).eq('author_id', user_id).limit(1)
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'message': '后端数据库连接失败: %s' % e}), 500
+    if not rows:
+        return jsonify({'success': False, 'message': '只能修改自己的作品'}), 403
+
+    old_file_url = rows[0].get('file_url')
+    new_file_url = old_file_url
+    new_file_name = None
+    new_file_size = None
+    new_mime = None
+    old_key = None
+
+    file = request.files.get('file')
+    if file and file.filename:
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(0)
+        if size > MAX_FILE_SIZE:
+            return jsonify({'success': False, 'message': '文件不能超过 50 MB'}), 400
+        key = safe_filename(file.filename)
+        try:
+            sb_storage.storage.from_('products').upload(key, file.read(), {
+                'content-type': file.mimetype or 'application/octet-stream'
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'message': '新文件上传失败: %s' % e}), 500
+        new_file_url = request.host_url.rstrip('/') + '/files/' + key
+        new_file_name = file.filename
+        new_file_size = size
+        new_mime = file.mimetype or ''
+        old_key = _storage_key_from_url(old_file_url)
+
+    # 更新记录：走 SECURITY DEFINER RPC（anon 无 UPDATE 权限）
+    data, rpc_err = rpc('edit_product', {
+        'p_product_id': product_id,
+        'p_user_id': user_id,
+        'p_title': title,
+        'p_description': description,
+        'p_price': price,
+        'p_file_url': new_file_url if new_file_url != old_file_url else None,
+        'p_file_name': new_file_name if new_file_url != old_file_url else None,
+        'p_file_size': new_file_size if new_file_url != old_file_url else None,
+        'p_mime_type': new_mime if new_file_url != old_file_url else None,
+    })
+    if rpc_err or not data or data.get('success') is not True:
+        # 记录更新失败时清理已上传的新文件
+        if new_file_url != old_file_url:
+            try:
+                sb_storage.storage.from_('products').remove([_storage_key_from_url(new_file_url)])
+            except Exception:
+                pass
+        return jsonify({'success': False, 'message': (rpc_err or (data and data.get('message')) or '保存失败')}), 500
+
+    # 删除旧文件（替换场景）
+    if old_key and new_file_url != old_file_url:
+        try:
+            sb_storage.storage.from_('products').remove([old_key])
+        except Exception:
+            pass
+
+    return jsonify({'success': True, 'message': '作品已更新'})
+
+
+@app.route('/delete-product', methods=['POST'])
+def delete_product():
+    """删除自己的作品（记录 + 存储文件 + 购买/下载记录）。"""
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    body = request.get_json(silent=True) or {}
+    try:
+        product_id = int(body.get('product_id'))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': '无效的作品 ID'}), 400
+
+    try:
+        rows = _exec_rows(
+            supabase.table('products').select('id, file_url').eq('id', product_id).eq('author_id', user_id).limit(1)
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'message': '后端数据库连接失败: %s' % e}), 500
+    if not rows:
+        return jsonify({'success': False, 'message': '只能删除自己的作品'}), 403
+
+    key = _storage_key_from_url(rows[0].get('file_url'))
+    # 走 SECURITY DEFINER RPC 删除记录（anon 无直接 DELETE 权限）
+    data, rpc_err = rpc('delete_product', {'p_product_id': product_id, 'p_user_id': user_id})
+    if rpc_err or not data or data.get('success') is not True:
+        return jsonify({'success': False, 'message': (rpc_err or (data and data.get('message')) or '删除失败')}), 500
+    if key:
+        try:
+            sb_storage.storage.from_('products').remove([key])
+        except Exception:
+            pass
+
+    return jsonify({'success': True, 'message': '作品已删除'})
+
+
+@app.route('/download', methods=['POST'])
+def download():
+    user_id, err = get_user_id()
+    if err:
+        return jsonify({'success': False, 'message': err}), 401
+
+    body = request.get_json(silent=True) or {}
+    try:
+        product_id = int(body.get('product_id'))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': '无效的作品 ID'}), 400
+
+    # 1. 查产品信息（价格/作者/文件地址）
+    try:
+        prod_rows = _exec_rows(
+            supabase.table('products').select('id, price, author_id, file_url, status') \
+            .eq('id', product_id).limit(1)
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'message': '后端数据库连接失败: %s' % e}), 500
+    prod = prod_rows[0] if prod_rows else None
+    if not prod or prod.get('status') != 'active':
+        return jsonify({'success': False, 'message': '作品不存在或已下架'}), 404
+
+    price = prod['price'] or 0
+    author_id = prod['author_id']
+
+    # 2. 作者本人：直接返回下载地址（不扣费）
+    if str(author_id) == str(user_id):
+        return jsonify({'success': True, 'file_url': _sign_product_url(prod['file_url']), 'message': '你的作品，直接下载'})
+
+    # 3. 免费作品：走 download_product（记录下载次数）
+    if price == 0:
+        data, rpc_err = rpc('download_product', {'p_product_id': product_id, 'p_user_id': user_id})
+        if rpc_err:
+            return jsonify({'success': False, 'message': '后端错误: %s' % rpc_err}), 500
+        if not data or data.get('success') is not True:
+            return jsonify({'success': False, 'message': (data and data.get('message')) or '下载失败'}), 400
+        return jsonify({'success': True, 'file_url': _sign_product_url(data.get('file_url')), 'message': data.get('message', '下载成功')})
+
+    # 4. 付费作品：先查是否已购买（避免重复扣费）
+    #    ⚠️ 这里必须走 RPC，不能直接 select product_purchases ——
+    #    该表已对 anon 关闭（安全加固，防止交易记录被匿名读取），
+    #    而后端用的是 ANON_KEY，直连会报 42501 permission denied。
+    pur, pur_err = rpc('check_product_purchased',
+                       {'p_product_id': str(product_id), 'p_user_id': user_id})
+    if pur_err:
+        return jsonify({'success': False, 'message': '后端错误: %s' % pur_err}), 500
+    if pur and pur.get('purchased'):
+        return jsonify({'success': True, 'file_url': _sign_product_url(prod['file_url']), 'message': '已购买，直接下载'})
+
+    # 5. 未购买：走 purchase_product（扣款并返回下载地址）
+    #    支付方式：pay_type = 'nb'（给作者NB币，默认）| 'market'（加作者公司市值，需 company_id）
+    pay_type = (body.get('pay_type') or 'nb').lower()
+    company_id = body.get('company_id')
+    rpc_kwargs = {'p_product_id': product_id, 'p_buyer_id': user_id, 'p_pay_type': pay_type}
+    if company_id:
+        try:
+            rpc_kwargs['p_company_id'] = int(company_id)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'message': '无效的公司 ID'}), 400
+    data, rpc_err = rpc('purchase_product', rpc_kwargs)
+    if rpc_err:
+        return jsonify({'success': False, 'message': '后端错误: %s' % rpc_err}), 500
+    if not data or data.get('success') is not True:
+        return jsonify({'success': False, 'message': (data and data.get('message')) or '购买失败'}), 400
+
+    return jsonify({'success': True, 'file_url': _sign_product_url(data.get('file_url')), 'message': data.get('message', '购买成功')})
+
+
+@app.route('/uploads/<path:filename>')
+def serve_file(filename):
+    """旧版本地存储的文件下载（历史遗留，新文件已走 Supabase Storage）。"""
+    if not re.match(r'^[a-f0-9]{32}(\.[a-zA-Z0-9]{1,10})?$', filename):
+        return jsonify({'success': False, 'message': '非法文件名'}), 400
+    return send_from_directory(UPLOAD_DIR, filename, as_attachment=True)
+
+
+@app.route('/files/<path:key>')
+def serve_s3_file(key):
+    """下载作品文件（附件方式）。三级兜底：Supabase Storage → S3 → 本地磁盘（兼容历史文件）。
+
+    ⚠️ 必须带有效签名 —— 签名由 /download 在确认身份之后签发（见 _sign_file_key）。
+       裸链接一律拒绝：否则只要拿到 key（它就在 products.file_url 里）就能白拿付费作品。
+    """
+    if not re.match(r'^[a-f0-9]{32}(\.[a-zA-Z0-9]{1,10})?$', key):
+        return jsonify({'success': False, 'message': '非法文件名'}), 400
+
+    if not _file_sig_ok(key, request.args.get('e'), request.args.get('s')):
+        return jsonify({'success': False,
+                        'message': '下载链接无效或已过期，请回到作品页重新点击下载'}), 403
+
+    # 1) Supabase Storage（新文件）
+    try:
+        body = sb_storage.storage.from_('products').download(key)
+        resp = Response(body, mimetype='application/octet-stream')
+        resp.headers['Content-Disposition'] = 'attachment; filename="%s"' % key
+        return resp
+    except Exception:
+        pass
+
+    # 2) S3（历史文件，若仍配置可用）
+    if s3_client is not None:
+        try:
+            obj = s3_client.get_object(Bucket=S3_BUCKET, Key=key)
+            body = obj['Body'].read()
+            resp = Response(body, mimetype='application/octet-stream')
+            resp.headers['Content-Disposition'] = 'attachment; filename="%s"' % key
+            return resp
+        except Exception:
+            pass
+
+    # 3) 本地磁盘（历史文件）
+    local_path = os.path.join(UPLOAD_DIR, key)
+    if os.path.isfile(local_path):
+        return send_from_directory(UPLOAD_DIR, key, as_attachment=True)
+
+    return jsonify({'success': False, 'message': '文件不存在或已删除'}), 404
+
+
+# ==================== GitHub 自动同步 ====================
+
+@app.route('/webhook', methods=['POST'])
+def github_webhook():
+    """GitHub Webhook：push 后自动 git pull 网站代码和本后端代码。"""
+    payload = request.get_data()
+    signature = request.headers.get('X-Hub-Signature-256', '')
+    if GITHUB_WEBHOOK_SECRET:
+        expected = 'sha256=' + hmac.new(
+            GITHUB_WEBHOOK_SECRET.encode('utf-8'), payload, hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            return jsonify({'success': False, 'message': '签名校验失败'}), 403
+    else:
+        print('[webhook] 警告：未配置 GITHUB_WEBHOOK_SECRET，跳过签名校验')
+
+    event = request.headers.get('X-GitHub-Event', 'push')
+    if event != 'push':
+        return jsonify({'success': True, 'message': '忽略事件: ' + event})
+
+    # 需要同步的目录：网站代码目录 + 本后端目录
+    sync_dirs = [SITE_DIR]
+    api_dir = os.path.dirname(os.path.abspath(__file__))
+    if os.path.abspath(api_dir) not in [os.path.abspath(d) for d in sync_dirs]:
+        sync_dirs.append(api_dir)
+
+    for d in sync_dirs:
+        if not os.path.isdir(os.path.join(d, '.git')):
+            print('[webhook] 跳过（不是 git 仓库）: %s' % d)
+            continue
+        log_name = 'pull_site.log' if d == SITE_DIR else 'pull_api.log'
+        log_path = os.path.join('/tmp', log_name)
+        try:
+            with open(log_path, 'a') as log:
+                subprocess.Popen(['git', '-C', d, 'pull'], stdout=log, stderr=log, cwd=d)
+            print('[webhook] 已在后台触发 git pull: %s' % d)
+        except Exception as e:
+            print('[webhook] 触发失败 %s: %s' % (d, e))
+
+    return jsonify({'success': True, 'message': '同步已触发'})
+
+
+# ==================== 股票市值 API（公开只读） ====================
+# GET /api/market                       全市场快照（支持 ?name= 模糊查询）
+# GET /api/market/<company_id>          单家公司市值
+# GET /api/market/<company_id>/history  历史K线（?days=7，默认7天，最多30天）
+# GET /api/weather                      天气瞎报（十二座虚拟城市的当前气象，含紫外线）
+# GET /api/docs                         接口文档页
+# 别名：/api/virtual-market-value 与 /api/Virtual market value 等价于 /api/market
+# 统一响应：{success, code, message?, ...data}
+#   错误码：OK / UNAUTHORIZED / RATE_LIMITED / NOT_FOUND / INVALID_PARAM / DB_ERROR
+# 可选保护：环境变量 API_KEY 配置后，需带 X-API-Key 请求头或 ?key= 参数访问；
+# 节流：每 IP 每分钟最多 60 次（响应头 X-RateLimit-* 告知剩余额度）；
+# 快照缓存 5 秒，避免刷爆 Supabase 免费额度。
+
+API_KEY = os.environ.get('API_KEY', '')
+
+# 兜底:环境变量读不到时,尝试从同目录的 secrets_local.py 读取
+# (PythonAnywhere 部分套餐没有 Environment variables 面板;
+#  该文件已在 .gitignore 里,只存在于服务器,不会进公开仓库)
+if not API_KEY:
+    try:
+        from secrets_local import API_KEY as _K  # noqa: E402
+        API_KEY = _K or ''
+    except Exception:
+        pass
+
+_market_cache = {'ts': 0, 'data': None}
+# ---------- 紫外线指数（/api/weather 用） ----------
+# 公式与前端 weather.html 里的 uvIndex() 一致：
+#   赤纬 → 太阳高度角 → 晴空 UV = 11.2 × sinH^2.42 → 乘城市系数和云量系数
+# 城市系数 uvK 表示海拔/气候（高原强、日照少的城市弱）。
+_UV_GEO = {
+    'NB频道总部': (30, 1.00),
+    'U系': (15, 1.08),
+    'AWM市': (38, 1.22),          # 高原，海拔高
+    'Lemon市': (24, 0.98),
+    'Oganesson市': (22, 1.05),
+    'Fafat市': (31, 0.96),
+    'GC3市': (32, 0.95),
+    'UVS市': (35, 1.18),          # 紫外线之都
+    'UWSF市': (28, 1.00),
+    'PTC市': (33, 0.97),
+    '5U市': (26, 1.02),
+    'Ubn市': (29, 0.90),          # 日照少的夜猫子之城
+    '3ty市': (27, 1.04),
+    'Mn(NO3)2市': (30, 1.00),
+    'AWST市': (28, 1.02),
+    '小琪市': (30, 1.00),
+}
+
+# 天气状况 → 云量系数（顺序有意义，先匹配到的赢）
+_UV_CLOUD = (('雷', 0.30), ('雪', 0.35), ('雨', 0.28), ('霾', 0.55),
+             ('雾', 0.45), ('阴', 0.35), ('间', 0.85), ('多云', 0.62))
+
+_UV_LEVELS = ((3, '弱'), (6, '中等'), (8, '强'), (11, '很强'))
+
+
+def _uv_condition(temp, hum, vis, aqi):
+    """按 temp/hum/vis/aqi 推天气状况 —— 与前端 condition() 同一套规则。"""
+    if temp <= 0 and hum >= 65:
+        return '小雪'
+    if temp <= 0:
+        return '晴冷'
+    if vis < 6:
+        return '有雾'
+    if aqi > 120:
+        return '霾'
+    if hum >= 88:
+        return '小雨'
+    if hum >= 78:
+        return '多云'
+    if temp >= 33:
+        return '酷热'
+    if hum <= 38:
+        return '晴'
+    return '晴间多云'
+
+
+def _uv_cloud(cond):
+    for kw, v in _UV_CLOUD:
+        if kw in cond:
+            return v
+    return 1.0
+
+
+def _uv_index(city, cond, dt):
+    """紫外線指数。太阳在地平线下返回 0。"""
+    geo = _UV_GEO.get(city)
+    if not geo:
+        return 0.0
+    lat, k = geo
+    doy = int(dt.strftime('%j'))
+    decl = 23.44 * math.sin(2 * math.pi * (doy - 81) / 365.25)
+    hours = dt.hour + dt.minute / 60.0 + dt.second / 3600.0
+    ha = 15.0 * (hours - 12.0)
+    latR, decR, haR = math.radians(lat), math.radians(decl), math.radians(ha)
+    sin_h = (math.sin(latR) * math.sin(decR) +
+             math.cos(latR) * math.cos(decR) * math.cos(haR))
+    if sin_h <= 0.02:
+        return 0.0
+    clear = 11.2 * (sin_h ** 2.42)
+    return max(0.0, min(12.0, clear * k * _uv_cloud(cond)))
+
+
+def _uv_level(v):
+    for hi, name in _UV_LEVELS:
+        if v < hi:
+            return name
+    return '极强'
+
+_weather_cache = {'ts': 0, 'data': None}
+_rate_buckets = {}  # ip -> [请求时间戳]
+
+# API 用量统计（进程内存；PythonAnywhere Reload 后清零）
+_api_stats = {
+    'since': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'day': None,           # 统计日期（UTC）
+    'day_total': 0,        # 当日请求总数
+    'by_endpoint': {},     # 当日各端点请求数
+    'rate_limited': 0,     # 被限流的请求数
+}
+
+@app.before_request
+def count_api_requests():
+    if not request.path.startswith('/api/') or request.path == '/api/stats':
+        return
+    # ---- IP 黑名单(全站封禁;缓存 60s;查询失败放行,不影响 API) ----
+    try:
+        # 用真实客户端 IP(CF-Connecting-IP);原先取 XFF 第一段是客户端可伪造的,
+        # 意味着封了的人伪造一个头就能绕过黑名单
+        ip = _client_ip()
+        now = datetime.datetime.now().timestamp()
+        if now - _api_ban_cache['ts'] > 60:
+            try:
+                rows = _exec_rows(supabase.table('banned_ips').select('ip'))
+                _api_ban_cache['ips'] = {str(r['ip']) for r in rows}
+                _api_ban_cache['nets'] = None   # 网段缓存失效,下次匹配时重建
+                _api_ban_cache['ts'] = now
+            except Exception:
+                _api_ban_cache['ts'] = now  # 查询失败也等 60s 再试,避免打爆
+        if _ip_banned(ip):
+            return jsonify({'success': False, 'code': 'IP_BANNED',
+                            'message': '该 IP 已被封禁,如有疑问请联系 nbchannel@163.com'}), 403
+    except Exception:
+        pass
+    today = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
+    if _api_stats['day'] != today:
+        _api_stats['day'] = today
+        _api_stats['day_total'] = 0
+        _api_stats['by_endpoint'] = {}
+    _api_stats['day_total'] += 1
+    _api_stats['by_endpoint'][request.path] = _api_stats['by_endpoint'].get(request.path, 0) + 1
+
+# IP 黑名单缓存(与 _api_stats 同级定义)
+_api_ban_cache = {'ts': 0.0, 'ips': set(), 'nets': None}
+
+
+# ---------- 公开端点限流(2026-09-25 新增) ----------
+# /api/bili-fans 不能加 API Key —— 官网首页要调它;加 Key 就得把 Key 写进
+# 公开的 HTML,等于没加。所以这几个公开端点单独做「每 IP 限流」。
+#
+# 为什么必须限:PythonAnywhere 免费版每个请求约有 1.1 秒的 worker 开销
+# (实测:连最简的 /health 也要 1.33s,而建连只要 0.24s)。也就是说
+# 一个 setInterval(fetch, 1000) 就能把 worker 占满,拖垮整个后端。
+#
+# 阈值取 120/分(2 次/秒):官网首页 30 秒轮询 = 2 次/分,余量极大;
+# 校园/公司共用出口的多人也不会撞到(要 60 人同时每秒轮询才够)。
+# 注意:应用层限流挡不住「多 IP 分布式」刷 —— 那种要靠 Cloudflare
+# 边缘缓存(见 README 的「接口防护」一节),让请求根本到不了源站。
+_PUBLIC_RATE_PATHS = ('/api/bili-fans', '/api/docs', '/health')
+_PUBLIC_RATE_LIMIT = 120
+
+
+@app.before_request
+def limit_public_endpoints():
+    """给不加 Key 的公开端点做每 IP 限流(注册在黑名单检查之后)。"""
+    if request.path not in _PUBLIC_RATE_PATHS:
+        return
+    limited, _remaining = _rate_limited('pub:' + _client_ip(),
+                                        limit=_PUBLIC_RATE_LIMIT, window=60)
+    if limited:
+        return _err('RATE_LIMITED', '请求过于频繁，请稍后再试', 429)
+
+
+
+def _ip_banned(ip):
+    """命中黑名单?支持精确 IP 与 IPv6/IPv4 网段(如 2409:8a30:9c84:7241::/64)"""
+    if not ip:
+        return False
+    ips = _api_ban_cache['ips']
+    if ip in ips:
+        return True
+    nets = _api_ban_cache.get('nets')
+    if nets is None:
+        nets = []
+        for entry in ips:
+            if '/' in entry:
+                try:
+                    nets.append(ipaddress.ip_network(entry, strict=False))
+                except Exception:
+                    continue
+        _api_ban_cache['nets'] = nets
+    if not nets:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip)
+    except Exception:
+        return False
+    for net in nets:
+        if addr.version == net.version and addr in net:
+            return True
+    return False
+
+def _client_ip():
+    """取真实客户端 IP(限流与黑名单都用它)。
+
+    ⚠️ 不能用 X-Forwarded-For 的第一段 —— 那是【客户端可伪造】的:
+      攻击者每次请求换一个假的 XFF,就能绕过一切「按 IP 限流」,
+      也能绕过 IP 黑名单(封了照样进)。
+    优先级:
+      1. CF-Connecting-IP  —— Cloudflare 会覆盖此头,客户端改不了,最可信
+      2. X-Forwarded-For 的最后一段 —— 代理链末尾是最近一跳代理附加的,
+         而客户端伪造的值只会出现在前面几段
+      3. remote_addr —— 直连时的对端地址(有 Cloudflare 时它是 CF 的 IP)
+    """
+    v = (request.headers.get('CF-Connecting-IP') or '').strip()
+    if v:
+        return v
+    xff = request.headers.get('X-Forwarded-For') or ''
+    if xff:
+        parts = [p.strip() for p in xff.split(',') if p.strip()]
+        if parts:
+            return parts[-1]
+    return request.remote_addr or 'unknown'
+
+
+def _rate_limited(ip, limit=60, window=60):
+    """返回 (是否受限, 剩余次数)。"""
+    now = datetime.datetime.now().timestamp()
+    ts_list = [t for t in _rate_buckets.get(ip, []) if now - t < window]
+    if len(ts_list) >= limit:
+        _rate_buckets[ip] = ts_list
+        return True, 0
+    ts_list.append(now)
+    _rate_buckets[ip] = ts_list
+    return False, limit - len(ts_list)
+
+def _check_api_key():
+    if not API_KEY:
+        return None
+    key = request.headers.get('X-API-Key', '') or request.args.get('key', '')
+    if key != API_KEY:
+        return '无效或缺失 API Key'
+    return None
+
+def _exec_rows(query):
+    """执行查询并返回行列表（兼容不同 supabase-py 版本的返回形态）。"""
+    try:
+        res = query.execute()
+    except Exception:
+        raise
+    if res is None:
+        return []
+    if isinstance(res, dict):
+        return [res]
+    data = getattr(res, 'data', None)
+    if data is None:
+        return []
+    if isinstance(data, list):
+        return data
+    return [data]
+def _now_iso():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+def _ok(data):
+    """统一成功响应。"""
+    return jsonify({'success': True, 'code': 'OK', **data})
+
+def _err(code, message, status):
+    """统一错误响应。"""
+    return jsonify({'success': False, 'code': code, 'message': message}), status
+
+def _guard():
+    """统一前置检查（API Key + 限流），并附加限流响应头。
+    返回 None 表示放行；否则返回应直接返回的响应。"""
+    err = _check_api_key()
+    if err:
+        return _err('UNAUTHORIZED', err, 401)
+    limited, remaining = _rate_limited('key:' + _client_ip())
+    if limited:
+        _api_stats['rate_limited'] += 1
+        return _err('RATE_LIMITED', '请求过于频繁，请稍后再试', 429)
+    # 挂上限流剩余信息（after_request 里统一加头）
+    request.environ['_rate_remaining'] = remaining
+    return None
+
+@app.after_request
+def after_request_api(resp):
+    # 限流剩余额度头（CORS 头由上方原有的 after_request 统一处理）
+    remaining = request.environ.get('_rate_remaining')
+    if remaining is not None:
+        resp.headers['X-RateLimit-Limit'] = '60'
+        resp.headers['X-RateLimit-Remaining'] = str(remaining)
+    # ---- API 访问日志:入队 + 节流批量落库(不阻塞响应,失败静默) ----
+    try:
+        path = request.path or ''
+        if path.startswith('/api/') and path != '/api/stats':
+            # 用真实客户端 IP —— 原先取 XFF 第一段是客户端可伪造的,
+            # 会让 api_logs 里的 IP 统计不可信(后台据此判断来源会误判)
+            ip = _client_ip()
+            with _api_log_lock:
+                _api_log_queue.append({
+                    'endpoint': path[:200],
+                    'method': (request.method or 'GET')[:10],
+                    'ip': ip[:60],
+                    'status': int(resp.status_code or 200),
+                    'ua': (request.headers.get('User-Agent') or '')[:200],
+                })
+            # 每 20 秒或攒够 300 条才批量写一次(攻击风暴不会拖垮请求)
+            now = datetime.datetime.now().timestamp()
+            if now - _api_log_flush_ts[0] >= 20 or len(_api_log_queue) >= 300:
+                _flush_api_logs()
+    except Exception:
+        pass
+    return resp
+
+
+# ==================== API 访问日志(持久表 supabase.api_logs) ====================
+# 内存缓冲 + 请求驱动批量落库;表未建或网络异常时静默放弃,不影响任何 API。
+import collections as _collections
+
+_api_log_queue = _collections.deque(maxlen=4000)
+_api_log_lock = threading.Lock()
+_api_log_flush_ts = [0.0]
+
+
+def _flush_api_logs():
+    """取出缓冲(每次最多 800 条)批量写入;失败则留待下轮,静默。"""
+    try:
+        rows = []
+        with _api_log_lock:
+            while len(rows) < 800 and _api_log_queue:
+                rows.append(_api_log_queue.popleft())
+            if not rows:
+                return
+        for i in range(0, len(rows), 400):
+            try:
+                supabase.rpc('log_api_requests', {'p_rows': rows[i:i + 400]}).execute()
+            except Exception:
+                return
+        _api_log_flush_ts[0] = datetime.datetime.now().timestamp()
+    except Exception:
+        pass
+
+
+def _parse_owner(c):
+    p = c.get('profiles')
+    if isinstance(p, list) and p:
+        return p[0].get('username')
+    if isinstance(p, dict):
+        return p.get('username')
+    return None
+
+def _fetch_market():
+    now = datetime.datetime.now().timestamp()
+    if _market_cache['data'] and now - _market_cache['ts'] < 5:
+        return _market_cache['data'], None
+    try:
+        rows = _exec_rows(
+            supabase.table('user_companies') \
+            .select('id, company_name, market_value, user_id, profiles(username)') \
+            .order('market_value', desc=True)
+        )
+    except Exception as e:
+        return None, str(e)
+    companies = []
+    total = 0
+    for c in rows:
+        companies.append({
+            'id': c['id'],
+            'name': c['company_name'],
+            'market_value': c['market_value'],
+            'owner': _parse_owner(c),
+        })
+        total += c['market_value'] or 0
+    data = {'total_market_value': total, 'count': len(companies), 'companies': companies,
+            'as_of': _now_iso()}
+    _market_cache['ts'] = now
+    _market_cache['data'] = data
+    return data, None
+
+def _fetch_company(company_id):
+    """查单家公司，返回 (company dict, error)；不存在返回 (None, None)。"""
+    try:
+        rows = _exec_rows(
+            supabase.table('user_companies') \
+            .select('id, company_name, market_value, user_id, profiles(username)') \
+            .eq('id', company_id).limit(1)
+        )
+    except Exception as e:
+        return None, str(e)
+    if not rows:
+        return None, None
+    return rows[0], None
+
+@app.route('/api/market')
+@app.route('/api/virtual-market-value')
+@app.route('/api/Virtual market value')
+def api_market():
+    denied = _guard()
+    if denied:
+        return denied
+    name = (request.args.get('name') or '').strip()
+    if name:
+        # 按公司名模糊查询（不缓存，保持实时；limit 保护）
+        try:
+            rows = _exec_rows(
+                supabase.table('user_companies') \
+                .select('id, company_name, market_value, user_id, profiles(username)') \
+                .ilike('company_name', '%' + name + '%') \
+                .limit(50)
+            )
+        except Exception as e:
+            return _err('DB_ERROR', '后端数据库连接失败: %s' % e, 500)
+        companies = [{
+            'id': c['id'],
+            'name': c['company_name'],
+            'market_value': c['market_value'],
+            'owner': _parse_owner(c),
+        } for c in rows]
+        total = sum(c['market_value'] or 0 for c in companies)
+        return _ok({'as_of': _now_iso(), 'total_market_value': total,
+                    'count': len(companies), 'companies': companies})
+    data, db_err = _fetch_market()
+    if db_err:
+        return _err('DB_ERROR', '后端数据库连接失败: %s' % db_err, 500)
+    return _ok({'as_of': data['as_of'], 'total_market_value': data['total_market_value'],
+                'count': data['count'], 'companies': data['companies']})
+
+@app.route('/api/market/<int:company_id>')
+def api_market_one(company_id):
+    denied = _guard()
+    if denied:
+        return denied
+    c, db_err = _fetch_company(company_id)
+    if db_err:
+        return _err('DB_ERROR', '后端数据库连接失败: %s' % db_err, 500)
+    if not c:
+        return _err('NOT_FOUND', '公司不存在', 404)
+    return _ok({'as_of': _now_iso(), 'id': c['id'], 'name': c['company_name'],
+                'market_value': c['market_value'], 'owner': _parse_owner(c)})
+
+@app.route('/api/market/<int:company_id>/history')
+def api_market_history(company_id):
+    denied = _guard()
+    if denied:
+        return denied
+    try:
+        days = int(request.args.get('days', 7))
+    except ValueError:
+        return _err('INVALID_PARAM', 'days 必须是数字', 400)
+    if days < 1 or days > 30:
+        return _err('INVALID_PARAM', 'days 需在 1~30 之间', 400)
+
+    c, db_err = _fetch_company(company_id)
+    if db_err:
+        return _err('DB_ERROR', '后端数据库连接失败: %s' % db_err, 500)
+    if not c:
+        return _err('NOT_FOUND', '公司不存在', 404)
+
+    try:
+        rows = _exec_rows(supabase.rpc('get_company_kline', {'p_company_id': company_id}))
+    except Exception as e:
+        return _err('DB_ERROR', 'K线数据读取失败: %s' % e, 500)
+
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+    points = []
+    for row in rows:
+        t = row.get('t')
+        if t is None:
+            continue
+        try:
+            ts = datetime.datetime.fromisoformat(t.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            continue
+        if ts >= cutoff:
+            points.append({'t': row['t'], 'v': row['v']})
+
+    return _ok({'as_of': _now_iso(), 'company_id': c['id'], 'name': c['company_name'],
+                'days': days, 'points_count': len(points), 'points': points})
+
+@app.route('/api/comments')
+def api_comments():
+    """只读评论接口：支持 page/limit/page_path 参数。"""
+    denied = _guard()
+    if denied:
+        return denied
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 20))
+    except ValueError:
+        return _err('INVALID_PARAM', 'page/limit 必须是数字', 400)
+    if page < 1 or limit < 1 or limit > 50:
+        return _err('INVALID_PARAM', 'page 需>=1，limit 需在 1~50 之间', 400)
+    q = supabase.table('comments') \
+        .select('id, page_path, content, created_at, parent_id, profiles(username)') \
+        .order('created_at', desc=True) \
+        .range((page - 1) * limit, page * limit - 1)
+    page_path = (request.args.get('page_path') or '').strip()
+    if page_path:
+        q = q.eq('page_path', page_path)
+
+    # 总评论数（用于调用方计算总页数；查询失败时不阻塞主查询）
+    total = None
+    page_count = None
+    try:
+        cnt_q = supabase.table('comments').select('id', count='exact', head=True)
+        if page_path:
+            cnt_q = cnt_q.eq('page_path', page_path)
+        cnt_res = cnt_q.execute()
+        total = getattr(cnt_res, 'count', None)
+        if total is not None:
+            total = int(total)
+            page_count = (total + limit - 1) // limit
+    except Exception:
+        total = None
+
+    try:
+        rows = _exec_rows(q)
+    except Exception as e:
+        return _err('DB_ERROR', '后端数据库连接失败: %s' % e), 500
+    comments = [{
+        'id': r['id'],
+        'username': _parse_owner(r),
+        'content': r['content'],
+        'created_at': r['created_at'],
+        'parent_id': r.get('parent_id'),
+        'page_path': r.get('page_path'),
+    } for r in rows]
+    return _ok({'as_of': _now_iso(), 'page': page, 'limit': limit,
+                'total': total, 'page_count': page_count,
+                'count': len(comments), 'comments': comments})
+
+
+@app.route('/api/market/export')
+def api_market_export():
+    """全市场快照导出（CSV）。"""
+    denied = _guard()
+    if denied:
+        return denied
+    fmt = (request.args.get('format') or 'csv').lower()
+    if fmt != 'csv':
+        return _err('INVALID_PARAM', '仅支持 format=csv', 400)
+    data, db_err = _fetch_market()
+    if db_err:
+        return _err('DB_ERROR', '后端数据库连接失败: %s' % db_err), 500
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['id', 'name', 'market_value', 'owner'])
+    for c in data['companies']:
+        writer.writerow([c['id'], c['name'], c['market_value'], c['owner'] or ''])
+    resp = Response(buf.getvalue(), mimetype='text/csv; charset=utf-8')
+    fname = 'market_%s.csv' % datetime.datetime.now().strftime('%Y%m%d')
+    resp.headers['Content-Disposition'] = 'attachment; filename="%s"' % fname
+    return resp
+
+
+@app.route('/api/weather')
+def api_weather():
+    """天气瞎报 · 十二座虚拟城市的当前气象（只读）。
+
+    数据由数据库的 weather_tick_loop 每 10 秒推进一轮，
+    这里再缓存 5 秒 —— 也就是最多十几秒的延迟。
+    支持 ?city= 按城市名模糊查询。
+    """
+    denied = _guard()
+    if denied:
+        return denied
+
+    now = datetime.datetime.now().timestamp()
+    rows = None
+    if _weather_cache['data'] is not None and now - _weather_cache['ts'] < 5:
+        rows = _weather_cache['data']
+    else:
+        try:
+            raw_rows = _exec_rows(supabase.rpc('get_weather'))
+            # get_weather 返回 jsonb，不同 supabase-py 版本可能包一层 {get_weather: [...]}
+            if raw_rows and isinstance(raw_rows[0], dict) and 'get_weather' in raw_rows[0]:
+                rows = raw_rows[0]['get_weather']
+            else:
+                rows = raw_rows
+            if not isinstance(rows, list):
+                rows = []
+            _weather_cache['data'] = rows
+            _weather_cache['ts'] = now
+        except Exception as e:
+            return _err('DB_ERROR', '后端数据库连接失败: %s' % e, 500)
+
+    if not isinstance(rows, list):
+        rows = []
+
+    kw = (request.args.get('city') or '').strip().lower()
+    if kw:
+        rows = [r for r in rows if kw in str(r.get('city', '')).lower()]
+
+    updated = ''
+    for r in rows:
+        u = str(r.get('updated_at') or '')
+        if u > updated:
+            updated = u
+
+    # ---- 紫外线：按【请求时刻】现算，公式与前端一致 ----
+    # 支持 ?at=2026-10-10T12:00 指定时刻（不传就用现在，东八区）
+    when = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
+    at = (request.args.get('at') or '').strip()
+    if at:
+        for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%Y-%m-%d'):
+            try:
+                when = datetime.datetime.strptime(at, fmt)
+                break
+            except ValueError:
+                continue
+    try:
+        conds = {}
+        for r in rows:
+            cond = _uv_condition(float(r.get('temp_c') or 0),
+                                 float(r.get('humidity') or 0),
+                                 float(r.get('visibility') or 0),
+                                 float(r.get('aqi') or 0))
+            conds[str(r.get('city'))] = cond
+            uv = _uv_index(str(r.get('city')), cond, when)
+            r['condition'] = cond
+            r['uv'] = round(uv, 2)
+            r['uv_level'] = _uv_level(uv)
+    except Exception:
+        pass
+
+    return _ok({
+        'unit': {'temp': '°C', 'temp_alt': '°F', 'pressure': 'kPa',
+                 'visibility': 'km', 'humidity': '%', 'wind_force': 'm/s'},
+        'wind_dir_index': '风向按 16 方位，0=北、4=东、8=南、12=西，顺时针',
+        'count': len(rows),
+        'updated_at': updated,
+        'uv_at': when.strftime('%Y-%m-%d %H:%M'),
+        'uv_note': 'uv 是按 uv_at 这个时刻现算的（默认东八区当前时间）；'
+                   'uv_level 分档：<3 弱 / <6 中等 / <8 强 / <11 很强 / 其余 极强',
+        'cities': rows,
+    })
+
+
+@app.route('/api/stats')
+def api_stats():
+    """API 用量统计：当日请求数、各端点分布、限流次数。"""
+    denied = _guard()
+    if denied:
+        return denied
+    return _ok({'date': _api_stats['day'],
+                'day_total_requests': _api_stats['day_total'],
+                'by_endpoint': _api_stats['by_endpoint'],
+                'rate_limited': _api_stats['rate_limited'],
+                'uptime_since': _api_stats['since']})
+
+
+@app.route('/api/docs')
+def api_docs():
+    """接口文档页。"""
+    return Response(DOCS_HTML, mimetype='text/html')
+
+DOCS_HTML = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NB频道 市值 API 文档</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:860px;margin:0 auto;padding:24px 16px;line-height:1.7;background:#f7f8fa;color:#222}
+h1{border-bottom:2px solid #00a1d6;padding-bottom:8px}
+h2{margin-top:32px;color:#00a1d6;border-left:4px solid #00a1d6;padding-left:10px}
+code,pre{background:#eef1f5;border-radius:6px;font-size:0.9em}
+code{padding:2px 6px}
+pre{padding:12px 14px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;margin:12px 0}
+th,td{border:1px solid #d5dae0;padding:8px 10px;text-align:left;font-size:0.92em}
+th{background:#e9eef4}
+.ep{background:#fff;border:1px solid #e1e6ec;border-radius:10px;padding:14px 16px;margin:14px 0}
+.badge{display:inline-block;background:#00a1d6;color:#fff;border-radius:4px;padding:1px 8px;font-size:0.8em;margin-right:6px}
+.badge.g{background:#28a745}
+.footer{margin-top:40px;color:#888;font-size:0.85em;text-align:center}
+</style>
+</head>
+<body>
+<h1>📈 NB频道 虚拟股票市值 API</h1>
+<p>只读接口，数据与网站前端实时一致。Base URL：<code>https://nbchannel.pythonanywhere.com</code> 或 <code>https://api.nb-channel.top</code></p>
+
+<div style="background:#fff8e1;border:1px solid #ffe08a;border-radius:10px;padding:14px 16px;margin:16px 0">
+<b>⚠️ 2026-09-25 起，主要接口需要 API Key</b><br>
+<code>/api/market</code>（含子路径与导出）、<code>/api/comments</code>、<code>/api/stats</code>
+需要带 <code>X-API-Key</code> 请求头，否则返回 <code>401 UNAUTHORIZED</code>。<br>
+<b>申请：</b>邮件 <a href="mailto:nbchannel@163.com">nbchannel@163.com</a>
+或站内评论区 @NB频道官方，说明用途与大致调用频率。<br>
+<b>用法：</b>
+<pre>curl -H "X-API-Key: 你申请到的Key" "https://api.nb-channel.top/api/market"</pre>
+请用请求头而不是 <code>?key=</code> 参数（URL 会进日志与 referrer），也不要把 Key 提交到公开仓库。<br>
+<code>/api/bili-fans</code> 与 <code>/api/docs</code> 仍然完全公开，不需要 Key。
+</div>
+
+<h2>统一响应结构</h2>
+<p>成功：<code>{"success": true, "code": "OK", ...数据字段}</code>；失败：<code>{"success": false, "code": "错误码", "message": "说明"}</code></p>
+<table>
+<tr><th>错误码</th><th>HTTP</th><th>含义</th></tr>
+<tr><td><code>OK</code></td><td>200</td><td>成功</td></tr>
+<tr><td><code>UNAUTHORIZED</code></td><td>401</td><td>API Key 缺失或错误（请带 <code>X-API-Key</code> 请求头）</td></tr>
+<tr><td><code>RATE_LIMITED</code></td><td>429</td><td>请求过于频繁（每 IP 每分钟 60 次）</td></tr>
+<tr><td><code>NOT_FOUND</code></td><td>404</td><td>公司不存在</td></tr>
+<tr><td><code>INVALID_PARAM</code></td><td>400</td><td>参数不合法</td></tr>
+<tr><td><code>DB_ERROR</code></td><td>500</td><td>后端数据库异常</td></tr>
+</table>
+
+<h2>接口列表</h2>
+
+<div class="ep">
+<span class="badge">GET</span><code>/api/market</code> — 全市场快照
+<p>参数：<code>name</code>（可选，按公司名模糊查询，最多50家）</p>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market"
+curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market?name=NB"</pre>
+</div>
+
+<div class="ep">
+<span class="badge">GET</span><code>/api/market/&lt;company_id&gt;</code> — 单家公司市值
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market/1"</pre>
+</div>
+
+<div class="ep">
+<span class="badge">GET</span><code>/api/market/&lt;company_id&gt;/history</code> — 历史K线（市值走势点）
+<p>参数：<code>days</code>（可选，默认 7，范围 1~30）</p>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market/1/history?days=7"</pre>
+</div>
+
+<div class="ep">
+<span class="badge">GET</span><code>/api/market/export?format=csv</code> — 全市场快照导出（CSV 文件下载）
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/market/export?format=csv" -o market.csv</pre>
+</div>
+
+<div class="ep">
+<span class="badge">GET</span><code>/api/comments</code> — 最新评论（只读）
+<p>参数：<code>page</code>（默认 1）、<code>limit</code>（默认 20，最大 50）、<code>page_path</code>（可选，按页面筛选，如 comments-beta.html）</p>
+<p>响应含 <code>total</code>（总评论数）与 <code>page_count</code>（总页数，按当前 limit 计算）</p>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/comments?page=1&limit=20"
+curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/comments?page_path=comments-beta.html"</pre>
+</div>
+
+<div class="ep">
+<span class="badge">GET</span><code>/api/stats</code> — API 用量统计（当日请求数/端点分布/限流次数）
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/stats"</pre>
+</div>
+
+<div class="ep">
+<h2>天气瞎报</h2>
+<pre>curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/weather"
+curl -H "X-API-Key: 你的Key" "https://api.nb-channel.top/api/weather?city=U"</pre>
+<p>返回十二座虚拟城市的当前气象：温度（摄氏 + 华氏）、湿度、气压、能见度、空气质量、风向风力。
+数据由数据库每 10 秒推进一轮，接口侧再缓存 5 秒。字段含义：</p>
+<table>
+<tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>temp_c</code> / <code>temp_f</code></td><td>摄氏温度 / 华氏温度</td></tr>
+<tr><td><code>humidity</code></td><td>相对湿度，%</td></tr>
+<tr><td><code>pressure</code></td><td>气压，kPa</td></tr>
+<tr><td><code>visibility</code></td><td>能见度，km</td></tr>
+<tr><td><code>aqi</code></td><td>空气质量指数（越小越好）</td></tr>
+<tr><td><code>wind_dir</code></td><td>风向，0=北、4=东、8=南、12=西，顺时针 16 方位</td></tr>
+<tr><td><code>wind_force</code></td><td>风速，m/s</td></tr>
+<tr><td><code>updated_at</code></td><td>该城市数据最后一次推进的时间</td></tr>
+</table>
+<tr><td><code>condition</code></td><td>由温度/湿度/能见度/空气质量推出的天气状况</td></tr>
+<tr><td><code>uv</code></td><td><b>紫外线指数</b>（0~12）</td></tr>
+<tr><td><code>uv_level</code></td><td>紫外线等级：弱 / 中等 / 强 / 很强 / 极强</td></tr>
+</table>
+<p><b>紫外线是按请求时刻现算的</b>，公式：</p>
+<pre>太阳赤纬   decl = 23.44° × sin(2π(doy-81)/365.25)      ← 季节
+时角       ha   = 15° × (小时 - 12)                     ← 时刻
+太阳高度角 sinH = sin(lat)·sin(decl) + cos(lat)·cos(decl)·cos(ha)
+晴空 UV    = 11.2 × sinH^2.42
+最终 UV    = 晴空 UV × 城市系数 × 云量系数(天气状况)</pre>
+<p>太阳在地平线下时返回 <code>0</code>。响应里的 <code>uv_at</code> 是算这个值用的时刻。
+可以用 <code>?at=</code> 指定时刻（东八区），例如 <code>?at=2026-07-15T12:00</code> 看盛夏正午。</p>
+<p>支持 <code>?city=</code> 按城市名模糊筛选。数据全是编的，与真实天气无关。</p>
+
+<span class="badge">GET</span><code>/api/docs</code> — 本文档
+</div>
+
+<h2>响应示例（全市场）</h2>
+<pre>{
+  "success": true,
+  "code": "OK",
+  "as_of": "2026-08-19T12:00:00+00:00",
+  "total_market_value": 1234567,
+  "count": 54,
+  "companies": [
+    {"id": 1, "name": "NB频道", "market_value": 148467, "owner": "NB搞事局"}
+  ]
+}</pre>
+
+<h2>响应示例（历史K线）</h2>
+<pre>{
+  "success": true,
+  "code": "OK",
+  "as_of": "2026-08-19T12:00:00+00:00",
+  "company_id": 1,
+  "name": "NB频道",
+  "days": 7,
+  "points_count": 900,
+  "points": [
+    {"t": "2026-08-19T03:55:00+00:00", "v": 148467}
+  ]
+}</pre>
+
+<h2>代码示例</h2>
+<p>完整 SDK 示例见仓库 <code>api-sdk/</code> 目录（<code>python_example.py</code> / <code>js_example.js</code>）。</p>
+
+<div class="ep">
+<span class="badge">Python</span> requests
+<pre>from python_example import NBMarket
+
+nb = NBMarket()   # 或 NBMarket(base_url="https://nbchannel.pythonanywhere.com")
+
+market = nb.market()                       # 全市场
+print(market["total_market_value"])
+print(nb.market(name="NB"))                # 按名模糊查询
+print(nb.market_by_id(3))                  # 单公司
+print(nb.history(3, days=7))               # 历史K线
+comments = nb.comments(page=1, limit=10)   # 评论（含 total / page_count）
+print(comments["total"], comments["page_count"])</pre>
+</div>
+
+<div class="ep">
+<span class="badge">JavaScript</span> fetch（浏览器 / Node）
+<pre>// 浏览器：&lt;script src="js_example.js"&gt; 后直接用 window.NBMarket
+const market = await NBMarket.market();
+console.log(market.total_market_value);
+
+const one = await NBMarket.marketById(3);
+const kline = await NBMarket.history(3, 7);
+
+const comments = await NBMarket.comments(1, 10);
+console.log('共', comments.total, '条，', comments.page_count, '页');</pre>
+</div>
+
+<h2>字段说明</h2>
+<table>
+<tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>as_of</code></td><td>数据生成时间（UTC ISO8601），调用方可判断数据新旧</td></tr>
+<tr><td><code>market_value</code></td><td>公司当前市值（NB币）</td></tr>
+<tr><td><code>t / v</code></td><td>K线采样时间 / 该时刻市值</td></tr>
+<tr><td><code>owner</code></td><td>公司归属用户名</td></tr>
+</table>
+
+<h2>限制与说明</h2>
+<ul>
+<li>限流：每 IP 每分钟最多 60 次，响应头 <code>X-RateLimit-Limit</code> / <code>X-RateLimit-Remaining</code> 可查剩余</li>
+<li>数据只读，请勿用于批量爬取；如需更高额度可联系站长</li>
+<li>别名：<code>/api/virtual-market-value</code>、<code>/api/Virtual market value</code> 与 <code>/api/market</code> 等价</li>
+</ul>
+
+<div class="footer">© 2026 NB频道 · 如有问题请联系 nbchannel@163.com</div>
+</body>
+</html>"""
+
+
+# ==================== 网站本体（静态文件服务） ====================
+# 注意：此路由放在最后定义，避免吞掉 /upload /download /webhook 等 API 路由
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_site(path):
+    """服务 NB频道 静态站点文件。"""
+    if path.startswith('uploads/'):
+        return serve_file(path[len('uploads/'):])
+
+    if not path:
+        path = 'index.html'
+    full = os.path.join(SITE_DIR, path)
+    # 目录请求(/api-sdk/ 等):与 GitHub Pages 一致,自动找目录内 index.html
+    if os.path.isdir(full):
+        idx = os.path.join(full, 'index.html')
+        if os.path.isfile(idx):
+            full = idx
+        else:
+            return '404 Not Found - %s' % path, 404
+    if not os.path.isfile(full):
+        # 支持无 .html 后缀的访问（/about -> about.html）
+        alt = full + '.html'
+        if os.path.isfile(alt):
+            full = alt
+        else:
+            return '404 Not Found - %s' % path, 404
+    return send_from_directory(SITE_DIR, os.path.relpath(full, SITE_DIR))
+
+
+if __name__ == '__main__':
+    # 本地调试用：python app.py
+    app.run(host='127.0.0.1', port=5000, debug=True)
+
+# ============================================================
+# 【邮箱验证码补丁】发信走 HTTP API(PA 禁了 465/587 端口,SMTP 不可用)
+# 使用前:
+#   1) 先把 sql/email_code.sql 在 Supabase SQL Editor 执行
+#   2) 注册 Brevo(https://www.brevo.com)拿 API Key
+#   3) 密钥放 WSGI 环境变量 EMAIL_API_KEY(不要写进代码/仓库)
+# ============================================================
+
+import os
+import random
+import hashlib
+import json
+import urllib.request
+
+# ==================== 邮件配置 ====================
+# provider: 'scf'(腾讯云函数SMTP,推荐) / 'brevo' / 'resend' / 'smtp'
+EMAIL_PROVIDER = os.environ.get('EMAIL_PROVIDER', 'scf')
+# 腾讯云 SCF 通道(provider=scf 时用)
+SCF_URL = os.environ.get('SCF_URL', '')            # 函数 URL(WSGI 环境变量)
+SCF_KEY = os.environ.get('SCF_KEY', '')            # 与函数 SEND_KEY 一致
+# Brevo/Resend 的 API Key(放 WSGI 环境变量 EMAIL_API_KEY,勿提交仓库)
+EMAIL_API_KEY = os.environ.get('EMAIL_API_KEY', '')
+EMAIL_ADDR = os.environ.get('EMAIL_FROM', 'nbchannel@163.com')   # 发件显示邮箱(brevo 后台建议验证)
+EMAIL_NAME = 'NB频道'
+EMAIL_CODE_MINUTES = 10
+# SMTP 兼容(provider=smtp 时才用)
+EMAIL_SMTP_HOST = os.environ.get('EMAIL_SMTP_HOST', 'smtp.163.com')
+EMAIL_SMTP_PORT = int(os.environ.get('EMAIL_SMTP_PORT', '465'))
+EMAIL_SMTP_AUTH = os.environ.get('EMAIL_SMTP_AUTH', '')
+# ============================================================
+
+_otp_last_send = {}        # email -> 上次成功发送时间
+_otp_last_send_lock = threading.Lock()
+
+
+def _md5(s):
+    return hashlib.md5((s or '').encode('utf-8')).hexdigest()
+
+
+def _gen_code():
+    return str(random.randint(100000, 999999))
+
+
+def _http_json(url, payload, headers, timeout=20):
+    """POST JSON,返回 (ok_bool, error_str 或 None)。"""
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status in (200, 201, 202):
+                return True, None
+            return False, 'HTTP %s' % resp.status
+    except urllib.error.HTTPError as e:
+        try:
+            detail = e.read().decode('utf-8', 'ignore')[:400]
+        except Exception:
+            detail = ''
+        return False, 'HTTP %s: %s' % (e.code, detail)
+    except Exception as e:
+        return False, str(e)
+
+
+def _send_otp_email(to_addr, code):
+    """返回 None=成功,否则返回错误信息字符串。"""
+    text = ('你的 NB频道 登录/注册验证码是: {code}\n'
+            '有效 {mins} 分钟,请勿告诉任何人。\n'
+            '如果这不是你本人的操作,请忽略本邮件。\n'
+            '—— NB频道(NB搞事局)').format(code=code, mins=EMAIL_CODE_MINUTES)
+    subject = 'NB频道 邮箱验证码'
+    try:
+        if EMAIL_PROVIDER == 'scf':
+            if not SCF_URL:
+                return '未配置 SCF_URL(请在 WSGI 环境变量中设置)'
+            if not SCF_KEY:
+                return '未配置 SCF_KEY(请在 WSGI 环境变量中设置)'
+            ok, err = _http_json(
+                SCF_URL,
+                {'to': to_addr, 'subject': subject, 'text': text},
+                {'Content-Type': 'application/json',
+                 'x-send-key': SCF_KEY})
+            return None if ok else ('邮件发送失败: ' + err)
+        if EMAIL_PROVIDER == 'brevo':
+            if not EMAIL_API_KEY:
+                return '未配置 EMAIL_API_KEY(请在 WSGI 环境变量中设置)'
+            ok, err = _http_json(
+                'https://api.brevo.com/v3/smtp/email',
+                {'sender': {'name': EMAIL_NAME, 'email': EMAIL_ADDR},
+                 'to': [{'email': to_addr}],
+                 'subject': subject,
+                 'textContent': text},
+                {'api-key': EMAIL_API_KEY,
+                 'Content-Type': 'application/json',
+                 'Accept': 'application/json'})
+            return None if ok else ('邮件发送失败: ' + err)
+        if EMAIL_PROVIDER == 'resend':
+            if not EMAIL_API_KEY:
+                return '未配置 EMAIL_API_KEY(请在 WSGI 环境变量中设置)'
+            ok, err = _http_json(
+                'https://api.resend.com/emails',
+                {'from': '%s <%s>' % (EMAIL_NAME, EMAIL_ADDR),
+                 'to': [to_addr],
+                 'subject': subject,
+                 'text': text},
+                {'Authorization': 'Bearer ' + EMAIL_API_KEY,
+                 'Content-Type': 'application/json'})
+            return None if ok else ('邮件发送失败: ' + err)
+        # ---- SMTP 兜底(默认不启用) ----
+        import smtplib
+        import ssl
+        import base64
+        msg = ('From: %s <%s>\r\nTo: %s\r\nSubject: =?UTF-8?B?%s?=\r\n'
+               'MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n'
+               'Content-Transfer-Encoding: base64\r\n\r\n').format(
+            EMAIL_NAME, EMAIL_ADDR, to_addr,
+            base64.b64encode(subject.encode('utf-8')).decode('ascii'))
+        msg += base64.b64encode(text.encode('utf-8')).decode('ascii')
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20, context=ctx) as s:
+            s.login(EMAIL_ADDR, EMAIL_SMTP_AUTH)
+            s.sendmail(EMAIL_ADDR, [to_addr], msg.encode('utf-8'))
+        return None
+    except Exception as e:
+        return '邮件发送失败: %s' % e
+
+
+@app.route('/api/send-code', methods=['POST'])
+def api_send_code():
+    """(已迁移)验证码发信已改由腾讯云 SCF 直连完成,本端点不再发信。
+    前端请直连 SCF 函数 URL(见前端配置 SCF_MAIL_URL)。"""
+    return jsonify({'ok': False, 'message': '验证码通道已迁移,请刷新页面使用新版入口'})
+    # ---- 以下旧逻辑保留注释,不再执行 ----
+    """注册/登录/绑定邮箱验证码。PA 生成码 -> DB 存哈希 -> SMTP 发送。"""
+    try:
+        body = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        body = {}
+    kind = str(body.get('kind') or '').strip().lower()
+    email = str(body.get('email') or '').strip().lower()
+    username = str(body.get('username') or '').strip()
+    password = str(body.get('password') or '')
+    ip = _client_ip()
+    # ⚠️ 必须用真实 IP:这个值会传给 store_email_code 做「每 IP 每天 20 封」的限频,
+    #    用可伪造的 XFF 第一段 = 伪造头就能绕过发信上限,把 163 配额刷光
+
+    if kind not in ('register', 'login', 'bind'):
+        return jsonify({'ok': False, 'message': '未知类型'})
+
+    # ---- 生成并存储(DB 限频:60秒/次、5次/天/邮箱、10次/时/IP) ----
+    code = _gen_code()
+    to_addr = email
+    if kind == 'login':
+        data, err = rpc('lookup_login_email', {'p_username': username, 'p_password': password})
+        if err:
+            return jsonify({'ok': False, 'message': '校验失败: ' + err})
+        if not data or not data.get('ok'):
+            return jsonify({'ok': False, 'message': (data or {}).get('message') or '用户名或密码错误'})
+        if data.get('need_bind'):
+            return jsonify({'ok': True, 'need_bind': True})
+        to_addr = data.get('email')
+        if not to_addr:
+            return jsonify({'ok': False, 'message': '账号邮箱缺失'})
+    elif kind == 'bind':
+        if not email or '@' not in email:
+            return jsonify({'ok': False, 'message': '请输入邮箱'})
+        data, err = rpc('lookup_login_email', {'p_username': username, 'p_password': password})
+        if err:
+            return jsonify({'ok': False, 'message': '校验失败: ' + err})
+        if not data or not data.get('ok'):
+            return jsonify({'ok': False, 'message': (data or {}).get('message') or '用户名或密码错误'})
+        if not data.get('need_bind'):
+            return jsonify({'ok': False, 'message': '该账号已绑定邮箱'})
+    else:  # register
+        if not email or '@' not in email:
+            return jsonify({'ok': False, 'message': '请输入邮箱'})
+
+    if '@' not in to_addr:
+        return jsonify({'ok': False, 'message': '邮箱格式不正确'})
+
+    data, err = rpc('store_email_code', {
+        'p_email': to_addr, 'p_purpose': kind, 'p_code_hash': _md5(code), 'p_ip': ip
+    })
+    if err:
+        return jsonify({'ok': False, 'message': '存储失败: ' + err})
+    if not data or not data.get('ok'):
+        return jsonify({'ok': False, 'message': (data or {}).get('message') or '发送失败'})
+
+    # ---- 发送邮件 ----
+    send_err = _send_otp_email(to_addr, code)
+    if send_err:
+        return jsonify({'ok': False, 'message': send_err})
+    masked = ''
+    if '@' in to_addr:
+        local, dom = to_addr.split('@', 1)
+        masked = local[0] + ('***' if len(local) > 1 else '*') + '@' + dom
+    return jsonify({'ok': True, 'masked': masked})
+

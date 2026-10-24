@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>NB频道 - 登录/注册</title>
+    <meta http-equiv="refresh" content="0;url=Beta/login-Beta.html">
+    <style>
+        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a101f; color: #e5eaf3; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .tip { text-align: center; font-size: .95rem; line-height: 2; }
+        .tip a { color: #60a5fa; }
+    </style>
+</head>
+<body>
+<div class="tip">正在前往新版登录/注册页(邮箱验证码)…<br>若未自动跳转,<a href="Beta/login-Beta.html" id="link">点这里进入</a></div>
+<script>
+    // 统一收口:经典登录页跳转官网版登录页,保留全部 query 参数(?redirect=&register=1)
+    (function () {
+        var target = 'Beta/login-Beta.html' + (window.location.search || '');
+        try {
+            var m = document.getElementById('link');
+            if (m) m.href = target;
+            window.location.replace(target);
+        } catch (e) {
+            window.location.href = target;
+        }
+    })();
+</script>
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261001-6AEBE29EB4D0
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDAxLTZBRUJFMjlFQjREMA";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="js/science-tips.js?v=26"></script>
+</body>
+</html>

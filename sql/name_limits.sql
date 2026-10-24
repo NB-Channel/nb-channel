@@ -1,0 +1,159 @@
+-- ============================================================
+-- NB频道 - 用户名/公司名字数限制（不超过20字）
+-- 在 Supabase SQL Editor 中执行
+-- 覆盖：register_user（注册）、update_username（改名）、
+--       register_company（注册公司）、admin_rename_company（后台改公司名）
+-- ============================================================
+
+-- ========== 1. 注册用户名（两参数版）加 20 字限制 + 零宽字符清洗 ==========
+CREATE OR REPLACE FUNCTION public.register_user(input_username text, input_password text)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    new_salt TEXT;
+    new_hash TEXT;
+    new_id UUID;
+    clean_name TEXT;
+BEGIN
+    -- 清洗零宽/不可见字符（含全角空格等，防伪装同名账号）
+    clean_name := regexp_replace(
+        input_username,
+        '[' || chr(8203) || chr(8204) || chr(8205) || chr(8206) || chr(8207)
+             || chr(65279) || chr(173) || chr(8288) || chr(12288) || chr(9)
+             || chr(10) || chr(13) || chr(32) || ']',
+        '', 'g'
+    );
+    clean_name := btrim(clean_name);
+
+    -- 拒绝仿冒字符：希腊字母 / 西里尔字母 / 全角字母（如 Β 冒充 B、а 冒充 a）
+    IF clean_name ~ ('[' || chr(880) || '-' || chr(1279) || chr(65313) || '-' || chr(65338) || chr(65345) || '-' || chr(65370) || ']') THEN
+        RAISE EXCEPTION '用户名包含仿冒字符（希腊/西里尔/全角字母），请使用中文、英文和数字';
+    END IF;
+
+    -- 用户名长度限制（1~20字，按清洗后计算）
+    IF clean_name IS NULL OR length(clean_name) < 1 OR length(clean_name) > 20 THEN
+        RAISE EXCEPTION '用户名长度需在 1~20 字之间';
+    END IF;
+    IF EXISTS (SELECT 1 FROM profiles WHERE username = clean_name) THEN
+        RETURN NULL;
+    END IF;
+    new_salt := encode(gen_random_bytes(16), 'hex');
+    new_hash := encode(sha256(concat(new_salt, input_password)::bytea), 'hex');
+    INSERT INTO profiles (username, password_hash, salt)
+    VALUES (clean_name, new_hash, new_salt)
+    RETURNING id INTO new_id;
+    RETURN new_id;
+END;
+$$;
+
+-- 补权限（防止 CREATE OR REPLACE 后 anon 无法调用导致 404）
+GRANT EXECUTE ON FUNCTION public.register_user(text, text) TO anon;
+
+-- ========== 2. 修改用户名（update_username）加 20 字限制 + 零宽字符清洗 ==========
+CREATE OR REPLACE FUNCTION public.update_username(user_id uuid, new_username text, old_password text)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    stored_hash TEXT;
+    stored_salt TEXT;
+    clean_name TEXT;
+BEGIN
+    SELECT password_hash, salt INTO stored_hash, stored_salt
+    FROM profiles
+    WHERE id = user_id;
+    IF NOT FOUND THEN
+        RETURN json_build_object('success', false, 'message', '用户不存在');
+    END IF;
+    IF encode(sha256(concat(stored_salt, old_password)::bytea), 'hex') != stored_hash THEN
+        RETURN json_build_object('success', false, 'message', '密码错误');
+    END IF;
+    -- 清洗零宽/不可见字符（含全角空格等，防伪装同名账号）
+    clean_name := regexp_replace(
+        new_username,
+        '[' || chr(8203) || chr(8204) || chr(8205) || chr(8206) || chr(8207)
+             || chr(65279) || chr(173) || chr(8288) || chr(12288) || chr(9)
+             || chr(10) || chr(13) || chr(32) || ']',
+        '', 'g'
+    );
+    clean_name := btrim(clean_name);
+
+    -- 拒绝仿冒字符：希腊字母 / 西里尔字母 / 全角字母
+    IF clean_name ~ ('[' || chr(880) || '-' || chr(1279) || chr(65313) || '-' || chr(65338) || chr(65345) || '-' || chr(65370) || ']') THEN
+        RETURN json_build_object('success', false, 'message', '用户名包含仿冒字符（希腊/西里尔/全角字母），请使用中文、英文和数字');
+    END IF;
+    -- 用户名长度限制（1~20字）
+    IF clean_name IS NULL OR length(clean_name) < 1 OR length(clean_name) > 20 THEN
+        RETURN json_build_object('success', false, 'message', '用户名长度需在 1~20 字之间');
+    END IF;
+    IF EXISTS (SELECT 1 FROM profiles WHERE username = clean_name AND id != user_id) THEN
+        RETURN json_build_object('success', false, 'message', '用户名已被占用');
+    END IF;
+    UPDATE profiles SET username = clean_name WHERE id = user_id;
+    RETURN json_build_object('success', true, 'message', '用户名修改成功');
+END;
+$$;
+
+-- ========== 3. 注册公司名加 20 字限制 ==========
+CREATE OR REPLACE FUNCTION public.register_company(p_user_id uuid, p_company_name text, p_need_verify boolean)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_is_verified_user BOOLEAN;
+BEGIN
+    -- 公司名称长度限制（1~20字）
+    IF p_company_name IS NULL OR length(p_company_name) < 1 OR length(p_company_name) > 20 THEN
+        RETURN jsonb_build_object('success', false, 'message', '公司名称需在 1~20 字之间');
+    END IF;
+    IF EXISTS (SELECT 1 FROM user_companies WHERE user_id = p_user_id) THEN
+        RETURN jsonb_build_object('success', false, 'message', '您已经注册过公司');
+    END IF;
+
+    -- 检查用户是否是蓝标用户
+    SELECT EXISTS (
+        SELECT 1 FROM verified_users WHERE user_id = p_user_id
+    ) INTO v_is_verified_user;
+
+    IF v_is_verified_user THEN
+        INSERT INTO user_companies (user_id, company_name, market_value, verified, verification_status)
+        VALUES (p_user_id, p_company_name, 20000, true, 'approved');
+        RETURN jsonb_build_object('success', true, 'message', '公司注册成功（已自动认证）', 'need_verify', false);
+    END IF;
+
+    IF p_need_verify THEN
+        INSERT INTO user_companies (user_id, company_name, market_value, verified, verification_status)
+        VALUES (p_user_id, p_company_name, 20000, false, 'pending');
+        RETURN jsonb_build_object('success', true, 'message', '公司注册申请已提交，等待管理员审核', 'need_verify', true);
+    ELSE
+        INSERT INTO user_companies (user_id, company_name, market_value, verified, verification_status)
+        VALUES (p_user_id, p_company_name, 20000, false, 'none');
+        RETURN jsonb_build_object('success', true, 'message', '公司注册成功', 'need_verify', false);
+    END IF;
+END;
+$$;
+
+-- ========== 4. 后台重命名公司加 20 字限制（顺带） ==========
+CREATE OR REPLACE FUNCTION public.admin_rename_company(company_id bigint, new_name text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF new_name IS NULL OR length(new_name) < 1 OR length(new_name) > 20 THEN
+        RAISE EXCEPTION '公司名称需在 1~20 字之间';
+    END IF;
+    UPDATE user_companies SET company_name = new_name WHERE id = company_id;
+    RETURN FOUND;
+END;
+$$;
+
+-- 说明：三参数版 register_user（含 email）未改动（该版本依赖 email 列，当前表结构无此列，不应被使用）

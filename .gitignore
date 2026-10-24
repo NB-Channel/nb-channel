@@ -1,0 +1,48 @@
+# ============================================================
+# ⚠️ 服务器上的密钥文件，绝不能进公开仓库
+#    pythonanywhere/secrets_local.py 里放 API_KEY / SUPABASE_SERVICE_KEY
+#    其中 service_role key 能绕过所有权限 —— 泄漏等于全站被别人控制
+#    （文件本来就不该被跟踪，这里再挡一层，防止哪次 git add -A 手滑）
+# ============================================================
+pythonanywhere/secrets_local.py
+secrets_local.py
+.env
+*.env
+
+
+*.injectbak
+*.bak
+*.ammbak
+
+# 临时脚手架（AI 排查/自测用，不入库）
+tools/_*
+_*.html
+_injtest_*.html
+
+# 提交信息临时文件 —— git commit -F 用，写完就删。
+# ⚠️ 这个被误提交过三次（365b851、ebe31b9、99647ea），
+#    原因是「先创建 _cm.txt、再 git add -A」，它就被一起暂存了。
+#    正确顺序是「先 git add -A、再创建 _cm.txt」，
+#    但加进 .gitignore 更保险。
+_cm.txt
+_m.txt
+
+# AI 排查用的临时脚本
+_chk*.js
+_ck/
+_dates.txt
+
+
+# ============================================================
+# ⚠️ 本地后台的【直通密钥】—— 泄漏等于后台被别人进
+#    只在站长机器上，绝不能进仓库
+# ============================================================
+admin-local-secret*
+admin_local_bypass_key*
+*local-secret*
+*local_secret*
+
+# Python 编译缓存（py_compile / import 会生成）
+__pycache__/
+*.pyc
+*.pyo

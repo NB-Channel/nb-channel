@@ -1,0 +1,2702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<script>
+/* ===== 跨子域名登录态同步（github. / cloudflare. / pythonanywhere. 之间互通）=====
+   localStorage 是按 origin 隔离的，两个子域名各存各的，所以要借 Cookie 中转。
+   Cookie 设 Domain=.nb-channel.top，所有子域名都能读到。
+
+   这里不改页面原本的任何代码 —— 而是劫持 localStorage 的读写：
+     · 页面登录时 setItem('nb_session', ...)  → 顺手写一份到 Cookie
+     · 页面登出时 removeItem('nb_session')    → 顺手把 Cookie 清掉
+     · 页面加载时 Cookie 有、本地没有          → 自动注入进 localStorage
+   所以那 57 处登录/登出代码一行都不用动。
+
+   ⚠️ 这意味着 *.nb-channel.top 下任何一个子域名都能读到这个令牌，
+      包括 product-storage 那个 Workers。将来新增子域名前先想清楚这件事。 */
+(function () {
+    try {
+        var KEY_S = 'nb_session', KEY_U = 'nb_user';
+        var DOMAIN = '.nb-channel.top';
+        var MAXAGE = 30 * 86400;
+
+        // 只在 .nb-channel.top 域下才启用（本地开文件、或别的域名访问时保持原样）
+        // ⚠️ 2026-10-16 放宽：原来只认 nb-channel.top，
+        //    但 pythonanywhere.nb-channel.top 会【302 跳到】nbchannel.pythonanywhere.com，
+        //    pages.dev / github.io 也是常用入口 —— 那几个域名下这个补丁原本整个不生效。
+        if (!/(^|\.)nb-channel\.top$/.test(location.hostname) &&
+            location.hostname !== 'nbchannel.pythonanywhere.com' &&
+            location.hostname !== 'nb-channel.pages.dev' &&
+            location.hostname !== 'nb-channel.github.io') return;
+
+        function readCookie(n) {
+            var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        }
+        function writeCookie(n, v) {
+            document.cookie = n + '=' + encodeURIComponent(v) + ';path=/;domain=' + DOMAIN +
+                              ';max-age=' + MAXAGE + ';SameSite=Lax' +
+                              (location.protocol === 'https:' ? ';Secure' : '');
+        }
+        function dropCookie(n) {
+            document.cookie = n + '=;path=/;domain=' + DOMAIN + ';max-age=0;SameSite=Lax' +
+                              (location.protocol === 'https:' ? ';Secure' : '');
+        }
+
+        // ---- ① 页面加载时双向对齐 ----
+        [KEY_S, KEY_U].forEach(function (k) {
+            var c = readCookie(k), l = null;
+            try { l = localStorage.getItem(k); } catch (e) {}
+            if (l) {
+                if (l !== c) writeCookie(k, l);            // 本地有 → 同步出去
+            } else if (c) {
+                try { localStorage.setItem(k, c); } catch (e) {}   // 本地没有 → 采用 Cookie
+            }
+        });
+
+        // ---- ①.5 验一下令牌还活着没有（2026-10-16 补）----
+        // ⚠️ 退出登录之后，【别的子域名】的 localStorage 里可能还留着旧令牌。
+        //    上面那一步会把 Cookie 里的值注入回来，而它不验有效性 ——
+        //    于是一个已经退掉的令牌会被反复复活，页面以为「已登录」，
+        //    不显示登录入口，看着就像「退登之后登不回来」。
+        //    这里补一步：拿令牌去调一个需要会话的接口，鉴权失败就把两边都清干净。
+        setTimeout(function () {
+            var tok = null, u = null;
+            try { tok = localStorage.getItem(KEY_S); } catch (e) {}
+            try { u = JSON.parse(localStorage.getItem(KEY_U) || 'null'); } catch (e) {}
+            if (!tok || !u || !u.id) return;
+            fetch('https://pbaafgjkwdbwcmsikcmg.supabase.co/rest/v1/rpc/get_checkin_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg',
+                    'Authorization': 'Bearer sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+                },
+                body: JSON.stringify({ p_user_id: u.id, p_session: tok })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                var msg = (d && d.message) || '';
+                // 只有明确说「鉴权失败 / 会话无效」才动手 ——
+                // 其它错误（比如称号没查到）不能当令牌失效处理
+                if (d && d.success === false && /鉴权|会话/.test(msg)) {
+                    try { localStorage.removeItem(KEY_S); localStorage.removeItem(KEY_U); } catch (e) {}
+                    try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+                    setTimeout(function () { location.reload(); }, 60);
+                }
+            }).catch(function () {});
+        }, 1200);
+
+        // ---- ② 劫持写入：登录时同步到 Cookie ----
+        var _set = localStorage.setItem;
+        localStorage.setItem = function (k, v) {
+            try { if ((k === KEY_S || k === KEY_U) && v) writeCookie(k, v); } catch (e) {}
+            return _set.call(localStorage, k, v);
+        };
+
+        // ---- ③ 劫持删除：登出时同步清 Cookie ----
+        var _rm = localStorage.removeItem;
+        localStorage.removeItem = function (k) {
+            try { if (k === KEY_S || k === KEY_U) dropCookie(k); } catch (e) {}
+            return _rm.call(localStorage, k);
+        };
+
+        // ---- ④ 万一有人用 clear() ----
+        var _cl = localStorage.clear;
+        localStorage.clear = function () {
+            try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+            return _cl.call(localStorage);
+        };
+    } catch (e) {}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="NB频道幸运转盘抽奖记录——查看你的总抽奖次数、中奖次数、中奖总额与净收益。">
+<meta name="theme-color" content="#0f172a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
+<title>NB报刊社 - NB频道</title>
+<script>
+    (function () {
+        try {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #f7f8fa;
+    --ink: #1a1d23;
+    --ink-soft: #5a6270;
+    --ink-faint: #8b93a3;
+    --line: #e8eaee;
+    --brand: #3b82f6;
+    --brand-deep: #2563eb;
+    --card: #ffffff;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+    --shadow-2: 0 2px 4px rgba(16,24,40,.05), 0 24px 48px -20px rgba(16,24,40,.18);
+}
+html.dark { color-scheme: dark; }
+html.dark {
+    --bg: #0a101f;
+    --ink: #e5eaf3;
+    --ink-soft: #9aa7bd;
+    --ink-faint: #64748b;
+    --line: rgba(148,163,184,.16);
+    --card: #101a2e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+    --shadow-2: 0 2px 6px rgba(0,0,0,.35), 0 28px 60px -24px rgba(0,0,0,.6);
+}
+html.dark .nav { background: rgba(10,16,31,.72); border-bottom-color: rgba(148,163,184,.12); }
+html.dark .nav.scrolled { background: rgba(10,16,31,.9); }
+html.dark .logo-img { filter: brightness(1.4) saturate(1.15); }
+html.dark .drawer { background: #0f1a30; }
+html.dark .drawer .d-close { background: rgba(255,255,255,.06); color: var(--ink); }
+html.dark .drawer a.d-item { color: var(--ink-soft); }
+html.dark .drawer a.d-item:hover, html.dark .drawer a.d-item.active { background: rgba(59,130,246,.14); color: #fff; }
+html.dark .drawer .d-brand { color: var(--ink); }
+html.dark .backtop { background: rgba(15,23,42,.85); color: #cbd5e1; border-color: rgba(148,163,184,.25); }
+html.dark .backtop:hover { background: var(--brand); color: #fff; }
+html.dark .footer-bottom { border-color: rgba(255,255,255,.06); }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+::selection { background: rgba(59,130,246,.22); }
+
+/* ============ 导航 ============ */
+.nav {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 64px;
+    background: rgba(255,255,255,.72);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+    border-bottom: 1px solid var(--line);
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; letter-spacing: .3px; margin-left: 12px; }
+.logo-img { display: block; height: 32px; width: auto; }
+.logo-text { color: var(--ink); }
+.nav-menu { display: flex; gap: 2px; }
+.nav-menu a {
+    position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); white-space: nowrap; transition: color .3s ease;
+}
+.nav-menu a:hover { color: var(--ink); }
+.nav-menu a.active { color: var(--brand); font-weight: 600; }
+.nav-menu a::after {
+    content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);
+}
+.nav-menu a:hover::after { transform: scaleX(1); }
+.nav-menu a.active::after { transform: scaleX(1); }
+.nav-menu a.nav-api { color: var(--brand); font-weight: 600; font-size: .86rem; }
+.nav-right-group { display: flex; align-items: center; gap: 10px; }
+.nav-auth-group { display: flex; gap: 8px; align-items: center; }
+.nav-clock {
+    display: flex; flex-direction: column; align-items: flex-end;
+    margin-right: 8px; flex-shrink: 0; user-select: none; line-height: 1.35;
+}
+.nav-clock .nc-time { font-size: 15.5px; font-weight: 800; letter-spacing: 1.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.nav-clock .nc-row { display: flex; align-items: baseline; gap: 6px; font-style: normal; }
+.nav-clock .nc-date { font-size: 10.5px; font-weight: 600; letter-spacing: .4px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.nav-clock .nc-label { font-size: 8.5px; font-weight: 600; letter-spacing: 2px; color: var(--ink-faint); }
+.nav-auth {
+    padding: 8px 18px; border-radius: 999px;
+    background: rgba(255,255,255,.6); color: var(--ink);
+    border: 1px solid var(--line);
+    font-size: .88rem; font-weight: 600; cursor: pointer;
+    transition: all .25s ease; white-space: nowrap;
+}
+.nav-auth:hover { background: #fff; border-color: rgba(59,130,246,.4); }
+.nav-auth.primary {
+    background: linear-gradient(135deg, var(--brand), #6366f1);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 8px 20px -8px rgba(59,130,246,.5);
+}
+.nav-auth.primary:hover { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; }
+html.dark .nav-auth { background: rgba(255,255,255,.05); color: var(--ink); border-color: rgba(148,163,184,.25); }
+html.dark .nav-auth:hover { background: rgba(255,255,255,.1); border-color: rgba(59,130,246,.5); }
+.theme-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--bg); cursor: pointer; font-size: .95rem;
+    display: flex; align-items: center; justify-content: center; transition: all .25s ease;
+}
+.theme-btn:hover { border-color: rgba(59,130,246,.4); transform: translateY(-1px); }
+.nav-burger {
+    display: none; width: 38px; height: 38px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: .95rem; cursor: pointer; color: var(--ink);
+    align-items: center; justify-content: center;
+}
+@media (max-width: 900px) { .nav-menu { display: none; } .nav-burger { display: flex; } .nav-clock, .nav-auth-group { display: none; } }
+
+/* ============ Hero(化学工具) ============ */
+.vhero {
+    position: relative; color: #fff; overflow: hidden;
+    padding: 110px 48px 150px;
+    background:
+        radial-gradient(760px 460px at 12% 4%, rgba(59,130,246,.16), transparent 62%),
+        radial-gradient(640px 420px at 96% 60%, rgba(139,92,246,.12), transparent 60%),
+        linear-gradient(168deg, #0b1220 0%, #101c33 58%, #1c1745 100%);}.vhero::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background-image: radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 72%);
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 72%);
+}
+.vhero-inner {
+    position: relative; z-index: 2; max-width: 1180px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.05fr .95fr; gap: 70px; align-items: center;
+}
+.hero-eyebrow {
+    display: block; font-size: 11px; font-weight: 400;
+    letter-spacing: 8px; color: rgba(255,255,255,.42); margin-bottom: 40px;
+}
+.vhero h1 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); font-weight: 800; letter-spacing: 8px; color: #fff; line-height: 1.12; }
+.vhero h1 .light { font-weight: 200; letter-spacing: 4px; color: #9cc0ff; }
+.vhero-sub {
+    margin: 34px 0 0; max-width: 480px;
+    font-size: .98rem; font-weight: 300; line-height: 2.15;
+    letter-spacing: .6px; color: rgba(255,255,255,.6);
+}
+.vhero-actions { margin-top: 48px; display: flex; gap: 44px; align-items: center; flex-wrap: wrap; }
+.hero-link {
+    font-size: .9rem; letter-spacing: 3px; font-weight: 600; color: #fff;
+    padding: 12px 2px; border-bottom: 1px solid rgba(255,255,255,.32);
+    transition: border-color .35s ease, color .35s ease;
+}
+.hero-link:hover { border-color: #7cb4ff; color: #7cb4ff; }
+.pd-stats {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 24px; padding: 10px 26px;
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.pd-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 13px 0; border-bottom: 1px dashed rgba(255,255,255,.1);
+}
+.pd-row:last-child { border-bottom: none; }
+.pd-row .k { font-size: .72rem; letter-spacing: 2.5px; color: rgba(255,255,255,.5); }
+.pd-row b { font-size: 1.12rem; font-weight: 700; color: #fff; letter-spacing: .5px; }
+.pd-row b small { font-size: .72rem; font-weight: 400; color: rgba(255,255,255,.55); letter-spacing: 1px; }
+.pd-tip { margin-top: 14px; font-size: .74rem; color: rgba(255,255,255,.4); letter-spacing: 1.2px; text-align: center; }
+.vhero-fade {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 1;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    pointer-events: none;
+}
+
+
+
+
+
+
+
+
+@keyframes tlfade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ============ 周期表 ============ */
+.pt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.pt-note { font-size: .76rem; color: var(--ink-faint); }
+.pt-scroll { overflow-x: auto; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; }
+.pt-frame { position: relative; padding-top: 24px; }
+.ptable {
+    display: grid; grid-template-columns: 30px repeat(18, minmax(42px, 1fr)); gap: 4px;
+    min-width: 880px;
+}
+/* 族标:绝对定位,各自贴到该列第一个真实元素的头上 */
+.pgrp-f {
+    position: absolute; height: 20px; line-height: 20px;
+    font-size: .76rem; font-weight: 800; color: var(--ink-soft);
+    text-align: center; white-space: nowrap; letter-spacing: .3px;
+    user-select: none; cursor: default;
+}
+.pper {
+    display: grid; place-items: center;
+    font-size: .74rem; font-weight: 800; color: var(--ink-faint);
+    user-select: none; letter-spacing: .5px; min-height: 52px;
+}
+.pper.per-f { writing-mode: vertical-rl; font-size: 11px; font-weight: 700; letter-spacing: 3px; opacity: .9; }
+.pper.spacer { min-height: 12px; }
+.psep { min-height: 12px; }
+.pcell {
+    position: relative; min-height: 52px; border-radius: 8px; padding: 5px 3px 3px;
+    text-align: center; cursor: pointer; color: #172033;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    transition: transform .15s ease, box-shadow .15s ease;
+    user-select: none;
+}
+.pcell:hover { transform: scale(1.14); box-shadow: 0 6px 16px rgba(0,0,0,.28); z-index: 6; }
+.pcell .pnum { position: absolute; top: 2px; left: 4px; font-size: .58rem; opacity: .72; font-weight: 600; }
+.pcell .psym { font-size: .95rem; font-weight: 800; line-height: 1.15; }
+.pcell .pmass { font-size: .56rem; opacity: .82; line-height: 1; }
+.pcell.empty, .pcell.hole { background: transparent; cursor: default; box-shadow: none; transition: none; }
+.pcell.empty:hover, .pcell.hole:hover { transform: none; box-shadow: none; }
+.pcell.hole { border: 1px dashed var(--line); }
+.pcell.hole .psym { font-size: .62rem; opacity: .6; }
+html.dark .pcell { color: #0f172a; }
+html.dark .pcell.empty, html.dark .pcell.hole { color: var(--ink-faint); }
+.cat-alkali { background: #ff8a80; } .cat-alkaline { background: #ffcc80; }
+.cat-transition { background: #80d8ff; } .cat-post { background: #b9f6ca; }
+.cat-metalloid { background: #a5d6a7; } .cat-nonmetal { background: #e1bee7; }
+.cat-halogen { background: #80cbc4; } .cat-noble { background: #cfd8dc; }
+.cat-lanthanide { background: #ffd1dc; } .cat-actinide { background: #ffb3ba; }
+.pt-legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); font-size: .76rem; color: var(--ink-faint); }
+.pt-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.pt-legend i { width: 13px; height: 13px; border-radius: 4px; display: inline-block; }
+
+/* 元素详情弹窗 */
+.el-ov {
+    display: none; position: fixed; inset: 0; z-index: 9500;
+    background: rgba(10,15,28,.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    justify-content: center; align-items: center; padding: 24px;
+}
+.el-ov.show { display: flex; }
+.el-box {
+    background: var(--card); border-radius: 24px; padding: 30px 34px;
+    width: min(400px, 92vw); text-align: center;
+    box-shadow: var(--shadow-2); border: 1px solid var(--line);
+    animation: tlfade .3s cubic-bezier(.16,1,.3,1) both;
+}
+.el-box .el-sym { font-size: 3.4rem; font-weight: 900; letter-spacing: 2px; color: var(--brand); line-height: 1.2; }
+.el-box .el-name { font-size: 1.15rem; color: var(--ink-soft); margin-bottom: 6px; letter-spacing: 2px; }
+/* 电子层示意图 */
+.el-shellbox { display: flex; justify-content: center; margin: 2px 0 0; position: relative; }
+.sh-svg { width: min(100%, 290px); height: auto; display: block; margin: 0 auto; }
+.sh-ring { stroke: var(--ink-faint); stroke-width: 1.3; fill: none; opacity: .5; }
+.sh-dot { fill: var(--brand); }
+.sh-core { fill: var(--ink); }
+.sh-sym { fill: var(--bg); font-weight: 800; font-size: 15px; }
+.sh-letter { fill: var(--ink-faint); font-size: 8.5px; font-weight: 700; }
+.sh-note {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; flex-wrap: wrap;
+    font-size: .68rem; color: var(--ink-faint); margin: 0 0 8px; letter-spacing: 1px;
+}
+.sh-note .sh-txt { opacity: .92; }
+.sh-disclaimer {
+    font-size: .63rem; color: var(--ink-faint); opacity: .85;
+    text-align: center; line-height: 1.8; letter-spacing: .2px;
+    margin: -2px 0 10px; padding: 0 6px;
+}
+/* 运动速度三档段选 */
+.sh-seg {
+    display: inline-flex; gap: 3px;
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px;
+}
+.sh-opt {
+    border: none; background: transparent; color: var(--ink-soft);
+    border-radius: 999px; padding: 5px 13px; cursor: pointer;
+    font-size: .72rem; font-weight: 700; letter-spacing: .3px;
+    transition: all .2s ease; white-space: nowrap;
+}
+.sh-opt:hover { color: var(--brand); }
+.sh-opt.on {
+    background: linear-gradient(135deg, var(--brand), #6366f1);
+    color: #fff; box-shadow: 0 5px 14px -6px rgba(59,130,246,.6);
+}
+/* 电子公转动画:默认静止;快速=各环基准周期 --t;慢速=2 倍 */
+.sh-orbit { transform-box: view-box; transform-origin: 50% 50%; }
+.sh-svg.spd-fast .sh-orbit { animation: shspin var(--t, 4s) linear infinite; }
+.sh-svg.spd-slow .sh-orbit { animation: shspin calc(var(--t, 4s) * 2) linear infinite; }
+@keyframes shspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .sh-svg.spd-fast .sh-orbit, .sh-svg.spd-slow .sh-orbit { animation: none; }}.el-box table { width: 100%; font-size: .9rem; border-collapse: collapse; margin: 4px 0 16px; }
+.el-box td { padding: 9px 8px; border-bottom: 1px dashed var(--line); text-align: left; }
+.el-box tr:last-child td { border-bottom: none; }
+.el-box td:first-child { color: var(--ink-faint); width: 38%; font-size: .82rem; }
+.el-box td:last-child { font-weight: 700; text-align: right; }
+.el-close {
+    border: none; border-radius: 999px; padding: 10px 38px; cursor: pointer;
+    background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff;
+    font-size: .92rem; font-weight: 700; letter-spacing: 2px;
+    box-shadow: 0 8px 20px -8px rgba(59,130,246,.55); transition: all .22s ease;
+}
+.el-close:hover { transform: translateY(-1px); }
+
+/* 页脚 */
+.footer { background: linear-gradient(180deg, #0f172a 0%, #0a0f1e 100%); color: #94a3b8; padding: 64px 48px 30px; }
+.footer-grid { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 44px; }
+.footer .brand { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; letter-spacing: .5px; }
+.footer .desc { font-size: .85rem; font-weight: 300; line-height: 2; margin-bottom: 20px; color: #7c8ba5; }
+.footer h5 { color: #e2e8f0; font-size: .88rem; font-weight: 700; margin-bottom: 18px; letter-spacing: 2px; }
+.footer a { display: block; color: #8fa0b8; font-size: .86rem; margin-bottom: 12px; transition: color .3s ease; }
+.footer a:hover { color: #fff; }
+.footer-bottom {
+    max-width: 1180px; margin: 44px auto 0; padding-top: 22px;
+    border-top: 1px solid rgba(255,255,255,.07);
+    font-size: .76rem; letter-spacing: 1px; color: #5b6a85; text-align: center;
+}
+
+/* 抽屉 */
+.drawer-mask { display: none; position: fixed; inset: 0; z-index: 9000; background: rgba(10,15,28,.5); }
+.drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 9001;
+    width: 300px; max-width: 84vw; background: #fff;
+    box-shadow: -20px 0 60px -30px rgba(0,0,0,.4);
+    transform: translateX(105%); transition: transform .35s cubic-bezier(.16,1,.3,1);
+    padding: 22px 20px; overflow-y: auto;
+}
+.drawer.open { transform: none; }
+.drawer .d-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.drawer .d-brand { font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.drawer .d-close { width: 36px; height: 36px; border-radius: 10px; border: none; background: var(--bg); font-size: .95rem; cursor: pointer; color: var(--ink); }
+.drawer a.d-item { display: block; padding: 12px 16px; border-radius: 12px; color: var(--ink-soft); font-size: .98rem; font-weight: 600; }
+.drawer a.d-item:hover, .drawer a.d-item.active { background: rgba(59,130,246,.1); color: var(--brand); }
+.drawer .d-auth { margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+.drawer .d-auth a { flex: 1; text-align: center; padding: 11px; border-radius: 999px; font-size: .9rem; font-weight: 600; }
+.drawer .d-auth .ga { background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
+.drawer .d-auth .gab { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; }
+
+/* 回到顶部 */
+.backtop {
+    position: fixed; right: 26px; bottom: 26px; z-index: 5000;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,.92); color: var(--brand);
+    border: 1px solid var(--line); cursor: pointer; font-size: 1.05rem;
+    opacity: 0; transform: translateY(12px); transition: all .3s ease;
+    box-shadow: var(--shadow-1);
+}
+.backtop.show { opacity: 1; transform: none; }
+.backtop:hover { background: var(--brand); color: #fff; }
+
+/* 入场 */
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+/* 响应式 */
+@media (max-width: 900px) {
+    .vhero { padding: 84px 24px 120px; }
+
+    .footer { padding: 48px 24px 26px; }}@media (max-width: 760px) {
+    .nav { padding: 0 20px; }
+    .vhero { padding: 72px 20px 110px; }
+    .vhero-inner { grid-template-columns: 1fr; gap: 40px; }
+    .vhero h1 { font-size: 2.4rem; letter-spacing: 5px; }
+    .pd-stats { display: none; }
+
+
+
+    .footer-grid { grid-template-columns: 1fr; gap: 26px; }
+    .backtop { right: 18px; bottom: 18px; width: 42px; height: 42px; }}        .ui-fx-glow {
+            position: fixed; left: -999px; top: -999px; width: 240px; height: 240px;
+            border-radius: 50%; pointer-events: none; z-index: 9997;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(59,130,246,.18), rgba(139,92,246,.10) 45%, transparent 65%);
+            opacity: 0;
+        }
+
+
+        /* ===== Hero 入场动画(全站统一,与首页一致的错峰淡入) ===== */
+        @keyframes heroFadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+        .vhero .hero-eyebrow, .vhero h1, .vhero .vhero-sub, .vhero .vhero-actions,
+        .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules {
+            animation: heroFadeUp .95s cubic-bezier(.16,1,.3,1) both;
+        }
+        .vhero .hero-eyebrow { animation-delay: .08s; }
+        .vhero h1 { animation-delay: .2s; }
+        .vhero .vhero-sub { animation-delay: .34s; }
+        .vhero .vhero-actions { animation-delay: .48s; }
+        .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules { animation-delay: .32s; }
+        @media (prefers-reduced-motion: reduce) {
+            .vhero .hero-eyebrow, .vhero h1, .vhero .vhero-sub, .vhero .vhero-actions,
+            .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules { animation: none; }}
+        /* ===== 全站公告条(与首页一致) ===== */
+        .beta-announce {
+            display: flex; align-items: center; gap: 14px;
+            max-width: 1080px; margin: 34px auto 0; padding: 15px 24px;
+            background: var(--card);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-1);
+            position: relative;
+        }
+        .beta-announce::before {
+            content: ''; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px;
+            border-radius: 3px; background: var(--brand);
+        }
+        .beta-announce .ba-title {
+            flex-shrink: 0; font-size: .82rem; font-weight: 700; color: var(--brand);
+            background: rgba(59,130,246,.08); border-radius: 999px; padding: 4px 12px;
+        }
+        .beta-announce .ba-track-wrap { flex: 1; overflow: hidden; min-width: 0; }
+        .beta-announce .ba-track { display: inline-block; white-space: nowrap; will-change: transform; }
+        .beta-announce .ba-item {
+            display: inline-block; white-space: nowrap; padding-right: 80px;
+            font-size: .92rem; color: var(--ink-soft);
+        }
+        .beta-announce a { color: var(--brand); text-decoration: underline; }
+        .beta-announce a:hover { color: var(--brand-deep); }
+        html.dark .beta-announce { background: var(--card); }
+        html.dark .beta-announce .ba-item { color: var(--ink-soft); }
+        @media (max-width: 760px) { .beta-announce { align-items: flex-start; flex-wrap: wrap; } }
+        html { scroll-behavior: smooth; }
+        [id] { scroll-margin-top: 86px; }
+
+
+
+
+
+
+
+
+
+
+
+@keyframes bkSpin { to { transform: rotate(360deg); } }
+
+
+
+
+
+
+
+
+
+
+
+
+@keyframes bkDot { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
+
+
+@media (max-width: 1000px) { }
+@media (max-width: 640px) { }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@media (max-width: 760px) { }
+
+
+
+
+
+
+
+
+
+@keyframes lrSpin { to { transform: rotate(360deg); } }
+
+
+
+
+
+
+
+
+
+
+
+
+@keyframes lrDot { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
+
+
+@media (max-width: 860px) { }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@keyframes lrRow { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===== 「更多功能」下拉(动画与原菜单项完全一致) ===== */
+.nav-more { position: relative; display: flex; align-items: center; }
+.nav-more-btn {
+    position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); background: none; border: none; cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+    transition: color .3s ease;}.nav-more-btn::after {
+    content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);
+}
+.nav-more-btn:hover { color: var(--ink); }
+.nav-more-btn:hover::after { transform: scaleX(1); }
+.nav-more.open .nav-more-btn { color: var(--ink); }
+.nav-more.open .nav-more-btn::after { transform: scaleX(1); }
+.nav-more-btn.active { color: var(--brand); font-weight: 600; }
+.nav-more-btn.active::after { transform: scaleX(1); }
+.nav-more-panel {
+    display: none; position: absolute; top: calc(100% + 12px); right: 0;
+    min-width: 178px; padding: 8px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 18px 44px -20px rgba(15,23,42,.42);
+    z-index: 300;
+}
+.nav-more.open .nav-more-panel { display: block; }
+.nav-more-panel a {
+    display: block; padding: 9px 12px; border-radius: 9px;
+    font-size: .88rem; color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+    transition: background .18s ease, color .18s ease;
+}
+.nav-more-panel a:hover { background: rgba(59,130,246,.1); color: var(--brand); }
+html.dark .nav-more-panel { background: #0f1a30; border-color: rgba(148,163,184,.22); }
+html.dark .nav-more-panel a:hover { background: rgba(59,130,246,.2); color: #fff; }
+
+/* ===== 移动端:也显示这条菜单栏(左右滑动看全部),不再只靠汉堡 ===== */
+@media (max-width: 900px) {
+    .nav { padding: 0 12px; gap: 6px; }
+    .nav-logo { flex: 0 0 auto; margin-left: 0; }
+    .nav-menu {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: flex-start;
+        gap: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+        /* 右侧渐隐,提示还能往右滑 */
+        -webkit-mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+        mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);}    .nav-menu::-webkit-scrollbar { display: none; }
+    .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 11px; font-size: .86rem; letter-spacing: .2px; }
+    .nav-menu > a::after, .nav-menu .nav-more-btn::after { left: 11px; right: 11px; }
+    .nav-right-group { flex: 0 0 auto; gap: 6px; }
+    .theme-btn { width: 38px; height: 38px; border-radius: 11px; font-size: 1rem; }
+    .nav-burger { flex: 0 0 auto; }
+    /* 下拉面板在手机上居中一点,避免贴边被裁 */
+    .nav-more-panel { right: auto; left: 0; }
+}
+@media (max-width: 420px) {
+    .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 9px; font-size: .82rem; }
+    .nav-logo .logo-img { height: 28px; }}
+/* ===== 移动端 / APP 适配增强 ===== */
+/* 1) 安全区:APP 全屏运行时,刘海屏/底部横条不再压住内容 */
+body {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+}
+.nav { padding-top: env(safe-area-inset-top, 0); }
+.footer { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.backtop { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.drawer { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.nav-more-panel { max-height: 70vh; overflow-y: auto; }
+.d-modal, .modal-content, .cam-modal > div, .custom-modal > div {
+    max-height: 86vh; overflow-y: auto;
+}
+
+/* 2) 触摸体验 */
+a, button, [onclick], .sort-btn, .d-item {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+html { -webkit-text-size-adjust: 100%; }
+
+/* 3) 手机上输入框字号统一 16px:
+      小于 16px 时 iOS/部分安卓 WebView 聚焦会自动放大整页(最常见的不适配感来源) */
+@media (max-width: 900px) {
+    input:not([type=checkbox]):not([type=radio]), textarea, select {
+        font-size: 16px !important;}    /* 关键操作按钮的最小可点区域(不影响小图标按钮) */
+    button:not(.d-close):not(.nav-burger):not(.theme-btn):not(.backtop):not(.react-btn):not(.reply-btn):not(.edit-btn):not(.delete-btn):not(.report-btn):not(.sort-btn),
+    .btn, .hero-btn, .vhero-actions a {
+        min-height: 38px;
+    }
+    /* 表格:已有横向滚动容器的保持,没有的自动兜底 */
+    .table-wrap, .scroll-x, .stock-table-wrap { -webkit-overflow-scrolling: touch; }
+    /* 长文本防溢出 */
+    .comment-content, .bn-reason, .d-item, .pd-tip { word-break: break-word; overflow-wrap: anywhere; }
+}
+
+/* 4) APP(独立窗口)下:去掉选中高亮与长按菜单的干扰,正文更接近原生 */
+@media (display-mode: standalone) {
+    a, button { -webkit-user-select: none; user-select: none; }
+    .comment-content { -webkit-user-select: text; user-select: text; }
+    .backtop { display: none; }   /* APP 里用系统返回键更自然 */}
+/* ===== 手机上「更多功能」下拉的处理 =====
+   原因:窄屏导航菜单是横向滚动的,而「更多功能」排在菜单最右端,
+        初始位置在屏幕外;且菜单的 overflow 会把弹出面板裁掉。
+   处理:手机上隐藏这个下拉(核心功能在 ☰ 抽屉里都有),平板/桌面保持可用。 */
+@media (max-width: 900px) {
+    .nav-more { display: none !important; }
+    .nav-more-panel { display: none !important; }}/* 平板/桌面:面板靠右弹出时留出边距,避免贴边 */
+@media (min-width: 901px) {
+    .nav-more-panel { max-width: calc(100vw - 24px); }}
+
+/* ===== 评论富文本:粗体 / 斜体 / 行内代码(不动链接颜色) ===== */
+.comment-content b, .comment-content strong { font-weight: 800; }
+.comment-content i, .comment-content em { font-style: italic; opacity: .95; }
+.comment-content code {
+    padding: 1px 6px; border-radius: 6px;
+    background: rgba(120,120,120,.14);
+    font-family: ui-monospace, Consolas, monospace; font-size: .92em;
+}
+.md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
+.md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
+/* ══════ NB报刊社（本页专用，官网模式）══════ */
+.np-main { max-width: 1080px; margin: 0 auto; padding: 0 24px 60px; }
+        /* ══════════════════════════════════════════════════════
+           NB报刊社 —— 报纸版式
+           用全站 CSS 变量，三套界面 + 七套主题下都能看。
+           纸面感靠：报头双线、正文分栏、细竖线分隔、衬线标题。
+           ══════════════════════════════════════════════════════ */
+
+                .np-paper {
+            background: var(--card);
+            border-radius: 6px;
+            padding: 34px 40px 30px;
+            box-shadow: 0 20px 40px -18px rgba(16,24,40,.25);
+            border: 1px solid var(--line);
+        }
+
+        /* ── 报头 ── */
+        .np-masthead { text-align: center; padding-bottom: 6px; }
+        .np-name {
+            font-family: "Songti SC", "SimSun", "Noto Serif SC", Georgia, serif;
+            font-size: clamp(2.4rem, 6vw, 4rem);
+            font-weight: 800; letter-spacing: 10px; text-indent: 10px;
+            color: var(--brand); line-height: 1.1;
+            margin: 0 0 6px;
+        }
+        .np-sub {
+            font-size: .82rem; letter-spacing: 3px; text-indent: 3px;
+            color: var(--ink-faint); margin-bottom: 14px;
+        }
+        /* 报头上下双线 —— 报纸的招牌样子 */
+        .np-rule { border-top: 3px solid var(--brand); }
+        .np-rule-thin { border-top: 1px solid var(--line); margin-top: 3px; }
+        .np-dateline {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 8px;
+            padding: 9px 2px; font-size: .78rem; color: var(--ink-faint);
+        }
+        .np-dateline .mid { letter-spacing: 1px; text-indent: 1px; }
+        .np-notice {
+            text-align: center; font-size: .74rem; color: var(--ink-faint);
+            letter-spacing: 2px; text-indent: 2px; padding: 5px 0 0;
+        }
+
+        /* ── 头条 ── */
+        .np-lead { padding: 24px 0 20px; border-bottom: 1px solid var(--line); }
+        .np-h1 {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: clamp(1.5rem, 3.4vw, 2.15rem);
+            font-weight: 800; line-height: 1.35; text-align: center;
+            color: var(--ink); margin: 0 0 10px;
+        }
+        .np-h1-sub {
+            text-align: center; font-size: .92rem; color: var(--brand);
+            font-weight: 600; margin-bottom: 16px;
+        }
+        .np-byline {
+            text-align: center; font-size: .76rem; color: var(--ink-faint);
+            margin-bottom: 18px;
+        }
+
+        /* 正文：两栏，报纸感 */
+        .np-cols { column-count: 2; column-gap: 30px; column-rule: 1px solid var(--line); }
+        .np-cols p {
+            margin: 0 0 12px; font-size: .92rem; line-height: 2.05;
+            color: var(--ink); text-align: justify;
+            text-indent: 2em;
+        }
+        .np-cols p.noindent { text-indent: 0; }
+
+        /* ── 配图 ── */
+        .np-figure { margin: 20px 0; text-align: center; }
+        .np-figure .box {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 100%; max-width: 520px; height: 170px;
+            border: 1px dashed var(--line); border-radius: 6px;
+            background: rgba(148,163,184,.10); color: var(--ink-faint);
+            font-size: .85rem; letter-spacing: 1px;
+        }
+        .np-figure figcaption {
+            margin-top: 8px; font-size: .75rem; color: var(--ink-faint);
+        }
+    /* 报纸正文里的真插图 */
+    .np-figure .np-figimg { display: block; margin: 0 auto; max-width: 560px; width: 100%; height: auto;
+        border-radius: 6px; border: 1px solid var(--card-border); background: var(--count-bg); }
+/* 插图点击放大 */
+.np-figimg { cursor: zoom-in; }
+#npZoom { display: none; position: fixed; inset: 0; z-index: 99999;
+    background: rgba(10,14,22,.88); padding: 24px; cursor: zoom-out;
+    align-items: center; justify-content: center; }
+#npZoom.on { display: flex; }
+#npZoom img { max-width: 96vw; max-height: 90vh; width: auto; height: auto;
+    border-radius: 8px; background: #fff;
+    box-shadow: 0 30px 70px -24px rgba(0,0,0,.75); }
+#npZoom .npz-x { position: absolute; top: 14px; right: 22px; color: #fff;
+    font-size: 1.7rem; line-height: 1; cursor: pointer; opacity: .75;
+    font-family: system-ui, sans-serif; }
+#npZoom .npz-x:hover { opacity: 1; }
+#npZoom .npz-t { position: absolute; left: 0; right: 0; bottom: 14px;
+    text-align: center; color: rgba(255,255,255,.72); font-size: .8rem;
+    font-family: system-ui, sans-serif; padding: 0 24px; }
+
+        /* ── 次条区 ── */
+        .np-second { padding: 22px 0; border-bottom: 1px solid var(--line); }
+        .np-h2 {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1.28rem; font-weight: 800; line-height: 1.4;
+            color: var(--ink); margin: 0 0 8px;
+        }
+        .np-h2 .tag {
+            display: inline-block; font-family: inherit;
+            font-size: .7rem; font-weight: 700; letter-spacing: 1px;
+            color: #fff; background: var(--brand);
+            border-radius: 3px; padding: 1px 7px; margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        /* ── 短讯 ── */
+        .np-briefs { padding: 22px 0; border-bottom: 1px solid var(--line); }
+        .np-sec-title {
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            font-size: 1.1rem; font-weight: 800; letter-spacing: 4px;
+            color: var(--brand); text-align: center;
+            margin: 0 0 16px; position: relative;
+        }
+        .np-sec-title::before, .np-sec-title::after {
+            content: ''; position: absolute; top: 50%; width: 28%;
+            border-top: 1px solid var(--line);
+        }
+        .np-sec-title::before { left: 2%; }
+        .np-sec-title::after { right: 2%; }
+        .np-brief-list {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px 26px; margin: 0; padding: 0; list-style: none;
+        }
+        .np-brief-list li {
+            font-size: .88rem; line-height: 1.9; color: var(--ink);
+            padding-left: 16px; position: relative;
+        }
+        .np-brief-list li::before {
+            content: '◆'; position: absolute; left: 0; top: 0;
+            color: var(--brand); font-size: .62rem; line-height: 2.7;
+        }
+
+        /* ── 便民信息 ── */
+        .np-service {
+            margin: 22px 0 0; padding: 18px 22px;
+            border: 1px solid var(--line); border-radius: 6px;
+            background: rgba(148,163,184,.10);
+        }
+        .np-service h4 {
+            margin: 0 0 12px; font-size: .95rem; letter-spacing: 3px;
+            font-family: "Songti SC", "SimSun", Georgia, serif;
+            color: var(--brand); text-align: center;
+        }
+        .np-service ul {
+            margin: 0; padding: 0; list-style: none;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 8px 24px;
+        }
+        .np-service li { font-size: .84rem; display: flex; justify-content: space-between; gap: 10px; }
+        .np-service li span { color: var(--ink-faint); }
+        .np-service a { color: var(--brand); text-decoration: none; font-weight: 600; }
+        .np-service a:hover { text-decoration: underline; }
+
+        /* ── 报尾 ── */
+        .np-colophon {
+            margin-top: 24px; padding-top: 14px;
+            border-top: 3px double var(--line);
+            text-align: center; font-size: .76rem;
+            color: var(--ink-faint); line-height: 2;
+        }
+
+        @media (max-width: 720px) {
+            .np-paper { padding: 24px 20px 22px; border-radius: 4px; }
+            .np-cols { column-count: 1; }
+            .np-name { letter-spacing: 6px; }
+            .np-sec-title::before, .np-sec-title::after { width: 18%; }}
+html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
+</style>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/images/app-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NB频道">
+<meta name="application-name" content="NB频道">
+<!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
+<link rel="stylesheet" href="../css/themes.css?v=35">
+<script src="../js/theme.js?v=9"></script>
+</head>
+<body>
+<nav class="nav">
+    <a class="nav-logo" href="index-Beta.html"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"></a>
+    <div class="nav-menu">
+        <a href="index-Beta.html">首页</a>
+        <a href="videos-Beta.html">视频</a>
+        <a href="about-Beta.html">关于</a>
+        <a href="rules-Beta.html">用户守则</a>
+        <a href="changelog-Beta.html">更新日志</a>
+        <a href="product-Beta.html">我的产品</a>
+        <a href="APP-Beta.html">软件/APP</a>
+        <a href="index-Beta.html#friends">友商</a>
+        <a class="nav-api" href="/api-sdk/" target="_blank" rel="noopener noreferrer" title="NB频道 API 文档">API<i>↗</i></a>
+        <div class="nav-more">
+            <button class="nav-more-btn" type="button">更多功能 ▾</button>
+            <div class="nav-more-panel">
+                <a href="stock-Beta.html">📈 虚拟股票</a>
+                <a href="messages-Beta.html">🔔 消息中心</a>
+                <a href="chat-Beta.html">👥 好友 / 私信</a>
+                <a href="bank-Beta.html">🏦 NB银行</a>
+                <a href="shop-Beta.html">🛍️ NB商店</a>
+                <a href="backpack-Beta.html">🎒 我的背包</a>
+                <a href="titles-Beta.html">🏅 称号大全</a>
+                <a href="achievements-Beta.html">🏆 成就墙</a>
+                <a href="lottery-Beta.html">📅 签到 · 转盘</a>
+                <a href="lottery_records-Beta.html">🎰 抽奖记录</a>
+                <a href="weather-Beta.html">🌦️ 天气瞎报</a>
+                <a href="newspaper-Beta.html">📰 NB报刊社</a>
+                <a href="tools-Beta.html">🔧 工具</a>
+                <a href="product_share-Beta.html">📦 作品分享</a>
+                <a href="comments-Beta.html">💬 评论区</a>
+                <a href="ban-Beta.html">🚫 小黑屋</a>
+                <a href="feedback-Beta.html">🐞 漏洞/建议</a><a href="pricing-Beta.html">💰 模型 &amp; 价格</a>
+                <a href="vote-Beta.html">🗳️ 投票中心</a>
+            </div>
+        </div>
+    </div>
+    <div class="nav-right-group">
+        <div class="nav-clock" id="navClock" title="北京时间（UTC+8）">
+            <span class="nc-time" id="bjTime">--:--:--</span>
+            <span class="nc-row"><i class="nc-date" id="bjDate">----.--.--</i><em class="nc-label">北京时间</em></span>
+        </div>
+        <button class="theme-btn" id="themeBtn" aria-label="切换夜间模式">🌙</button>
+        <div class="nav-auth-group" id="betaAuthGroup">
+            <a class="nav-auth" id="betaProfileBtn" href="#">👤 个人中心</a>
+            <a class="nav-auth primary" id="betaAuthBtn" href="#">登录 / 注册</a>
+        </div>
+    </div>
+    <button class="nav-burger" id="navBurger" aria-label="打开菜单">☰</button>
+    <!-- 扫码:手机端右上角,在汉堡(☰)的右边。只在 APP 里显示 —— 网页端调不动摄像头。
+         整段自包含(自带样式/脚本),不依赖本页既有的 CSS 变量和导航结构。 -->
+    <a class="nav-scan" id="navScanBtn" href="scan-Beta.html" aria-label="扫一扫" title="扫一扫"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5V6a3 3 0 0 1 3-3h2.5"/><path d="M15.5 3H18a3 3 0 0 1 3 3v2.5"/><path d="M21 15.5V18a3 3 0 0 1-3 3h-2.5"/><path d="M8.5 21H6a3 3 0 0 1-3-3v-2.5"/><path d="M3.2 12h17.6"/></svg></a>
+    <style>
+      .nav-scan{display:none;width:42px;height:42px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.7);border:1px solid var(--line,#e2e8f0);color:var(--ink,#0f172a);align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent}
+      .nav-scan svg{width:21px;height:21px;display:block}
+      .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
+      html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
+      @media (max-width:900px){.nav-scan{display:flex}}
+    
+/* ===== 报刊亭（数据驱动版新增，用 Beta 变量）===== */
+.np-tabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 4px 0 18px; }
+.np-tab {
+    border: 1px solid var(--line); background: var(--card);
+    color: var(--ink-soft); border-radius: 30px;
+    padding: 8px 20px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: .2s;
+}
+.np-tab:hover { border-color: var(--brand); color: var(--brand); }
+.np-tab.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+.np-kiosk { text-align: center; margin: 18px 0 16px; }
+.np-kiosk-t {
+    font-family: "Songti SC", "SimSun", Georgia, serif;
+    font-size: 1.6rem; font-weight: 800; letter-spacing: 6px; text-indent: 6px;
+    color: var(--ink); margin: 0;
+}
+.np-day {
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0 12px; font-size: .84rem; font-weight: 700;
+    color: var(--ink-soft); letter-spacing: 1px;
+}
+.np-day::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.np-day .d { background: rgba(120,120,120,.12); border-radius: 20px; padding: 3px 12px; color: var(--brand); }
+
+.np-cards { display: flex; flex-direction: column; gap: 14px; }
+.np-card {
+    display: flex; gap: 20px; align-items: stretch;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px 20px; transition: .22s;
+}
+.np-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+.np-card-l { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.np-card-no { font-size: .74rem; font-weight: 700; letter-spacing: 1px; color: var(--brand); margin-bottom: 6px; }
+.np-card-t {
+    font-family: "Songti SC", "SimSun", Georgia, serif;
+    font-size: 1.2rem; font-weight: 800; line-height: 1.4; color: var(--ink); margin-bottom: 6px;
+}
+.np-card-s { font-size: .84rem; color: var(--ink-soft); line-height: 1.8; flex: 1; }
+.np-card-m { font-size: .74rem; color: var(--ink-faint); margin: 10px 0 12px; letter-spacing: .3px; }
+.np-read {
+    align-self: flex-start; border: 1px solid var(--brand);
+    background: transparent; color: var(--brand); border-radius: 30px;
+    padding: 8px 22px; font-size: .86rem; font-weight: 700; cursor: pointer; transition: .2s;
+}
+.np-read:hover { background: var(--brand); color: #fff; }
+.np-card-r { flex: 0 0 190px; display: flex; align-items: center; justify-content: center; }
+.np-cover { width: 190px; height: 124px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.np-cover-ph {
+    width: 190px; height: 124px; border-radius: 6px;
+    border: 1px dashed rgba(128,145,170,.62);
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(120,120,120,.07);
+    font-family: "Songti SC", "SimSun", Georgia, serif;
+    font-size: .82rem; color: var(--ink-faint); text-align: center; line-height: 1.6;
+}
+.np-badge { display: inline-block; font-size: .72rem; font-weight: 700; border-radius: 20px; padding: 3px 11px; white-space: nowrap; }
+.np-badge.owned { background: rgba(34,197,94,.16); color: #22c55e; }
+.np-badge.buy { background: rgba(124,140,248,.18); color: #818cf8; }
+.np-badge.free { background: rgba(148,163,184,.18); color: var(--ink-soft); }
+
+.np-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--card);
+    color: var(--ink-soft); border-radius: 30px; padding: 7px 16px;
+    font-size: .84rem; cursor: pointer; margin-bottom: 14px;
+}
+.np-back:hover { border-color: var(--brand); color: var(--brand); }
+
+.np-readnote {
+    font-size: .82rem; color: var(--ink-soft); line-height: 1.9;
+    background: rgba(96,165,250,.10); border: 1px solid var(--line);
+    border-left: 3px solid var(--brand); border-radius: 6px;
+    padding: 10px 16px; margin-bottom: 16px;
+}
+.np-readnote b { color: var(--brand); }
+
+.np-lock {
+    margin: 22px 0 4px; padding: 26px 22px; text-align: center;
+    border: 1px dashed rgba(128,145,170,.62); border-radius: 6px;
+    background: rgba(120,120,120,.07);
+}
+.np-lock .lk-title { font-size: 1.05rem; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+.np-lock .lk-sub { font-size: .84rem; color: var(--ink-soft); line-height: 1.8; margin-bottom: 16px; }
+.np-buy {
+    border: none; border-radius: 30px; padding: 12px 30px;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa);
+    color: #fff; font-size: .95rem; font-weight: 700; cursor: pointer;
+    box-shadow: 0 12px 26px -10px rgba(99,102,241,.6); transition: .2s;
+}
+.np-buy:hover { transform: translateY(-2px); }
+.np-buy:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+.np-locked-list { margin-top: 14px; text-align: left; }
+.np-locked-list div { font-size: .84rem; color: var(--ink-soft); line-height: 2.2; padding-left: 20px; position: relative; }
+.np-locked-list div::before { content: '🔒'; position: absolute; left: 0; font-size: .72rem; }
+
+.np-empty, .np-loading { text-align: center; padding: 40px 20px; color: var(--ink-soft); font-size: .9rem; line-height: 2; }
+#npToast {
+    position: fixed; left: 50%; top: 84px; transform: translateX(-50%) translateY(-8px);
+    z-index: 9999; padding: 11px 22px; border-radius: 30px;
+    background: rgba(30,41,59,.95); color: #fff; font-size: .88rem; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: .25s;
+}
+#npToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 720px) {
+    .np-card { flex-direction: column-reverse; }
+    .np-card-r { flex: none; }
+    .np-cover, .np-cover-ph { width: 100%; height: 150px; }
+}
+
+</style>
+    <script>/* 扫码入口只在 APP 里显示。旧版 APP 也显示 —— 点进去 scan-Beta.html 会提示他更新 */
+    (function(){try{if(!/NBChannelApp/i.test(navigator.userAgent||"")){var b=document.getElementById("navScanBtn");if(b)b.style.display="none";}}catch(e){}})();</script>
+
+</nav>
+<script>
+// ===== 在 APP 里隐藏导航菜单的 emoji =====
+// 站长要求：APP 的「更多功能」下拉菜单不要 emoji，网页端保留原样。
+//
+// APP 是 Capacitor 套壳，加载的就是本站 —— 改 HTML 会两边一起改，
+// 所以只能按 UA 区分（APP 在 UA 里注入了 NBChannelApp）。
+// 判断写法与上面「扫一扫」那段保持一致。
+(function () {
+    var isApp = false;
+    try { isApp = /NBChannelApp/i.test(navigator.userAgent || ''); } catch (e) {}
+    if (!isApp) return;              // 浏览器里 —— emoji 保持原样
+
+    // 代理对（U+1F000 以上）+ BMP 符号区 + 变体选择符 + 零宽连接符，连同后面的空格一起剥掉
+    var LEAD = /^(?:[\u2190-\u21FF\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]|[\uD83C-\uDBFF][\uDC00-\uDFFF])+\s*/;
+
+    function strip() {
+        try {
+            var as = document.querySelectorAll('.nav-more-panel a, .drawer a');
+            // ⚠️ 桌面下拉(.nav-more-panel)在手机上被 CSS 藏了，手机走的是
+            //    汉堡抽屉(.drawer)。两个都要处理，否则 APP 里会漏。
+            for (var i = 0; i < as.length; i++) {
+                var t = as[i].textContent || '';
+                var n = t.replace(LEAD, '');
+                if (n !== t) as[i].textContent = n;}        } catch (e) {}
+    }
+    strip();
+    setTimeout(strip, 400);    // 导航若是后渲染的，补两次
+    setTimeout(strip, 1500);
+})();
+
+// ===== 导航「更多功能」下拉 =====
+(function () {
+    var box = document.querySelector('.nav-more');
+    if (!box) return;
+    var btn = box.querySelector('.nav-more-btn');
+    btn.addEventListener('click', function (e) { e.stopPropagation(); box.classList.toggle('open'); });
+    document.addEventListener('click', function () { box.classList.remove('open'); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') box.classList.remove('open'); });
+    var here = (location.pathname.split('/').pop() || '').toLowerCase();
+    if (here && box.querySelector('.nav-more-panel a[href="' + here + '"]')) btn.classList.add('active');
+})();
+</script>
+
+<!-- Hero -->
+<!-- Hero -->
+<header class="vhero">
+    <div class="vhero-inner">
+        <div class="hero-copy">
+            <span class="hero-eyebrow">PRESS · NB 报刊社</span>
+            <h1>NB<span class="light">报刊社</span></h1>
+            <p class="vhero-sub">NB频道虚拟公司的机关报——报头、头条、短讯、便民信息，一份正经的假报纸</p>
+            <div class="vhero-actions">
+                <a class="hero-link" href="#npPaper">读报 ↓</a>
+                <a class="hero-link" href="newspaper.html">网页版 ↗</a>
+            </div>
+        </div>
+        <div class="pd-stats">
+            <div class="pd-row"><span class="k">刊期</span><b>第 1 期</b></div>
+            <div class="pd-row"><span class="k">出版</span><b>NB频道 · 虚拟公司</b></div>
+            <div class="pd-row"><span class="k">版次</span><b>第一版 · 共一版</b></div>
+            <div class="pd-row"><span class="k">定价</span><b>免费取阅</b></div>
+            <div class="pd-tip">仅供娱乐 · 请勿代入现实</div>
+        </div>
+    </div>
+    <div class="vhero-fade"></div>
+</header>
+<!-- 全站公告(与全站一致;admin_config key=announcement) -->
+<div class="beta-announce" id="betaAnnounce" style="display:none;">
+    <div class="ba-title">公告</div>
+    <div class="ba-track-wrap"><div class="ba-track" id="baTrack"></div></div>
+</div>
+<main class="np-main">
+    <div class="np-tabs">
+        <button class="np-tab active" data-view="free">🆓 免费刊</button>
+        <button class="np-tab" data-view="paid">💰 付费刊</button>
+        <button class="np-tab" data-view="mine">📖 我可以直接读的报纸</button>
+    </div>
+
+    <div class="np-kiosk">
+        <h2 class="np-kiosk-t">📰 报刊亭</h2>
+    </div>
+
+    <div id="npBody"><div class="np-empty">正在取报…</div></div>
+</main>
+<div id="npToast"></div>
+<footer class="footer">
+    <div class="footer-grid">
+        <div>
+            <div class="brand"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span class="logo-text">NB频道</span></div>
+            <p class="desc">NB频道（NoBook频道）——热爱理科（和作死）的 UP主建立的虚拟公司。化学物理实验、日常作死、虚拟经济，一个有趣的数字世界</p>
+        </div>
+        <div>
+            <h5>功能</h5>
+            <a href="stock-Beta.html">虚拟股票</a><a href="bank-Beta.html">NB银行</a><a href="comments-Beta.html">评论区</a><a href="shop-Beta.html">NB商店</a><a href="tools-Beta.html">工具</a><a href="titles-Beta.html">称号系统</a>
+        </div>
+        <div>
+            <h5>友商</h5>
+            <a href="https://orgent.pythonanywhere.com/" target="_blank" rel="noopener noreferrer">Orgent（已注销）</a>
+            <a href="https://45d.cn/AWM/" target="_blank" rel="noopener noreferrer">AWM</a>
+            <a href="https://fafat.uuk.pp.ua/" target="_blank" rel="noopener noreferrer">Fafat</a>
+            <a href="https://nb-qx.top/" target="_blank" rel="noopener noreferrer">Lemon（齐喜）</a>
+            <a href="https://gaohantu.cn/" target="_blank" rel="noopener noreferrer">GaoHanTu</a>
+            <a href="https://utw.pages.dev" target="_blank" rel="noopener noreferrer">Utw</a>
+            <a href="https://pipetrainingcamp.github.io/" target="_blank" rel="noopener noreferrer">PTC（GoodPTC）</a>
+            <a href="https://yoyo-user-awa.github.io/UVS/" target="_blank" rel="noopener noreferrer">UVS</a>
+            <a href="https://3f7ceb4e.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">UwLS</a>
+            <a href="https://45d.cn/nb-og.top/" target="_blank" rel="noopener noreferrer">Oganesson</a>
+            <a href="https://78439049.pinit.eth.limo/" target="_blank" rel="noopener noreferrer">SOT</a>
+        </div>
+        <div>
+            <h5>联系</h5>
+            <a href="mailto:nbchannel@163.com">nbchannel@163.com</a><a href="https://space.bilibili.com/3493259582114264" target="_blank" rel="noopener noreferrer">B站：NB搞事局</a><a href="https://nb-channel.top" target="_blank" rel="noopener noreferrer">nb-channel.top</a>
+        </div>
+    </div>
+    <div class="footer-bottom">© 2026 NB频道 · 虚拟公司 · 制作：NB搞事局 · 由 GitHub Pages / Cloudflare / EdgeOne Pages / PythonAnywhere 提供支持</div><div style="margin-top:8px;font-size:0.78rem;opacity:.72;line-height:1.9;">本站所有内容（页面代码 · 图文 · 数据）版权归 <b>NB频道</b> 所有，未经书面授权禁止复制、镜像或部署到其他域名</div>
+</footer>
+
+<!-- 移动端抽屉 -->
+<div class="drawer-mask" id="drawerMask"></div>
+<aside class="drawer" id="drawer">
+    <div class="d-head">
+        <span class="d-brand"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"><span class="logo-text">NB频道</span></span>
+        <button class="d-close" id="drawerClose" aria-label="关闭菜单">✕</button>
+    </div>
+        <a class="d-item" href="vote-Beta.html">投票中心</a>
+        <a class="d-item" href="stock-Beta.html">虚拟股票</a>
+        <a class="d-item" href="messages-Beta.html">消息中心</a>
+        <a class="d-item" href="chat-Beta.html">好友 / 私信</a>
+        <a class="d-item" href="bank-Beta.html">NB银行</a>
+        <a class="d-item" href="shop-Beta.html">NB商店</a>
+        <a class="d-item" href="backpack-Beta.html">我的背包</a>
+        <a class="d-item" href="titles-Beta.html">称号大全</a>
+        <a class="d-item" href="achievements-Beta.html">成就墙</a>
+        <a class="d-item" href="lottery-Beta.html">签到 · 转盘</a>
+        <a class="d-item" href="lottery_records-Beta.html">抽奖记录</a>
+        <a class="d-item" href="weather-Beta.html">天气瞎报</a>
+        <a class="d-item" href="newspaper-Beta.html">NB报刊社</a>
+        <a class="d-item" href="tools-Beta.html">工具</a>
+        <a class="d-item" href="product_share-Beta.html">作品分享</a>
+        <a class="d-item" href="comments-Beta.html">评论区</a>
+        <a class="d-item" href="ban-Beta.html">小黑屋</a>
+        <a class="d-item" href="pricing-Beta.html">💰 模型 &amp; 价格</a>
+    <div class="d-auth">
+        <a class="ga" id="dProfileBtn" href="#">个人中心</a>
+        <a class="gab" id="dAuthBtn" href="#">登录 / 注册</a>
+    </div>
+</aside>
+
+<!-- 回到顶部 -->
+<button class="backtop" id="backTop" aria-label="回到顶部">↑</button>
+
+
+<script>
+    // ===== 入场渐显 =====
+    (function () {
+        var els = document.querySelectorAll('.reveal');
+        var io = new IntersectionObserver(function (es) {
+            es.forEach(function (e) {
+                if (e.isIntersecting) {
+                    var i = Array.prototype.indexOf.call(e.target.parentNode.children, e.target);
+                    e.target.style.transitionDelay = Math.min(i * 80, 300) + 'ms';
+                    e.target.classList.add('in');
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.12 });
+        els.forEach(function (el, i) {
+            var r = el.getBoundingClientRect();
+            if (r.top < window.innerHeight * 0.9) { el.style.transitionDelay = (i * 90) + 'ms'; el.classList.add('in'); }
+            else io.observe(el);
+        });
+    })();
+
+    // ===== 登录区绑定(与全站一致) =====
+    function bindAuthPair(pbEl, abEl) {
+        if (!pbEl && !abEl) return;
+        var storedU = null;
+        try { storedU = JSON.parse(localStorage.getItem('nb_user')); } catch (e) {}
+        if (storedU && storedU.id) {
+            if (abEl) {
+                abEl.textContent = '登出账号';
+                abEl.onclick = function () { localStorage.removeItem('nb_user'); localStorage.removeItem('nb_session'); location.reload(); };
+            }
+            if (pbEl) {
+                pbEl.textContent = '👤 ' + (storedU.username || storedU.name || '个人中心');
+                pbEl.href = 'profile-Beta.html';
+            }
+        } else {
+            var loginHref = 'login-Beta.html?redirect=' + encodeURIComponent(location.href);
+            if (abEl) { abEl.href = loginHref; abEl.textContent = '登录 / 注册'; }
+            if (pbEl) { pbEl.href = loginHref; pbEl.textContent = '👤 个人中心'; }
+        }
+    }
+    bindAuthPair(document.getElementById('betaProfileBtn'), document.getElementById('betaAuthBtn'));
+    bindAuthPair(document.getElementById('dProfileBtn'), document.getElementById('dAuthBtn'));
+
+    // ===== 导航栏北京时间(与全站一致) =====
+    (function () {
+        var tEl = document.getElementById('bjTime');
+        var dEl = document.getElementById('bjDate');
+        if (!tEl) return;
+        var fmtT = new Intl.DateTimeFormat('zh-CN', {
+            timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit',
+            second: '2-digit', hour12: false, hourCycle: 'h23'
+        });
+        var fmtD = new Intl.DateTimeFormat('zh-CN', {
+            timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit',
+            day: '2-digit', weekday: 'short'
+        });
+        function tick() {
+            var now = new Date();
+            tEl.textContent = fmtT.format(now);
+            if (dEl) dEl.textContent = fmtD.format(now).replace(/\//g, '.');
+        }
+        tick();
+        setInterval(tick, 1000);
+    })();
+
+    // ===== 导航滚动态 + 回到顶部 =====
+    (function () {
+        var nav = document.querySelector('.nav');
+        var backTop = document.getElementById('backTop');
+        function onScroll() {
+            var y = window.scrollY || document.documentElement.scrollTop;
+            if (nav) nav.classList.toggle('scrolled', y > 10);
+            if (backTop) backTop.classList.toggle('show', y > 700);
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+        if (backTop) backTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    })();
+
+    // ===== 夜间模式切换 =====
+    (function () {
+        var btn = document.getElementById('themeBtn');
+        var root = document.documentElement;
+        function isDark() { return root.classList.contains('dark'); }
+        function render() {
+            if (btn) { btn.textContent = isDark() ? '☀️' : '🌙'; btn.title = isDark() ? '切换到日间模式' : '切换到夜间模式'; }
+        }
+        function apply(dark) {
+            root.classList.toggle('dark', dark);
+            try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+            render();
+        }
+        if (btn) btn.addEventListener('click', function () {
+            var dark = !isDark();
+            if (document.startViewTransition) {
+                try { document.startViewTransition(function () { apply(dark); }); } catch (e) { apply(dark); }
+            } else apply(dark);
+        });
+        render();
+    })();
+
+    // ===== 移动端抽屉 =====
+    (function () {
+        var burger = document.getElementById('navBurger');
+        var drawer = document.getElementById('drawer');
+        var mask = document.getElementById('drawerMask');
+        var closeBtn = document.getElementById('drawerClose');
+        if (!burger || !drawer || !mask) return;
+        function open() { drawer.classList.add('open'); mask.style.display = 'block'; document.body.classList.add('locked'); }
+        function close() { drawer.classList.remove('open'); mask.style.display = 'none'; document.body.classList.remove('locked'); }
+        burger.addEventListener('click', open);
+        closeBtn.addEventListener('click', close);
+        mask.addEventListener('click', close);
+        drawer.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', close); });
+    })();
+
+    // ===== 防查看代码(反调试,静默无提示) =====
+    (function () {
+        var DEV = window.__allowDevTools ||
+                  /(?:^|[?&#])dev=1(?=&|#|$)/.test(location.href) ||
+                  /#dev\b/.test(location.hash);
+        if (DEV) return;
+        document.addEventListener('keydown', function (e) {
+            var k = e.keyCode || e.which;
+            var ctrl = e.ctrlKey || e.metaKey;
+            if (k === 123 || e.key === 'F12' ||
+                (ctrl && e.shiftKey && (k === 73 || k === 74 || k === 67)) ||
+                (ctrl && k === 85)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+        document.addEventListener('contextmenu', function (e) { e.preventDefault(); return false; });
+        setInterval(function () { debugger; }, 600);
+    })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+    // ===== 我的抽奖记录(与经典版一致) =====
+    var supabaseClient = null;
+    try {
+        supabaseClient = supabase.createClient(
+            'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+            'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+        );
+    } catch (e) { supabaseClient = null; }
+    function getUser() {
+        var stored = localStorage.getItem('nb_user');
+        if (!stored) return null;
+        try { return JSON.parse(stored); } catch (e) { return null; }
+    }
+    function esc(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[&<>"']/g, function (m) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+        });
+    }
+    function formatTime(ts) {
+        try { return new Date(ts).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }); }
+        catch (e) { return new Date(ts).toLocaleString(); }
+    }
+    function lrLoginButtons() {
+        return '<div class="lr-st-actions">' +
+            '<a class="lr-st-btn login" href="login-Beta.html?redirect=' + encodeURIComponent(location.href) + '">去登录</a>' +
+            '<a class="lr-st-btn ghost" href="login-Beta.html?register=1&redirect=' + encodeURIComponent(location.href) + '">注册新账号</a>' +
+            '</div>';
+    }
+    function loadRecords() {
+        var body = document.getElementById('lrBody');
+        var note = document.getElementById('lrUserNote');
+        // ⚠️ 这一段是「我的抽奖记录」的遗留代码，被复制到这个页面上，
+        //    但报刊社页根本没有 #lrBody / #lrUserNote / #refreshBtn。
+        //    以前它会一路跑到底再在 refreshBtn 那里抛
+        //    「Cannot read properties of null (reading 'addEventListener')」。
+        //    容器不在就直接退出，别空跑也别抛错。
+        if (!body) return;
+        var user = getUser();
+        if (!user) {
+            note.textContent = '未登录';
+            body.innerHTML = '<div class="lr-state"><div class="lr-st-ico">🔒</div><h3>登录后查看抽奖记录</h3>' +
+                '<p>每一次转动都有记录</p>' + lrLoginButtons() + '</div>';
+            return;
+        }
+        note.textContent = '当前账号: ' + user.username;
+        body.innerHTML = '<div class="lr-state"><div class="lr-st-ico">🎰</div><h3>记录加载中<span class="lr-dot">.</span><span class="lr-dot">.</span><span class="lr-dot">.</span></h3><p>正在翻账本</p></div>';
+        supabaseClient.rpc('get_my_lottery_records', { p_user_id: user.id , p_session: localStorage.getItem('nb_session') })
+            .then(function (res) {
+                if (res.error) throw res.error;
+                var records = res.data || [];
+                var wins = 0, totalWin = 0;
+                records.forEach(function (r) { if (r.result === 'win') { wins++; totalWin += (Number(r.amount) || 0); } });
+                var cost = records.length * 50;
+                var net = totalWin - cost;
+                var h = '<div class="lr-stats">' +
+                    '<div class="lr-stat times"><b>' + records.length + '</b><span>总抽奖次数</span></div>' +
+                    '<div class="lr-stat wins"><b>' + wins + '</b><span>中奖次数</span></div>' +
+                    '<div class="lr-stat total"><b>' + totalWin + '</b><span>中奖总额(NB)</span></div>' +
+                    '<div class="lr-stat net ' + (net >= 0 ? 'pos' : 'neg') + '"><b>' + (net >= 0 ? '+' : '') + net + '</b><span>净收益(NB)</span></div>' +
+                    '</div>';
+                if (!records.length) {
+                    h += '<div class="lr-empty">还没有抽过奖,快去试试手气吧～ 🎡</div>';
+                } else {
+                    h += '<div class="lr-list">' + records.map(function (r, i) {
+                        var isWin = r.result === 'win';
+                        return '<div class="lr-row" style="animation-delay:' + Math.min(i * 35, 400) + 'ms">' +
+                            '<span class="lr-result ' + (isWin ? 'win' : 'none') + '">' + (isWin ? '🎉 中奖' : '😅 谢谢惠顾') + '</span>' +
+                            '<span class="lr-amount ' + (isWin ? 'win' : 'zero') + '">' + (isWin ? '+' + (Number(r.amount) || 0) + ' NB' : '0 NB') + '</span>' +
+                            '<span class="lr-time">' + formatTime(r.created_at) + '</span>' +
+                            '</div>';
+                    }).join('') + '</div>';
+                }
+                body.innerHTML = h;
+            })
+            .catch(function (err) {
+                console.error(err);
+                body.innerHTML = '<div class="lr-state"><div class="lr-st-ico">😵</div><h3>加载失败</h3><p>' + esc((err && err.message) || err) + ',请稍后重试</p></div>';
+            });
+    }
+    var __rb = document.getElementById('refreshBtn');
+    if (__rb) __rb.addEventListener('click', function () {
+        var btn = __rb;
+        btn.classList.remove('spin');
+        void btn.offsetWidth;
+        btn.classList.add('spin');
+        loadRecords();
+    });
+    loadRecords();
+
+</script>
+<script>
+    // ===== 鼠标/触摸特效:跟随光晕 + 点击波纹与彩色粒子(鼠标 + 触屏都启用) =====
+    (function () {
+        var mqFine = window.matchMedia ? window.matchMedia('(pointer: fine)') : null;
+        var isFine = !!(mqFine && mqFine.matches);
+        var canTouch = ('ontouchstart' in window) ||
+            !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+        var glow = document.createElement('div');
+        glow.className = 'ui-fx-glow';
+        document.body.appendChild(glow);
+        var gx = -999, gy = -999, tx = -999, ty = -999;
+        var colors = ['#3b82f6', '#8b5cf6', '#6366f1', '#06b6d4', '#f59e0b'];
+        var lastTouch = 0, glowTimer = null;
+
+        // 光晕跟手:有精确指针(鼠标)就跟鼠标,否则跟手指
+        if (isFine) {
+            document.addEventListener('mousemove', function (e) { tx = e.clientX; ty = e.clientY; });
+            document.addEventListener('mouseenter', function () { glow.style.opacity = '1'; });
+            document.addEventListener('mouseleave', function () { glow.style.opacity = '0'; });
+        }
+        if (canTouch) {
+            document.addEventListener('touchstart', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                if (gx < -100) { gx = tx; gy = ty; }   // 首次别从屏幕角落滑过来
+                glow.style.opacity = '1';
+                if (glowTimer) { clearTimeout(glowTimer); glowTimer = null; }
+                lastTouch = Date.now();
+                burst(t.clientX, t.clientY, 6, 0.75);
+            }, { passive: true });
+            document.addEventListener('touchmove', function (e) {
+                var t = e.touches[0]; if (!t) return;
+                tx = t.clientX; ty = t.clientY;
+                glow.style.opacity = '1';
+            }, { passive: true });
+            document.addEventListener('touchend', function () {
+                if (glowTimer) clearTimeout(glowTimer);
+                glowTimer = setTimeout(function () { glow.style.opacity = '0'; }, 380);
+            }, { passive: true });
+            document.addEventListener('touchcancel', function () { glow.style.opacity = '0'; }, { passive: true });
+        }
+
+        var lx = -1e9, ly = -1e9;
+        (function loop() {
+            var k = isFine ? 0.14 : 0.32;   // 手指跟得紧一些
+            gx += (tx - gx) * k;
+            gy += (ty - gy) * k;
+            // 静止时跳过写入:避免每帧重复改 style 白白触发样式计算
+            if (Math.abs(gx - lx) > 0.2 || Math.abs(gy - ly) > 0.2) {
+                glow.style.left = gx + 'px';
+                glow.style.top = gy + 'px';
+                lx = gx; ly = gy;
+            }
+            requestAnimationFrame(loop);
+        })();
+
+        // ===== 点击波纹 + 彩色粒子 =====
+        function burst(x, y, count, scale) {
+            var ring = document.createElement('div');
+            ring.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:12px; height:12px; border:2px solid rgba(59,130,246,.75); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%);';
+            document.body.appendChild(ring);
+            setTimeout(function () { if (ring.parentNode) ring.remove(); }, 900);
+            try {
+                ring.animate([
+                    { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9 },
+                    { transform: 'translate(-50%,-50%) scale(' + (5.5 * scale) + ')', opacity: 0 }
+                ], { duration: 600, easing: 'ease-out', fill: 'forwards' });
+            } catch (err) { ring.remove(); }
+            for (var i = 0; i < count; i++) {
+                var p = document.createElement('div');
+                var size = 4 + Math.random() * 6;
+                var ang = Math.random() * Math.PI * 2;
+                var dist = (28 + Math.random() * 52) * scale;
+                p.style.cssText = 'position:fixed; left:' + x + 'px; top:' + y + 'px; width:' + size + 'px; height:' + size + 'px; border-radius:50%; background:' + colors[i % colors.length] + '; pointer-events:none; z-index:9999;';
+                document.body.appendChild(p);
+                var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+                var dur = 500 + Math.random() * 250;
+                setTimeout(function (el) {
+                    return function () { if (el.parentNode) el.remove(); };
+                }(p), dur + 250);
+                try {
+                    p.animate([
+                        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+                        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(0.1)', opacity: 0 }
+                    ], { duration: dur, easing: 'cubic-bezier(0.15,0.8,0.25,1)', fill: 'forwards' });
+                } catch (err) { p.remove(); }
+            }
+        }
+        // 鼠标点击
+        document.addEventListener('click', function (e) {
+            if (Date.now() - lastTouch < 800) return;   // 触摸后浏览器会补发 click,去重
+            burst(e.clientX, e.clientY, 8, 1);
+        });
+    })();
+</script>
+<script>
+    // ===== 全站公告条:supabase REST 单次拉取(无需加载 SDK),失败静默隐藏 =====
+    (function () {
+        var bar = document.getElementById('betaAnnounce');
+        var track = document.getElementById('baTrack');
+        if (!bar || !track) return;
+        function escA(s) {
+            return String(s).replace(/[&<>"']/g, function (m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+            });
+        }
+        function linkify(s) {
+            return s.replace(/(https?:\/\/[^\s<>"']+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:var(--brand); text-decoration:underline;">$1</a>');
+        }
+        fetch('https://pbaafgjkwdbwcmsikcmg.supabase.co/rest/v1/admin_config?select=value&key=eq.announcement', {
+            headers: {
+                'apikey': 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg',
+                'Authorization': 'Bearer sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+            }
+        })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (rows) {
+            if (!rows || !rows.length) return;
+            var raw = String(rows[0].value || '').trim();
+            if (!raw) return;
+            bar.style.display = 'flex';
+            var one = '<span class="ba-item">' + linkify(escA(raw)) + '</span>';
+            track.innerHTML = one;
+            var item = track.querySelector('.ba-item');
+            var itemW = item ? item.offsetWidth : 0;
+            if (itemW <= 0) return;
+            var wrapEl = bar.querySelector('.ba-track-wrap');
+            var barW = wrapEl ? wrapEl.clientWidth : 0;
+            var copies = Math.max(2, Math.ceil(barW / itemW) + 1);
+            var all = '';
+            for (var ci = 0; ci < copies; ci++) all += '<span class="ba-item">' + linkify(escA(raw)) + '</span>';
+            track.innerHTML = all;
+            var dur = Math.max(8, itemW / 45);
+            if (track.animate) {
+                track.animate(
+                    [{ transform: 'translateX(0)' }, { transform: 'translateX(-' + itemW + 'px)' }],
+                    { duration: dur * 1000, iterations: Infinity, easing: 'linear' }
+                );
+            }
+        })
+        .catch(function () {});
+    })();
+</script>
+
+<script>
+    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
+    (function () {
+        function patch(sb) {
+            if (!sb || sb.__secPatched) return;
+            sb.__secPatched = true;
+            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
+            var orig = sb.rpc.bind(sb);
+            sb.rpc = function (fn, args) {
+                if (names.indexOf(fn) !== -1) {
+                    args = Object.assign({}, args || {});
+                    var t = null;
+                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
+                    args.p_session = t;
+                }
+                return orig(fn, args);
+            };
+        }
+        var cands = [];
+        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
+        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
+        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
+        cands.forEach(patch);
+    })();
+</script>
+
+
+<script>
+    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
+    (function () {
+        try {
+            var u = localStorage.getItem('nb_user');
+            var s = localStorage.getItem('nb_session');
+            if (u && !s) {
+                localStorage.removeItem('nb_user');
+                location.reload();
+            }
+        } catch (e) {}
+    })();
+</script>
+
+
+<script>
+    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
+    (function () {
+        function applyBal() {
+            var u = null, t = null;
+            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
+            if (!u || !u.id || !t) return;
+            var el = document.getElementById('balanceDisplay') ||
+                     document.getElementById('balanceSpan') ||
+                     document.getElementById('tradeBalance');
+            if (!el) return;
+            var sb = null;
+            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
+            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
+            if (!sb) return;
+            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
+                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
+            }).catch(function () {});
+        }
+        var tries = 0;
+        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
+    })();
+</script>
+
+
+<script>
+// ===== APP 自更新(仅 APP 内生效) =====
+(function () {
+    var ua = navigator.userAgent || '';
+    var m = /NBChannelApp\/([0-9.]+)/i.exec(ua);
+    if (!m) return;                       // 不是 APP 环境,不打扰网页用户
+    var localVer = m[1];
+    var APK = '/download/NBChannel.apk';
+
+    function cmp(a, b) {
+        var x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+        for (var i = 0; i < 3; i++) { var p = x[i] || 0, q = y[i] || 0; if (p !== q) return p - q; }
+        return 0;
+    }
+
+    var checking = false;
+    function check(manual) {
+        if (checking) return;
+        checking = true;
+        fetch('/download/version.json?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(function (info) {
+                checking = false;
+                if (!info || !info.versionName) throw new Error('版本信息不完整');
+                if (cmp(info.versionName, localVer) > 0) showBar(info, manual);
+                else if (manual) toast('✅ 已是最新版 v' + localVer);
+            })
+            .catch(function (e) {
+                checking = false;
+                if (manual) toast('检查更新失败:' + e.message + '\n请检查网络后重试');
+            });
+    }
+
+    // ---- 底部更新条 ----
+    function showBar(info, manual) {
+        if (document.getElementById('nbUpdateBar')) return;
+        var bar = document.createElement('div');
+        bar.id = 'nbUpdateBar';
+        bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;' +
+            'padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));' +
+            'background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;' +
+            'display:flex;align-items:center;gap:10px;font-size:.86rem;' +
+            'box-shadow:0 -8px 28px rgba(0,0,0,.3);';
+        bar.innerHTML =
+            '<div style="flex:1;line-height:1.6;min-width:0;">' +
+                '<b>发现新版本 v' + info.versionName + '</b><br>' +
+                '<span style="opacity:.9;font-size:.78rem;">当前 v' + localVer + ' · ' +
+                (info.note || '修复与优化') + '</span>' +
+            '</div>' +
+            '<button id="nbUpdGo" style="background:#fff;color:#3b82f6;border:none;border-radius:999px;' +
+                'padding:9px 18px;font-weight:800;font-family:inherit;font-size:.86rem;cursor:pointer;white-space:nowrap;">立即更新</button>' +
+            '<button id="nbUpdNo" style="background:transparent;border:none;color:#fff;opacity:.75;' +
+                'font-size:1.05rem;cursor:pointer;padding:4px 6px;">✕</button>';
+        document.body.appendChild(bar);
+        document.getElementById('nbUpdNo').onclick = function () { bar.remove(); };
+        document.getElementById('nbUpdGo').onclick = function () {
+            var b = this;
+            b.textContent = '下载中…'; b.disabled = true; b.style.opacity = '.8';
+            location.href = info.url || APK;
+            setTimeout(function () { b.textContent = '立即更新'; b.disabled = false; b.style.opacity = '1'; }, 12000);
+        };
+    }
+
+    // ---- 轻提示 ----
+    function toast(msg) {
+        var t = document.createElement('div');
+        t.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;' +
+            'background:rgba(15,23,42,.94);color:#fff;padding:14px 20px;border-radius:14px;' +
+            'font-size:.86rem;line-height:1.7;max-width:80vw;text-align:center;white-space:pre-line;' +
+            'box-shadow:0 12px 36px rgba(0,0,0,.4);';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 2600);
+    }
+
+    // ---- 在导航「更多功能」下拉 + 手机抽屉里注入入口 ----
+    function inject() {
+        var panel = document.querySelector('.nav-more-panel');
+        if (panel && !panel.querySelector('[data-nb-upd]')) {
+            var a = document.createElement('a');
+            a.href = 'javascript:void(0)';
+            a.setAttribute('data-nb-upd', '1');
+            a.textContent = '🔄 检查更新';
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                var more = document.querySelector('.nav-more');
+                if (more) more.classList.remove('open');
+                check(true);
+            });
+            panel.insertBefore(a, panel.firstChild);
+        }
+        var authBox = document.querySelector('.drawer .d-auth');
+        if (authBox && !document.querySelector('[data-nb-upd-d]')) {
+            var d = document.createElement('a');
+            d.className = 'd-item';
+            d.href = 'javascript:void(0)';
+            d.setAttribute('data-nb-upd-d', '1');
+            d.textContent = '🔄 检查更新(v' + localVer + ')';
+            d.addEventListener('click', function (e) { e.preventDefault(); check(true); });
+            authBox.parentNode.insertBefore(d, authBox);
+        }
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
+    else inject();
+    setTimeout(inject, 1200);      // 兜底:导航是脚本渲染时再试一次
+
+    // 启动自动查一次,之后每 30 分钟
+    setTimeout(function () { check(false); }, 2000);
+    setInterval(function () { check(false); }, 30 * 60 * 1000);
+})();
+</script>
+
+<script>
+/* ===== Android 上让 B站链接优先打开 B站 APP ===== */
+(function () {
+    try {
+        if (!/Android/i.test(navigator.userAgent)) return;   // 只在安卓上改,桌面/iPhone 保持原样
+        function toIntent(href) {
+            var m = href.match(/space\.bilibili\.com\/(\d+)/);
+            if (!m) return null;
+            // intent:// 是安卓专属协议:能打开 APP 就打开,打不开就回退到 browser_fallback_url
+            return 'intent://space/' + m[1] + '#Intent;scheme=bilibili;package=tv.danmaku.bili' +
+                   ';S.browser_fallback_url=' + encodeURIComponent(href) + ';end';
+        }
+        function patch() {
+            var links = document.querySelectorAll('a[href*="space.bilibili.com"]');
+            for (var i = 0; i < links.length; i++) {
+                var a = links[i];
+                if (a.dataset.nbIntent) continue;
+                var it = toIntent(a.getAttribute('href') || a.href);
+                if (it) { a.setAttribute('href', it); a.dataset.nbIntent = '1'; }
+            }
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', patch);
+        else patch();
+        setTimeout(patch, 1500);
+    } catch (e) {}
+})();
+
+/* ===== 双击视频铺满屏幕 ===== */
+(function () {
+    try {
+        var style = document.createElement('style');
+        style.textContent =
+            'video.nb-fs{position:fixed!important;left:0!important;top:0!important;' +
+            'width:100vw!important;height:100vh!important;max-width:100vw!important;' +
+            'max-height:100vh!important;margin:0!important;border-radius:0!important;' +
+            'z-index:99999!important;background:#000!important;object-fit:contain!important;}' +
+            'body.nb-fs-lock{overflow:hidden!important;}';
+        document.head.appendChild(style);
+
+        var current = null;
+        function exit() {
+            if (!current) return;
+            current.classList.remove('nb-fs');
+            document.body.classList.remove('nb-fs-lock');
+            current = null;
+        }
+        function enter(v) {
+            exit();
+            v.classList.add('nb-fs');
+            document.body.classList.add('nb-fs-lock');
+            current = v;
+            try { v.play(); } catch (e) {}
+        }
+        // 双击:进/出全屏
+        document.addEventListener('dblclick', function (e) {
+            var v = e.target && e.target.closest ? e.target.closest('video') : null;
+            if (!v) return;
+            e.preventDefault();
+            if (current === v) exit(); else enter(v);
+        }, true);
+        // 全屏状态下点空白处/按 Esc 退出
+        document.addEventListener('click', function (e) {
+            if (current && !(e.target.closest && e.target.closest('video'))) exit();
+        }, true);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') exit(); });
+        // 页面切换/尺寸变化时兜底
+        window.addEventListener('resize', function () { if (current) exit(); });
+    } catch (e) {}
+})();
+</script>
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261001-2CFE309AEC6C
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDAxLTJDRkUzMDlBRUM2Qw";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="../js/science-tips.js?v=26"></script>
+<script src="../js/pomodoro.js?v=7" defer></script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   NB报刊社 · 分期制前端
+   数据全部走 RPC（news_issues / news_articles / news_owned
+   三张表都开了 RLS 且 REVOKE 掉 anon，前端读不到）
+   ══════════════════════════════════════════════════════════════ */
+(function () {
+    var sb = null;
+    try {
+        if (window.supabase) {
+            sb = window.supabase.createClient(
+                'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+                'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg');
+        }
+    } catch (e) { sb = null; }
+
+    var body = document.getElementById('npBody');
+    var toastEl = document.getElementById('npToast');
+    var VIEW = 'free';
+    var CUR = null;          // 正在看的那一期（route 要用，漏了这句就会 ReferenceError）
+
+    function me() {
+        try {
+            var u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+            return (u && u.id) ? u : null;
+        } catch (e) { return null; }
+    }
+
+    function toast(msg, ok) {
+        toastEl.textContent = msg;
+        toastEl.style.background = ok === false ? 'rgba(190,40,40,.95)' : 'rgba(30,41,59,.95)';
+        toastEl.classList.add('on');
+        clearTimeout(toastEl.__t);
+        toastEl.__t = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
+    }
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    // 正文/标题里的行内标记。旧版是直接写 <b> / <br>，改数据驱动后正文是纯文本，
+    // 所以给两个等价写法：
+    //     **文字**    → <b>文字</b>
+    //     换行        → <br>
+    // ⚠️ 一定【先 esc 再换标签】—— 反过来正文里写 <script> 就能注入。
+    function boldify(safe) {
+        return safe.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+    }
+    // 标题、短讯这类单行文本用它
+    function npTxt(s) {
+        return boldify(esc(String(s == null ? '' : s))).replace(/\n/g, '<br>');
+    }
+    // 正文按空行分段；段首写 :: 表示这段不缩进（对应旧版的 <p class="noindent">）
+    function paras(txt) {
+        return String(txt || '').split(/\n\s*\n/).filter(function (x) { return x.trim(); })
+            .map(function (p) {
+                p = p.trim();
+                var noind = /^::\s*/.test(p);
+                if (noind) p = p.replace(/^::\s*/, '');
+                return '<p' + (noind ? ' class="noindent"' : '') + '>' +
+                       boldify(esc(p)).replace(/\n/g, '<br>') + '</p>';
+            }).join('');
+    }
+
+    // 会话令牌：站点用自定义登录，Supabase 一律看到 anon，
+    // 所以每个需要认人的 RPC 都得自己把 nb_session 传过去。
+    // ⚠️ 不要指望页面上那个「自动注入补丁」—— 它只包了 window.supabaseClient，
+    //    而这个页面是自己 createClient 的，那个补丁包不到。
+    function sess() { try { return localStorage.getItem('nb_session'); } catch (e) { return null; } }
+
+    // 便民信息里的链接化：先把整段转义，再把 xxx.html / http(s)://… 包成 <a>
+    // ⚠️ 一定要先 esc 再包链接 —— 反过来的话正文里的尖括号就能注入 HTML
+    // ⚠️ 名字用 npLinkify 不用 linkify —— 公告条那边已经有一个同名的 linkify，
+    //    它在自己的 IIFE 里，够不着；重名会让「已存在就跳过」的判断误判，
+    //    结果这里调用的名字根本没定义 → ReferenceError → 整个脚本挂掉。
+    function npLinkify(txt) {
+        var safe = esc(txt);
+        return safe.replace(
+            /(https?:\/\/[^\s<>"']+)|((?:[\w\u4e00-\u9fa5][\w\u4e00-\u9fa5 .\-]*?)\.html\b)/g,
+            function (all, url, page) {
+                var href = url || page;
+                return '<a href="' + href + '"' +
+                       (url ? ' target="_blank" rel="noopener noreferrer"' : '') +
+                       '>' + href + '</a>';
+            });
+    }
+
+    // ⚠️ 三层保险，保证不会「一直卡在正在取报…」：
+    //    ① 等 supabase 就绪（CDN 慢时不至于当场判死）
+    //    ② 8 秒超时（网络被墙 / 请求石沉大海时也能给出结果）
+    //    ③ 任何异常都 reject，让调用方的 .catch 接住并显示出来
+    function waitSb() {
+        if (sb && sb.rpc) return Promise.resolve(sb);
+        return new Promise(function (resolve, reject) {
+            var t0 = Date.now();
+            (function tick() {
+                if (sb && sb.rpc) return resolve(sb);
+                if (window.supabase && !sb) {
+                    try {
+                        sb = window.supabase.createClient(
+                            'https://pbaafgjkwdbwcmsikcmg.supabase.co',
+                            'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg');
+                    } catch (e) { /* 下一轮再试 */ }
+                }
+                if (Date.now() - t0 > 10000) {
+                    return reject(new Error('supabase 脚本没能加载（可能是网络/CDN 问题），刷新试试'));
+                }
+                setTimeout(tick, 150);
+            })();
+        });
+    }
+
+    function rpc(fn, args) {
+        args = Object.assign({}, args || {});
+        if (!('p_session' in args)) args.p_session = sess();
+        return waitSb().then(function (client) {
+            return Promise.race([
+                client.rpc(fn, args),
+                new Promise(function (_, rej) {
+                    setTimeout(function () { rej(new Error('请求超时（8 秒没回应）')); }, 8000);
+                })
+            ]);
+        }).then(function (r) {
+            if (r && r.error) throw new Error(r.error.message || 'RPC 失败');
+            return r ? r.data : null;
+        });
+    }
+
+    /* ── 各期 ── */
+    function renderIssues() {
+        body.innerHTML = '<div class="np-loading">正在取报…</div>';
+        var u = me();
+        rpc('get_news_issues', { p_user_id: u ? u.id : null }).then(function (d) {
+            var all = (d && d.issues) || [];
+            var list = all.filter(function (x) { return (x.kind || 'free') === VIEW; });
+            if (!list.length) {
+                body.innerHTML = '<div class="np-empty">' +
+                    (VIEW === 'free' ? '免费刊还没有出刊。' : '付费刊还没有出刊。') +
+                    '<br>站长去后台发一期就有了。</div>';
+                return;
+            }
+            body.innerHTML = issueListHtml(list);
+            bindIssueClicks();
+        }).catch(function (e) {
+            body.innerHTML = '<div class="np-empty">取报失败：' + esc(e.message) +
+                '<br><span style="font-size:.8rem">（多半是 SQL 还没跑）</span></div>';
+        });
+    }
+
+    /* ── 我拥有的 ── */
+    function renderMine() {
+        var u = me();
+        if (!u) {
+            body.innerHTML = '<div class="np-empty">请先登录，才能看到你能读的报纸。<br>' +
+                '<a href="login-Beta.html" style="color:var(--status-border)">去登录 →</a></div>';
+            return;
+        }
+        body.innerHTML = '<div class="np-loading">正在翻你的报箱…</div>';
+        rpc('get_my_newspapers', { p_user_id: u.id }).then(function (d) {
+            var list = (d && d.issues) || [];
+            if (!list.length) {
+                body.innerHTML = '<div class="np-empty">还没有你能读的报纸。<br>' +
+                    '去「🆓 免费刊」看看 —— 那些整期都能直接读。</div>';
+                return;
+            }
+            var freeN = 0;
+            list.forEach(function (x) {
+                if ((x.why || (x.kind === 'free' ? 'free' : 'bought')) === 'free') freeN++;
+            });
+            var boughtN = list.length - freeN;
+            body.innerHTML =
+                '<div class="np-readnote">这里是你<b>可以直接读</b>的报纸：' +
+                  '<b>免费刊</b>的全部（' + freeN + ' 期）' +
+                  (boughtN > 0 ? '，以及你<b>付过费</b>的付费刊（' + boughtN + ' 期）'
+                               : '。付费刊要买过才会出现在这里。') +
+                '</div>' +
+                issueListHtml(list, true, true);
+            bindIssueClicks();
+        }).catch(function (e) {
+            body.innerHTML = '<div class="np-empty">取报失败：' + esc(e.message) + '</div>';
+        });
+    }
+
+    function issueListHtml(list, mine, showWhy) {
+        // 按出版日期分组（和齐喜那个报刊亭一样）
+        var groups = [], byDay = {};
+        list.forEach(function (it) {
+            var d = it.publish_date || '未知日期';
+            if (!byDay[d]) { byDay[d] = []; groups.push(d); }
+            byDay[d].push(it);
+        });
+        var h = '';
+        groups.forEach(function (day) {
+            h += '<div class="np-day"><span class="d">' + esc(day) + '</span></div>' +
+                 '<div class="np-cards">';
+            byDay[day].forEach(function (it) {
+                var badge, isFree = (it.kind || 'free') === 'free';
+                var why = it.why || (isFree ? 'free' : 'bought');
+                if (showWhy) {
+                    badge = (why === 'free')
+                        ? '<span class="np-badge free">🆓 免费刊</span>'
+                        : '<span class="np-badge owned">✓ 已购买</span>';
+                } else if (isFree) {
+                    badge = '<span class="np-badge free">🆓 免费刊</span>';
+                } else if (it.owned || mine) {
+                    badge = '<span class="np-badge owned">✓ 已拥有</span>';
+                } else {
+                    badge = '<span class="np-badge buy">💰 ' + it.price + ' NB币</span>';
+                }
+                var cover = it.cover
+                    ? '<img class="np-cover" src="' + esc(it.cover) + '" alt="' + esc(it.title) + ' 封面" loading="lazy">'
+                    : '<div class="np-cover-ph">第 ' + it.issue_no + ' 期<br>NB报刊社</div>';
+                h += '<div class="np-card" data-no="' + it.issue_no + '">' +
+                       '<div class="np-card-l">' +
+                         '<div class="np-card-no">第 ' + it.issue_no + ' 期' + (badge ? '　' + badge : '') + '</div>' +
+                         '<div class="np-card-t">' + esc(it.title) + '</div>' +
+                         '<div class="np-card-s">' + esc(it.summary || '') + '</div>' +
+                         '<div class="np-card-m">' + esc(it.publish_date) +
+                           ' · 共 ' + (it.pages || 1) + ' 页' +
+                           (isFree ? ' · 全部免费' : ' · 单期 ' + it.price + ' NB币买断') +
+                           (it.bought_at ? ' · 购买于 ' + esc(it.bought_at) : '') +
+                         '</div>' +
+                         '<button class="np-read">📄 阅读</button>' +
+                       '</div>' +
+                       '<div class="np-card-r">' + cover + '</div>' +
+                     '</div>';
+            });
+            h += '</div>';
+        });
+        return h;
+    }
+
+    function bindIssueClicks() {
+        Array.prototype.forEach.call(body.querySelectorAll('.np-card'), function (el) {
+            el.onclick = function () {
+                var no = parseInt(el.getAttribute('data-no'), 10);
+                setHash('#/issue/' + no);
+                openIssue(no);
+            };
+        });
+    }
+
+    /* ── 某一期 ── */
+    function openIssue(no) {
+        body.innerHTML = '<div class="np-loading">正在展开第 ' + no + ' 期…</div>';
+        var u = me();
+        rpc('get_news_issue', { p_user_id: u ? u.id : null, p_issue_no: no }).then(function (d) {
+            if (!d || !d.success) {
+                body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
+                    '<div class="np-empty">' + esc((d && d.message) || '没找到这一期') + '</div>';
+                document.getElementById('npBack').onclick = backToList;
+                return;
+            }
+            CUR = d;                       // 记住这一期
+            setHash('#/issue/' + no);
+            drawIssue();
+        }).catch(function (e) {
+            body.innerHTML = '<button class="np-back" id="npBack">← 回各期</button>' +
+                '<div class="np-empty">打开失败：' + esc(e.message) + '</div>';
+            document.getElementById('npBack').onclick = backToList;
+        });
+    }
+
+    /* 画这一期 —— 按改写前那版报纸的结构输出，所有页顺着往下排 */
+    /* ── 插图点击放大 ──
+       点 .np-figimg → 全屏浮层看原图；点浮层 / Esc / ✕ 关掉。
+       纯原生，不引库。 */
+    (function () {
+        function ensure() {
+            var b = document.getElementById('npZoom');
+            if (b) return b;
+            b = document.createElement('div');
+            b.id = 'npZoom';
+            b.innerHTML = '<span class="npz-x">&#10005;</span><img alt=""><div class="npz-t"></div>';
+            b.addEventListener('click', function () { b.classList.remove('on'); });
+            document.body.appendChild(b);
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' || e.keyCode === 27) b.classList.remove('on');
+            });
+            return b;
+        }
+        document.addEventListener('click', function (e) {
+            var el = e.target;
+            if (!el || !el.classList || !el.classList.contains('np-figimg')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var b = ensure();
+            var im = b.querySelector('img');
+            im.src = el.getAttribute('src') || '';
+            im.alt = el.getAttribute('alt') || '';
+            b.querySelector('.npz-t').textContent = el.getAttribute('alt') || '';
+            b.classList.add('on');
+        }, true);
+    })();
+
+    function drawIssue() {
+        var d = CUR;
+        var total = d.pages || 1;
+        var arts = [];
+        for (var q = 1; q <= total; q++) {
+            ((d.by_page && d.by_page[String(q)]) || []).forEach(function (a) {
+                a.__page = q;
+                arts.push(a);
+            });
+        }
+
+        // 分类：头条（第一篇带副标题的正文）/ 次条 / 短讯 / 便民 / 插图 / 其余正文
+        var lead = null, second = [], briefs = [], services = [], figures = [], others = [];
+        arts.forEach(function (a) {
+            if (a.kind === 'brief') { briefs.push(a); return; }
+            if (a.kind === 'service') { services.push(a); return; }
+            if (a.kind === 'figure') { figures.push(a); return; }
+            if (!lead && a.subhead) { lead = a; return; }
+            second.push(a);
+        });
+
+        var h = '<button class="np-back" id="npBack">← 回各期</button>' +
+            '<div class="np-wrap"><div class="np-paper" id="npPaper">';
+
+        // ── 报头 ──
+        h += '<header class="np-masthead">' +
+               '<h1 class="np-name">NB报刊社</h1>' +
+               '<div class="np-sub">NB CHANNEL · DAILY</div>' +
+             '</header>' +
+             '<div class="np-rule"></div><div class="np-rule-thin"></div>' +
+             '<div class="np-dateline">' +
+               '<span>第 <b>' + d.issue_no + '</b> 期</span>' +
+               '<span class="mid">' + esc(npDate(d.publish_date)) + ' · NB频道 · 虚拟公司</span>' +
+               '<span>第 ' + (total > 1 ? '1' : '一') + ' 版 · 共' + (total > 1 ? total : '一') + '版</span>' +
+             '</div>' +
+             '<div class="np-rule-thin"></div>' +
+             '<div class="np-notice">仅供娱乐 · 请勿代入现实 · 免费取阅</div>' +
+             '<div class="np-rule" style="margin-top:10px;"></div>';
+
+        // ── 头条 ──
+        if (lead) {
+            h += '<article class="np-lead">' +
+                   '<h2 class="np-h1">' + npTxt(lead.headline) + '</h2>' +
+                   (lead.subhead ? '<div class="np-h1-sub">' + esc(lead.subhead) + '</div>' : '') +
+                   '<div class="np-byline">本报记者 · NB频道唯一正式员工 · 报道</div>' +
+                   '<div class="np-cols">' + paras(lead.body) + '</div>' +
+                   figures.map(figureHtml).join('') +
+                 '</article>';
+        } else if (figures.length) {
+            h += figures.map(figureHtml).join('');
+        }
+
+        // ── 次条 ──
+        second.forEach(function (a) {
+            h += '<article class="np-second">' +
+                   '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(a.tag) + '</span>' : '') +
+                     npTxt(a.headline) + '</h3>' +
+                   (a.body ? '<div class="np-cols">' + paras(a.body) + '</div>' : '') +
+                 '</article>';
+        });
+
+        // ── 短讯 ──
+        if (briefs.length) {
+            h += '<section class="np-briefs">' +
+                   '<h3 class="np-sec-title">短 讯</h3>' +
+                   '<ul class="np-brief-list">' +
+                     briefs.map(function (b) { return '<li>' + npTxt(b.headline) + '</li>'; }).join('') +
+                   '</ul></section>';
+        }
+
+        // ── 便民信息 ──
+        // ⚠️ 所有便民信息合成【一个】区块，固定标题「便民信息」。
+        //    以前是一条文章一个方框、拿文章标题当小标题，
+        //    结果标题显示成「化学工具」「天气瞎报」，而「便民信息」四个字压根没出现。
+        if (services.length) {
+            var svcItems = [];
+            services.forEach(function (s) {
+                var body = String(s.body == null ? '' : s.body).trim();
+                var title = String(s.headline == null ? '' : s.headline).trim();
+                if (body) {
+                    body.split('\n').filter(function (x) { return x.trim(); }).forEach(function (line) {
+                        line = line.trim();
+                        var p2 = line.split(/→|->/);
+                        if (p2.length > 1) {
+                            // 旧写法：正文里写「名字 → 值」
+                            svcItems.push({ name: npLinkify(p2[0].trim()),
+                                            val:  npLinkify(p2.slice(1).join('→').trim()) });
+                        } else {
+                            // 新写法：标题当项目名，正文当值
+                            svcItems.push({ name: npLinkify(title || line), val: npLinkify(title ? line : '') });
+                        }
+                    });
+                } else if (title) {
+                    svcItems.push({ name: npLinkify(title), val: '' });
+                }
+            });
+            if (svcItems.length) {
+                h += '<section class="np-service"><h4>便民信息</h4><ul>' +
+                     svcItems.map(function (it) {
+                         return '<li>' + it.name + (it.val ? '<span>' + it.val + '</span>' : '') + '</li>';
+                     }).join('') +
+                     '</ul></section>';
+            }
+        }
+
+        // ── 付费刊解锁卡 ──
+        if ((d.kind === 'paid') && !d.owned && (d.paid || []).length) {
+            h += '<div class="np-lock">' +
+                   '<div class="lk-title">🔒 这一期还有内容没解锁</div>' +
+                   '<div class="lk-sub">共 ' + d.paid.length + ' 篇 · 花 ' + d.price +
+                     ' NB币买下，<b>永久可读</b>，不会重复扣</div>' +
+                   (d.logged_in
+                     ? '<button class="np-buy" id="npBuy">花 ' + d.price + ' NB币 购买这一期</button>'
+                     : '<button class="np-buy" disabled>请先登录</button>' +
+                       '<div class="lk-sub" style="margin-top:12px">' +
+                       '<a href="login-Beta.html" style="color:var(--status-border)">去登录 →</a></div>') +
+                   '<div class="np-locked-list">' +
+                     d.paid.map(function (a) { return '<div>' + esc(a.headline) + '</div>'; }).join('') +
+                   '</div>' +
+                 '</div>';
+        }
+
+        // ── 报尾 ──
+        h += '<div class="np-colophon">' +
+               '《NB报刊社》由 <b>NB频道</b> 出品 · HTML + CSS 手工打造 · 共' + total + '版<br>' +
+               '本报所有内容均为虚构，如有雷同，那大概是巧合' +
+             '</div></div></div>';
+
+        body.innerHTML = h;
+
+        document.getElementById('npBack').onclick = backToList;
+        var buy = document.getElementById('npBuy');
+        if (buy && !buy.disabled) buy.onclick = function () { doBuy(d.issue_no, buy); };
+    }
+
+    // 2026-10-10 → 2026 年 10 月 10 日
+    function npDate(s) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+        if (!m) return String(s || '');
+        return m[1] + ' 年 ' + parseInt(m[2], 10) + ' 月 ' + parseInt(m[3], 10) + ' 日';
+    }
+
+    function figureHtml(a) {
+        // 正文里填的是图片路径/链接 → 画真图
+        // ⚠️ 判断要严一点：「图 1：报刊社页面改版前后」这种说明文字
+        //    不能因为里面有个点就被当成文件名。
+        var src = String(a.body == null ? '' : a.body).trim();
+        var looksImg = /^(https?:\/\/|images\/|\/|\.\/|data:image\/)/i.test(src) &&
+                       /\.(png|jpe?g|gif|webp|svg|avif|bmp)(\?|#|$)/i.test(src);
+        // ⚠️ images/ 开头的要补成【根目录绝对路径】。
+        //    Beta 版页面在 /Beta/ 子目录里，相对路径会算成 /Beta/images/… → 404。
+        //    补成 /images/… 之后，根目录页和 Beta 页都能用。
+        if (looksImg && /^images\//i.test(src)) src = '/' + src;
+        if (looksImg) {
+            return '<figure class="np-figure">' +
+                     '<img class="np-figimg" src="' + esc(src) + '" alt="' +
+                       esc(a.headline || '插图') + '" loading="lazy">' +
+                     (a.headline ? '<figcaption>' + esc(a.headline) + '</figcaption>' : '') +
+                   '</figure>';
+        }
+        // 其它情况：还是虚线占位框（创刊号那篇就是这种）
+        return '<figure class="np-figure">' +
+                 '<div class="box">' + esc(a.body || '') + '</div>' +
+                 (a.headline ? '<figcaption>' + esc(a.headline) + '</figcaption>' : '') +
+               '</figure>';
+    }
+
+
+    function backToList() {
+        CUR = null;
+        setHash(VIEW === 'mine' ? '#/mine' : '#/' + VIEW);
+        if (VIEW === 'mine') renderMine(); else renderIssues();
+    }
+
+    function renderArticles(list) {
+        var arts = (list || []).filter(function (a) { return a.kind !== 'brief'; });
+        var briefs = (list || []).filter(function (a) { return a.kind === 'brief'; });
+        var h = '';
+        arts.forEach(function (a) {
+            h += '<article class="np-art">';
+            if (a.kind === 'figure') {
+                // 插图（假图片）：headline 是图注，body 是框里那句话
+                h += '<figure class="np-figure">' +
+                       '<div class="box">' +
+                         (a.tag ? '<span class="tag">' + esc(a.tag) + '</span><br>' : '') +
+                         esc(a.body || '') +
+                       '</div>' +
+                       (a.headline ? '<figcaption>' + esc(a.headline) + '</figcaption>' : '') +
+                     '</figure>';
+            } else if (a.kind === 'service') {
+                h += '<h3 class="np-h2">' + esc(a.headline) + '</h3>' +
+                     '<div class="np-service"><pre>' + npLinkify(a.body) + '</pre></div>';
+            } else if (a.subhead) {
+                h += '<h2 class="np-h1">' + esc(a.headline) + '</h2>' +
+                     '<div class="np-hsub">' + esc(a.subhead) + '</div>' +
+                     '<div class="np-cols">' + paras(a.body) + '</div>';
+            } else {
+                h += '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(a.tag) + '</span>' : '') +
+                     esc(a.headline) + '</h3>' +
+                     (a.body ? '<div class="np-cols">' + paras(a.body) + '</div>' : '');
+            }
+            h += '</article>';
+        });
+        if (briefs.length) {
+            h += '<div class="np-art"><div class="np-briefs">' +
+                 briefs.map(function (b) { return '<div>' + esc(b.headline) + '</div>'; }).join('') +
+                 '</div></div>';
+        }
+        return h;
+    }
+
+    /* ── 购买 ── */
+    function doBuy(no, btn) {
+        var u = me();
+        if (!u) { toast('请先登录', false); return; }
+        var old = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '正在扣款…';
+        rpc('buy_newspaper', { p_user_id: u.id, p_issue_no: no }).then(function (d) {
+            if (d && d.success) {
+                toast(d.message || '购买成功', true);
+                openIssue(no);
+            } else {
+                toast((d && d.message) || '购买失败', false);
+                btn.disabled = false; btn.textContent = old;
+            }
+        }).catch(function (e) {
+            toast('购买失败：' + e.message, false);
+            btn.disabled = false; btn.textContent = old;
+        });
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (b) {
+        b.onclick = function () {
+            Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            VIEW = b.getAttribute('data-view');
+            setHash(VIEW === 'mine' ? '#/mine' : '#/' + VIEW);
+            backToList();
+        };
+    });
+
+    /* ══════════════════════════════════════════════════════════
+       hash 路由 —— 让刷新 / 前进后退能停在同一期同一页
+           #/            各期（默认免费刊）
+           #/free        免费刊
+           #/paid        付费刊
+           #/mine        我拥有的报纸
+           #/issue/1     第 1 期
+           #/issue/1/2   第 1 期第 2 页
+       ══════════════════════════════════════════════════════════ */
+    var HASH_LOCK = false;      // 自己写 hash 时别触发 hashchange 重复渲染
+
+    function setHash(h) {
+        if (location.hash === h) return;
+        HASH_LOCK = true;
+        location.hash = h;
+        setTimeout(function () { HASH_LOCK = false; }, 60);
+    }
+
+    function pickTab(v) {
+        Array.prototype.forEach.call(document.querySelectorAll('.np-tab'), function (x) {
+            x.classList.toggle('active', x.getAttribute('data-view') === v);
+        });
+    }
+
+    function route() {
+        if (HASH_LOCK) return;
+        if (DRAFT_MODE && DRAFT_SHOWN) return;   // 草稿预览模式下不让路由顶掉画面
+        var h = (location.hash || '').replace(/^#\/?/, '');   // 去掉开头的 # 和 /
+        var seg = h.split('/').filter(function (x) { return x !== ''; });
+
+        // #/issue/N 或 #/issue/N/P
+        if (seg[0] === 'issue' && seg[1]) {
+            var no = parseInt(seg[1], 10);
+            if (!isNaN(no) && no > 0) {
+                if (CUR && CUR.issue_no === no) return;   // 已经在看这一期
+                openIssue(no);
+                return;
+            }
+        }
+
+        // #/free | #/paid | #/mine | 空
+        var v = (seg[0] === 'paid' || seg[0] === 'mine') ? seg[0] : 'free';
+        VIEW = v;
+        pickTab(v);
+        CUR = null;
+        if (v === 'mine') renderMine(); else renderIssues();
+    }
+
+    window.addEventListener('hashchange', route);
+
+
+    /* ══════════════════════════════════════════════════════════
+       草稿预览模式（后台「实时预览」用）
+           newspaper.html?draft=1
+       进入方式只有这一个：URL 上带 ?draft=1。正常访问完全不受影响。
+       ══════════════════════════════════════════════════════════ */
+    var DRAFT_MODE = /[?&]draft=1(&|$)/.test(location.search);
+
+    function draftPull() {
+        try { return JSON.parse(localStorage.getItem('nb_news_draft') || 'null'); }
+        catch (e) { return null; }
+    }
+
+    function draftRender(d) {
+        if (!d || typeof d !== 'object') return false;
+        try {
+            DRAFT_SHOWN = true;
+            VIEW = 'issue';
+            CUR = d;
+            drawIssue();
+            return true;
+        } catch (e) {
+            DRAFT_SHOWN = false;
+            return false;
+        }
+    }
+
+    var DRAFT_SHOWN = false;
+
+    if (DRAFT_MODE) {
+        // 预览里点什么都不该跳走 —— 拦掉所有链接点击
+        document.addEventListener('click', function (e) {
+            var a = e.target && e.target.closest && e.target.closest('a');
+            if (a) { e.preventDefault(); e.stopPropagation(); }
+        }, true);
+
+        // ① 先用 localStorage 里现成的（后台可能已经写过）
+        var d0 = draftPull();
+        if (d0) draftRender(d0);
+
+        // ② 后台每次改内容就 postMessage 过来
+        window.addEventListener('message', function (ev) {
+            var m = ev && ev.data;
+            if (m && m.type === 'nb-news-draft') draftRender(m.issue);
+        });
+
+        // ③ 后台若是写 localStorage，storage 事件会自动来（同源的话）
+        window.addEventListener('storage', function (ev) {
+            if (ev.key === 'nb_news_draft') { var d = draftPull(); if (d) draftRender(d); }
+        });
+
+    var __NB_DRAFT_CSS__ = "\n    /* ── 草稿预览模式：只留报纸本体，把站点外壳藏掉 ──\n       （后台那个 iframe 里要的是「这一期长什么样」，\n         不是又看一遍导航栏和快捷入口） */\n    html.__nb-draft .top-nav,\n    html.__nb-draft .quick-nav,\n    html.__nb-draft .hero,\n    html.__nb-draft .vhero,\n    html.__nb-draft .nav,\n    html.__nb-draft .drawer,\n    html.__nb-draft .site-footer,\n    html.__nb-draft .footer,\n    html.__nb-draft .beta-announce,\n    html.__nb-draft .author-info,\n    html.__nb-draft #nbAnnounce,\n    html.__nb-draft .np-head,\n    html.__nb-draft .np-tabs,\n    html.__nb-draft .np-list,\n    html.__nb-draft .np-hero,\n    html.__nb-draft .wx-fab,\n    html.__nb-draft #backTop,\n    html.__nb-draft .float-tip { display: none !important; }\n\n    /* 收紧外层留白，让报纸占满 */\n    html.__nb-draft body { padding-top: 0 !important; margin: 0 !important; }\n    html.__nb-draft .container,\n    html.__nb-draft .np-main,\n    html.__nb-draft main { max-width: 100% !important; margin: 0 !important; padding: 8px !important; }\n\n    /* 只留报纸本体 */\n    html.__nb-draft .np-wrap { margin: 0 auto !important; }\n\n    /* 预览里不该有滚动条抢戏，给个细的 */\n    html.__nb-draft ::-webkit-scrollbar { width: 8px; height: 8px; }\n    html.__nb-draft ::-webkit-scrollbar-thumb { background: rgba(120,140,170,.45); border-radius: 8px; }\n";
+
+        // ④ 站在预览模式就别让正常路由把画面顶掉
+        window.addEventListener('hashchange', function (e) {
+            if (DRAFT_SHOWN) { e.stopPropagation(); }
+        }, true);
+
+        // ⑤ 藏掉站点外壳 —— 预览里要的是「这一期长什么样」，
+        //    不是又看一遍导航栏和快捷入口（站长截图反馈过）
+        document.documentElement.classList.add('__nb-draft');
+        (function () {
+            var st = document.createElement('style');
+            st.id = 'nbDraftCss';
+            st.textContent = __NB_DRAFT_CSS__;
+            (document.head || document.documentElement).appendChild(st);
+        })();
+    }
+
+    /* 初始路由 —— 这里踩过坑，别改回直接 route()：
+       刷新一个带 hash 的页面时，浏览器【有时在脚本跑完之后】才把 hash 恢复回去，
+       那时 route() 看到的是空 hash，就会渲染成列表页；而「恢复」本身不会触发
+       hashchange，于是就永远停在列表页上了（站长报的「刷新回选期页」就是它）。
+
+       所以：先等一拍再路由，load 之后再补一次；hashchange 照常监听。 */
+    setTimeout(route, 0);
+    window.addEventListener('load', route);
+    setTimeout(route, 400);
+})();
+</script>
+</body>
+</html>
