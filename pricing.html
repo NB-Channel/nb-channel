@@ -311,111 +311,62 @@
 <h2>模型细节</h2>
 <table class="price-table">
     <thead>
-        <tr>
-            <th>项目</th>
-            <th>MiniMax M3.1 Flash</th>
-            <th>Step 5 Preview</th>
-            <th>Nemotron 3.5 Lightning</th>
-        </tr>
+        <tr><th>项目</th><th>说明</th></tr>
     </thead>
     <tbody>
-        <tr><td><strong>模型 ID</strong></td><td><code>minimaxai/minimax-m3.1-flash</code></td><td><code>stepfun-ai/step-5-preview</code></td><td><code>nvidia/nemotron-3.5-lightning-30b-a3b</code></td></tr>
-        <tr><td><strong>接入方式</strong></td><td colspan="3">站内 AI 页面（<a href="ai.html">ai.html</a>）· OpenAI 兼容格式</td></tr>
-        <tr><td><strong>思考模式</strong></td><td colspan="3">支持 · 滑档切换 Off / Minimal / Low / Medium / High / XHigh / Max</td></tr>
-        <tr><td><strong>输出长度</strong></td><td colspan="3">最大 4096 tokens</td></tr>
-        <tr><td><strong>联网搜索</strong></td><td colspan="3">支持 · 用 Bing 的 RSS 输出，<strong>免费</strong></td></tr>
-        <tr><td><strong>站内数据库</strong></td><td colspan="3">支持 · 报纸 / 道具 / 称号 / 成就 / 公司 / 行情 / 投票 / 天气 / 小黑屋 · <strong>免费</strong></td></tr>
-        <tr><td><strong>多轮对话</strong></td><td colspan="3">支持 · 每次对话最多 100 轮</td></tr>
-        <tr><td><strong>每日次数</strong></td><td colspan="3">每人 5 次 / 天（内测期间管理员 200 次）</td></tr>
-        <tr><td><strong>并发限制</strong></td><td colspan="3">全站 300 次 / 天</td></tr>
+        <tr><td><strong>可选模型</strong></td><td>7 个，分四组：DeepSeek / 智谱 GLM / 通义千问 / 其它</td></tr>
+        <tr><td><strong>接入方式</strong></td><td>站内 AI 页面 · OpenAI 兼容格式</td></tr>
+        <tr><td><strong>思考模式</strong></td><td>滑块 7 档（None / Minimal / Low / Medium / High / XHigh / Max）<br>DeepSeek V4.1 Flash 多一档 <strong>Ultra</strong>（共 8 档）</td></tr>
+        <tr><td><strong>输出长度</strong></td><td>最大 4096 tokens</td></tr>
+        <tr><td><strong>联网搜索</strong></td><td>支持 · 每次最多 10 条结果 · <strong>免费</strong></td></tr>
+        <tr><td><strong>站内数据库</strong></td><td>报纸 / 道具 / 称号 / 成就 / 公司 / 行情 / 投票 / 天气 / 小黑屋 · <strong>免费</strong></td></tr>
+        <tr><td><strong>多轮对话</strong></td><td>支持 · 每次对话最多 100 轮 · 保留最近 20 个对话</td></tr>
+        <tr><td><strong>每日次数</strong></td><td>每人 5 次 / 天（内测期管理员 200 次）</td></tr>
+        <tr><td><strong>余额门槛</strong></td><td>NB 币 ≤ 0 时无法提问</td></tr>
     </tbody>
 </table>
 
 <h2>价格</h2>
-<p>单价 = <strong>基础价 10 NB币 / 1000 token</strong> × 模型倍率。输入和输出合并计算。</p>
+<p>单价 = <strong>基础价 500 NB币 / 1000 token</strong> × 模型倍率。输入和输出合并计算。</p>
 <table class="price-table">
     <thead>
-        <tr>
-            <th>模型</th>
-            <th>倍率</th>
-            <th>每 1000 token</th>
-            <th>一句普通问题（约 4400 token）</th>
-        </tr>
+        <tr><th>模型</th><th>跑在哪</th><th>倍率</th><th>每 1000 token</th><th>一句普通问题<br><span class="price-note">约 4400 token</span></th></tr>
     </thead>
     <tbody>
-        <tr><td><strong>Step 5 Preview</strong><br><span class="price-note">最快最便宜</span></td><td>0.7×</td><td><strong>7 NB币</strong></td><td>约 31 NB币</td></tr>
-        <tr><td><strong>MiniMax M3.1 Flash</strong><br><span class="price-note">默认 · 均衡</span></td><td>1.0×</td><td><strong>10 NB币</strong></td><td>约 44 NB币</td></tr>
-        <tr><td><strong>Nemotron 3.5 Lightning</strong><br><span class="price-note">思考最多 · 适合难题</span></td><td>1.5×</td><td><strong>15 NB币</strong></td><td>约 66 NB币</td></tr>
+        <tr><td><strong>DeepSeek V4.1 Flash</strong><br><span class="price-note">推荐 · 最快</span></td><td>魔搭</td><td>1.0×</td><td><strong>500 NB币</strong></td><td>约 2200 NB币</td></tr>
+        <tr><td><strong>Qwen3.8 Flash Next</strong><br><span class="price-note">通义 · 便宜</span></td><td>魔搭</td><td>1.0×</td><td><strong>500 NB币</strong></td><td>约 2200 NB币</td></tr>
+        <tr><td><strong>GLM-5.2</strong><br><span class="price-note">智谱旗舰 · 想得多</span></td><td>魔搭</td><td>1.2×</td><td><strong>600 NB币</strong></td><td>约 2640 NB币</td></tr>
+        <tr><td><strong>Step 5 Preview</strong><br><span class="price-note">最快 · 赶时间</span></td><td>NVIDIA</td><td>1.2×</td><td><strong>600 NB币</strong></td><td>约 2640 NB币</td></tr>
+        <tr><td><strong>Nemotron 3.5 Lightning</strong><br><span class="price-note">想得最细 · 难题</span></td><td>NVIDIA</td><td>1.2×</td><td><strong>600 NB币</strong></td><td>约 2640 NB币</td></tr>
+        <tr><td><strong>DeepSeek V4 Pro</strong><br><span class="price-note">更强 · 贵一点</span></td><td>魔搭</td><td>1.5×</td><td><strong>750 NB币</strong></td><td>约 3300 NB币</td></tr>
+        <tr><td><strong>MiniMax M3.1 Flash</strong><br><span class="price-note">均衡 · 默认</span></td><td>NVIDIA</td><td>1.5×</td><td><strong>750 NB币</strong></td><td>约 3300 NB币</td></tr>
     </tbody>
 </table>
 
 <h2>网页搜索</h2>
 <table class="price-table">
-    <thead>
-        <tr><th>能力</th><th>计费单位</th><th>价格</th></tr>
-    </thead>
+    <thead><tr><th>能力</th><th>计费单位</th><th>价格</th></tr></thead>
     <tbody>
-        <tr><td>联网搜索</td><td>每次请求</td><td><strong>免费</strong>（走 Bing 的 RSS 输出，不花钱）</td></tr>
-        <tr><td>站内数据库查询</td><td>每次请求</td><td><strong>免费</strong>（查报纸 / 道具 / 行情 / 天气等）</td></tr>
-        <tr><td>站内小知识检索</td><td>每次请求</td><td><strong>免费</strong>（799 条理科小知识）</td></tr>
+        <tr><td>联网搜索</td><td>每次请求</td><td><strong>免费</strong>（Bing 的 RSS 输出，最多 10 条）</td></tr>
+        <tr><td>站内数据库查询</td><td>每次请求</td><td><strong>免费</strong></td></tr>
+        <tr><td>站内小知识检索</td><td>每次请求</td><td><strong>免费</strong>（799 条）</td></tr>
     </tbody>
 </table>
 
 <h2>扣费规则</h2>
 <ul class="price-rules">
     <li>模型调用费用 = <strong>token 消耗量 × 模型单价</strong>；搜索和数据库查询免费。</li>
-    <li><strong>答完再扣</strong>：等模型输出结束后，用真实的 token 用量结算。</li>
+    <li><strong>答完再扣</strong>：等输出结束后，用真实的 token 用量结算。</li>
     <li><strong>中断也扣</strong>：手动停止或中途断开，按已经生成的内容结算。</li>
-    <li>余额可以直接扣成<strong>负数</strong>，下次赚到 NB 币会自动补上。</li>
-    <li>内测期间<strong>管理员免扣</strong>。</li>
+    <li><strong>余额 ≤ 0 不能提问</strong>：想继续用先去赚 NB 币。</li>
+    <li>最低消费 <strong>1 NB币</strong>；内测期间<strong>管理员免扣</strong>。</li>
     <li>价格可能调整，以本页面为准。</li>
 </ul>
 
-
-
-
-<style>
-.price-page h2 { margin-top: 28px; }
-.price-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 14px 0 6px;
-    font-size: 0.92rem;
-    background: var(--card-bg, #fff);
-}
-.price-table th,
-.price-table td {
-    border: 1px solid var(--count-border, #e5e9ef);
-    padding: 10px 12px;
-    text-align: center;
-    vertical-align: middle;
-}
-.price-table thead th {
-    background: var(--count-bg, #f6f8fb);
-    font-weight: 600;
-}
-.price-table tbody td:first-child { text-align: center; }
-.price-table code {
-    font-size: 0.82rem;
-    background: var(--count-bg, #f6f8fb);
-    padding: 1px 5px;
-    border-radius: 4px;
-    word-break: break-all;
-}
-.price-note {
-    display: block;
-    font-size: 0.76rem;
-    color: var(--count-text, #7b8794);
-    margin-top: 2px;
-}
-.price-rules { padding-left: 22px; line-height: 1.9; }
-.price-rules li { margin: 4px 0; }
-@media (max-width: 700px) {
-    .price-table { font-size: 0.8rem; }
-    .price-table th, .price-table td { padding: 7px 6px; }
-}
-</style>
-
+<div class="hero-btns" style="margin-top:24px;">
+    <a class="hero-btn" href="ai.html">去用 AI</a>
+    <a class="hero-btn ghost" href="index.html">回首页</a>
+</div>
 
 </div>
 
