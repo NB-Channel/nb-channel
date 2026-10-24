@@ -3828,7 +3828,10 @@ function webOn() {
                                 var li = document.createElement('li');
                                 if (_ws[wi].u) {
                                     var a = document.createElement('a');
-                                    a.setAttribute('href', _ws[wi].u);
+                                    var _u = String(_ws[wi].u || '');
+                                if (/^https?:\/\//i.test(_u)) {
+                                    a.setAttribute('href', _u);
+                                }
                                     a.setAttribute('target', '_blank');
                                     a.setAttribute('rel', 'noopener noreferrer');
                                     a.textContent = _ws[wi].t;
