@@ -1,0 +1,262 @@
+/* ============================================================
+NB频道 - 经典模式皮肤（html.classic 时生效）
+尽量还原旧版界面观感：浅色背景、白卡片、无毛玻璃、无特效
+用法：<html class="classic"> 时本文件覆盖 ui-new.css 的效果
+============================================================ */
+
+/* ===== 1. 背景：去掉光斑/渐变，还原纯浅灰 ===== */
+html.classic body {
+    background: #f6f7f9 !important;
+}
+html.classic body::before {
+    display: none !important;   /* 隐藏背景光斑 */
+}
+html.classic .ui-orb {
+    display: none !important;   /* 隐藏浮动光球 */
+}
+
+/* ===== 2. 卡片：去掉毛玻璃，还原纯白/浅色实底 ===== */
+html.classic .home-card,
+html.classic .about-content,
+html.classic .changelog-content,
+html.classic .comment-section,
+html.classic .product-card,
+html.classic .upload-section,
+html.classic .info-card,
+html.classic .chat-container,
+html.classic .messages-container,
+html.classic .profile-container,
+html.classic .records-container,
+html.classic .ach-container,
+html.classic .register-card,
+html.classic .login-card,
+html.classic .balance-card,
+html.classic .my-company-card,
+html.classic .distribution-card,
+html.classic .chart-wrapper,
+html.classic .canvas-container,
+html.classic .data-table-wrapper,
+html.classic .toolbar,
+html.classic .stats {
+    background: #ffffff !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border: 1px solid #e5e9ef !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+    border-radius: 12px !important;
+}
+
+/* 小型元素还原纯色 */
+html.classic .comment,
+html.classic .video-card,
+html.classic .ach-card,
+html.classic .record-item,
+html.classic .notification-item,
+html.classic .stat-card,
+html.classic .stat-item,
+html.classic .feature-card,
+html.classic .msg.other .bubble,
+html.classic .slider-container {
+    background: #ffffff !important;
+    border-color: #e5e9ef !important;
+}
+
+/* ===== 3. 导航：还原旧版三行导航观感 ===== */
+/* 旧版 = nav-container(居中多行, 灰按钮, 蓝hover) */
+html.classic .top-nav {
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    position: static !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 0 !important;
+    margin-bottom: 20px !important;
+}
+html.classic .top-nav .nav-logo {
+    display: none !important;   /* 旧版顶部是大标题,不是logo */
+}
+html.classic .top-nav .nav-right {
+    display: none !important;   /* 旧版登录按钮在别处 */
+}
+html.classic .top-nav .nav-menu {
+    display: flex !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 15px !important;
+    width: 100% !important;
+}
+html.classic .top-nav .nav-menu .nav-btn {
+    background: #e0e0e0 !important;
+    color: #333 !important;
+    border-radius: 30px !important;
+    padding: 10px 25px !important;
+    font-size: 1.1rem !important;
+    min-width: 90px !important;
+}
+html.classic .top-nav .nav-menu .nav-btn:hover {
+    background: #00a1d6 !important;
+    color: #fff !important;
+}
+html.classic .top-nav .nav-menu .nav-btn.active {
+    background: #00a1d6 !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+/* quick-nav 还原为旧版第二三行功能链接 */
+html.classic .quick-nav {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 15px !important;
+    padding: 0 !important;
+    margin-bottom: 12px !important;
+}
+html.classic .quick-nav > span {
+    display: none !important;   /* 隐藏"⚡ 快捷入口："标签 */
+}
+html.classic .quick-nav .nav-btn {
+    background: #e0e0e0 !important;
+    color: #333 !important;
+    border-radius: 30px !important;
+    padding: 10px 25px !important;
+    font-size: 1.1rem !important;
+    min-width: 90px !important;
+}
+html.classic .quick-nav .nav-btn:hover {
+    background: #00a1d6 !important;
+    color: #fff !important;
+}
+html.classic .quick-nav .share-btn {
+    background: #00a1d6 !important;
+    border-radius: 30px !important;
+    box-shadow: none !important;
+    padding: 10px 25px !important;
+    font-size: 1.1rem !important;
+    min-width: 90px !important;
+}
+html.classic .quick-nav .share-btn:hover {
+    transform: none !important;
+}
+
+/* ===== 4. 首页组件：隐藏 hero/数据条/功能卡片/友商网格（旧版首页没有） ===== */
+html.classic .hero {
+    display: none !important;
+}
+html.classic .stat-bar {
+    display: none !important;
+}
+html.classic .feature-grid {
+    display: none !important;
+}
+html.classic .friend-grid {
+    display: none !important;
+}
+html.classic #uiPageBanner {
+    display: none !important;
+}
+
+/* ===== 4.5 首页还原：显示旧版首页结构（被新UI JS隐藏的元素恢复） ===== */
+html.classic .container > h1 {
+    display: block !important;
+    text-align: center !important;
+    margin: 20px 0 10px !important;
+    color: #00a1d6 !important;
+    font-size: 2rem !important;
+}
+html.classic #authorInfo {
+    display: block !important;
+    text-align: center !important;
+    margin: 4px 0 20px !important;
+    color: #666 !important;
+    font-size: 1rem !important;
+}
+html.classic .video-container {
+    display: block !important;
+    margin-bottom: 20px !important;
+}
+html.classic .home-row {
+    display: flex !important;
+    gap: 20px !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 20px !important;
+}
+html.classic .home-card {
+    flex: 1 1 45% !important;
+    min-width: 280px !important;
+}
+html.classic .stats-container {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 20px !important;
+    margin-top: 20px !important;
+    font-size: 0.9rem !important;
+    color: #666 !important;
+}
+/* 旧版公告栏 */
+html.classic .announcement-bar {
+    display: block !important;
+}
+
+/* ===== 5. 动画/特效：关闭 ===== */
+html.classic .ui-reveal,
+html.classic .ui-reveal-in {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+}
+html.classic * {
+    animation: none !important;
+}
+
+/* ===== 6. 圆角还原（新UI偏圆，旧版偏方） ===== */
+html.classic .comment,
+html.classic .video-card,
+html.classic .ach-card,
+html.classic .record-item,
+html.classic .notification-item,
+html.classic .stat-card,
+html.classic .feature-card,
+html.classic .msg.other .bubble {
+    border-radius: 8px !important;
+}
+html.classic input,
+html.classic textarea,
+html.classic select {
+    border-radius: 4px !important;
+}
+html.classic button:not(.nav-btn) {
+    border-radius: 4px !important;
+}
+
+/* ===== 7. 页面主标题还原（h1 强制显示,旧版样式） ===== */
+html.classic .container h1,
+html.classic .bank-container h1,
+html.classic .profile-container h1,
+html.classic .title-container h1,
+html.classic .shop-container h1,
+html.classic .bp-container h1,
+html.classic .records-container h1,
+html.classic .ach-container h1,
+html.classic .register-card h1,
+html.classic .login-card h1,
+html.classic .chat-container h1,
+html.classic .messages-container h1,
+html.classic .about-content h1,
+html.classic .changelog-content h1,
+html.classic .product-container h1 {
+    display: block !important;
+    text-align: center !important;
+    margin: 0 0 10px !important;
+    color: #00a1d6 !important;
+    font-size: 1.8rem !important;
+    font-weight: 700 !important;
+}

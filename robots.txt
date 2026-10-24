@@ -1,0 +1,17 @@
+# NB频道 · robots.txt
+# 不允许收录的路径
+
+User-agent: *
+Allow: /
+Disallow: /archive/
+Disallow: /legacy/
+Disallow: /classic-legacy/
+Disallow: /classic-skin/
+Disallow: /Beta/qr-
+Disallow: /Beta/scan-Beta.html
+Disallow: /Beta/scan.html
+Disallow: /sql/
+
+# 后台页面已经从仓库移除，这里留一条防止旧缓存被索引
+Disallow: /Website%20backend.html
+Disallow: /Website backend.html

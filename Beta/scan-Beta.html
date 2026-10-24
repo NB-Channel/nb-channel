@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<script>
+/* ===== 跨子域名登录态同步（github. / cloudflare. / pythonanywhere. 之间互通）=====
+   localStorage 是按 origin 隔离的，两个子域名各存各的，所以要借 Cookie 中转。
+   Cookie 设 Domain=.nb-channel.top，所有子域名都能读到。
+
+   这里不改页面原本的任何代码 —— 而是劫持 localStorage 的读写：
+     · 页面登录时 setItem('nb_session', ...)  → 顺手写一份到 Cookie
+     · 页面登出时 removeItem('nb_session')    → 顺手把 Cookie 清掉
+     · 页面加载时 Cookie 有、本地没有          → 自动注入进 localStorage
+   所以那 57 处登录/登出代码一行都不用动。
+
+   ⚠️ 这意味着 *.nb-channel.top 下任何一个子域名都能读到这个令牌，
+      包括 product-storage 那个 Workers。将来新增子域名前先想清楚这件事。 */
+(function () {
+    try {
+        var KEY_S = 'nb_session', KEY_U = 'nb_user';
+        var DOMAIN = '.nb-channel.top';
+        var MAXAGE = 30 * 86400;
+
+        // 只在 .nb-channel.top 域下才启用（本地开文件、或别的域名访问时保持原样）
+        // ⚠️ 2026-10-16 放宽：原来只认 nb-channel.top，
+        //    但 pythonanywhere.nb-channel.top 会【302 跳到】nbchannel.pythonanywhere.com，
+        //    pages.dev / github.io 也是常用入口 —— 那几个域名下这个补丁原本整个不生效。
+        if (!/(^|\.)nb-channel\.top$/.test(location.hostname) &&
+            location.hostname !== 'nbchannel.pythonanywhere.com' &&
+            location.hostname !== 'nb-channel.pages.dev' &&
+            location.hostname !== 'nb-channel.github.io') return;
+
+        function readCookie(n) {
+            var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        }
+        function writeCookie(n, v) {
+            document.cookie = n + '=' + encodeURIComponent(v) + ';path=/;domain=' + DOMAIN +
+                              ';max-age=' + MAXAGE + ';SameSite=Lax' +
+                              (location.protocol === 'https:' ? ';Secure' : '');
+        }
+        function dropCookie(n) {
+            document.cookie = n + '=;path=/;domain=' + DOMAIN + ';max-age=0;SameSite=Lax' +
+                              (location.protocol === 'https:' ? ';Secure' : '');
+        }
+
+        // ---- ① 页面加载时双向对齐 ----
+        [KEY_S, KEY_U].forEach(function (k) {
+            var c = readCookie(k), l = null;
+            try { l = localStorage.getItem(k); } catch (e) {}
+            if (l) {
+                if (l !== c) writeCookie(k, l);            // 本地有 → 同步出去
+            } else if (c) {
+                try { localStorage.setItem(k, c); } catch (e) {}   // 本地没有 → 采用 Cookie
+            }
+        });
+
+        // ---- ①.5 验一下令牌还活着没有（2026-10-16 补）----
+        // ⚠️ 退出登录之后，【别的子域名】的 localStorage 里可能还留着旧令牌。
+        //    上面那一步会把 Cookie 里的值注入回来，而它不验有效性 ——
+        //    于是一个已经退掉的令牌会被反复复活，页面以为「已登录」，
+        //    不显示登录入口，看着就像「退登之后登不回来」。
+        //    这里补一步：拿令牌去调一个需要会话的接口，鉴权失败就把两边都清干净。
+        setTimeout(function () {
+            var tok = null, u = null;
+            try { tok = localStorage.getItem(KEY_S); } catch (e) {}
+            try { u = JSON.parse(localStorage.getItem(KEY_U) || 'null'); } catch (e) {}
+            if (!tok || !u || !u.id) return;
+            fetch('https://pbaafgjkwdbwcmsikcmg.supabase.co/rest/v1/rpc/get_checkin_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg',
+                    'Authorization': 'Bearer sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+                },
+                body: JSON.stringify({ p_user_id: u.id, p_session: tok })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                var msg = (d && d.message) || '';
+                // 只有明确说「鉴权失败 / 会话无效」才动手 ——
+                // 其它错误（比如称号没查到）不能当令牌失效处理
+                if (d && d.success === false && /鉴权|会话/.test(msg)) {
+                    try { localStorage.removeItem(KEY_S); localStorage.removeItem(KEY_U); } catch (e) {}
+                    try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+                    setTimeout(function () { location.reload(); }, 60);
+                }
+            }).catch(function () {});
+        }, 1200);
+
+        // ---- ② 劫持写入：登录时同步到 Cookie ----
+        var _set = localStorage.setItem;
+        localStorage.setItem = function (k, v) {
+            try { if ((k === KEY_S || k === KEY_U) && v) writeCookie(k, v); } catch (e) {}
+            return _set.call(localStorage, k, v);
+        };
+
+        // ---- ③ 劫持删除：登出时同步清 Cookie ----
+        var _rm = localStorage.removeItem;
+        localStorage.removeItem = function (k) {
+            try { if (k === KEY_S || k === KEY_U) dropCookie(k); } catch (e) {}
+            return _rm.call(localStorage, k);
+        };
+
+        // ---- ④ 万一有人用 clear() ----
+        var _cl = localStorage.clear;
+        localStorage.clear = function () {
+            try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+            return _cl.call(localStorage);
+        };
+    } catch (e) {}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f172a">
+<title>扫一扫 - NB频道</title>
+<script>
+    (function () {
+        try {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #f7f8fa; --ink: #1a1d23; --ink-soft: #5a6270; --ink-faint: #8b93a3;
+    --line: #e8eaee; --brand: #3b82f6; --card: #ffffff;
+    --radius-lg: 20px; --radius-md: 14px;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+}
+html.dark { color-scheme: dark;
+    --bg: #0a101f; --ink: #e5eaf3; --ink-soft: #9aa7bd; --ink-faint: #64748b;
+    --line: rgba(148,163,184,.16); --card: #101a2e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+}
+body {
+    background: var(--bg); color: var(--ink); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust: 100%;
+}
+.wrap { width: 100%; max-width: 420px; }
+.brand { display: flex; align-items: center; gap: 9px; justify-content: center; margin-bottom: 18px; }
+.brand .dot {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: #fff; font-weight: 800; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+}
+.brand b { font-size: 1.05rem; letter-spacing: .5px; }
+.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1); padding: 26px 20px; text-align: center;
+}
+.ico { font-size: 3.4rem; line-height: 1; margin-bottom: 14px; }
+h1 { font-size: 1.16rem; margin-bottom: 8px; }
+.sub { font-size: .88rem; color: var(--ink-soft); line-height: 1.9; }
+button {
+    width: 100%; border: none; border-radius: 999px; padding: 15px 18px;
+    font-size: 1.02rem; font-weight: 700; font-family: inherit; cursor: pointer;
+    margin-top: 20px; transition: transform .15s ease;
+}
+button:active { transform: translateY(1px); }
+.btn-main { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+            box-shadow: 0 10px 24px -10px rgba(59,130,246,.7); }
+.btn-ghost { background: transparent; color: var(--ink-soft);
+             border: 1px solid var(--line); margin-top: 10px; font-weight: 600; }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+.warn {
+    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.32);
+    color: #b45309; border-radius: var(--radius-md); text-align: left;
+    padding: 12px 15px; font-size: .85rem; line-height: 1.9; margin-top: 18px;
+}
+html.dark .warn { color: #fbbf24; }
+.info {
+    background: rgba(59,130,246,.10); border: 1px solid rgba(59,130,246,.30);
+    color: #1d4ed8; border-radius: var(--radius-md); text-align: left;
+    padding: 12px 15px; font-size: .85rem; line-height: 1.9; margin-top: 18px;
+}
+html.dark .info { color: #93c5fd; }
+.foot { text-align: center; font-size: .74rem; color: var(--ink-faint); margin-top: 18px; line-height: 1.8; }
+.hide { display: none !important; }
+.log {
+    font-family: ui-monospace, Consolas, monospace; font-size: .78rem;
+    color: var(--ink-faint); margin-top: 14px; word-break: break-all;
+    line-height: 1.7; text-align: left; max-height: 120px; overflow-y: auto;
+}
+</style>
+<!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
+<link rel="stylesheet" href="../css/themes.css?v=35">
+<script src="../js/theme.js?v=9"></script>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="brand"><span class="dot">NB</span><span><b>NB频道</b></span></div>
+
+    <!-- 在 APP 里、且 APP 支持扫码 -->
+    <div class="card hide" id="pApp">
+        <div class="ico">📷</div>
+        <h1>扫一扫</h1>
+        <p class="sub">
+            对准电脑上那个二维码扫一下。<br>
+            扫到之后会自动打开对应的页面。
+        </p>
+        <button class="btn-main" id="btnScan">开始扫码</button>
+        <button class="btn-ghost" onclick="location.href='index-Beta.html'">返回首页</button>
+
+        <div class="info">
+            这个按钮只有 NB频道 APP 里才有 —— 网页版没法调摄像头。
+        </div>
+        <div class="log hide" id="logBox"></div>
+    </div>
+
+    <!-- 在 APP 里，但 APP 版本太旧（还没有扫码能力） -->
+    <div class="card hide" id="pOldApp">
+        <div class="ico">⬆️</div>
+        <h1>更新 APP 才能用扫一扫</h1>
+        <p class="sub" style="margin-bottom:6px;">
+            你现在用的 <b>NB频道 APP</b> 版本比较旧，还没有扫码能力。<br>
+            更新一次就能用了 —— <b>签名没变，可以直接覆盖安装</b>，数据不会丢。
+        </p>
+        <div class="info">
+            更新方法：APP 首页底部会自动出现蓝色更新条，点「立即更新」即可；<br>
+            也可以去「我的 → 关于」里手动检查更新。
+        </div>
+        <button class="btn-main" onclick="location.href='index-Beta.html'">回首页更新</button>
+    </div>
+
+    <!-- 不在 APP 里（真的手机浏览器） -->
+    <div class="card hide" id="pWeb">
+        <div class="ico">📱</div>
+        <h1>请在 APP 里用「扫一扫」</h1>
+        <p class="sub" style="margin-bottom:6px;">
+            你现在用的是手机浏览器，<b>浏览器没有扫码能力</b> ——
+            安卓和 iOS 都没给网页开放稳定的摄像头扫码接口。<br>
+            NB频道 APP 里内置了扫一扫。
+        </p>
+        <div class="warn">
+            不想装 APP 的话也有别的办法：<br>
+            · 用<b>手机自带相机</b>扫（如果你的相机 App 带扫码功能）<br>
+            · 或者让电脑那边直接给你一个链接，点开就行
+        </div>
+        <button class="btn-main" onclick="location.href='download/index.html'">下载 NB频道 APP</button>
+        <button class="btn-ghost" onclick="location.href='index-Beta.html'">返回首页</button>
+    </div>
+
+    <div class="foot">NB频道 · 扫一扫</div>
+</div>
+
+<script>
+/* ============================================================
+   扫一扫
+   ------------------------------------------------------------
+   什么时候能扫：只有在 NB频道 APP 里才调得动摄像头。
+   网页版（手机浏览器）没有扫描能力 —— 安卓/iOS 都没给网页开放
+   摄像头扫码的稳定接口，所以这个功能只能放原生侧。
+
+   原生那边（MainActivity.java）暴露的是 window.NBQr：
+       window.NBQr.available()  → true
+       window.NBQr.scan()       → 开摄像头
+     扫完原生会调 window.__nbQrResult(ok, data)
+
+   ⚠️ 安全：扫到的内容可能是任意字符串，有可能是恶意二维码。
+      绝不能拿到就直接 location.href —— 那等于让任何二维码都能把
+      APP 里的用户带到钓鱼站，而且是在 APP 的 WebView 里，看起来很像真的。
+      所以下面有一道【域名白名单】，只认我们自己的域名。
+   ============================================================ */
+(function () {
+    'use strict';
+
+    var el = function (id) { return document.getElementById(id); };
+    var scanning = false;
+
+    function log(msg) {
+        var b = el('logBox');
+        if (!b) return;
+        b.classList.remove('hide');
+        b.textContent = msg;
+    }
+
+    function inApp() {
+        try { return /NBChannelApp/i.test(navigator.userAgent || ''); } catch (e) { return false; }
+    }
+    // 能不能扫：靠原生桥 window.NBQr。旧版 APP 里没有这个桥。
+    function canScan() {
+        try {
+            return !!(window.NBQr && typeof window.NBQr.available === 'function' && window.NBQr.available());
+        } catch (e) { return false; }
+    }
+
+    function show(id) {
+        ['pApp', 'pOldApp', 'pWeb'].forEach(function (p) {
+            var el2 = el(p);
+            if (el2) el2.classList.toggle('hide', p !== id);
+        });
+    }
+
+    // ⭐ 只允许我们自己的域名。别的域名一律拒绝。
+    //   允许的：xxx.nb-channel.top / nb-channel.pages.dev / nbchannel.pythonanywhere.com
+    var ALLOW = [
+        /^https:\/\/([a-z0-9-]+\.)?nb-channel\.top(\/|$)/i,
+        /^https:\/\/([a-z0-9-]+\.)?nb-channel\.pages\.dev(\/|$)/i,
+        /^https:\/\/nbchannel\.pythonanywhere\.com(\/|$)/i
+    ];
+    function allowed(url) {
+        for (var i = 0; i < ALLOW.length; i++) if (ALLOW[i].test(url)) return true;
+        return false;
+    }
+
+    function onResult(ok, data) {
+        scanning = false;
+        var btn = el('btnScan');
+        if (btn) { btn.disabled = false; btn.textContent = '开始扫码'; }
+
+        if (!ok) {
+            if (data === 'cancelled') { log('已取消'); return; }
+            log('扫码失败：' + data);
+            alert('扫码失败：' + data);
+            return;
+        }
+        var text = String(data || '').trim();
+        log('扫到：' + text);
+
+        if (!allowed(text)) {
+            alert('这个二维码不是 NB频道 的，已忽略。\n\n' + text.slice(0, 120));
+            return;
+        }
+        // 白名单过了才跳
+        location.href = text;
+    }
+
+    function startScan() {
+        if (scanning) return;
+        if (!canScan()) { route(); return; }
+        scanning = true;
+        var btn = el('btnScan');
+        btn.disabled = true;
+        btn.textContent = '正在打开摄像头…';
+        window.__nbQrResult = onResult;
+        try {
+            window.NBQr.scan();
+        } catch (e) {
+            scanning = false;
+            btn.disabled = false;
+            btn.textContent = '开始扫码';
+            alert('打不开摄像头：' + ((e && e.message) || e));
+        }
+    }
+
+    // 三种情况分开处理 —— 别把「旧版 APP」误判成「手机浏览器」，
+    // 那样用户会一脸懵：我明明在 APP 里，怎么说我是浏览器。
+    function route() {
+        if (canScan()) {                         // ① APP 且支持扫码
+            show('pApp');
+            var b = el('btnScan');
+            if (b && !b.__bound) { b.__bound = true; b.addEventListener('click', startScan); }
+            return;
+        }
+        if (inApp()) { show('pOldApp'); return; } // ② APP 但太旧（没有 window.NBQr）
+        show('pWeb');                             // ③ 真的在手机浏览器里
+    }
+
+    // 等原生桥就绪 —— addJavascriptInterface 是页面加载前就注入好的，
+    // 但 WebView 里脚本执行的时机偶尔会早一点点，所以轮询几次更稳
+    var n = 0;
+    (function wait() {
+        if (canScan()) { route(); return; }
+        if (n++ > 20) { route(); return; }
+        setTimeout(wait, 100);
+    })();
+})();
+</script>
+
+<!--
+  ══════════════════════════════════════════════════════════════════
+   NB-CHANNEL ORIGINAL · 本页面由 NB频道 原创制作
+   构建指纹 NBC-20261001-120396C03193
+   官方域名 nb-channel.top （github. / cloudflare. / edgeone. / pythonanywhere.）
+   如果你在其他域名看到本页，说明该站点未经授权复制了 NB频道 的内容，
+   欢迎举报：nbchannel@163.com
+  ══════════════════════════════════════════════════════════════════
+-->
+
+<script>/* 构建元信息（请勿删除，侵权取证用） */
+(function () {
+    try {
+        var _nb = "TkJDLTIwMjYxMDAxLTEyMDM5NkMwMzE5Mw";
+        if (typeof window !== "undefined") window.__nbBuild = _nb;
+    } catch (e) {}
+})();
+</script>
+<script defer src="../js/science-tips.js?v=26"></script>
+<script src="../js/pomodoro.js?v=7" defer></script>
+</body>
+</html>

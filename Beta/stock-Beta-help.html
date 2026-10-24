@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <script>
+    /* ===== 跨子域名登录态同步（github. / cloudflare. / pythonanywhere. 之间互通）=====
+       localStorage 是按 origin 隔离的，两个子域名各存各的，所以要借 Cookie 中转。
+       Cookie 设 Domain=.nb-channel.top，所有子域名都能读到。
+
+       这里不改页面原本的任何代码 —— 而是劫持 localStorage 的读写：
+         · 页面登录时 setItem('nb_session', ...)  → 顺手写一份到 Cookie
+         · 页面登出时 removeItem('nb_session')    → 顺手把 Cookie 清掉
+         · 页面加载时 Cookie 有、本地没有          → 自动注入进 localStorage
+       所以那 57 处登录/登出代码一行都不用动。
+
+       ⚠️ 这意味着 *.nb-channel.top 下任何一个子域名都能读到这个令牌，
+          包括 product-storage 那个 Workers。将来新增子域名前先想清楚这件事。 */
+    (function () {
+        try {
+            var KEY_S = 'nb_session', KEY_U = 'nb_user';
+            var DOMAIN = '.nb-channel.top';
+            var MAXAGE = 30 * 86400;
+
+            // 只在 .nb-channel.top 域下才启用（本地开文件、或别的域名访问时保持原样）
+            // ⚠️ 2026-10-16 放宽：原来只认 nb-channel.top，
+        //    但 pythonanywhere.nb-channel.top 会【302 跳到】nbchannel.pythonanywhere.com，
+        //    pages.dev / github.io 也是常用入口 —— 那几个域名下这个补丁原本整个不生效。
+        if (!/(^|\.)nb-channel\.top$/.test(location.hostname) &&
+            location.hostname !== 'nbchannel.pythonanywhere.com' &&
+            location.hostname !== 'nb-channel.pages.dev' &&
+            location.hostname !== 'nb-channel.github.io') return;
+
+            function readCookie(n) {
+                var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]*)'));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+            function writeCookie(n, v) {
+                document.cookie = n + '=' + encodeURIComponent(v) + ';path=/;domain=' + DOMAIN +
+                                  ';max-age=' + MAXAGE + ';SameSite=Lax' +
+                                  (location.protocol === 'https:' ? ';Secure' : '');
+            }
+            function dropCookie(n) {
+                document.cookie = n + '=;path=/;domain=' + DOMAIN + ';max-age=0;SameSite=Lax' +
+                                  (location.protocol === 'https:' ? ';Secure' : '');
+            }
+
+            // ---- ① 页面加载时双向对齐 ----
+            [KEY_S, KEY_U].forEach(function (k) {
+                var c = readCookie(k), l = null;
+                try { l = localStorage.getItem(k); } catch (e) {}
+                if (l) {
+                    if (l !== c) writeCookie(k, l);            // 本地有 → 同步出去
+                } else if (c) {
+                    try { localStorage.setItem(k, c); } catch (e) {}   // 本地没有 → 采用 Cookie
+                }
+            });
+
+            // ---- ①.5 验一下令牌还活着没有（2026-10-16 补）----
+        // ⚠️ 退出登录之后，【别的子域名】的 localStorage 里可能还留着旧令牌。
+        //    上面那一步会把 Cookie 里的值注入回来，而它不验有效性 ——
+        //    于是一个已经退掉的令牌会被反复复活，页面以为「已登录」，
+        //    不显示登录入口，看着就像「退登之后登不回来」。
+        //    这里补一步：拿令牌去调一个需要会话的接口，鉴权失败就把两边都清干净。
+        setTimeout(function () {
+            var tok = null, u = null;
+            try { tok = localStorage.getItem(KEY_S); } catch (e) {}
+            try { u = JSON.parse(localStorage.getItem(KEY_U) || 'null'); } catch (e) {}
+            if (!tok || !u || !u.id) return;
+            fetch('https://pbaafgjkwdbwcmsikcmg.supabase.co/rest/v1/rpc/get_checkin_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg',
+                    'Authorization': 'Bearer sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
+                },
+                body: JSON.stringify({ p_user_id: u.id, p_session: tok })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                var msg = (d && d.message) || '';
+                // 只有明确说「鉴权失败 / 会话无效」才动手 ——
+                // 其它错误（比如称号没查到）不能当令牌失效处理
+                if (d && d.success === false && /鉴权|会话/.test(msg)) {
+                    try { localStorage.removeItem(KEY_S); localStorage.removeItem(KEY_U); } catch (e) {}
+                    try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+                    setTimeout(function () { location.reload(); }, 60);
+                }
+            }).catch(function () {});
+        }, 1200);
+
+        // ---- ② 劫持写入：登录时同步到 Cookie ----
+            var _set = localStorage.setItem;
+            localStorage.setItem = function (k, v) {
+                try { if ((k === KEY_S || k === KEY_U) && v) writeCookie(k, v); } catch (e) {}
+                return _set.call(localStorage, k, v);
+            };
+
+            // ---- ③ 劫持删除：登出时同步清 Cookie ----
+            var _rm = localStorage.removeItem;
+            localStorage.removeItem = function (k) {
+                try { if (k === KEY_S || k === KEY_U) dropCookie(k); } catch (e) {}
+                return _rm.call(localStorage, k);
+            };
+
+            // ---- ④ 万一有人用 clear() ----
+            var _cl = localStorage.clear;
+            localStorage.clear = function () {
+                try { dropCookie(KEY_S); dropCookie(KEY_U); } catch (e) {}
+                return _cl.call(localStorage);
+            };
+        } catch (e) {}
+    })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
+
+    <script>
+    (function () {
+        try {
+            var tt = localStorage.getItem('theme');
+            if (tt === 'dark' || (!tt && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (e) {}
+    })();
+</script>
+
+    
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/images/app-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NB频道">
+<meta name="application-name" content="NB频道">
+<!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
+<link rel="stylesheet" href="../css/themes.css?v=35">
+<script src="../js/theme.js?v=9"></script>
+<title>股票系统改版说明 - NB频道</title>
+<style>:root {
+    --card-bg: #ffffff; --bg-color: #f7f8fa; --text-color: #1a1d23;
+    --card-border: #e8eaee; --count-text: #8b93a3; --count-bg: #eef2f8;
+    --status-border: #3b82f6;
+    --nav-btn-bg: #eef2f8; --nav-btn-text: #1a1d23;
+    --nav-btn-hover-bg: #3b82f6; --nav-btn-hover-text: #ffffff;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --bg: #f7f8fa;
+    --ink: #1a1d23;
+    --ink-soft: #5a6270;
+    --ink-faint: #8b93a3;
+    --line: #e8eaee;
+    --brand: #3b82f6;
+    --brand-deep: #2563eb;
+    --card: #ffffff;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+    --shadow-2: 0 2px 4px rgba(16,24,40,.05), 0 24px 48px -20px rgba(16,24,40,.18);
+}
+html.dark { color-scheme: dark; }
+html.dark {
+    --bg: #0a101f;
+    --ink: #e5eaf3;
+    --ink-soft: #9aa7bd;
+    --ink-faint: #64748b;
+    --line: rgba(148,163,184,.16);
+    --card: #101a2e;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+    --shadow-2: 0 2px 6px rgba(0,0,0,.35), 0 28px 60px -24px rgba(0,0,0,.6);
+}
+html.dark .nav { background: rgba(10,16,31,.72); border-bottom-color: rgba(148,163,184,.12); }
+html.dark .nav.scrolled { background: rgba(10,16,31,.9); }
+html.dark .logo-img { filter: brightness(1.4) saturate(1.15); }
+html.dark .drawer { background: #0f1a30; }
+html.dark .drawer .d-close { background: rgba(255,255,255,.06); color: var(--ink); }
+html.dark .drawer a.d-item { color: var(--ink-soft); }
+html.dark .drawer a.d-item:hover, html.dark .drawer a.d-item.active { background: rgba(59,130,246,.14); color: #fff; }
+html.dark .drawer .d-brand { color: var(--ink); }
+html.dark .backtop { background: rgba(15,23,42,.85); color: #cbd5e1; border-color: rgba(148,163,184,.25); }
+html.dark .backtop:hover { background: var(--brand); color: #fff; }
+html.dark .footer-bottom { border-color: rgba(255,255,255,.06); }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+::selection { background: rgba(59,130,246,.22); }
+
+/* ============ 导航 ============ */
+.nav {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 64px;
+    background: rgba(255,255,255,.72);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+    border-bottom: 1px solid var(--line);
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; letter-spacing: .3px; margin-left: 12px; }
+.logo-img { display: block; height: 32px; width: auto; }
+.logo-text { color: var(--ink); }
+.nav-menu { display: flex; gap: 2px; }
+.nav-menu a {
+    position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); white-space: nowrap; transition: color .3s ease;
+}
+.nav-menu a:hover { color: var(--ink); }
+.nav-menu a.active { color: var(--brand); font-weight: 600; }
+.nav-menu a::after {
+    content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);
+}
+.nav-menu a:hover::after { transform: scaleX(1); }
+.nav-menu a.active::after { transform: scaleX(1); }
+.nav-menu a.nav-api { color: var(--brand); font-weight: 600; font-size: .86rem; }
+.nav-right-group { display: flex; align-items: center; gap: 10px; }
+.nav-auth-group { display: flex; gap: 8px; align-items: center; }
+.nav-clock {
+    display: flex; flex-direction: column; align-items: flex-end;
+    margin-right: 8px; flex-shrink: 0; user-select: none; line-height: 1.35;
+}
+.nav-clock .nc-time { font-size: 15.5px; font-weight: 800; letter-spacing: 1.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.nav-clock .nc-row { display: flex; align-items: baseline; gap: 6px; font-style: normal; }
+.nav-clock .nc-date { font-size: 10.5px; font-weight: 600; letter-spacing: .4px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.nav-clock .nc-label { font-size: 8.5px; font-weight: 600; letter-spacing: 2px; color: var(--ink-faint); }
+.nav-auth {
+    padding: 8px 18px; border-radius: 999px;
+    background: rgba(255,255,255,.6); color: var(--ink);
+    border: 1px solid var(--line);
+    font-size: .88rem; font-weight: 600; cursor: pointer;
+    transition: all .25s ease; white-space: nowrap;
+}
+.nav-auth:hover { background: #fff; border-color: rgba(59,130,246,.4); }
+.nav-auth.primary {
+    background: linear-gradient(135deg, var(--brand), #6366f1);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 8px 20px -8px rgba(59,130,246,.5);
+}
+.nav-auth.primary:hover { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; }
+html.dark .nav-auth { background: rgba(255,255,255,.05); color: var(--ink); border-color: rgba(148,163,184,.25); }
+html.dark .nav-auth:hover { background: rgba(255,255,255,.1); border-color: rgba(59,130,246,.5); }
+.theme-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--bg); cursor: pointer; font-size: .95rem;
+    display: flex; align-items: center; justify-content: center; transition: all .25s ease;
+}
+.theme-btn:hover { border-color: rgba(59,130,246,.4); transform: translateY(-1px); }
+.nav-burger {
+    display: none; width: 38px; height: 38px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg);
+    font-size: .95rem; cursor: pointer; color: var(--ink);
+    align-items: center; justify-content: center;
+}
+@media (max-width: 900px) { .nav-menu { display: none; } .nav-burger { display: flex; } .nav-clock, .nav-auth-group { display: none; } }
+
+/* ============ Hero(产品) ============ */
+.vhero {
+    position: relative; color: #fff; overflow: hidden;
+    padding: 110px 48px 150px;
+    background:
+        radial-gradient(760px 460px at 12% 4%, rgba(59,130,246,.16), transparent 62%),
+        radial-gradient(640px 420px at 96% 60%, rgba(139,92,246,.12), transparent 60%),
+        linear-gradient(168deg, #0b1220 0%, #101c33 58%, #1c1745 100%);
+}
+.vhero::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background-image: radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 72%);
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 72%);
+}
+.vhero-inner {
+    position: relative; z-index: 2; max-width: 1180px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.05fr .95fr; gap: 70px; align-items: center;
+}
+.hero-eyebrow {
+    display: block; font-size: 11px; font-weight: 400;
+    letter-spacing: 8px; color: rgba(255,255,255,.42); margin-bottom: 40px;
+}
+.vhero h1 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); font-weight: 800; letter-spacing: 8px; color: #fff; line-height: 1.12; }
+.vhero h1 .light { font-weight: 200; letter-spacing: 4px; color: #9cc0ff; }
+.vhero-sub {
+    margin: 34px 0 0; max-width: 470px;
+    font-size: .98rem; font-weight: 300; line-height: 2.15;
+    letter-spacing: .6px; color: rgba(255,255,255,.6);
+}
+.vhero-actions { margin-top: 48px; display: flex; gap: 44px; align-items: center; flex-wrap: wrap; }
+.hero-link {
+    font-size: .9rem; letter-spacing: 3px; font-weight: 600; color: #fff;
+    padding: 12px 2px; border-bottom: 1px solid rgba(255,255,255,.32);
+    transition: border-color .35s ease, color .35s ease;
+}
+.hero-link:hover { border-color: #7cb4ff; color: #7cb4ff; }
+/* 右侧统计卡 */
+.pd-stats {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 24px; padding: 10px 26px;
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.pd-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 13px 0; border-bottom: 1px dashed rgba(255,255,255,.1);
+}
+.pd-row:last-child { border-bottom: none; }
+.pd-row .k { font-size: .72rem; letter-spacing: 2.5px; color: rgba(255,255,255,.5); }
+.pd-row b { font-size: 1.12rem; font-weight: 700; color: #fff; letter-spacing: .5px; }
+.pd-row b small { font-size: .72rem; font-weight: 400; color: rgba(255,255,255,.55); letter-spacing: 1px; }
+.pd-tip { margin-top: 14px; font-size: .74rem; color: rgba(255,255,255,.4); letter-spacing: 1.2px; text-align: center; }
+.vhero-fade {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 130px; z-index: 1;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    pointer-events: none;
+}
+
+/* ============ 正文 ============ */
+.vwrap { max-width: 1080px; margin: 0 auto; padding: 70px 48px 60px; }
+.leadq { text-align: center; max-width: 760px; margin: 0 auto 80px; }
+.leadq h2 { font-size: clamp(1.5rem, 2.8vw, 2.1rem); font-weight: 800; line-height: 1.6; letter-spacing: 1px; }
+.leadq h2 em { font-style: normal; color: var(--brand); }
+.leadq h2 .thin { font-weight: 200; color: var(--ink-soft); }
+.leadq .sig { margin-top: 26px; font-size: .9rem; color: var(--ink-faint); letter-spacing: 3px; }
+.leadq .sig b { color: var(--ink); font-weight: 700; letter-spacing: 1px; }
+
+/* 产品网格 */
+.pd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.p-card {
+    background: var(--card); border-radius: var(--radius-lg); overflow: hidden;
+    border: 1px solid var(--line); box-shadow: var(--shadow-1);
+    display: flex; flex-direction: column;
+    transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease;
+}
+.p-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-2); }
+.p-media {
+    position: relative; aspect-ratio: 16 / 9.4; overflow: hidden;
+    background: linear-gradient(140deg, rgba(59,130,246,.12), rgba(139,92,246,.12));
+}
+.p-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .9s cubic-bezier(.16,1,.3,1); }
+.p-card:hover .p-media img { transform: scale(1.045); }
+.p-media .p-no {
+    position: absolute; top: 14px; left: 16px; z-index: 2;
+    font-size: 11px; font-weight: 700; letter-spacing: 3px; color: #fff;
+    background: rgba(10,16,31,.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2);
+}
+.p-body { padding: 22px 24px 24px; display: flex; flex-direction: column; flex: 1; }
+.p-body h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: 1px; margin-bottom: 9px; }
+.p-body .p-sub { font-size: .92rem; color: var(--ink-soft); line-height: 1.85; flex: 1; }
+.p-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.p-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: 999px;
+    font-size: .84rem; font-weight: 700; letter-spacing: .8px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
+    transition: all .25s ease;
+}
+.p-link:hover { border-color: var(--brand); color: var(--brand); transform: translateY(-1px); }
+.p-link.go { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; border-color: transparent; box-shadow: 0 8px 20px -8px rgba(59,130,246,.55); }
+.p-link.go:hover { color: #fff; box-shadow: 0 12px 26px -8px rgba(59,130,246,.6); }
+
+.p-note { text-align: center; color: var(--ink-faint); font-size: .82rem; letter-spacing: 1px; line-height: 2; padding: 26px 20px 0; }
+
+/* CTA */
+.cta {
+    text-align: center; padding: 84px 24px;
+    background: linear-gradient(170deg, #101c33 0%, #1c1745 100%);
+    color: #fff; margin-top: 70px;
+}
+.cta h2 { font-size: 1.7rem; font-weight: 800; letter-spacing: .5px; margin-bottom: 13px; }
+.cta p { color: rgba(255,255,255,.55); font-size: .93rem; font-weight: 300; margin-bottom: 32px; }
+.cta .cta-actions { display: flex; gap: 44px; justify-content: center; align-items: center; flex-wrap: wrap; }
+
+/* 页脚 */
+.footer { background: linear-gradient(180deg, #0f172a 0%, #0a0f1e 100%); color: #94a3b8; padding: 64px 48px 30px; }
+.footer-grid { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 44px; }
+.footer .brand { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; letter-spacing: .5px; }
+.footer .desc { font-size: .85rem; font-weight: 300; line-height: 2; margin-bottom: 20px; color: #7c8ba5; }
+.footer h5 { color: #e2e8f0; font-size: .88rem; font-weight: 700; margin-bottom: 18px; letter-spacing: 2px; }
+.footer a { display: block; color: #8fa0b8; font-size: .86rem; margin-bottom: 12px; transition: color .3s ease; }
+.footer a:hover { color: #fff; }
+.footer-bottom {
+    max-width: 1180px; margin: 44px auto 0; padding-top: 22px;
+    border-top: 1px solid rgba(255,255,255,.07);
+    font-size: .76rem; letter-spacing: 1px; color: #5b6a85; text-align: center;
+}
+
+/* 抽屉 */
+.drawer-mask { display: none; position: fixed; inset: 0; z-index: 9000; background: rgba(10,15,28,.5); }
+.drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 9001;
+    width: 300px; max-width: 84vw; background: #fff;
+    box-shadow: -20px 0 60px -30px rgba(0,0,0,.4);
+    transform: translateX(105%); transition: transform .35s cubic-bezier(.16,1,.3,1);
+    padding: 22px 20px; overflow-y: auto;
+}
+.drawer.open { transform: none; }
+.drawer .d-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.drawer .d-brand { font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; color: var(--ink); }
+.drawer .d-close { width: 36px; height: 36px; border-radius: 10px; border: none; background: var(--bg); font-size: .95rem; cursor: pointer; color: var(--ink); }
+.drawer a.d-item { display: block; padding: 12px 16px; border-radius: 12px; color: var(--ink-soft); font-size: .98rem; font-weight: 600; }
+.drawer a.d-item:hover, .drawer a.d-item.active { background: rgba(59,130,246,.1); color: var(--brand); }
+.drawer .d-auth { margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+.drawer .d-auth a { flex: 1; text-align: center; padding: 11px; border-radius: 999px; font-size: .9rem; font-weight: 600; }
+.drawer .d-auth .ga { background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
+.drawer .d-auth .gab { background: linear-gradient(135deg, var(--brand), #6366f1); color: #fff; }
+
+/* 回到顶部 */
+.backtop {
+    position: fixed; right: 26px; bottom: 26px; z-index: 5000;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,.92); color: var(--brand);
+    border: 1px solid var(--line); cursor: pointer; font-size: 1.05rem;
+    opacity: 0; transform: translateY(12px); transition: all .3s ease;
+    box-shadow: var(--shadow-1);
+}
+.backtop.show { opacity: 1; transform: none; }
+.backtop:hover { background: var(--brand); color: #fff; }
+
+/* 入场 */
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+/* 响应式 */
+@media (max-width: 900px) {
+    .vhero { padding: 84px 24px 120px; }
+    .vwrap { padding: 56px 24px 40px; }
+    .footer { padding: 48px 24px 26px; }
+}
+@media (max-width: 760px) {
+    .nav { padding: 0 20px; }
+    .vhero { padding: 72px 20px 110px; }
+    .vhero-inner { grid-template-columns: 1fr; gap: 40px; }
+    .vhero h1 { font-size: 2.4rem; letter-spacing: 5px; }
+    .pd-stats { display: none; }
+    .vwrap { padding: 40px 20px 30px; }
+    .leadq { margin-bottom: 54px; }
+    .pd-grid { grid-template-columns: 1fr; }
+    .p-body { padding: 17px 18px 19px; }
+    .cta { margin-top: 50px; padding: 60px 20px; }
+    .footer-grid { grid-template-columns: 1fr; gap: 26px; }
+    .backtop { right: 18px; bottom: 18px; width: 42px; height: 42px; }
+}
+        .ui-fx-glow {
+            position: fixed; left: -999px; top: -999px; width: 240px; height: 240px;
+            border-radius: 50%; pointer-events: none; z-index: 9997;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(59,130,246,.18), rgba(139,92,246,.10) 45%, transparent 65%);
+            opacity: 0;
+        }
+
+
+        /* ===== Hero 入场动画(全站统一,与首页一致的错峰淡入) ===== */
+        @keyframes heroFadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+        .vhero .hero-eyebrow, .vhero h1, .vhero .vhero-sub, .vhero .vhero-actions,
+        .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules {
+            animation: heroFadeUp .95s cubic-bezier(.16,1,.3,1) both;
+        }
+        .vhero .hero-eyebrow { animation-delay: .08s; }
+        .vhero h1 { animation-delay: .2s; }
+        .vhero .vhero-sub { animation-delay: .34s; }
+        .vhero .vhero-actions { animation-delay: .48s; }
+        .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules { animation-delay: .32s; }
+        @media (prefers-reduced-motion: reduce) {
+            .vhero .hero-eyebrow, .vhero h1, .vhero .vhero-sub, .vhero .vhero-actions,
+            .vhero .pd-stats, .vhero .cl-stats, .vhero .acard, .vhero .vhcard, .vhero .com-rules { animation: none; }
+        }
+
+        /* ===== 全站公告条(与首页一致) ===== */
+        .beta-announce {
+            display: flex; align-items: center; gap: 14px;
+            max-width: 1080px; margin: 34px auto 0; padding: 15px 24px;
+            background: var(--card);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-1);
+            position: relative;
+        }
+        .beta-announce::before {
+            content: ''; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px;
+            border-radius: 3px; background: var(--brand);
+        }
+        .beta-announce .ba-title {
+            flex-shrink: 0; font-size: .82rem; font-weight: 700; color: var(--brand);
+            background: rgba(59,130,246,.08); border-radius: 999px; padding: 4px 12px;
+        }
+        .beta-announce .ba-track-wrap { flex: 1; overflow: hidden; min-width: 0; }
+        .beta-announce .ba-track { display: inline-block; white-space: nowrap; will-change: transform; }
+        .beta-announce .ba-item {
+            display: inline-block; white-space: nowrap; padding-right: 80px;
+            font-size: .92rem; color: var(--ink-soft);
+        }
+        .beta-announce a { color: var(--brand); text-decoration: underline; }
+        .beta-announce a:hover { color: var(--brand-deep); }
+        html.dark .beta-announce { background: var(--card); }
+        html.dark .beta-announce .ba-item { color: var(--ink-soft); }
+        @media (max-width: 760px) { .beta-announce { align-items: flex-start; flex-wrap: wrap; } }
+</style>
+<style>html.dark {
+    --card-bg: #101a2e; --bg-color: #0a101f; --text-color: #e5eaf3;
+    --card-border: rgba(148,163,184,.16); --count-text: #64748b; --count-bg: rgba(255,255,255,.06);
+    --status-border: #60a5fa;
+    --nav-btn-bg: rgba(255,255,255,.07); --nav-btn-text: #e5eaf3;
+    --nav-btn-hover-bg: #3b82f6; --nav-btn-hover-text: #ffffff;
+}
+
+/* ===== 股票页官网化打磨 ===== */
+.home-card { max-width: 1100px; margin: 0 auto; padding: 6px 24px 90px; }
+button { border-radius: 999px; }
+</style>
+<style>
+        /* 基础样式（原有样式保持不变） */
+        .chart-wrapper { padding: 20px 0 32px 0; }
+        .canvas-container {
+            position: relative; width: 100%; min-height: 550px; background: var(--card-bg);
+            border-radius: 24px; padding: 16px 8px 8px 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            transition: background 0.3s ease, opacity 0.3s ease;
+        }
+        .canvas-container.fade-out { opacity: 0; }
+        .canvas-container.fade-in { opacity: 1; }
+        .history-chart-container {
+            margin-top: 20px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 12px 16px;
+            border: 1px solid var(--card-border);
+            position: relative;
+        }
+        .history-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--status-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .chart-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .topn-select {
+            background: var(--count-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            color: var(--text-color);
+        }
+        .zoom-btn {
+            background: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            border: none;
+            border-radius: 30px;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+        .zoom-btn:hover {
+            background: var(--nav-btn-hover-bg);
+            color: white;
+        }
+        canvas { max-height: 550px; width: 100%; }
+        .stats {
+            display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px;
+            padding: 16px 0 0 0; border-top: 1px solid var(--card-border);
+        }
+        .stat-card {
+            background: var(--count-bg); border-radius: 28px; padding: 10px 22px;
+            display: inline-flex; align-items: baseline; gap: 12px; flex-wrap: wrap; font-size: 0.85rem;
+        }
+        .stat-label { font-weight: 600; }
+        .stat-value {
+            font-weight: 700; color: var(--status-border); background: var(--card-bg);
+            padding: 4px 12px; border-radius: 30px;
+        }
+        .error-msg {
+            color: #c7362b; background: #ffeae8; border-radius: 40px;
+            padding: 8px 20px; font-size: 0.85rem;
+        }
+        html.dark .error-msg { background: #3b1e1a; color: #f87171; }
+        .toolbar {
+            display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 20px;
+        }
+        .btn-group {
+            display: flex; gap: 12px; background: var(--nav-btn-bg); padding: 6px; border-radius: 60px;
+        }
+        .chart-btn {
+            background: transparent; border: none; padding: 8px 24px; border-radius: 40px;
+            cursor: pointer; transition: all 0.2s; font-size: 0.9rem; font-weight: 600;
+            color: var(--nav-btn-text);
+        }
+        .chart-btn.active {
+            background: #00a1d6; color: white; box-shadow: 0 4px 8px rgba(0,161,214,0.3);
+        }
+        .chart-btn:hover:not(.active) {
+            background: rgba(0,161,214,0.1); color: var(--nav-btn-hover-text);
+        }
+        .refresh-btn {
+            background: var(--nav-btn-hover-bg); color: white; border: none;
+            padding: 8px 20px; border-radius: 40px; cursor: pointer; transition: 0.2s;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .refresh-btn:hover { filter: brightness(0.9); transform: scale(0.96); }
+        .refresh-btn .spinner {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.3); border-radius: 50%;
+            border-top-color: white; animation: spin 0.8s linear infinite;
+            visibility: hidden;
+        }
+        .refresh-btn.loading .spinner { visibility: visible; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .pause-btn {
+            background: var(--nav-btn-hover-bg); color: white; border: none;
+            padding: 8px 20px; border-radius: 40px; cursor: pointer; transition: 0.2s;
+        }
+        .pause-btn:hover { filter: brightness(0.9); transform: scale(0.96); }
+        .pause-btn { background: #6c757d; }
+        
+        .data-table-wrapper { margin-top: 20px; overflow-x: auto; }
+        .search-box { margin-bottom: 12px; display: flex; justify-content: flex-end; }
+        .search-box input {
+            padding: 6px 12px; border-radius: 30px; border: 1px solid var(--card-border);
+            background: var(--card-bg); color: var(--text-color); width: 200px; font-size: 0.85rem;
+        }
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 16px;
+            overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .data-table th, .data-table td {
+            padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--card-border);
+        }
+        .data-table th { background: var(--count-bg); font-weight: 600; color: var(--text-color); }
+        .data-table tr:hover { background: rgba(0,161,214,0.05); }
+        html.dark .data-table tr:hover { background: rgba(96,165,250,0.1); }
+        .data-table td:first-child, .data-table th:first-child { font-weight: 500; }
+        .data-table td:last-child, .data-table th:last-child {
+            text-align: right; font-family: monospace; font-weight: 600;
+        }
+        .change-up { color: #f44336; }
+        .change-down { color: #4caf50; }
+        .change-icon { font-size: 0.75rem; margin-left: 4px; }
+        .toggle-table-btn {
+            display: block; margin: 12px auto 0 auto; background: var(--nav-btn-bg);
+            color: var(--nav-btn-text); border: none; padding: 6px 20px; border-radius: 30px;
+            cursor: pointer; font-size: 0.85rem; transition: 0.2s; width: fit-content;
+        }
+        .toggle-table-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
+        .countdown-badge {
+            background: var(--count-bg); padding: 4px 12px; border-radius: 60px;
+            font-size: 0.75rem; margin-left: 8px;
+        }
+        .slider-container {
+            margin: 0 0 20px 0; background: var(--card-bg); padding: 12px 16px;
+            border-radius: 40px; display: flex; flex-wrap: wrap; align-items: center;
+            gap: 16px; border: 1px solid var(--card-border);
+        }
+        .slider-label {
+            font-size: 0.85rem; color: var(--text-color); background: var(--count-bg);
+            padding: 4px 12px; border-radius: 30px;
+        }
+        input[type="range"] {
+            flex: 1; min-width: 150px; height: 6px; -webkit-appearance: none;
+            background: var(--card-border); border-radius: 3px; outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+            background: var(--status-border); cursor: pointer;
+        }
+        .range-value {
+            font-size: 0.8rem; background: var(--count-bg); padding: 4px 12px;
+            border-radius: 30px; font-family: monospace;
+        }
+        .reset-btn {
+            background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none;
+            padding: 6px 16px; border-radius: 30px; cursor: pointer; font-size: 0.8rem;
+            transition: 0.2s;
+        }
+        .reset-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
+        .mini-pie-container {
+            margin-top: 20px; background: var(--card-bg); border-radius: 24px;
+            padding: 12px 16px; border: 1px solid var(--card-border);
+        }
+        .mini-pie-title {
+            font-size: 0.9rem; font-weight: 600; margin-bottom: 10px;
+            color: var(--status-border);
+        }
+        .mini-canvas { max-height: 200px; width: 100%; }
+        .histogram-container {
+            margin-top: 20px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 12px 16px;
+            border: 1px solid var(--card-border);
+        }
+        .histogram-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--status-border);
+        }
+        /* 全屏模式 */
+        .history-chart-container:-webkit-full-screen {
+            width: 100%; height: 100%; display: flex; flex-direction: column;
+            justify-content: center; background: var(--card-bg);
+        }
+        .history-chart-container:-webkit-full-screen canvas { max-height: calc(100% - 60px); }
+        .history-chart-container:fullscreen {
+            width: 100%; height: 100%; display: flex; flex-direction: column;
+            justify-content: center; background: var(--card-bg);
+        }
+        .history-chart-container:fullscreen canvas { max-height: calc(100% - 60px); }
+        
+        @media (max-width: 680px) {
+            .canvas-container { min-height: 400px; }
+            canvas { max-height: 400px; }
+            .chart-btn { padding: 6px 16px; font-size: 0.8rem; }
+            .refresh-btn, .pause-btn, .toggle-table-btn {
+                padding: 4px 16px; font-size: 0.75rem;
+            }
+            .slider-container { flex-wrap: wrap; justify-content: center; }
+            .slider-label, .range-value, .reset-btn { font-size: 0.7rem; }
+            .reset-btn { padding: 4px 12px; }
+            .data-table th, .data-table td { padding: 6px 8px; font-size: 0.75rem; }
+            .stats { gap: 12px; }
+            .stat-card { padding: 6px 16px; }
+            .search-box input { width: 100%; }
+            .chart-controls { width: 100%; justify-content: space-between; }
+            /* 手机端优化 */
+            .data-table td:first-child { min-width: 90px; }
+            .data-table { min-width: 480px; }  /* 表格窄屏横向滚动，保证可读性 */
+            .trade-btn { padding: 2px 8px !important; font-size: 0.7rem !important; margin-right: 2px !important; }
+            #holdingsList { overflow-x: auto; }
+            #kLineDayNav button { padding: 2px 10px; font-size: 0.75rem; }
+            .my-company-card { padding: 10px 14px; }
+            .company-btn { padding: 5px 12px; font-size: 0.8rem; }
+            .user-info { justify-content: center; }
+            .balance-card { font-size: 0.8rem; }
+        }
+        /* 新样式 */
+        .user-info { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 16px; gap: 12px; }
+        .balance-card { background: var(--count-bg); padding: 6px 16px; border-radius: 30px; font-weight: bold; font-size: 0.9rem; }
+        .my-company-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .company-btn { background: var(--nav-btn-bg); color: var(--nav-btn-text); border: none; border-radius: 30px; padding: 6px 16px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .company-btn:hover { background: var(--nav-btn-hover-bg); color: white; }
+        .danger-btn { background: #dc3545; color: white; }
+        .danger-btn:hover { background: #c82333; }
+        /* 自定义模态框 */
+        .custom-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 10000; }
+        .custom-modal .modal-content { background: var(--card-bg); border-radius: 24px; padding: 24px; max-width: 350px; width: 90%; text-align: center; box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
+        .custom-modal .modal-content button { margin: 8px; padding: 6px 20px; border-radius: 30px; border: none; cursor: pointer; background: var(--nav-btn-hover-bg); color: white; }
+        .custom-modal .modal-content button.cancel { background: var(--nav-btn-bg); color: var(--nav-btn-text); }
+
+        .distribution-card .stat-value {
+            display: inline-flex;
+            gap: 6px;
+            background: none;
+            padding: 0;
+        }
+        .distribution-card .stat-value span {
+            padding: 2px 8px;
+            border-radius: 30px;
+            background: var(--count-bg);
+        }
+            html { scroll-behavior: smooth; }
+        [id] { scroll-margin-top: 86px; }
+
+
+/* ===== 「更多功能」下拉(动画与原菜单项完全一致) ===== */
+.nav-more { position: relative; display: flex; align-items: center; }
+.nav-more-btn {
+    position: relative; padding: 10px 14px;
+    font-size: .92rem; font-weight: 500; letter-spacing: .4px;
+    color: var(--ink-soft); background: none; border: none; cursor: pointer;
+    font-family: inherit; white-space: nowrap;
+    transition: color .3s ease;
+}
+.nav-more-btn::after {
+    content: ''; position: absolute; left: 14px; right: 14px; bottom: 2px;
+    height: 1px; background: var(--brand);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s cubic-bezier(.16,1,.3,1);
+}
+.nav-more-btn:hover { color: var(--ink); }
+.nav-more-btn:hover::after { transform: scaleX(1); }
+.nav-more.open .nav-more-btn { color: var(--ink); }
+.nav-more.open .nav-more-btn::after { transform: scaleX(1); }
+.nav-more-btn.active { color: var(--brand); font-weight: 600; }
+.nav-more-btn.active::after { transform: scaleX(1); }
+.nav-more-panel {
+    display: none; position: absolute; top: calc(100% + 12px); right: 0;
+    min-width: 178px; padding: 8px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 18px 44px -20px rgba(15,23,42,.42);
+    z-index: 300;
+}
+.nav-more.open .nav-more-panel { display: block; }
+.nav-more-panel a {
+    display: block; padding: 9px 12px; border-radius: 9px;
+    font-size: .88rem; color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+    transition: background .18s ease, color .18s ease;
+}
+.nav-more-panel a:hover { background: rgba(59,130,246,.1); color: var(--brand); }
+html.dark .nav-more-panel { background: #0f1a30; border-color: rgba(148,163,184,.22); }
+html.dark .nav-more-panel a:hover { background: rgba(59,130,246,.2); color: #fff; }
+
+/* ===== 移动端:也显示这条菜单栏(左右滑动看全部),不再只靠汉堡 ===== */
+@media (max-width: 900px) {
+    .nav { padding: 0 12px; gap: 6px; }
+    .nav-logo { flex: 0 0 auto; margin-left: 0; }
+    .nav-menu {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: flex-start;
+        gap: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+        /* 右侧渐隐,提示还能往右滑 */
+        -webkit-mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+        mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+    }
+    .nav-menu::-webkit-scrollbar { display: none; }
+    .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 11px; font-size: .86rem; letter-spacing: .2px; }
+    .nav-menu > a::after, .nav-menu .nav-more-btn::after { left: 11px; right: 11px; }
+    .nav-right-group { flex: 0 0 auto; gap: 6px; }
+    .theme-btn { width: 38px; height: 38px; border-radius: 11px; font-size: 1rem; }
+    .nav-burger { flex: 0 0 auto; }
+    /* 下拉面板在手机上居中一点,避免贴边被裁 */
+    .nav-more-panel { right: auto; left: 0; }
+}
+@media (max-width: 420px) {
+    .nav-menu > a, .nav-menu .nav-more-btn { padding: 9px 9px; font-size: .82rem; }
+    .nav-logo .logo-img { height: 28px; }
+}
+
+/* ===== 移动端 / APP 适配增强 ===== */
+/* 1) 安全区:APP 全屏运行时,刘海屏/底部横条不再压住内容 */
+body {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+}
+.nav { padding-top: env(safe-area-inset-top, 0); }
+.footer { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.backtop { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.drawer { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.nav-more-panel { max-height: 70vh; overflow-y: auto; }
+.d-modal, .modal-content, .cam-modal > div, .custom-modal > div {
+    max-height: 86vh; overflow-y: auto;
+}
+
+/* 2) 触摸体验 */
+a, button, [onclick], .sort-btn, .d-item {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+html { -webkit-text-size-adjust: 100%; }
+
+/* 3) 手机上输入框字号统一 16px:
+      小于 16px 时 iOS/部分安卓 WebView 聚焦会自动放大整页(最常见的不适配感来源) */
+@media (max-width: 900px) {
+    input:not([type=checkbox]):not([type=radio]), textarea, select {
+        font-size: 16px !important;
+    }
+    /* 关键操作按钮的最小可点区域(不影响小图标按钮) */
+    button:not(.d-close):not(.nav-burger):not(.theme-btn):not(.backtop):not(.react-btn):not(.reply-btn):not(.edit-btn):not(.delete-btn):not(.report-btn):not(.sort-btn),
+    .btn, .hero-btn, .vhero-actions a {
+        min-height: 38px;
+    }
+    /* 表格:已有横向滚动容器的保持,没有的自动兜底 */
+    .table-wrap, .scroll-x, .stock-table-wrap { -webkit-overflow-scrolling: touch; }
+    /* 长文本防溢出 */
+    .comment-content, .bn-reason, .d-item, .pd-tip { word-break: break-word; overflow-wrap: anywhere; }
+}
+
+/* 4) APP(独立窗口)下:去掉选中高亮与长按菜单的干扰,正文更接近原生 */
+@media (display-mode: standalone) {
+    a, button { -webkit-user-select: none; user-select: none; }
+    .comment-content { -webkit-user-select: text; user-select: text; }
+    .backtop { display: none; }   /* APP 里用系统返回键更自然 */
+}
+
+/* ===== 图表:移动端适配(不再被压成细条,容器不留空白) ===== */
+@media (max-width: 900px) {
+    .canvas-container { min-height: auto; padding: 12px 6px 6px 6px; border-radius: 18px; }
+    .canvas-container canvas#stockChart { height: 264px !important; max-height: 264px; }
+    .history-chart-container { padding: 12px 8px 8px; border-radius: 16px; }
+    .history-chart-container canvas#totalHistoryChart { height: 176px !important; max-height: 176px; }
+    .histogram-container { padding: 12px 8px 8px; border-radius: 16px; }
+    .histogram-container canvas#histogramChart { height: 196px !important; max-height: 196px; }
+    .mini-pie-container { padding: 12px 8px 8px; border-radius: 16px; }
+    .mini-pie-container canvas#miniPieChart { height: 180px !important; max-height: 180px; }
+    #kLineChart { height: 300px !important; }
+    .chart-wrapper { padding: 12px 0 20px 0; }
+    /* 标题区在手机上紧凑一些 */
+    .history-title, .histogram-title, .mini-pie-title { font-size: .86rem; padding: 0 4px 8px; }
+    #kLineTitle { font-size: .82rem; line-height: 1.6; }
+}
+
+/* ===== 手机上「更多功能」下拉的处理 =====
+   原因:窄屏导航菜单是横向滚动的,而「更多功能」排在菜单最右端,
+        初始位置在屏幕外;且菜单的 overflow 会把弹出面板裁掉。
+   处理:手机上隐藏这个下拉(核心功能在 ☰ 抽屉里都有),平板/桌面保持可用。 */
+@media (max-width: 900px) {
+    .nav-more { display: none !important; }
+    .nav-more-panel { display: none !important; }
+}
+/* 平板/桌面:面板靠右弹出时留出边距,避免贴边 */
+@media (min-width: 901px) {
+    .nav-more-panel { max-width: calc(100vw - 24px); }
+}
+
+
+/* ===== 评论富文本:粗体 / 斜体 / 行内代码(不动链接颜色) ===== */
+.comment-content b, .comment-content strong { font-weight: 800; }
+.comment-content i, .comment-content em { font-style: italic; opacity: .95; }
+.comment-content code {
+    padding: 1px 6px; border-radius: 6px;
+    background: rgba(120,120,120,.14);
+    font-family: ui-monospace, Consolas, monospace; font-size: .92em;
+}
+.md-tip { font-size: .74rem; color: var(--ink-soft, #5a6270); opacity: .7; margin-top: 6px; }
+.md-tip code { padding: 1px 4px; border-radius: 4px; background: rgba(120,120,120,.14); font-size: .95em; }
+</style>
+<style>
+      .nav-scan{display:none;width:42px;height:42px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.7);border:1px solid var(--line,#e2e8f0);color:var(--ink,#0f172a);align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent}
+      .nav-scan svg{width:21px;height:21px;display:block}
+      .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
+      html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
+      @media (max-width:900px){.nav-scan{display:flex}}
+    </style>
+<style>
+  #nbStockHelpBar {
+    display: flex; justify-content: center;
+    max-width: 1200px; margin: 14px auto 0; padding: 0 16px;
+  }
+  #nbStockHelpBar a {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 15px;
+    border-radius: 999px;
+    border: 1px solid var(--card-border, var(--line, #e8eaee));
+    background: var(--card-bg, #fff);
+    color: var(--brand, #3b82f6);
+    font-size: .82rem; font-weight: 700; line-height: 1.4;
+    text-decoration: none;
+    transition: border-color .18s ease, background .18s ease, color .18s ease;
+  }
+  #nbStockHelpBar a:hover {
+    border-color: var(--brand, #3b82f6);
+    color: var(--brand-deep, var(--brand, #2563eb));
+  }
+  @media (max-width: 680px) {
+    #nbStockHelpBar { margin-top: 10px; padding: 0 12px; }
+    #nbStockHelpBar a { font-size: .76rem; padding: 5px 12px; }
+  }
+</style>
+<style>
+/* ================= 帮助页正文（命名空间 .nbhelp，不污染导航） ================= */
+.nbhelp{max-width:880px;margin:0 auto;padding:26px 18px 90px;
+    font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    line-height:1.85;font-size:15.5px;color:var(--ink)}
+.nbhelp *{box-sizing:border-box}
+.nbhelp .hd{background:var(--card);border:1px solid var(--card-border);
+    border-radius:20px;padding:32px 30px;margin-bottom:22px;box-shadow:var(--shadow-1)}
+.nbhelp .hd h1{margin:0 0 10px;font-size:1.8rem;line-height:1.35;color:var(--ink)}
+.nbhelp .hd .meta{color:var(--ink-faint);font-size:.86rem}
+.nbhelp .hd .lead{margin-top:16px;padding:14px 18px;border-radius:12px;
+    background:var(--count-bg);border-left:3px solid var(--brand);
+    color:var(--ink-soft);font-size:.94rem}
+.nbhelp section{background:var(--card);border:1px solid var(--card-border);
+    border-radius:18px;padding:26px 28px;margin-bottom:18px;box-shadow:var(--shadow-1)}
+.nbhelp section>h2{margin:0 0 16px;font-size:1.22rem;color:var(--ink);
+    display:flex;align-items:center;gap:10px}
+.nbhelp section>h2 .n{flex:0 0 auto;width:28px;height:28px;border-radius:9px;
+    background:var(--brand);color:#fff;font-size:.82rem;
+    display:flex;align-items:center;justify-content:center;font-weight:700}
+.nbhelp section>h3{margin:22px 0 10px;font-size:1.02rem;color:var(--ink);
+    padding-left:11px;border-left:3px solid var(--brand)}
+.nbhelp p{margin:10px 0;color:var(--ink-soft)}
+.nbhelp strong{color:var(--ink);font-weight:700}
+.nbhelp .tw{overflow-x:auto;margin:14px 0;border-radius:12px;border:1px solid var(--card-border)}
+.nbhelp table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:430px}
+.nbhelp th,.nbhelp td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--card-border)}
+.nbhelp th{background:var(--count-bg);color:var(--ink);font-weight:700;font-size:.86rem}
+.nbhelp td{color:var(--ink-soft)}
+.nbhelp tr:last-child td{border-bottom:none}
+.nbhelp td strong,.nbhelp td b{color:var(--ink)}
+.nbhelp .bad{color:#e05252;font-weight:600}
+.nbhelp .good{color:#2fa96b;font-weight:600}
+.nbhelp pre{background:var(--count-bg);border:1px solid var(--card-border);
+    border-radius:12px;padding:16px 18px;overflow-x:auto;margin:14px 0;
+    font-family:ui-monospace,Consolas,monospace;font-size:.85rem;
+    line-height:1.75;color:var(--ink-soft);white-space:pre-wrap}
+.nbhelp pre b{color:var(--ink);font-weight:700}
+.nbhelp .tip{border-radius:13px;padding:15px 18px;margin:16px 0;
+    border-left:3px solid var(--brand);background:var(--count-bg);
+    font-size:.92rem;color:var(--ink-soft)}
+.nbhelp .tip.warn{border-left-color:#e8a33d}
+.nbhelp .tip.key{border-left-color:#2fa96b}
+.nbhelp .tip .t{display:block;font-weight:700;color:var(--ink);margin-bottom:5px}
+.nbhelp details{border:1px solid var(--card-border);border-radius:13px;
+    margin:10px 0;overflow:hidden;background:var(--count-bg)}
+.nbhelp details[open]{background:var(--card)}
+.nbhelp summary{padding:14px 18px;cursor:pointer;font-weight:600;color:var(--ink);
+    font-size:.94rem;list-style:none;display:flex;align-items:center;gap:10px}
+.nbhelp summary::-webkit-details-marker{display:none}
+.nbhelp summary::before{content:"+";flex:0 0 auto;width:20px;height:20px;border-radius:6px;
+    background:var(--brand);color:#fff;font-size:.8rem;
+    display:flex;align-items:center;justify-content:center;font-weight:700}
+.nbhelp details[open] summary::before{content:"\2212"}
+.nbhelp details .body{padding:0 18px 16px 48px;font-size:.92rem;color:var(--ink-soft)}
+.nbhelp details .body p:first-child{margin-top:0}
+.nbhelp .end{text-align:center;padding:30px 20px;margin-top:26px;border-radius:18px;
+    border:1px dashed var(--line);color:var(--ink-faint);font-size:.9rem}
+.nbhelp .end .big{display:block;font-size:1.05rem;color:var(--ink);
+    margin-bottom:10px;line-height:1.9}
+.nbhelp .back{display:inline-flex;align-items:center;gap:7px;margin-bottom:18px;
+    color:var(--brand);text-decoration:none;font-size:.9rem;font-weight:600}
+.nbhelp .back:hover{text-decoration:underline}
+@media(max-width:640px){
+    .nbhelp{padding:14px 12px 70px;font-size:15px}
+    .nbhelp .hd{padding:24px 20px;border-radius:16px}
+    .nbhelp .hd h1{font-size:1.4rem}
+    .nbhelp section{padding:20px 17px;border-radius:15px}
+    .nbhelp section>h2{font-size:1.08rem}
+    .nbhelp details .body{padding-left:18px}
+}
+</style>
+</head>
+<body>
+<nav class="nav">
+    <a class="nav-logo" href="index-Beta.html"><img class="logo-img" src="/images/NB频道LOGO.png" alt="NB频道"></a>
+    <div class="nav-menu">
+        <a href="index-Beta.html">首页</a>
+        <a href="videos-Beta.html">视频</a>
+        <a href="about-Beta.html">关于</a>
+        <a href="rules-Beta.html">用户守则</a>
+        <a href="changelog-Beta.html">更新日志</a>
+        <a href="product-Beta.html">我的产品</a>
+        <a href="APP-Beta.html">软件/APP</a>
+        <a href="index-Beta.html#friends">友商</a>
+        <a class="nav-api" href="/api-sdk/" target="_blank" rel="noopener noreferrer" title="NB频道 API 文档">API<i>↗</i></a>
+        <div class="nav-more">
+            <button class="nav-more-btn" type="button">更多功能 ▾</button>
+            <div class="nav-more-panel">
+                <a href="stock-Beta.html">📈 虚拟股票</a>
+                <a href="messages-Beta.html">🔔 消息中心</a>
+                <a href="chat-Beta.html">👥 好友 / 私信</a>
+                <a href="bank-Beta.html">🏦 NB银行</a>
+                <a href="shop-Beta.html">🛍️ NB商店</a>
+                <a href="backpack-Beta.html">🎒 我的背包</a>
+                <a href="titles-Beta.html">🏅 称号大全</a>
+                <a href="achievements-Beta.html">🏆 成就墙</a>
+                <a href="lottery-Beta.html">📅 签到 · 转盘</a>
+                <a href="lottery_records-Beta.html">🎰 抽奖记录</a>
+                <a href="weather-Beta.html">🌦️ 天气瞎报</a>
+                <a href="newspaper-Beta.html">📰 NB报刊社</a>
+                <a href="tools-Beta.html">🔧 工具</a>
+                <a href="product_share-Beta.html">📦 作品分享</a>
+                <a href="comments-Beta.html">💬 评论区</a>
+                <a href="ban-Beta.html">🚫 小黑屋</a>
+                <a href="feedback-Beta.html">🐞 漏洞/建议</a><a href="pricing-Beta.html">💰 模型 &amp; 价格</a>
+                <a href="vote-Beta.html">🗳️ 投票中心</a>
+            </div>
+        </div>
+    </div>
+    <div class="nav-right-group">
+        <div class="nav-clock" id="navClock" title="北京时间（UTC+8）">
+            <span class="nc-time" id="bjTime">--:--:--</span>
+            <span class="nc-row"><i class="nc-date" id="bjDate">----.--.--</i><em class="nc-label">北京时间</em></span>
+        </div>
+        <button class="theme-btn" id="themeBtn" aria-label="切换夜间模式">🌙</button>
+        <div class="nav-auth-group" id="betaAuthGroup">
+            <a class="nav-auth" id="betaProfileBtn" href="#">👤 个人中心</a>
+            <a class="nav-auth primary" id="betaAuthBtn" href="#">登录 / 注册</a>
+        </div>
+    </div>
+    <button class="nav-burger" id="navBurger" aria-label="打开菜单">☰</button>
+    <!-- 扫码:手机端右上角,在汉堡(☰)的右边。只在 APP 里显示 —— 网页端调不动摄像头。
+         整段自包含(自带样式/脚本),不依赖本页既有的 CSS 变量和导航结构。 -->
+    <a class="nav-scan" id="navScanBtn" href="scan-Beta.html" aria-label="扫一扫" title="扫一扫"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5V6a3 3 0 0 1 3-3h2.5"/><path d="M15.5 3H18a3 3 0 0 1 3 3v2.5"/><path d="M21 15.5V18a3 3 0 0 1-3 3h-2.5"/><path d="M8.5 21H6a3 3 0 0 1-3-3v-2.5"/><path d="M3.2 12h17.6"/></svg></a>
+    <style>
+      .nav-scan{display:none;width:42px;height:42px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.7);border:1px solid var(--line,#e2e8f0);color:var(--ink,#0f172a);align-items:center;justify-content:center;text-decoration:none;-webkit-tap-highlight-color:transparent}
+      .nav-scan svg{width:21px;height:21px;display:block}
+      .nav-scan:hover{border-color:rgba(59,130,246,.5);color:var(--brand,#3b82f6)}
+      html.dark .nav-scan{background:rgba(255,255,255,.06);border-color:rgba(148,163,184,.25);color:var(--ink,#e2e8f0)}
+      @media (max-width:900px){.nav-scan{display:flex}}
+    </style>
+    <script>/* 扫码入口只在 APP 里显示。旧版 APP 也显示 —— 点进去 scan-Beta.html 会提示他更新 */
+    (function(){try{if(!/NBChannelApp/i.test(navigator.userAgent||"")){var b=document.getElementById("navScanBtn");if(b)b.style.display="none";}}catch(e){}})();</script>
+
+</nav>
+<div class="nbhelp">
+<a class="back" href="stock-Beta.html">&larr; 返回虚拟股票</a>
+<div class="hd">
+    <h1>虚拟股票系统改版说明</h1>
+    <div class="meta">2026 年 10 月更新 &middot; 从「注资托底」改为「定价方式」模型</div>
+    <div class="lead">
+        这次改动比较大，核心只有一个目标：<strong>让系统里的钱不多不少。</strong><br>
+        你投进去的每一分钱，要么还在你手里，要么还在公司公司里 —— 系统不再凭空印钱。
+    </div>
+</div>
+
+<section><h2><span class="n">1</span>为什么要改</h2>
+<p>旧版有三个「造币口」，经济系统被刷坏了：</p>
+<div class="tw"><table>
+<tr><th>问题</th><th>后果</th></tr>
+<tr><td>买入时钱消失、卖出时钱凭空出现</td><td>系统的货币总量被买卖行为左右</td></tr>
+<tr><td>「注资」让所有股东一起白赚</td><td class="bad">等于凭空印钱分给大家</td></tr>
+<tr><td>破产时老板拿走全部市值，股东持仓作废</td><td class="bad">又印一次</td></tr>
+</table></div>
+<p>有人利用这三条反复操作，刷出了天量 NB币。新版把这三个口子全部堵上。</p>
+</section>
+
+<section><h2><span class="n">2</span>新版是什么模型</h2>
+<p>每家公司都有一个<strong>公司的钱</strong>，里面装两样东西：</p>
+<pre><b>公司的钱现金</b>    公司账上的钱
+<b>公司的钱股份</b>    可供买卖的股份
+
+<b>股价 = 公司账上有多少钱 ÷ 公司总共多少股</b></pre>
+<p>买卖都是跟<strong>公司</strong>成交 —— 不需要等别人挂单，公司永远是你的交易对象，随时能买卖。</p>
+<h3>交易怎么影响价格</h3>
+<pre>买入 1000 NB币：
+    公司账上的钱 +1000
+    公司总股数 −（按公式算出的数量）
+    → 现金多了、股份少了 → <b>股价自动上涨</b>
+
+卖出 100 张：
+    公司总股数 +100
+    公司账上的钱 −（按公式算出的数量）
+    → 股份多了、现金少了 → <b>股价自动下跌</b></pre>
+<p>买的人多价格自然涨，卖的人多价格自然跌。<strong>不再需要系统「随机波动」。</strong></p>
+<h3>为什么这样就不造币了</h3>
+<div class="tip key"><span class="t">公司账上的钱是个封闭的箱子</span>
+你买入 → 你的钱进箱子，你拿走股份<br>
+你卖出 → 你的股份进箱子，你拿走钱<br><br>
+箱子里的钱总共就那么多。<strong>你能套现的上限，就是箱子里有多少现金。</strong>
+股份再多，箱子没钱也换不出钱来。</div>
+</section>
+
+<section><h2><span class="n">3</span>和你有关的七个变化</h2>
+<h3>① 注册公司要出钱了</h3>
+<div class="tw"><table>
+<tr><th></th><th>旧版</th><th>新版</th></tr>
+<tr><td>初始市值</td><td>白送 20000</td><td><b>你自己出资建公司</b></td></tr>
+</table></div>
+<pre>你出 <b>C 币</b>建公司：
+    公司账上的钱   = C
+    公司总股数   = C 张        →  股价 = <b>1.00</b>
+    总股数     = 2C 张
+    你（创始人）得 C 张       →  价值 C，<b>正好是你出的钱</b>
+    公司留     = C 张        →  供别人买</pre>
+<p>最低出资 <strong>20000 NB币</strong>。</p>
+<h3>② 买入：钱真的进公司了</h3>
+<p>旧版买入时钱是「消失」的（既不进公司也不给别人）。新版钱<strong>真的进公司</strong>，成为公司的钱。</p>
+<div class="tip"><span class="t">所以买入会推高股价</span>这是特性，不是 bug。</div>
+<h3>③ 卖出：输入的是「张数」不是「金额」</h3>
+<p>旧版你输入「卖多少钱」，新版你输入「卖多少张股份」。</p>
+<p>因为新版里卖出的钱取决于公司状态，事先不知道确切金额，只能先定张数、再算能拿多少。页面上会实时显示预览。</p>
+<h3>④「注资」还在，但玩法彻底变了</h3>
+<p>注资 = 给自己公司注资让市值涨。新版一度取消了，因为<strong>旧版那个市值是个虚数，配合破产能套现 —— 那是造币</strong>。</p>
+<p>新版又把它加回来了，但方式完全不同：<strong>「注资」</strong> —— 同样是自己给公司注资，但方式完全不同，见下面第 ⑦ 条。</p>
+<h3>⑤「提取公司价值」又回来了 —— 而且这次不造币</h3>
+<div class="tw"><table>
+<tr><th></th><th>旧版「提取」</th><th>新版「分红」</th></tr>
+<tr><td>谁能拿</td><td>只有老板</td><td><b>全体股东按持股比例</b></td></tr>
+<tr><td>效果</td><td>市值减少，老板拿钱</td><td>公司钱减少，股价自动下跌</td></tr>
+</table></div>
+<p>新版提取是从【公司账上真有的钱】里拿，拿完股价自动跌 —— 而且最多只能提【公司账上的钱 × 你自己的持股比例】，提不走别人的那一份。<br>分红则是按持股比例分给【所有】股东。两者都会让股价下跌，区别是谁拿到钱。<strong>股价会同步下跌</strong> —— 这叫「分红后股价下跌」，是真实市场的规则。你拿到现金，但手里的股票同时贬值，<strong>总资产不变</strong>。</p>
+<h3>⑥「破产」改成「破产清算」</h3>
+<div class="tw"><table>
+<tr><th></th><th>旧版</th><th>新版</th></tr>
+<tr><td>公司账上的钱给谁</td><td class="bad">老板独吞</td><td class="good">按持股比例分给所有股东</td></tr>
+</table></div>
+<p>跟真实市场一致：破产清算时，还完债后剩余资产按持股比例分给股东。</p>
+<h3>⑦ 注资：创始人可以往自己公司账上打钱了</h3>
+<p><strong>只有创始人能用。</strong>往自己公司的公司的钱里打钱，<strong>不获得任何股份</strong>。</p>
+<pre>公司账上的钱变多、公司总股数不变
+    → 股价上涨
+    → <b>全体股东一起受益</b></pre>
+<div class="tip warn"><span class="t">三个必须知道的点</span>
+<strong>① 注资不会给你股份。</strong>钱进了公司就是公司的，你想拿回来只有两条路：分红（全体股东一起分）或破产清算（按持股比例分）。<br><br>
+<strong>② 注资后 7 天内，你不能卖出这家公司的股份。</strong>这是为了防止「先拉高价格吸引别人跟风，然后砸盘套现」。<br><br>
+<strong>③ 如果你手上没有这家公司的股份，千万别注资。</strong>分红和破产清算都是按持股比例分的 —— 你持股为 0，就等于把钱白送给其他股东。想给公司注资，先确保自己手里有股份。</div>
+<div class="tw"><table>
+<tr><th></th><th>买入</th><th>注资</th></tr>
+<tr><td>谁能用</td><td>所有人（不能买自己公司）</td><td><b>只有创始人</b></td></tr>
+<tr><td>钱去哪</td><td>进公司</td><td>进公司</td></tr>
+<tr><td>拿到什么</td><td><b>股份</b></td><td><b>什么都没有</b></td></tr>
+<tr><td>股价</td><td>涨</td><td>涨</td></tr>
+<tr><td>谁受益</td><td>你自己持股增值</td><td><b>全体股东一起增值</b></td></tr>
+<tr><td>限制</td><td>—</td><td>7 天内不能卖该公司股份</td></tr>
+</table></div>
+<p>单次最少 1000 NB币，最多 1 亿。入口在你自己的公司操作区。</p>
+</section>
+
+<section><h2><span class="n">8</span>公司税再分配：小公司会自己长大</h2>
+
+每天 <b>20:00 收盘后</b>收一次公司税：
+
+<ul>
+  <li><b>抽税</b>：公司账上 ≥ 30 万的，按大小抽 <b>0.2% ~ 2%</b>；
+      占全站总额 40% 以上的再加 <b>5% 垄断税</b></li>
+  <li><b>发放</b>：抽到的钱<b>不再销毁</b>，发给账上不足 100 万的<b>中小公司</b>当经营收入，
+      每家最多涨自己账上的 <b>2%</b></li>
+  <li>发不完的余额销毁，所以全站总量只会慢慢减少，不会通胀</li>
+</ul>
+
+<b>为什么要这样</b>：<br>
+以前收上来的税是直接销毁的 —— 结果是全站通缩，小公司永远长不大，
+玩家打开页面发现自己公司一点变化都没有。<br>
+现在改成「大公司缩、小公司长」，玩家每天来看都能看到自己的公司变了 ——
+这才是股票该有的样子。<br><br>
+
+<b>注意</b>：这是<b>转移</b>不是印钱。发出去的钱全部来自大公司交的税，
+系统总量没有增加。
+
+</section>
+
+<section><h2><span class="n">4</span>怎么玩：三个策略</h2>
+<h3>策略一：自己做一家公司（创始人）</h3>
+<pre>① 出 20000 建公司 → 你得到 20000 张（股价 1.00）
+② 等别人来买 → 他们把钱放进公司，股价上涨 → 你的股份增值
+③ 想让股价快点涨 → 用「注资」往公司里打钱（不拿股份，7 天内不能卖）
+④ 想拿钱 → 发起「分红」，从公司里取钱，全体股东一起分
+⑤ 不想做了 → 「破产清算」，公司账上的钱按持股比例分给所有股东</pre>
+<div class="tip"><span class="t">关键理解</span>
+股价上涨主要靠<strong>别人买入</strong>。
+「注资」能自己推一把，但那是纯付出 —— 你不拿股份，钱进了公司就出不来。
+所以长期看，你要做的不是「往里砸钱」，而是<strong>让公司值得被买</strong>。</div>
+<h3>策略二：买入别人的公司（投资人）</h3>
+<pre>① 看中一家公司 → 买入（钱进公司，你拿到股份）
+② 公司被更多人看好 → 股价涨 → 你的股份增值
+③ 卖出 → 从公司里把钱换回来
+④ 持有期间如果创始人分红 → 你也能分到</pre>
+<div class="tip"><span class="t">关键理解</span>
+你赚的钱来自<strong>后来买入的人</strong>，不是系统给的。
+所以你要判断的是「这家公司会不会有人愿意出更高的价买」。</div>
+<h3>策略三：自动抄底</h3>
+<p>设置规则：某公司股价跌破 X 时，自动买入 Y 币。</p>
+<div class="tw"><table>
+<tr><th>可设参数</th><th>说明</th></tr>
+<tr><td>目标股价</td><td>跌到这个数以下就买</td></tr>
+<tr><td>每次买入金额</td><td>10 ~ 100000</td></tr>
+<tr><td>每日上限</td><td>默认 50000</td></tr>
+</table></div>
+<div class="tip warn"><span class="t">注意</span>只能盯<strong>别人的公司</strong> —— 不能对自己的公司设自动买入。</div>
+</section>
+
+<section><h2><span class="n">5</span>关于价格影响（必须理解的一件事）</h2>
+<p>买入金额越大，成交均价越高。这个差价叫<strong>价格影响</strong>。</p>
+<pre>某公司公司：现金 20000，股份 20000  →  股价 1.00
+
+你买 <b>100 币</b>：
+    均价 1.005      价格影响 +0.5%      （几乎没感觉）
+
+你买 <b>1000 币</b>：
+    均价 1.05       价格影响 +5%        （能感觉到）
+
+你买 <b>5000 币</b>：
+    均价 1.32       价格影响 +32%       （很痛）</pre>
+<p>为什么？因为你买入时把公司账上的钱加多了、股份拿走了，价格自然被你自己推高了。</p>
+<div class="tip key"><span class="t">所以要这样操作</span>
+小公司公司：小额买入，别一次砸太多<br>
+大公司公司：可以承受较大的单笔买入<br>
+页面上会实时显示价格影响，超过 5% 会标红提醒</div>
+<p>卖出同理 —— <strong>卖得越多，均价越低</strong>。</p>
+</section>
+
+<section><h2><span class="n">6</span>常见问题</h2>
+<details><summary>我的公司市值怎么缩水了？</summary><div class="body">
+<p>旧版的「市值」是个虚数（注册白送 2 万 + 注资撑起来的，很多从来没兑现过）。新版按<strong>真实资金</strong>重算，所以数字会变小。</p>
+<p><strong>你的股份张数没变，价值也没变</strong>，只是口径改了。</p></div></details>
+<details><summary>我的持仓怎么变成「张数」了？</summary><div class="body">
+<p>旧版记录的是「本金」，新版记录的是「持有多少张股份」。</p>
+<p><strong>数值上你的持仓价值不变</strong> —— 原来「持仓价值 3 万」，现在就是「持股 3 万张 × 股价 1.00」。</p></div></details>
+<details><summary>注资和买入有什么区别？</summary><div class="body">
+<p><strong>买入</strong>是花钱换股份，股份是你的，股价涨了你赚。</p>
+<p><strong>注资</strong>是花钱喂给公司，你什么都不拿，全体股东一起受益。只有创始人能用。</p>
+<p>那创始人为什么要注资？因为公司股价涨了，<strong>你手里的创始人股份也跟着增值</strong>，而且公司看起来更有实力、更容易吸引别人来买。</p>
+<p><strong>但注意</strong>：注资的钱进了公司就出不来了，只能靠分红或破产清算慢慢拿回。而且注资后 7 天内不能卖这家公司的股份。</p>
+</div></details>
+
+<details><summary>为什么不能买自己的公司？</summary><div class="body">
+<p>防止操纵。如果允许，创始人可以自己大额买入拉高价格，吸引别人跟风后砸盘。真实市场也不允许 —— 那叫市场操纵。</p>
+<p><strong>但有一个例外：如果你手上已经一张股份都没有了</strong>，那你就跟普通投资者没区别，这时允许你买自己的公司。</p>
+<p>买一次之后就又有股份了，规则立刻恢复拦截 —— 所以只能买一次，没法反复拉盘。想多买，得先把股份卖掉再买（来回要交手续费和价格影响，不划算）。</p>
+</div></details>
+<details><summary>我把创始股全卖了，会怎样？</summary><div class="body">
+<p>你就会变成「<strong>没有股份的公司创始人</strong>」：</p>
+<div class="tw"><table>
+<tr><th>操作</th><th>还能用吗</th></tr>
+<tr><td>分红</td><td class="bad">拿不到（按持股比例分，你 0%）</td></tr>
+<tr><td>破产清算</td><td class="bad">拿不到（同上）</td></tr>
+<tr><td>卖出</td><td class="bad">没股份可卖</td></tr>
+<tr><td>注资</td><td class="bad">能用，但等于白送钱给其他股东</td></tr>
+<tr><td>买入</td><td class="good">可以 —— 持股为 0 时允许买自己公司</td></tr>
+</table></div>
+<p><strong>所以还有救</strong>：花钱把自己的股份买回来，重新成为股东。买的时候注意价格 —— 如果公司被推得很高（比如有人注过一大笔钱），买回一部分也可能很贵。</p>
+<p><strong>建议</strong>：卖股份之前先想清楚，你是不是真的不想要这家公司了。卖光了再买回来，来回要交手续费和价格影响。</p>
+</div></details>
+
+<details><summary>公司公司的钱的钱我能拿出来吗？</summary><div class="body">
+<p>能，但只有两个途径：<strong>分红</strong>（全体股东一起分）或<strong>破产清算</strong>（按持股比例分）。</p>
+<p><strong>不能一个人独吞。</strong></p></div></details>
+<details><summary>股价会自己波动吗？</summary><div class="body">
+<p>不会了。旧版有「随机波动」和「公司税」在改市值，新版价格<strong>完全由交易决定</strong>。</p>
+<p>唯一还会影响价格的是<strong>公司税</strong> —— 每天从公司里扣一笔，扣完股价自动下跌。</p></div></details>
+<details><summary>散户能不能玩？</summary><div class="body">
+<p>能。公司小的公司，几百币就能买。</p>
+<p><strong>但要注意价格影响 —— 小公司公司别一次买太多。</strong></p></div></details>
+<details><summary>怎么知道我赚了还是亏了？</summary><div class="body">
+<p>页面上「我的持仓」会显示：持股张数 / 成本均价 / 现价 / 浮动盈亏。</p>
+<p><strong>浮动盈亏 = 当前价值 − 你的累计投入成本。</strong></p></div></details>
+<details><summary>公司税是怎么收的？</summary><div class="body">
+<p>每天 20:00 收盘后扣一次，<b>基准是「市值」</b>（= 股价 × 总股数）：</p>
+<div class="tw"><table>
+<tr><th>市值</th><th>税率</th></tr>
+<tr><td>小于 100 万</td><td>0.2%</td></tr>
+<tr><td>100 万 ~ 2000 万</td><td>0.5%</td></tr>
+<tr><td>2000 万 ~ 5000 万</td><td>1.0%</td></tr>
+<tr><td>5000 万以上</td><td>2.0%</td></tr>
+<tr><td>占全站市值 40% 以上</td><td>额外 +5%（垄断税）</td></tr>
+</table></div>
+<p>市值不足 <b>30 万</b>的公司不收税，让它们专心长大。</p>
+<p>⚠️ 钱是从<b>公司账上</b>扣的 —— 扣完股价跌、市值跟着跌，跌的部分所有股东一起承担。单次最多扣公司账上的 <b>20%</b>，扣完不低于 20000。</p></div></details>
+</section>
+
+<div class="end">
+    <span class="big">
+        旧版是「充值推高市值，然后想办法把市值换成钱」。<br>
+        新版是「用真钱买股份，从后来的人手里赚钱」。
+    </span>
+    系统不再印钱，你赚的每一分都是别人亏的 —— 这才是股票。<br><br>
+    有问题在评论区问，或者在个人中心反馈。
+</div>
+</div>
+<script>
+// ===== 在 APP 里隐藏导航菜单的 emoji =====
+// 站长要求：APP 的「更多功能」下拉菜单不要 emoji，网页端保留原样。
+// APP 是 Capacitor 套壳，加载的就是本站 —— 改 HTML 会两边一起改，
+// 所以只能按 UA 区分（APP 在 UA 里注入了 NBChannelApp）。
+(function () {
+    var isApp = false;
+    try { isApp = /NBChannelApp/i.test(navigator.userAgent || ''); } catch (e) {}
+    if (!isApp) return;
+    var LEAD = /^(?:[\u2190-\u21FF\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]|[\uD83C-\uDBFF][\uDC00-\uDFFF])+\s*/;
+    function strip() {
+        try {
+            var as = document.querySelectorAll('.nav-more-panel a, .drawer a');
+            // ⚠️ 桌面下拉(.nav-more-panel)在手机上被 CSS 藏了，手机走的是
+            //    汉堡抽屉(.drawer)。两个都要处理，否则 APP 里会漏。
+            for (var i = 0; i < as.length; i++) {
+                var x = as[i].textContent || '';
+                var y = x.replace(LEAD, '');
+                if (y !== x) as[i].textContent = y;
+            }
+        } catch (e) {}
+    }
+    strip();
+    setTimeout(strip, 400);
+    setTimeout(strip, 1500);
+})();
+</script>
+</body>
+</html>

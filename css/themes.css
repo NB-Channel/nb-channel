@@ -1,0 +1,1733 @@
+
+/* ===== 默认滚动条（不限主题） =====
+   ⚠️ 这个文件里原有的滚动条规则都是 html[theme="xxx"] 作用域的 ——
+      只有切到对应主题才生效。而官网模式（Beta/）的页面【只加载本文件】，
+      不加载 css/ui-new.css（根目录页面的蓝色滚动条就在那里），
+      所以不设主题时滚动条是系统默认的灰色，和其他页面明显不一样。
+      这里补一条不受主题限制的默认样式，让官网模式也有颜色。
+      （官网模式本来就走深色，所以两个模式各给一套。） */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(0, 161, 214, .35); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 161, 214, .55); }
+::-webkit-scrollbar-track { background: transparent; }
+html.beta ::-webkit-scrollbar-thumb { background: rgba(140, 170, 255, .38); }
+html.beta ::-webkit-scrollbar-thumb:hover { background: rgba(140, 170, 255, .6); }
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: rgba(0, 161, 214, .38) transparent; }
+html.beta * { scrollbar-color: rgba(140, 170, 255, .4) transparent; }
+
+/* ============================================================
+   NB频道 · 主题包（官网模式）
+   ------------------------------------------------------------
+   官网模式的配色全部走 CSS 变量（--bg / --ink / --brand / --card …），
+   所以这里主要靠覆盖变量换掉整套配色，再补少量装饰。
+
+   加载顺序很重要：这个文件必须排在页面内联 <style> 之后，
+   因为 html[theme=x] 和 html.dark 的特异度相同，靠「后写的赢」压过去。
+   ============================================================ */
+
+/* ============================================================
+   🌃 赛博朋克 · 霓虹紫粉 + 雨夜
+   常驻主题。和「科技」的区别：科技是冷静的青蓝，这个是湿热的紫粉。
+   ============================================================ */
+html[theme="cyber"] {
+    --bg:        #0b0518;
+    --ink:       #f6e9ff;
+    --ink-soft:  #c9a5e8;
+    --ink-faint: #8a6aa8;
+    --line:      rgba(255, 46, 166, .22);
+    --brand:     #ff2ea6;
+    --brand-deep:#c9188a;
+    --card:      #170a2b;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .55), 0 4px 18px rgba(255, 46, 166, .1);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .6), 0 28px 64px -24px rgba(255, 46, 166, .28);
+}
+
+/* 底色：深紫底 + 品红与青的霓虹光斑 + 雨丝 */
+html[theme="cyber"] body {
+    background:
+        repeating-linear-gradient(103deg,
+            rgba(255, 255, 255, .028) 0 1px,
+            transparent 1px 7px),
+        radial-gradient(900px 520px at 14% -6%, rgba(255, 46, 166, .22), transparent 62%),
+        radial-gradient(820px 500px at 88% 8%, rgba(0, 229, 255, .18), transparent 60%),
+        linear-gradient(178deg, #150826 0%, #0b0518 58%, #12061f 100%);
+    background-attachment: fixed;
+    background-color: var(--bg);
+}
+
+/* 导航：玻璃 + 品红底线 */
+html[theme="cyber"] .nav {
+    background: rgba(11, 5, 24, .84);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    border-bottom: 1px solid rgba(255, 46, 166, .26);
+    box-shadow: 0 0 26px -8px rgba(255, 46, 166, .5);
+}
+
+/* Hero / vhero */
+html[theme="cyber"] .hero,
+html[theme="cyber"] .vhero {
+    background-image:
+        radial-gradient(880px 460px at 16% 4%, rgba(255, 46, 166, .2), transparent 62%),
+        radial-gradient(760px 460px at 92% 28%, rgba(0, 229, 255, .15), transparent 60%),
+        linear-gradient(168deg, #180a2c 0%, #0e0519 54%, #150826 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, right top, center !important;
+}
+html[theme="cyber"] .vhero::before,
+html[theme="cyber"] .hero::after {
+    background-image: radial-gradient(rgba(255, 46, 166, .12) 1px, transparent 1px);
+}
+html[theme="cyber"] .vhero h1,
+html[theme="cyber"] .hero h1 { color: #fff2fc; }
+html[theme="cyber"] .vhero h1 .light,
+html[theme="cyber"] .hero h1 .light { color: var(--brand); }
+html[theme="cyber"] .vhero-sub,
+html[theme="cyber"] .hero-sub { color: rgba(214, 186, 232, .72); }
+html[theme="cyber"] .hero-eyebrow { color: rgba(255, 120, 200, .65); }
+html[theme="cyber"] .vhero-actions .hero-link,
+html[theme="cyber"] .hero-actions .hero-link {
+    color: #ffe6f7;
+    border-bottom-color: rgba(255, 46, 166, .5);
+}
+html[theme="cyber"] .vhero-fade,
+html[theme="cyber"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+/* 卡片：霓虹描边 + 切角 */
+html[theme="cyber"] .home-card,
+html[theme="cyber"] .comment-section,
+html[theme="cyber"] .product-card,
+html[theme="cyber"] .about-content,
+html[theme="cyber"] .changelog-content,
+html[theme="cyber"] .profile-card {
+    border: 1px solid rgba(255, 46, 166, .24);
+    box-shadow:
+        inset 0 0 26px -16px rgba(255, 46, 166, .7),
+        0 0 26px -10px rgba(255, 46, 166, .3);
+}
+
+/* 按钮 */
+html[theme="cyber"] .nav-cta {
+    background: linear-gradient(135deg, #ff2ea6, #7c3aed);
+    color: #fff2fc;
+    box-shadow: 0 0 22px -6px rgba(255, 46, 166, .85);
+}
+html[theme="cyber"] .stat-bar .num { text-shadow: 0 0 18px rgba(255, 46, 166, .55); }
+html[theme="cyber"] .nav-scan:hover,
+html[theme="cyber"] .theme-btn:hover,
+html[theme="cyber"] .drawer .d-close:hover { color: var(--brand); }
+html[theme="cyber"] .nav-more-panel a:hover {
+    background: rgba(255, 46, 166, .12);
+    color: #fff2fc;
+}
+html[theme="cyber"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="cyber"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(255, 46, 166, .9);
+}
+
+/* CTA */
+html[theme="cyber"] .cta {
+    background: linear-gradient(170deg, #180a2c 0%, #150826 55%, #1d0a33 100%);
+    color: #fff2fc;
+}
+html[theme="cyber"] .cta p { color: rgba(214, 186, 232, .66); }
+html[theme="cyber"] .cta .hero-link { border-bottom-color: rgba(255, 46, 166, .5); }
+
+/* 页脚 */
+html[theme="cyber"] .footer {
+    background: linear-gradient(180deg, #150826 0%, #0b0518 100%);
+    color: #b490cf;
+}
+html[theme="cyber"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 46, 166, .6), rgba(0, 229, 255, .45), transparent);
+}
+html[theme="cyber"] .footer h5 { color: #f6e9ff; }
+html[theme="cyber"] .footer a { color: #a986c6; }
+html[theme="cyber"] .footer a:hover { color: #fff2fc; }
+html[theme="cyber"] .footer .brand { color: #f6e9ff; }
+html[theme="cyber"] .footer .brand .dot {
+    background: linear-gradient(135deg, var(--brand), #00e5ff);
+}
+html[theme="cyber"] .footer .desc { color: #8f6cad; }
+html[theme="cyber"] .footer-bottom {
+    border-top-color: rgba(255, 46, 166, .16);
+    color: #8a6aa8;
+}
+
+/* 输入框 / 滚动条 */
+html[theme="cyber"] input,
+html[theme="cyber"] textarea {
+    background: rgba(23, 10, 43, .8);
+    border-color: rgba(255, 46, 166, .3);
+    color: #f6e9ff;
+}
+html[theme="cyber"] ::-webkit-scrollbar-thumb { background: rgba(255, 46, 166, .45); }
+html[theme="cyber"] ::-webkit-scrollbar-thumb:hover { background: rgba(255, 46, 166, .7); }
+
+/* 标题加一点霓虹故障感（不真做 glitch，只加外发光） */
+html[theme="cyber"] .hero h1,
+html[theme="cyber"] .vhero h1 {
+    text-shadow:
+        0 0 26px rgba(255, 46, 166, .35),
+        2px 0 0 rgba(0, 229, 255, .18);
+}
+
+/* ============================================================
+   🖌️ 墨韵 · 宣纸米白 + 焦墨
+   常驻主题。全套里唯一一个浅色主题 —— 和其余深色形成反差。
+   去掉所有发光和渐变，安静、省电，白天在强光下也看得清。
+   ============================================================ */
+html[theme="ink"] {
+    --bg:        #f4f0e6;
+    --ink:       #1c1a17;
+    --ink-soft:  #3d3830;
+    --ink-faint: #6b6459;
+    --line:      rgba(28, 26, 23, .16);
+    --brand:     #8c2f23;
+    --brand-deep:#6d241a;
+    --card:      #faf7f0;
+
+    --shadow-1: 0 1px 2px rgba(40, 34, 26, .08), 0 4px 12px rgba(40, 34, 26, .06);
+    --shadow-2: 0 2px 8px rgba(40, 34, 26, .1), 0 20px 48px -20px rgba(40, 34, 26, .18);
+}
+
+/* 底色：宣纸的米白，加一点点纸纹 */
+html[theme="ink"] body {
+    background:
+        repeating-linear-gradient(91deg,
+            rgba(28, 26, 23, .012) 0 1px,
+            transparent 1px 4px),
+        radial-gradient(900px 560px at 12% 0%, rgba(140, 47, 35, .05), transparent 62%),
+        var(--bg);
+    background-attachment: fixed;
+    color: var(--ink);
+    background-color: var(--bg);
+}
+
+/* 导航：米白 + 细墨线 */
+html[theme="ink"] .nav {
+    background: rgba(244, 240, 230, .92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(28, 26, 23, .14);
+}
+html[theme="ink"] .nav a { color: var(--ink-soft); }
+html[theme="ink"] .nav a:hover,
+html[theme="ink"] .nav a.active { color: var(--brand); }
+
+html[theme="ink"] .hero,
+html[theme="ink"] .vhero {
+    background-image:
+        radial-gradient(860px 440px at 16% 6%, rgba(140, 47, 35, .07), transparent 62%),
+        linear-gradient(168deg, #f6f2e9 0%, #f1ece1 54%, #ece6d9 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, center !important;
+}
+html[theme="ink"] .vhero::before,
+html[theme="ink"] .hero::after {
+    background-image: radial-gradient(rgba(28, 26, 23, .07) 1px, transparent 1px);
+    opacity: .5;
+}
+html[theme="ink"] .vhero h1,
+html[theme="ink"] .hero h1 { color: #1c1a17; }
+html[theme="ink"] .vhero h1 .light,
+html[theme="ink"] .hero h1 .light { color: var(--brand); font-weight: 200; }
+html[theme="ink"] .vhero-sub,
+html[theme="ink"] .hero-sub { color: rgba(74, 69, 61, .82); }
+html[theme="ink"] .hero-eyebrow { color: rgba(140, 47, 35, .6); }
+html[theme="ink"] .vhero-actions .hero-link,
+html[theme="ink"] .hero-actions .hero-link {
+    color: var(--ink);
+    border-bottom-color: rgba(28, 26, 23, .3);
+}
+html[theme="ink"] .vhero-fade,
+html[theme="ink"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+/* 卡片：白宣纸 + 细边，不加阴影光效 */
+html[theme="ink"] .home-card,
+html[theme="ink"] .comment-section,
+html[theme="ink"] .product-card,
+html[theme="ink"] .about-content,
+html[theme="ink"] .changelog-content,
+html[theme="ink"] .profile-card {
+    background: var(--card);
+    border: 1px solid rgba(28, 26, 23, .12);
+    box-shadow: var(--shadow-1);
+}
+html[theme="ink"] .nav-cta {
+    background: var(--brand);
+    color: #faf7f0;
+    box-shadow: none;
+}
+html[theme="ink"] .stat-bar .num { text-shadow: none; }
+html[theme="ink"] .nav-scan:hover,
+html[theme="ink"] .theme-btn:hover,
+html[theme="ink"] .drawer .d-close:hover { color: var(--brand); }
+html[theme="ink"] .nav-more-panel a:hover {
+    background: rgba(140, 47, 35, .08);
+    color: var(--brand);
+}
+html[theme="ink"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="ink"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: none;
+}
+
+html[theme="ink"] .cta {
+    background: linear-gradient(170deg, #efe9dd 0%, #e9e2d4 100%);
+    color: #1c1a17;
+}
+html[theme="ink"] .cta p { color: rgba(74, 69, 61, .78); }
+html[theme="ink"] .cta .hero-link { border-bottom-color: rgba(28, 26, 23, .3); }
+
+html[theme="ink"] .footer {
+    background: linear-gradient(180deg, #ece6d9 0%, #e4ddcd 100%);
+    color: #4a453d;
+}
+html[theme="ink"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(140, 47, 35, .4), transparent);
+}
+html[theme="ink"] .footer h5 { color: #1c1a17; }
+html[theme="ink"] .footer a { color: #4a453d; }
+html[theme="ink"] .footer a:hover { color: var(--brand); }
+html[theme="ink"] .footer .brand { color: #1c1a17; }
+html[theme="ink"] .footer .brand .dot { background: var(--brand); }
+html[theme="ink"] .footer .desc { color: #6b6459; }
+html[theme="ink"] .footer-bottom {
+    border-top-color: rgba(28, 26, 23, .12);
+    color: #8b8375;
+}
+
+html[theme="ink"] input,
+html[theme="ink"] textarea {
+    background: #faf7f0;
+    border-color: rgba(28, 26, 23, .18);
+    color: #1c1a17;
+}
+html[theme="ink"] ::-webkit-scrollbar-thumb { background: rgba(28, 26, 23, .22); }
+html[theme="ink"] ::-webkit-scrollbar-thumb:hover { background: rgba(140, 47, 35, .5); }
+html[theme="ink"] ::-webkit-scrollbar-track { background: transparent; }
+
+/* 首页「大事记」那套 jny- 也换成纸墨 */
+html[theme="ink"] .jny-stage {
+    background-image:
+        radial-gradient(760px 420px at 18% 16%, rgba(140, 47, 35, .07), transparent 60%),
+        linear-gradient(168deg, #f6f2e9 0%, #efe9dd 54%, #e9e2d4 100%);
+}
+html[theme="ink"] .jny-bg {
+    background: radial-gradient(320px 320px at 50% 50%, rgba(140, 47, 35, .08), transparent 65%);
+}
+html[theme="ink"] .jny-node { color: rgba(28, 26, 23, .75); }
+html[theme="ink"] .jny-node.lit { color: #1c1a17; text-shadow: none; }
+html[theme="ink"] .jny-node.lit .jy { color: var(--brand); }
+html[theme="ink"] .jny-svg .base { stroke: rgba(28, 26, 23, .14); }
+html[theme="ink"] .jny-svg .go { stroke: var(--brand); filter: none; }
+html[theme="ink"] .jny-batt i { background: var(--brand); box-shadow: none; }
+html[theme="ink"] .jny-batt b { border-color: rgba(140, 47, 35, .4); }
+html[theme="ink"] .jny-card { background: rgba(250, 247, 240, .9); }
+html[theme="ink"] .jny-tag { color: var(--brand); }
+html[theme="ink"] .jny-h { color: #1c1a17; }
+html[theme="ink"] .jny-d { color: rgba(74, 69, 61, .8); }
+html[theme="ink"] .jny-progress { color: rgba(74, 69, 61, .6); }
+html[theme="ink"] .jny-progress .bar { background: rgba(28, 26, 23, .12); }
+html[theme="ink"] .jny-progress .bar i { background: var(--brand); }
+
+/* 浅色主题下，深色 logo 图片不用反相 */
+html[theme="ink"] .logo-img { filter: none; }
+
+/* ============================================================
+   👾 像素风 · 8-bit 有限色板
+   常驻主题。参考 PICO-8 那套 16 色：
+   不用渐变、不用圆角、不用阴影模糊，全部换成硬边和纯色块。
+   ============================================================ */
+html[theme="pixel"] {
+    --bg:        #1a1c2c;
+    --ink:       #f4f4f4;
+    --ink-soft:  #c2c3c7;
+    --ink-faint: #8b8fa3;
+    --line:      rgba(41, 173, 255, .35);
+    --brand:     #29adff;
+    --brand-deep:#1d7fbd;
+    --card:      #24263a;
+
+    --shadow-1: 3px 3px 0 rgba(0, 0, 0, .5);
+    --shadow-2: 5px 5px 0 rgba(0, 0, 0, .55);
+}
+
+html[theme="pixel"] body {
+    /* 棋盘格底纹，像老游戏的背景 */
+    background-image:
+        linear-gradient(45deg, rgba(41, 173, 255, .035) 25%, transparent 25% 75%, rgba(41, 173, 255, .035) 75%),
+        linear-gradient(45deg, rgba(41, 173, 255, .035) 25%, transparent 25% 75%, rgba(41, 173, 255, .035) 75%);
+    background-size: 16px 16px, 16px 16px;
+    background-position: 0 0, 8px 8px;
+    background-color: var(--bg);
+    background-attachment: fixed;
+    /* 全站等宽字体，最有 8-bit 味 */
+    font-family: ui-monospace, Consolas, 'Courier New', monospace;
+}
+
+/* 一律方角、硬边 */
+html[theme="pixel"] .home-card,
+html[theme="pixel"] .comment-section,
+html[theme="pixel"] .product-card,
+html[theme="pixel"] .about-content,
+html[theme="pixel"] .changelog-content,
+html[theme="pixel"] .profile-card,
+html[theme="pixel"] .nav,
+html[theme="pixel"] .cta,
+html[theme="pixel"] .footer,
+html[theme="pixel"] button,
+html[theme="pixel"] input,
+html[theme="pixel"] textarea {
+    border-radius: 0 !important;
+}
+
+html[theme="pixel"] .nav {
+    background: var(--bg);
+    border-bottom: 3px solid var(--brand);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+html[theme="pixel"] .home-card,
+html[theme="pixel"] .comment-section,
+html[theme="pixel"] .product-card,
+html[theme="pixel"] .about-content,
+html[theme="pixel"] .changelog-content,
+html[theme="pixel"] .profile-card {
+    background: var(--card);
+    border: 3px solid #3a3f5c;
+    box-shadow: var(--shadow-1);
+}
+html[theme="pixel"] .home-card:hover,
+html[theme="pixel"] .product-card:hover {
+    border-color: var(--brand);
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-2);
+}
+
+html[theme="pixel"] .hero,
+html[theme="pixel"] .vhero {
+    background-color: var(--bg) !important;
+    background-image:
+        repeating-linear-gradient(0deg, rgba(41, 173, 255, .05) 0 2px, transparent 2px 4px) !important;
+    background-repeat: repeat !important;
+    background-position: center !important;
+}
+html[theme="pixel"] .vhero::before,
+html[theme="pixel"] .hero::after {
+    background-image: none;
+}
+html[theme="pixel"] .vhero h1,
+html[theme="pixel"] .hero h1 {
+    color: #ffec27;
+    text-shadow: 4px 4px 0 #b9004f;
+    letter-spacing: 2px;
+}
+html[theme="pixel"] .vhero h1 .light,
+html[theme="pixel"] .hero h1 .light { color: #ff77a8; font-weight: 800; }
+html[theme="pixel"] .vhero-sub,
+html[theme="pixel"] .hero-sub { color: var(--ink-soft); }
+html[theme="pixel"] .hero-eyebrow { color: #29adff; letter-spacing: 3px; }
+html[theme="pixel"] .vhero-actions .hero-link,
+html[theme="pixel"] .hero-actions .hero-link {
+    color: #ffec27;
+    border-bottom: 3px solid #b9004f;
+}
+html[theme="pixel"] .vhero-fade,
+html[theme="pixel"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+html[theme="pixel"] .nav-cta {
+    background: #ff004d;
+    color: #fff1e8;
+    border: 3px solid #ff77a8;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, .5);
+}
+html[theme="pixel"] .stat-bar .num {
+    color: #ffec27;
+    text-shadow: 2px 2px 0 #b9004f;
+}
+html[theme="pixel"] .stat .label .live {
+    background: #00e436;
+    border-radius: 0;
+    box-shadow: none;
+}
+html[theme="pixel"] .beta-announce .ba-title { color: #ffec27; }
+html[theme="pixel"] .nav-scan:hover,
+html[theme="pixel"] .theme-btn:hover,
+html[theme="pixel"] .drawer .d-close:hover { color: #ffec27; }
+html[theme="pixel"] .nav-more-panel a:hover {
+    background: #ff004d;
+    color: #fff1e8;
+}
+
+html[theme="pixel"] .cta {
+    background: #24263a;
+    color: #ffec27;
+    border-top: 3px solid #29adff;
+}
+html[theme="pixel"] .cta p { color: var(--ink-soft); }
+html[theme="pixel"] .cta .hero-link { border-bottom-color: #ff004d; }
+
+html[theme="pixel"] .footer {
+    background: #13141f;
+    color: #8b8fa3;
+    border-top: 3px solid #29adff;
+}
+html[theme="pixel"] .footer::before { background: none; }
+html[theme="pixel"] .footer h5 { color: #ffec27; }
+html[theme="pixel"] .footer a { color: #8b8fa3; }
+html[theme="pixel"] .footer a:hover { color: #29adff; }
+html[theme="pixel"] .footer .brand { color: #f4f4f4; }
+html[theme="pixel"] .footer .brand .dot {
+    background: #ff004d;
+    border-radius: 0;
+}
+html[theme="pixel"] .footer .desc { color: #6d7186; }
+html[theme="pixel"] .footer-bottom {
+    border-top: 3px solid #24263a;
+    color: #6d7186;
+}
+
+html[theme="pixel"] input,
+html[theme="pixel"] textarea {
+    background: #13141f;
+    border: 3px solid #3a3f5c;
+    color: #f4f4f4;
+}
+html[theme="pixel"] ::-webkit-scrollbar { width: 12px; }
+html[theme="pixel"] ::-webkit-scrollbar-thumb {
+    background: #29adff;
+    border-radius: 0;
+}
+html[theme="pixel"] ::-webkit-scrollbar-track { background: #13141f; }
+
+/* 首页「大事记」 */
+html[theme="pixel"] .jny-stage {
+    background-color: var(--bg);
+    background-image: repeating-linear-gradient(0deg, rgba(41, 173, 255, .05) 0 2px, transparent 2px 4px);
+    border: 3px solid #3a3f5c;
+    border-radius: 0;
+}
+html[theme="pixel"] .jny-bg { background: none; }
+html[theme="pixel"] .jny-node { color: var(--ink-faint); }
+html[theme="pixel"] .jny-node.lit { color: #ffec27; text-shadow: 2px 2px 0 #b9004f; }
+html[theme="pixel"] .jny-node.lit .jy { color: #ff77a8; }
+html[theme="pixel"] .jny-svg .base { stroke: rgba(255, 255, 255, .1); }
+html[theme="pixel"] .jny-svg .go { stroke: #29adff; filter: none; stroke-width: 3; }
+html[theme="pixel"] .jny-batt i { background: #ffec27; box-shadow: none; }
+html[theme="pixel"] .jny-batt b { border: 3px solid #ff004d; }
+html[theme="pixel"] .jny-card {
+    background: var(--card);
+    border: 3px solid #3a3f5c;
+    border-radius: 0;
+}
+html[theme="pixel"] .jny-tag { color: #29adff; }
+html[theme="pixel"] .jny-h { color: #ffec27; }
+html[theme="pixel"] .jny-d { color: var(--ink-soft); }
+html[theme="pixel"] .jny-progress { color: var(--ink-faint); }
+html[theme="pixel"] .jny-progress .bar { background: #13141f; border-radius: 0; }
+html[theme="pixel"] .jny-progress .bar i { background: #29adff; border-radius: 0; }
+
+/* ============================================================
+   🌙 护眼 · 低对比暖灰
+   常驻主题。不是「好看」用的，是「晚上看站不刺眼」用的：
+   去掉全部发光、阴影和渐变，把对比压到最低，色温偏暖。
+   ============================================================ */
+html[theme="eyecare"] {
+    --bg:        #d6cfc0;
+    --ink:       #3a3630;
+    --ink-soft:  #524c43;
+    --ink-faint: #7a7266;
+    --line:      rgba(58, 54, 48, .16);
+    --brand:     #6b5a3e;
+    --brand-deep:#544730;
+    --card:      #e0d9cb;
+
+    --shadow-1: none;
+    --shadow-2: none;
+}
+
+html[theme="eyecare"] body {
+    background: var(--bg);
+    background-image: none;
+    color: var(--ink);
+}
+
+/* 把所有装饰性效果关掉 */
+html[theme="eyecare"] * {
+    text-shadow: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+html[theme="eyecare"] .nav {
+    background: #cdc5b5;
+    border-bottom: 1px solid var(--line);
+}
+html[theme="eyecare"] .nav a { color: var(--ink-soft); }
+html[theme="eyecare"] .nav a:hover,
+html[theme="eyecare"] .nav a.active { color: var(--brand); }
+
+html[theme="eyecare"] .hero,
+html[theme="eyecare"] .vhero {
+    background-color: #dad3c4 !important;
+    background-image: none !important;
+}
+html[theme="eyecare"] .vhero::before,
+html[theme="eyecare"] .hero::after { background-image: none; }
+html[theme="eyecare"] .vhero h1,
+html[theme="eyecare"] .hero h1 { color: var(--ink); }
+html[theme="eyecare"] .vhero h1 .light,
+html[theme="eyecare"] .hero h1 .light { color: var(--brand); font-weight: 300; }
+html[theme="eyecare"] .vhero-sub,
+html[theme="eyecare"] .hero-sub { color: var(--ink-soft); }
+html[theme="eyecare"] .hero-eyebrow { color: var(--ink-faint); }
+html[theme="eyecare"] .vhero-actions .hero-link,
+html[theme="eyecare"] .hero-actions .hero-link {
+    color: var(--ink);
+    border-bottom-color: rgba(58, 54, 48, .3);
+}
+html[theme="eyecare"] .vhero-fade,
+html[theme="eyecare"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+html[theme="eyecare"] .home-card,
+html[theme="eyecare"] .comment-section,
+html[theme="eyecare"] .product-card,
+html[theme="eyecare"] .about-content,
+html[theme="eyecare"] .changelog-content,
+html[theme="eyecare"] .profile-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+}
+html[theme="eyecare"] .nav-cta {
+    background: var(--brand);
+    color: #e0d9cb;
+}
+html[theme="eyecare"] .stat-bar .num { color: var(--ink); }
+html[theme="eyecare"] .stat .label .live { background: #7a8a55; }
+html[theme="eyecare"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="eyecare"] .nav-scan:hover,
+html[theme="eyecare"] .theme-btn:hover,
+html[theme="eyecare"] .drawer .d-close:hover { color: var(--brand); }
+html[theme="eyecare"] .nav-more-panel a:hover {
+    background: rgba(58, 54, 48, .08);
+    color: var(--ink);
+}
+
+html[theme="eyecare"] .cta {
+    background: #d2cabb;
+    color: var(--ink);
+}
+html[theme="eyecare"] .cta p { color: var(--ink-soft); }
+html[theme="eyecare"] .cta .hero-link { border-bottom-color: rgba(58, 54, 48, .3); }
+
+html[theme="eyecare"] .footer {
+    background: #cdc5b5;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--line);
+}
+html[theme="eyecare"] .footer::before { background: none; }
+html[theme="eyecare"] .footer h5 { color: var(--ink); }
+html[theme="eyecare"] .footer a { color: var(--ink-soft); }
+html[theme="eyecare"] .footer a:hover { color: var(--brand); }
+html[theme="eyecare"] .footer .brand { color: var(--ink); }
+html[theme="eyecare"] .footer .brand .dot { background: var(--brand); }
+html[theme="eyecare"] .footer .desc { color: var(--ink-faint); }
+html[theme="eyecare"] .footer-bottom {
+    border-top-color: var(--line);
+    color: var(--ink-faint);
+}
+
+html[theme="eyecare"] input,
+html[theme="eyecare"] textarea {
+    background: #e0d9cb;
+    border: 1px solid var(--line);
+    color: var(--ink);
+}
+html[theme="eyecare"] ::-webkit-scrollbar-thumb { background: rgba(58, 54, 48, .28); }
+html[theme="eyecare"] ::-webkit-scrollbar-thumb:hover { background: rgba(107, 90, 62, .5); }
+
+/* 大事记 */
+html[theme="eyecare"] .jny-stage {
+    background-color: #dad3c4;
+    background-image: none;
+}
+html[theme="eyecare"] .jny-bg { background: none; }
+html[theme="eyecare"] .jny-node { color: var(--ink-faint); }
+html[theme="eyecare"] .jny-node.lit { color: var(--ink); }
+html[theme="eyecare"] .jny-node.lit .jy { color: var(--brand); }
+html[theme="eyecare"] .jny-svg .base { stroke: rgba(58, 54, 48, .16); }
+html[theme="eyecare"] .jny-svg .go { stroke: var(--brand); filter: none; }
+html[theme="eyecare"] .jny-batt i { background: var(--brand); }
+html[theme="eyecare"] .jny-batt b { border-color: rgba(107, 90, 62, .4); }
+html[theme="eyecare"] .jny-card { background: var(--card); }
+html[theme="eyecare"] .jny-tag { color: var(--brand); }
+html[theme="eyecare"] .jny-h { color: var(--ink); }
+html[theme="eyecare"] .jny-d { color: var(--ink-soft); }
+html[theme="eyecare"] .jny-progress { color: var(--ink-faint); }
+html[theme="eyecare"] .jny-progress .bar { background: rgba(58, 54, 48, .14); }
+html[theme="eyecare"] .jny-progress .bar i { background: var(--brand); }
+
+/* ============================================================
+   🇨🇳 国庆主题 · 红金
+   限时 10 月 1 日 ~ 7 日（由 js/theme.js 控制可用性）
+   ============================================================ */
+html[theme="national"] {
+    --bg:        #6d1017;
+    --ink:       #ffedcf;
+    --ink-soft:  #e3c49a;
+    --ink-faint: #ab8a63;
+    --line:      rgba(255, 214, 102, .22);
+    --brand:     #ffd24a;
+    --brand-deep:#e8b52c;
+    --card:      #8a151e;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .28);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 26px 56px -22px rgba(0, 0, 0, .55);
+}
+
+/* 底色：深红打底 + 极淡的金色光晕，避免大片纯色显得闷 */
+html[theme="national"] body {
+    background:
+        radial-gradient(1100px 620px at 12% -8%, rgba(255, 210, 74, .16), transparent 62%),
+        radial-gradient(900px 520px at 92% 4%, rgba(255, 120, 90, .13), transparent 60%),
+        var(--bg);
+    background-attachment: fixed;
+}
+
+/* ---- Hero 幕布：深红 + 金色顶光。
+       国旗改由 js/turtle-flag.js 的海龟动画呈现（在 LOGO 视频上方），
+       这里不再放任何静态旗子。 ---- */
+html[theme="national"] .hero {
+    background-image:
+        radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
+        radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, right top, center !important;
+    background-size: auto, auto, auto !important;
+}
+
+/* ---- 其它页面的 Hero 幕布（类名是 .vhero，比首页多一个 v）----
+   首页只有 index-Beta.html 用 .hero，另外 24 个页面（关于 / 视频 / 更新日志 …）
+   用的是 .vhero 系列。它们在各自内联 <style> 里写死了蓝色顶光，
+   这里统一压成同一套红金，省得逐个页面改。 */
+html[theme="national"] .vhero {
+    background-image:
+        radial-gradient(880px 470px at 16% 6%, rgba(255, 210, 74, .17), transparent 62%),
+        radial-gradient(720px 470px at 92% 30%, rgba(255, 108, 74, .13), transparent 60%),
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
+    background-repeat: no-repeat;
+    background-position: left top, right top, center;
+}
+/* 点阵装饰换成金色 */
+html[theme="national"] .vhero::before {
+    background-image: radial-gradient(rgba(255, 214, 102, .085) 1px, transparent 1px);
+}
+html[theme="national"] .vhero h1 { color: #fff6e2; }
+html[theme="national"] .vhero h1 .light { color: var(--brand); }
+html[theme="national"] .vhero-sub { color: rgba(255, 232, 200, .66); }
+html[theme="national"] .hero-eyebrow { color: rgba(255, 226, 170, .55); }
+html[theme="national"] .vhero-actions .hero-link {
+    color: #ffedcf;
+    border-bottom-color: rgba(255, 210, 74, .42);
+}
+html[theme="national"] .vhero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+/* ---- 首页页脚上方的 CTA 区块 ----
+   原来是 linear-gradient(170deg,#101c33,#1c1745) 的深蓝紫，
+   完全没接主题。这块在首页最下方，是转化入口，配色得跟上。 */
+html[theme="national"] .cta {
+    background: linear-gradient(170deg, #4d0a10 0%, #5e0d14 55%, #6d1017 100%);
+    color: #fff6e2;
+}
+html[theme="national"] .cta p { color: rgba(255, 232, 200, .62); }
+html[theme="national"] .cta .hero-link { border-bottom-color: rgba(255, 210, 74, .42); }
+
+/* ---- 导航栏按钮 ---- */
+html[theme="national"] .nav-cta {
+    background: linear-gradient(135deg, var(--brand), #ff8a5c);
+    color: #4d0a10;
+}
+html[theme="national"] .nav-scan:hover { color: var(--brand); }
+html[theme="national"] .nav-more-panel a:hover {
+    background: rgba(255, 210, 74, .12);
+    color: #fff6e2;
+}
+html[theme="national"] .theme-btn:hover {
+    border-color: rgba(255, 210, 74, .5);
+    color: var(--brand);
+}
+html[theme="national"] .drawer .d-close:hover { color: var(--brand); }
+
+/* ---- 公告条标题、实时小圆点 ---- */
+html[theme="national"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="national"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(255, 210, 74, .8);
+}
+
+/* ---- 卡片图标与视频缩略图 ---- */
+html[theme="national"] .about-card .ico {
+    background: linear-gradient(135deg, rgba(255, 210, 74, .22), rgba(255, 108, 74, .18));
+    color: var(--brand);
+}
+html[theme="national"] .vcard:nth-child(1) .thumb {
+    background: linear-gradient(135deg, #8a151e, #4d0a10);
+}
+
+/* ---- 页脚：同样换红金 ----
+   页脚配色在页面内联样式里写死成深蓝紫
+   （background #0f172a→#0a0f1e、顶线 rgba(59,130,246)/rgba(139,92,246)、
+     a #8fa0b8、desc #7c8ba5、footer-bottom #5b6a85），
+   这里整段压过来。 */
+html[theme="national"] .footer {
+    background: linear-gradient(180deg, #4d0a10 0%, #3a070c 100%);
+    color: #e3c49a;
+}
+html[theme="national"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 210, 74, .55), rgba(255, 108, 74, .42), transparent);
+}
+html[theme="national"] .footer h5 { color: #fff6e2; }
+html[theme="national"] .footer a { color: #e0bd93; }
+html[theme="national"] .footer a:hover { color: #fff; }
+html[theme="national"] .footer .brand { color: #fff6e2; }
+html[theme="national"] .footer .brand .dot {
+    background: linear-gradient(135deg, var(--brand), #ff8a5c);
+}
+html[theme="national"] .footer .desc { color: #c9a274; }
+html[theme="national"] .footer-bottom {
+    border-top-color: rgba(255, 214, 102, .16);
+    color: #ab8a63;
+}
+html[theme="national"] .footer .logo-img { filter: none; }
+
+/* ---- 首页「大事记」区块（#milestone，一整套 jny- 类）----
+   这块的颜色写死在 index-Beta.html 的内联样式里，全是蓝紫：
+   舞台顶光 rgba(59,130,246,.16)、节点高亮 #9cc0ff、
+   能量核心 rgba(96,165,250,.9)、卡片底 rgba(15,23,42,.55)、
+   进度条 linear-gradient(90deg,#60a5fa,#a78bfa)。
+   这里整段压成红金。 */
+html[theme="national"] .jny-stage {
+    background-image:
+        radial-gradient(760px 420px at 18% 16%, rgba(255, 210, 74, .15), transparent 60%),
+        radial-gradient(620px 380px at 88% 78%, rgba(255, 108, 74, .12), transparent 62%),
+        linear-gradient(168deg, #4d0a10 0%, #6d1017 52%, #8a151e 100%);
+}
+html[theme="national"] .jny-bg {
+    background: radial-gradient(320px 320px at 50% 50%, rgba(255, 210, 74, .16), transparent 65%);
+}
+html[theme="national"] .jny-node { color: rgba(255, 246, 226, .85); }
+html[theme="national"] .jny-node.lit {
+    color: #fff;
+    text-shadow: 0 0 26px rgba(255, 210, 74, .7);
+}
+html[theme="national"] .jny-node.lit .jy { color: var(--brand); }
+html[theme="national"] .jny-svg .base { stroke: rgba(255, 214, 102, .12); }
+html[theme="national"] .jny-svg .go {
+    stroke: rgba(255, 210, 74, .92);
+    filter: drop-shadow(0 0 6px rgba(255, 210, 74, .6));
+}
+html[theme="national"] .jny-batt i {
+    background: #fff6d8;
+    box-shadow: 0 0 22px rgba(255, 210, 74, .9), 0 0 46px rgba(232, 181, 44, .5);
+}
+html[theme="national"] .jny-batt b { border-color: rgba(255, 210, 74, .55); }
+html[theme="national"] .jny-batt.dragging i {
+    box-shadow: 0 0 30px rgba(255, 210, 74, 1), 0 0 70px rgba(232, 181, 44, .75);
+}
+html[theme="national"] .jny-card { background: rgba(74, 10, 16, .62); }
+html[theme="national"] .jny-tag { color: var(--brand); }
+html[theme="national"] .jny-h { color: #fff6e2; }
+html[theme="national"] .jny-d { color: rgba(255, 232, 200, .74); }
+html[theme="national"] .jny-progress { color: rgba(255, 232, 200, .5); }
+html[theme="national"] .jny-progress .bar { background: rgba(255, 214, 102, .16); }
+html[theme="national"] .jny-progress .bar i {
+    background: linear-gradient(90deg, #ffd24a, #ff8a5c);
+}
+
+/* 手机上交叠会太挤，缩小并挪到右下角 */
+@media (max-width: 900px) {
+    }
+
+/* 旗子压在 Hero 的装饰点阵之下，正文之上不受影响 */
+html[theme="national"] .hero::after { opacity: .28; }
+
+/* 顶部导航：金线压边 */
+html[theme="national"] .nav {
+    background: rgba(109, 16, 23, .9);
+    border-bottom: 1px solid rgba(255, 214, 102, .32);
+    box-shadow: 0 1px 0 rgba(255, 214, 102, .14), 0 8px 26px -14px rgba(0, 0, 0, .6);
+}
+
+/* 卡片：金色细边 + 内发光 */
+html[theme="national"] .home-card,
+html[theme="national"] .comment-section,
+html[theme="national"] .product-card,
+html[theme="national"] .about-content,
+html[theme="national"] .changelog-content,
+html[theme="national"] .profile-card,
+html[theme="national"] .stat-bar,
+html[theme="national"] .feature-grid > * {
+    border-color: rgba(255, 214, 102, .18);
+    box-shadow: inset 0 1px 0 rgba(255, 214, 102, .07), var(--shadow-1);
+}
+
+/* 标题：金色渐变字（只作用于主标题，不碰正文） */
+html[theme="national"] .hero h1,
+html[theme="national"] .section-title,
+html[theme="national"] .hero-title {
+    background: linear-gradient(100deg, #ffe9b0, #ffd24a 42%, #ffb01f);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #ffd24a;
+}
+
+/* 主按钮：金底红字，反色更醒目 */
+html[theme="national"] .nav-auth.primary,
+html[theme="national"] .hero-btns .primary,
+html[theme="national"] button.primary,
+html[theme="national"] .f-go {
+    background: linear-gradient(135deg, #ffd24a, #e8a91c);
+    color: #6d1017 !important;
+    border-color: rgba(255, 214, 102, .5);
+}
+
+html[theme="national"] .nav-auth.primary:hover,
+html[theme="national"] .hero-btns .primary:hover {
+    background: linear-gradient(135deg, #ffe27a, #f5bb32);
+    box-shadow: 0 6px 22px -6px rgba(255, 210, 74, .5);
+}
+
+/* 链接与高亮 */
+html[theme="national"] a:hover { color: #ffd24a; }
+html[theme="national"] .stat-bar .num { color: #ffd24a; }
+html[theme="national"] .hero-badge,
+html[theme="national"] .hero-badges span {
+    background: rgba(255, 210, 74, .12);
+    border-color: rgba(255, 210, 74, .3);
+    color: #ffe0a3;
+}
+
+/* 公告栏：红底金字 */
+html[theme="national"] .announcement-bar {
+    background: rgba(255, 210, 74, .1);
+    border-color: rgba(255, 210, 74, .3);
+}
+
+/* 顶部金色飘带（挂在 <html> 上，避开国旗用的 body::before） */
+html[theme="national"]::before {
+    content: "";
+    position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 9999;
+    pointer-events: none;
+    background: linear-gradient(90deg,
+        transparent, #ffd24a 18%, #fff2c4 50%, #ffd24a 82%, transparent);
+    opacity: .85;
+}
+
+/* 角落灯笼（纯 CSS 画，两个） */
+html[theme="national"] body::after {
+    content: "";
+    position: fixed; top: 0; right: 34px; z-index: 60;
+    width: 30px; height: 30px; pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%, #ff6a5a, #c8102e 68%, #8c0a1e);
+    box-shadow:
+        0 0 16px 4px rgba(255, 90, 70, .38),
+        0 34px 0 -12px rgba(255, 210, 74, .55),
+        0 66px 0 -15px rgba(200, 16, 46, .45);
+    animation: nbLantern 3.6s ease-in-out infinite;
+    transform-origin: 50% -14px;
+}
+@keyframes nbLantern {
+    0%, 100% { transform: rotate(-3deg); }
+    50%      { transform: rotate(3deg); }
+}
+
+/* ============================================================
+   🚀 科技主题 · 深空蓝 + 霓虹
+   天生就是深色，所以相当于「默认的深色模式」再加上科技感
+   ============================================================ */
+html[theme="tech"] {
+    --bg:        #060a14;
+    --ink:       #d7e5ff;
+    --ink-soft:  #8ea4c9;
+    --ink-faint: #59698a;
+    --line:      rgba(0, 229, 255, .17);
+    --brand:     #00e5ff;
+    --brand-deep:#00b4d8;
+    --card:      #0c1424;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .5), 0 4px 16px rgba(0, 229, 255, .05);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, .55), 0 26px 60px -22px rgba(0, 229, 255, .16);
+}
+
+/* 底色：深空 + 青紫双光源 + 细网格 */
+html[theme="tech"] body {
+    background:
+        linear-gradient(rgba(0, 229, 255, .045) 1px, transparent 1px) 0 0 / 100% 34px,
+        linear-gradient(90deg, rgba(0, 229, 255, .045) 1px, transparent 1px) 0 0 / 34px 100%,
+        radial-gradient(1000px 600px at 14% -10%, rgba(0, 229, 255, .12), transparent 60%),
+        radial-gradient(880px 520px at 88% 6%, rgba(124, 58, 237, .16), transparent 62%),
+        var(--bg);
+    background-attachment: fixed;
+}
+
+/* ---- Hero 幕布（首页 .hero / 其它 24 个页面 .vhero）----
+   两套版式的内联样式都写死了蓝色顶光，这里统一压成深空 + 青紫双光源。 */
+html[theme="tech"] .hero,
+html[theme="tech"] .vhero {
+    background-image:
+        linear-gradient(rgba(0, 229, 255, .05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, .05) 1px, transparent 1px),
+        radial-gradient(900px 480px at 14% 4%, rgba(0, 229, 255, .14), transparent 62%),
+        radial-gradient(760px 460px at 90% 26%, rgba(124, 58, 237, .17), transparent 60%),
+        linear-gradient(168deg, #060a14 0%, #0a1220 54%, #0e1a2c 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, left top, left top, right top, center !important;
+    background-size: 34px 34px, 34px 34px, auto, auto, auto !important;
+}
+/* 点阵装饰换成青色 */
+html[theme="tech"] .hero::after,
+html[theme="tech"] .vhero::before {
+    background-image: radial-gradient(rgba(0, 229, 255, .1) 1px, transparent 1px);
+}
+html[theme="tech"] .vhero h1,
+html[theme="tech"] .hero h1 { color: #eaf4ff; }
+html[theme="tech"] .vhero h1 .light,
+html[theme="tech"] .hero h1 .light { color: var(--brand); }
+html[theme="tech"] .vhero-sub,
+html[theme="tech"] .hero-sub { color: rgba(180, 205, 240, .68); }
+html[theme="tech"] .hero-eyebrow { color: rgba(120, 220, 255, .6); }
+html[theme="tech"] .vhero-actions .hero-link,
+html[theme="tech"] .hero-actions .hero-link {
+    color: #cfe9ff;
+    border-bottom-color: rgba(0, 229, 255, .42);
+}
+html[theme="tech"] .vhero-fade,
+html[theme="tech"] .hero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+/* 导航：玻璃感 + 青色底线 */
+html[theme="tech"] .nav {
+    background: rgba(6, 10, 20, .82);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-bottom: 1px solid rgba(0, 229, 255, .22);
+    box-shadow: 0 0 24px -6px rgba(0, 229, 255, .22);
+}
+
+/* 卡片：霓虹细边 + 四角切角 */
+html[theme="tech"] .home-card,
+html[theme="tech"] .comment-section,
+html[theme="tech"] .product-card,
+html[theme="tech"] .about-content,
+html[theme="tech"] .changelog-content,
+html[theme="tech"] .profile-card {
+    border: 1px solid rgba(0, 229, 255, .2);
+    box-shadow:
+        inset 0 0 24px -14px rgba(0, 229, 255, .55),
+        0 0 0 1px rgba(0, 229, 255, .04),
+        var(--shadow-1);
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px),
+                       calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+
+html[theme="tech"] .home-card:hover,
+html[theme="tech"] .product-card:hover {
+    border-color: rgba(0, 229, 255, .42);
+    box-shadow:
+        inset 0 0 30px -12px rgba(0, 229, 255, .7),
+        0 0 22px -4px rgba(0, 229, 255, .3),
+        var(--shadow-2);
+}
+
+/* 标题：青色发光 */
+html[theme="tech"] .hero h1,
+html[theme="tech"] .section-title,
+html[theme="tech"] .hero-title {
+    color: #eaf7ff;
+    text-shadow:
+        0 0 12px rgba(0, 229, 255, .5),
+        0 0 34px rgba(0, 229, 255, .26);
+}
+
+/* 按钮：霓虹描边风 */
+html[theme="tech"] .nav-auth.primary,
+html[theme="tech"] .hero-btns .primary,
+html[theme="tech"] button.primary,
+html[theme="tech"] .f-go {
+    background: linear-gradient(135deg, rgba(0, 229, 255, .16), rgba(124, 58, 237, .2));
+    color: #b8f4ff !important;
+    border: 1px solid rgba(0, 229, 255, .5);
+    box-shadow: 0 0 18px -4px rgba(0, 229, 255, .45), inset 0 0 14px -8px rgba(0, 229, 255, .8);
+}
+
+html[theme="tech"] .nav-auth.primary:hover,
+html[theme="tech"] .hero-btns .primary:hover {
+    background: linear-gradient(135deg, rgba(0, 229, 255, .28), rgba(124, 58, 237, .32));
+    box-shadow: 0 0 26px -2px rgba(0, 229, 255, .6), inset 0 0 18px -6px rgba(0, 229, 255, .9);
+}
+
+/* 数字与链接：霓虹青 */
+html[theme="tech"] .stat-bar .num {
+    color: #00e5ff;
+    text-shadow: 0 0 14px rgba(0, 229, 255, .55);
+    font-variant-numeric: tabular-nums;
+}
+html[theme="tech"] a:hover { color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, .5); }
+
+html[theme="tech"] .hero-badge,
+html[theme="tech"] .hero-badges span {
+    background: rgba(0, 229, 255, .09);
+    border-color: rgba(0, 229, 255, .32);
+    color: #9defff;
+}
+
+/* 公告栏 */
+html[theme="tech"] .announcement-bar {
+    background: rgba(0, 229, 255, .07);
+    border-color: rgba(0, 229, 255, .28);
+}
+
+/* 输入框 / 下拉：统一霓虹描边 */
+html[theme="tech"] input,
+html[theme="tech"] textarea,
+html[theme="tech"] select {
+    background: rgba(6, 10, 20, .72);
+    border-color: rgba(0, 229, 255, .24);
+    color: var(--ink);
+}
+html[theme="tech"] input:focus,
+html[theme="tech"] textarea:focus,
+html[theme="tech"] select:focus {
+    border-color: rgba(0, 229, 255, .6);
+    box-shadow: 0 0 0 3px rgba(0, 229, 255, .14);
+    outline: none;
+}
+
+/* 滚动条也跟着变色（只在支持的时候生效） */
+html[theme="tech"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+html[theme="tech"] ::-webkit-scrollbar-track { background: #060a14; }
+html[theme="tech"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(#00b4d8, #7c3aed);
+    border-radius: 6px;
+    border: 2px solid #060a14;
+}
+
+html[theme="national"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+html[theme="national"] ::-webkit-scrollbar-track { background: #6d1017; }
+html[theme="national"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(#ffd24a, #c8102e);
+    border-radius: 6px;
+    border: 2px solid #6d1017;
+}
+
+/* ============================================================
+   Hero 区：这部分官网模式写的是硬编码颜色（#0b1220 / rgba(59,130,246,…)），
+   不走变量，所以要单独覆盖一遍。
+   ============================================================ */
+
+/* ---- 国庆：深红幕布 + 金色顶光 ----
+   注意：.hero 的背景（含国旗）统一写在文件上半部分那一条里，
+        这里不再重复定义 background，否则会把国旗覆盖掉。 */
+html[theme="national"] .hero::before {
+    background: radial-gradient(620px 310px at 15% 10%, rgba(255, 200, 60, .22), transparent 60%);
+}
+html[theme="national"] .hero::after {
+    background-image: radial-gradient(rgba(255, 214, 102, .09) 1px, transparent 1px);
+}
+html[theme="national"] .hero h1 { color: #fff6e2; }
+html[theme="national"] .hero h1 .light { color: #ffd24a; }
+html[theme="national"] .hero-eyebrow { color: rgba(255, 226, 170, .5); }
+html[theme="national"] .hero-sub { color: rgba(255, 232, 200, .66); }
+html[theme="national"] .hero-link { color: #ffedcf; border-bottom-color: rgba(255, 210, 74, .4); }
+html[theme="national"] .hero-link:hover { color: #ffd24a; border-color: #ffd24a; }
+html[theme="national"] .hero-video {
+    background: #4d0a10;
+    box-shadow: 0 70px 140px -60px rgba(0, 0, 0, .9),
+                0 0 0 1px rgba(255, 210, 74, .16),
+                0 0 60px -20px rgba(255, 210, 74, .28);
+}
+html[theme="national"] .hero-scroll { color: rgba(255, 226, 170, .5); }
+
+/* ---- 科技：深空 + 青色顶光 ---- */
+html[theme="tech"] .hero {
+    background:
+        radial-gradient(880px 470px at 16% 6%, rgba(0, 229, 255, .16), transparent 62%),
+        radial-gradient(720px 470px at 92% 30%, rgba(124, 58, 237, .2), transparent 60%),
+        linear-gradient(168deg, #04070f 0%, #071120 55%, #0a1830 100%) !important;
+}
+html[theme="tech"] .hero::before {
+    background: radial-gradient(620px 310px at 15% 10%, rgba(0, 229, 255, .24), transparent 60%);
+}
+html[theme="tech"] .hero::after {
+    background-image:
+        linear-gradient(rgba(0, 229, 255, .07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, .07) 1px, transparent 1px);
+    background-size: 34px 34px, 34px 34px;
+}
+html[theme="tech"] .hero h1 { color: #f2fbff; }
+html[theme="tech"] .hero h1 .light {
+    color: #00e5ff;
+    text-shadow: 0 0 18px rgba(0, 229, 255, .6);
+}
+html[theme="tech"] .hero-eyebrow { color: rgba(150, 235, 255, .55); }
+html[theme="tech"] .hero-sub { color: rgba(198, 228, 255, .68); }
+html[theme="tech"] .hero-link { color: #d7e5ff; border-bottom-color: rgba(0, 229, 255, .4); }
+html[theme="tech"] .hero-link:hover { color: #00e5ff; border-color: #00e5ff; text-shadow: 0 0 12px rgba(0, 229, 255, .6); }
+html[theme="tech"] .hero-video {
+    background: #04070f;
+    box-shadow: 0 70px 140px -60px rgba(0, 0, 0, .95),
+                0 0 0 1px rgba(0, 229, 255, .22),
+                0 0 70px -18px rgba(0, 229, 255, .35);
+}
+html[theme="tech"] .hero-scroll { color: rgba(150, 235, 255, .5); }
+
+/* 统计条 / 功能区在深色主题下的底色 */
+html[theme="national"] .stat-bar,
+html[theme="national"] .stat-item { background: rgba(255, 210, 74, .07); }
+
+html[theme="tech"] .stat-bar,
+html[theme="tech"] .stat-item {
+    background: rgba(0, 229, 255, .05);
+    border-color: rgba(0, 229, 255, .18);
+}
+
+/* 功能区图标在深色主题下不刺眼 */
+html[theme="national"] .f-icon { background: rgba(255, 210, 74, .14); }
+html[theme="tech"] .f-icon {
+    background: rgba(0, 229, 255, .1);
+    box-shadow: 0 0 20px -6px rgba(0, 229, 255, .5);
+}
+
+/* ============================================================
+   无障碍：系统设了「减少动态效果」就关掉动画
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    html[theme="national"] body::after { animation: none; }
+}
+
+
+/* ---- CTA：深空 + 青色标题 ---- */
+html[theme="tech"] .cta {
+    background: linear-gradient(170deg, #0a1220 0%, #0c1424 55%, #0e1a2c 100%);
+    color: #eaf4ff;
+}
+html[theme="tech"] .cta p { color: rgba(180, 205, 240, .62); }
+html[theme="tech"] .cta .hero-link { border-bottom-color: rgba(0, 229, 255, .42); }
+
+html[theme="tech"] .nav-cta {
+    background: linear-gradient(135deg, var(--brand), #7c3aed);
+    color: #04121a;
+    box-shadow: 0 0 22px -6px rgba(0, 229, 255, .8);
+}
+html[theme="tech"] .nav-scan:hover { color: var(--brand); }
+html[theme="tech"] .nav-more-panel a:hover {
+    background: rgba(0, 229, 255, .1);
+    color: #eaf4ff;
+}
+html[theme="tech"] .theme-btn:hover {
+    border-color: rgba(0, 229, 255, .5);
+    color: var(--brand);
+}
+html[theme="tech"] .drawer .d-close:hover { color: var(--brand); }
+
+html[theme="tech"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="tech"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(0, 229, 255, .85);
+}
+
+html[theme="tech"] .about-card .ico {
+    background: linear-gradient(135deg, rgba(0, 229, 255, .2), rgba(124, 58, 237, .18));
+    color: var(--brand);
+}
+html[theme="tech"] .vcard:nth-child(1) .thumb {
+    background: linear-gradient(135deg, #0c1424, #060a14);
+}
+
+/* ---- 页脚：深空 + 青色顶线 ---- */
+html[theme="tech"] .footer {
+    background: linear-gradient(180deg, #0a1220 0%, #060a14 100%);
+    color: #8ea4c9;
+}
+html[theme="tech"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, .6), rgba(124, 58, 237, .45), transparent);
+}
+html[theme="tech"] .footer h5 { color: #d7e5ff; }
+html[theme="tech"] .footer a { color: #7f97bd; }
+html[theme="tech"] .footer a:hover { color: #eaf4ff; }
+html[theme="tech"] .footer .brand { color: #eaf4ff; }
+html[theme="tech"] .footer .brand .dot {
+    background: linear-gradient(135deg, var(--brand), #7c3aed);
+    box-shadow: 0 0 12px -2px rgba(0, 229, 255, .8);
+}
+html[theme="tech"] .footer .desc { color: #6d80a3; }
+html[theme="tech"] .footer-bottom {
+    border-top-color: rgba(0, 229, 255, .13);
+    color: #59698a;
+}
+
+
+
+/* fade 的端点写死颜色，不依赖 CSS 变量继承（中秋那版就栽在这） */
+html[theme="cyber"] .vhero-fade,
+html[theme="cyber"] .hero-fade { background: linear-gradient(to bottom, transparent, #0b0518) !important; }
+html[theme="ink"] .vhero-fade,
+html[theme="ink"] .hero-fade { background: linear-gradient(to bottom, transparent, #f4f0e6) !important; }
+html[theme="pixel"] .vhero-fade,
+html[theme="pixel"] .hero-fade { background: linear-gradient(to bottom, transparent, #1a1c2c) !important; }
+html[theme="eyecare"] .vhero-fade,
+html[theme="eyecare"] .hero-fade { background: linear-gradient(to bottom, transparent, #d6cfc0) !important; }
+
+/* ============================================================
+   通用修正 · 浅底卡片
+   ------------------------------------------------------------
+   一批卡片只在 html.dark 下有深色版（比如评论区那条公告：
+   浅色模式是 #fff8e6 米白底，dark 模式才是 #2d2418 深棕底）。
+   但切主题时 theme.js 会摘掉 dark 类，于是主题下走的是浅色底，
+   而文字色又跟着主题走 —— 浅字压浅底，直接看不清。
+
+   这些卡片一律改用主题变量。html[theme] 只在非默认主题下匹配，
+   默认主题完全不受影响。
+   ============================================================ */
+html[theme] .announcement-bar {
+    background: var(--card) !important;
+    border-color: var(--line) !important;
+    border-left: 4px solid var(--brand) !important;
+    color: var(--ink) !important;
+}
+html[theme] .announcement-bar * { color: inherit; }
+
+/* 其它同样「大面积浅底」的容器 */
+html[theme] .drawer {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+}
+html[theme] .drawer a { color: var(--ink-soft); }
+html[theme] .drawer a:hover { color: var(--brand); }
+
+html[theme] .panel,
+html[theme] .tt-card,
+html[theme] .p-card,
+html[theme] .poll-card,
+html[theme] .conv-item,
+html[theme] .bn-item,
+html[theme] .bk-btn,
+html[theme] .lt-btn,
+html[theme] .pk-act,
+html[theme] .pk-mbtn,
+html[theme] .tt-btn-buy,
+html[theme] .bk-cfill {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+}
+
+/* 抽屉里的输入框、下拉，一并跟上 */
+html[theme] .drawer input,
+html[theme] .drawer select,
+html[theme] .drawer textarea {
+    background: var(--bg) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+}
+
+/* 评论区里那几块（评论卡片、回复框）—— 它们用的是自己的变量
+   （--bg-color / --text-color / --card-border），页面内联里已经定义了，
+   但主题没覆盖到，这里补一层，保证底色跟主题一致 */
+html[theme] .comment-section,
+html[theme] .comment-card,
+html[theme] .new-comment-area textarea,
+html[theme] .reply-form textarea {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+}
+html[theme] .comment-card a { color: var(--brand); }
+
+/* ============================================================
+   通用修正 · 对比度
+   ------------------------------------------------------------
+   自动扫描（遍历每个元素、按 WCAG 公式算前景/背景对比度）发现：
+       1.00  a.nav-auth.primary   「登录 / 注册」—— 字和底同色，完全看不见
+       1.40  button.theme-btn     主题切换按钮
+       2.06  a.nav-auth           「个人中心」
+       2.9x  div.label / em / small  各类次要文字
+   导航栏是全站共用的，不修的话每个主题下导航都是瞎的。
+
+   这些元素原来用的是页面内联写死的深蓝紫系颜色，
+   主题换了底色它们不跟着换，所以这里统一接管。
+   ============================================================ */
+
+/* ---- 导航栏按钮：主按钮用金色实底 + 深色字，保证足够对比 ---- */
+html[theme] .nav-auth {
+    color: var(--ink-soft) !important;
+    border-color: var(--line) !important;
+}
+html[theme] .nav-auth:hover { color: var(--ink) !important; }
+html[theme] .nav-auth.primary,
+html[theme] .nav-auth.primary:visited {
+    background: var(--brand) !important;
+    color: #2b0a06 !important;          /* 深棕字压金底，对比度约 8:1 */
+    border-color: var(--brand) !important;
+}
+html[theme] .nav-auth.primary:hover {
+    background: var(--brand-deep) !important;
+    color: #2b0a06 !important;
+}
+html[theme] .theme-btn {
+    color: var(--ink-soft) !important;
+    border-color: var(--line) !important;
+}
+html[theme] .theme-btn:hover { color: var(--brand) !important; }
+
+/* 导航里其余链接和图标 */
+html[theme] .nav a,
+html[theme] .nav .nav-scan,
+html[theme] .nav .nav-more {
+    color: var(--ink-soft) !important;
+}
+html[theme] .nav a:hover,
+html[theme] .nav a.active { color: var(--brand) !important; }
+html[theme] .nav svg { fill: currentColor; }
+
+/* ---- 次要文字：原来写死的灰蓝色，在暖色底上偏淡 ---- */
+html[theme] .label,
+html[theme] .meta,
+html[theme] .pd-tip,
+html[theme] .sk-tb-sub,
+html[theme] .toolbar-label,
+html[theme] .update-badge,
+html[theme] .sort-btn,
+html[theme] small {
+    color: var(--ink-faint) !important;
+}
+html[theme] .sort-btn.active {
+    color: var(--brand) !important;
+    border-color: var(--brand) !important;
+}
+html[theme] .hero-eyebrow { color: var(--brand) !important; opacity: .85; }
+
+/* ---- 数字徽标（about 页那种 01 / 02）---- */
+html[theme] .no { color: var(--brand) !important; }
+
+/* ---- 强调字 ---- */
+html[theme] .about-text b,
+html[theme] .about-text strong { color: var(--ink) !important; }
+
+/* ============================================================
+   股票页（stock-Beta.html）主题适配
+   ------------------------------------------------------------
+   这一页的图表容器和小控件大量写死了白色 / #eef2f8。
+   在护眼、墨韵这类浅色主题下，纯白会从米色里"跳"出来；
+   在赛博朋克、像素这类深色主题下更糟 —— 白底配亮字几乎看不清。
+   统一改用主题变量。
+   ============================================================ */
+
+/* ---- 图表容器：纯白 → 卡片色 ---- */
+html[theme] .canvas-container,
+html[theme] .history-chart-container,
+html[theme] .histogram-container,
+html[theme] .mini-pie-container,
+html[theme] .slider-container,
+html[theme] .my-company-card {
+    background: var(--card) !important;
+    border-color: var(--card-border) !important;
+}
+
+/* ---- 小控件：浅灰 → 一层极淡的罩，深浅主题都成立 ---- */
+html[theme] .balance-card,
+html[theme] .company-btn,
+html[theme] .update-badge,
+html[theme] .btn-group,
+html[theme] .slider-label,
+html[theme] .range-value,
+html[theme] .reset-btn,
+html[theme] .toggle-table-btn,
+html[theme] .stat-card,
+html[theme] .stat-value {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+
+/* ---- 表头 ---- */
+html[theme] th {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--line) !important;
+}
+html[theme] td {
+    border-color: var(--line) !important;
+    color: var(--ink-soft) !important;
+}
+
+/* ---- 导航里的登录按钮（原来是半透明白）---- */
+html[theme] .nav-auth {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border: 1px solid var(--card-border) !important;
+}
+html[theme] .nav-auth.primary {
+    background: var(--brand) !important;
+    color: #fff !important;
+}
+
+/* ---- 图表里 canvas 自己的底色也要跟 ---- */
+html[theme] .canvas-container canvas,
+html[theme] .history-chart-container canvas,
+html[theme] .histogram-container canvas,
+html[theme] .mini-pie-container canvas {
+    background: transparent !important;
+}
+
+/* ---- 卡片里的输入框 / 下拉 ---- */
+html[theme] .slider-container input[type="range"] {
+    accent-color: var(--brand) !important;
+}
+
+/* ============================================================
+   浅色主题的深色变体
+   ------------------------------------------------------------
+   墨韵和护眼本身是浅色，之前没有深色版 —— 一开深色模式，
+   theme.js 又会把 html.dark 摘掉，等于深色开关在主题下完全失效。
+
+   这里给这两个主题各生成一套深色变量：
+   色相和饱和度保留，只把亮度翻过来（米色变深棕、墨色变浅灰），
+   所以还是同一个调子，只是明暗反了。
+
+   两种触发方式都支持：
+     · html[theme="x"][data-dark]        —— 网站自己的深色开关
+     · @media (prefers-color-scheme: dark) —— 系统深色
+   ============================================================ */
+
+html[theme="ink"][data-dark] {
+    --bg: #352d18;
+    --ink: #c5c0b8;
+    --ink-soft: #b4aca0;
+    --ink-faint: #958d80;
+    --line: rgba(255, 255, 255, .16);
+    --brand: #d36051;
+    --brand-deep: #db7466;
+    --card: #312710;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
+}
+@media (prefers-color-scheme: dark) {
+html[theme="ink"] {
+    --bg: #352d18;
+    --ink: #c5c0b8;
+    --ink-soft: #b4aca0;
+    --ink-faint: #958d80;
+    --line: rgba(255, 255, 255, .16);
+    --brand: #d36051;
+    --brand-deep: #db7466;
+    --card: #312710;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
+}
+}
+
+html[theme="eyecare"][data-dark] {
+    --bg: #4c4432;
+    --ink: #b3ada3;
+    --ink-soft: #a59d91;
+    --ink-faint: #8c8375;
+    --line: rgba(255, 255, 255, .16);
+    --brand: #b19b78;
+    --brand-deep: #bba988;
+    --card: #453c29;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
+}
+@media (prefers-color-scheme: dark) {
+html[theme="eyecare"] {
+    --bg: #4c4432;
+    --ink: #b3ada3;
+    --ink-soft: #a59d91;
+    --ink-faint: #8c8375;
+    --line: rgba(255, 255, 255, .16);
+    --brand: #b19b78;
+    --brand-deep: #bba988;
+    --card: #453c29;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .24);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, .34), 0 20px 48px -20px rgba(0, 0, 0, .55);
+}
+}
+
+/* ============================================================
+   全站主题适配：审计扫出来的漏网元素
+   ------------------------------------------------------------
+   办法同上：写脚本在护眼主题下渲染每个页面，扫「背景亮度 > 232
+   且接近中性色」的元素。29 个页面里 22 个干净，剩下这几个是漏的。
+   ============================================================ */
+
+/* ---- 评论页：排序按钮 ---- */
+html[theme] .sort-btn,
+html[theme] a.sort-btn,
+html[theme] button.sort-btn {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] .sort-btn.active,
+html[theme] .sort-btn.on {
+    background: var(--brand) !important;
+    color: #fff !important;
+}
+
+/* ---- 反馈页：下拉框 ---- */
+html[theme] .rc-select,
+html[theme] select.rc-select {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] .rc-select option {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+}
+
+/* ---- 消息页：全部已读按钮 ---- */
+html[theme] .btn-read-all {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+
+/* ---- 分享页：筛选按钮 ---- */
+html[theme] .filter-btn {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] .filter-btn.active,
+html[theme] .filter-btn.on {
+    background: var(--brand) !important;
+    color: #fff !important;
+}
+
+/* ---- 视频页 / 首页：缩略图占位 ---- */
+html[theme] .thumb {
+    background: rgba(127, 127, 127, .12) !important;
+    border-color: var(--card-border) !important;
+}
+
+/* ---- 首页的番茄钟面板 ----
+   它的样式是 fourier/pomodoro 那个脚本动态注入的，
+   里面把背景写死成 #fdfbf6（怕被别的规则盖住，还加了 !important）。
+   主题下得跟着走，所以这里用同等权重、靠后生效来覆盖。 */
+html[theme] #nbPomoBox .nb-pomo-panel,
+html[theme] .nb-pomo-panel {
+    background: var(--card) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-panel .time,
+html[theme] #nbPomoBox .nb-pomo-panel .nb-pomo-side .ph {
+    color: var(--ink) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-panel .rd,
+html[theme] #nbPomoBox .nb-pomo-panel .nb-pomo-tip,
+html[theme] #nbPomoBox .nb-pomo-head .t {
+    color: var(--ink-soft) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-cfg input {
+    background: rgba(127, 127, 127, .1) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-cfg .reset {
+    background: rgba(127, 127, 127, .16) !important;
+    color: var(--ink-soft) !important;
+}
+html[theme] #nbPomoBox .nb-pomo-btns button {
+    background: var(--brand) !important;
+    color: #fff !important;
+}
+html[theme] #nbPomoBox .nb-pomo-btns button.gh {
+    background: rgba(127, 127, 127, .12) !important;
+    color: var(--ink) !important;
+    border-color: var(--card-border) !important;
+}
+
+
+/* ============================================================
+   旧变量名 → 新变量名 映射
+   ------------------------------------------------------------
+   站内不少页面用的是这套旧名字：
+       --card-bg / --bg-color / --text-color / --count-bg / --count-text
+       --card-border / --status-border
+       --nav-btn-bg / --nav-btn-text / --nav-btn-hover-bg / --nav-btn-hover-text
+
+   它们只在页面自己的 :root 里定义过（固定浅色），
+   而主题包只管 --bg / --card / --ink 这一套新名字。
+   于是换深色主题时：--ink 变浅了，--card-bg 还是白的
+   → 白底 + 浅字 = 弹窗、抽屉、提示框里的字看不见。
+
+   这里做一次映射，让旧名字跟着新名字走。
+   用 html[theme] 选择器：属性选择器优先级 (0,1,1) 高于 :root 的 (0,1,0)，
+   稳定覆盖页面自己的定义，不受加载顺序影响。
+   ============================================================ */
+
+html[theme],
+html.dark {
+    /* ---- 底色与文字 ---- */
+    --card-bg:      var(--card);
+    --bg-color:     var(--bg);
+    --text-color:   var(--ink);
+    --count-text:   var(--ink-faint);
+    --card-border:  var(--line);
+    --status-border: var(--brand);
+
+    /* ---- 浅色块（标签、徽章、统计卡）----
+       先给一个中性兜底值，再用 color-mix 融合主题文字色。
+       不支持 color-mix 的浏览器会忽略第二条，保留兜底值。 */
+    --count-bg:        rgba(127, 127, 127, .10);
+    --count-bg:        color-mix(in srgb, var(--ink) 9%, transparent);
+
+    /* ---- 小按钮（弹窗里的取消、次要操作）---- */
+    --nav-btn-bg:        rgba(127, 127, 127, .12);
+    --nav-btn-bg:        color-mix(in srgb, var(--ink) 11%, transparent);
+    --nav-btn-text:      var(--ink);
+    --nav-btn-hover-bg:  var(--brand);
+    --nav-btn-hover-text: #ffffff;
+}
+
+/* 上面那套映射之后，弹窗 / 抽屉 / 提示框只要背景走 --card-bg
+   就自动跟着主题了。但有几处写死了白色底或深色底，单独收一下。 */
+
+html[theme] .custom-modal .modal-content,
+html.dark    .custom-modal .modal-content {
+    background: var(--card);
+    color: var(--ink);
+}
+
+html[theme] .custom-modal .modal-content button,
+html.dark    .custom-modal .modal-content button {
+    color: #fff;
+}
+
+html[theme] .custom-modal .modal-content button.cancel,
+html.dark    .custom-modal .modal-content button.cancel {
+    color: var(--ink);
+}
+
+/* 弹窗遮罩：深色主题下稍微加深一点，别让底下的内容透出来干扰 */
+html[theme] .custom-modal,
+html.dark    .custom-modal {
+    background: rgba(0, 0, 0, .58);
+}
+
+/* 抽屉（移动端菜单）：原本写了固定白色 */
+html[theme] .drawer,
+html.dark    .drawer {
+    background: var(--card);
+    color: var(--ink);
+}

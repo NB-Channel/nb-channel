@@ -1,0 +1,21 @@
+{
+  "name": "NB频道 · 虚拟公司官网",
+  "short_name": "NB频道",
+  "description": "NB频道官网 —— 虚拟公司、虚拟股票、NB币、化学工具与社区。热爱理科(和作死)的 UP 主建立的虚拟世界。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "start_url": "/Beta/index-Beta.html",
+  "scope": "/",
+  "id": "/Beta/index-Beta.html",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "categories": ["games", "social", "education"],
+  "icons": [
+    { "src": "/images/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/images/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/images/app-icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

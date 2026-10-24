@@ -1,0 +1,56 @@
+/* ============================================================
+   css/dark.css — 深色模式样式（从 ui-new.css 抽出来）
+
+   为什么单独一个文件:
+     深色模式的 44 条规则原本全写在 ui-new.css（31KB 的新版皮肤）里。
+     经典模式为了回到 style.css 的原始外观，必须把 ui-new.css 整个停用,
+     结果连深色模式一起没了 —— 一开夜间模式就崩。
+
+     所以把这些规则抽出来单独放，经典模式只加载这一个:
+     既有深色模式，又不会有新版皮肤。
+
+   自动生成，来源 css/ui-new.css。
+   以后在 ui-new.css 里改了深色样式，记得同步这个文件。
+   ============================================================ */
+
+
+            body.dark-mode .top-nav { background: rgba(24,26,32,0.78); border-color: rgba(0,161,214,0.22); }
+
+            body.dark-mode::before {
+                background:
+                    radial-gradient(900px 520px at 6% -8%, rgba(0,161,214,0.20), transparent 62%),
+                    radial-gradient(760px 540px at 96% 12%, rgba(108,92,231,0.18), transparent 62%),
+                    radial-gradient(860px 640px at 50% 112%, rgba(0,161,214,0.14), transparent 65%);
+            }
+
+            body.dark-mode .home-card, body.dark-mode .about-content, body.dark-mode .changelog-content,
+            body.dark-mode .comment-section, body.dark-mode .product-card, body.dark-mode .upload-section,
+            body.dark-mode .info-card, body.dark-mode .chat-container, body.dark-mode .messages-container,
+            body.dark-mode .profile-container, body.dark-mode .records-container, body.dark-mode .ach-container,
+            body.dark-mode .register-card, body.dark-mode .login-card, body.dark-mode .balance-card,
+            body.dark-mode .my-company-card, body.dark-mode .distribution-card, body.dark-mode .chart-wrapper,
+            body.dark-mode .canvas-container, body.dark-mode .data-table-wrapper, body.dark-mode .toolbar,
+            body.dark-mode .stats, body.dark-mode .top-nav, body.dark-mode .quick-nav {
+                background: rgba(24,26,32,0.60) !important;
+                border-color: rgba(255,255,255,0.09) !important;
+            }
+
+            body.dark-mode .comment, body.dark-mode .video-card, body.dark-mode .ach-card,
+            body.dark-mode .record-item, body.dark-mode .notification-item, body.dark-mode .stat-card,
+            body.dark-mode .stat-item, body.dark-mode .feature-card, body.dark-mode .msg.other .bubble,
+            body.dark-mode .slider-container, body.dark-mode .history-chart-container,
+            body.dark-mode .histogram-container, body.dark-mode .mini-pie-container,
+            body.dark-mode .btn-group, body.dark-mode .update-badge, body.dark-mode .countdown-badge {
+                background: rgba(24,26,32,0.72) !important;
+                border-color: rgba(255,255,255,0.09) !important;
+            }
+
+body.dark-mode .nav-container {
+    background: rgba(24,26,32,0.60) !important;
+    border-color: rgba(255,255,255,0.09) !important;
+}
+
+body.dark-mode .auth-area {
+    background: rgba(24,26,32,0.60) !important;
+    border-color: rgba(255,255,255,0.09) !important;
+}
