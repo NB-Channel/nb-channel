@@ -1441,7 +1441,7 @@ def _db_ctx_text(data, limit=None):
     return '\n'.join(lines)
 
 
-AI_WEB_MAX_CHARS = 2400        # 联网搜索结果最多拼这么长
+AI_WEB_MAX_CHARS = 3200        # 联网搜索结果最多拼这么长
 AI_WEB_CACHE_TTL = 300         # 同一个问题 5 分钟内不重复搜
 _WEB_CACHE = {}                # {query: (时间戳, 结果列表)}
 
@@ -1984,7 +1984,7 @@ def _api_ai_body():
     web_src = []          # 给前端列「来源链接」用
     if bool(data.get('web')):
         try:
-            _hits = bing_search(question, 8)
+            _hits = bing_search(question, 10)
         except Exception as _e:
             _hits = []
             print('[AI-WEB-EXC] %s' % str(_e)[:120], flush=True)
@@ -1998,7 +1998,7 @@ def _api_ai_body():
                 _lines.append(_line)
             web_ctx = '\n'.join(_lines)
             web_n = len(_lines)
-            for _t, _d, _l in _hits[:8]:
+            for _t, _d, _l in _hits[:10]:
                 if _t:
                     web_src.append({'t': _t[:60], 'u': _l or ''})
             print('[AI-WEB-CTX] %d 条 / %d 字' % (web_n, len(web_ctx)), flush=True)
