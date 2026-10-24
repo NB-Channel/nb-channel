@@ -1105,6 +1105,12 @@ def ping():
         _probe = ''
 
     if _probe == 'effort':
+        # ⚠️ 这个接口会真的打 9 次上游（花魔粒），所以结果缓存 10 分钟，
+        #    别人反复刷也只算第一次，避免被当成刷额度的口子。
+        _cnt = _WEB_CACHE.get('__probe_effort__')
+        _nowp = time.time()
+        if _cnt and _nowp - _cnt[0] < 600:
+            return jsonify({'ok': True, 'cached': True, 'efforts': _cnt[1]})
         out = {}
         for _k, (_mid, _label) in AI_MODELS.items():
             _url, _key = _model_route(_mid)
@@ -1132,6 +1138,9 @@ def ping():
                            'msg': _e.read().decode('utf-8', 'ignore')[:220].replace('\n', ' ')}
             except Exception as _e:
                 out[_k] = {'model': _mid, 'label': _label, 'err': type(_e).__name__}
+        if len(_WEB_CACHE) > 200:
+            _WEB_CACHE.clear()
+        _WEB_CACHE['__probe_effort__'] = (_nowp, out)
         return jsonify({'ok': True, 'efforts': out})
 
     if not deep:
