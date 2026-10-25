@@ -1,26 +1,14 @@
 -- ============================================================
--- 给机器人账号设头像
+-- 给机器人账号设头像（data URI 版本，不依赖任何外链）
 --
--- 头像文件：img/bot-avatar.svg（刚加进仓库）
--- 用绝对地址，这样在根目录页和 Beta 页都能显示（相对路径在 Beta 下会 404）。
---
--- ⚠️ 如果你的头像渲染要求 http(s) 开头（前端可能有过滤），下面这个是合格的。
---    如果显示不出来，改成 data URI 版本（文件末尾那段注释里）。
---
--- 在 Supabase SQL Editor 里跑一次。
+-- 站长要求：头像不要放到 GitHub 里。
+-- 所以把 SVG 直接编码进 avatar_url —— 浏览器原生支持 data:image/svg+xml，
+-- 不管从哪个镜像打开都能显示，也不怕 Pages 404。
 -- ============================================================
 
 update public.profiles
-   set avatar_url = 'https://github.nb-channel.top/img/bot-avatar.svg'
+   set avatar_url = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4IiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJOQumikemBk0FJ5Yqp5omLIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZzEiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzRkOGRmZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjU1JSIgc3RvcC1jb2xvcj0iIzdhNmJmZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNiNDVjZmYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImcyIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZmZmZmYiIHN0b3Atb3BhY2l0eT0iLjk1Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2ZmZmZmZiIgc3RvcC1vcGFjaXR5PSIuNzgiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgoKICA8IS0tIOWchuW6lSAtLT4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgcng9IjI4IiBmaWxsPSJ1cmwoI2cxKSIvPgoKICA8IS0tIOWFieaZlSAtLT4KICA8Y2lyY2xlIGN4PSIzNCIgY3k9IjMwIiByPSIzNCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iLjEyIi8+CiAgPGNpcmNsZSBjeD0iMTA0IiBjeT0iMTA0IiByPSIzMCIgZmlsbD0iIzAwMDAwMCIgb3BhY2l0eT0iLjEwIi8+CgogIDwhLS0g5a+56K+d5rCU5rOhIC0tPgogIDxwYXRoIGQ9Ik0zMiAzNGg2NGExMCAxMCAwIDAgMSAxMCAxMHYzNGExMCAxMCAwIDAgMS0xMCAxMEg2MmwtMTYgMTR2LTE0aC0xNGExMCAxMCAwIDAgMS0xMC0xMFY0NGExMCAxMCAwIDAgMSAxMC0xMHoiCiAgICAgICAgZmlsbD0idXJsKCNnMikiLz4KCiAgPCEtLSDnnLznnZvvvIjkuKTkuKrlnIbngrnvvIzku6PooajmnLrlmajkurrvvIkgLS0+CiAgPGNpcmNsZSBjeD0iNTIiIGN5PSI2MCIgcj0iNiIgZmlsbD0iIzNkNWFmZSIvPgogIDxjaXJjbGUgY3g9Ijc2IiBjeT0iNjAiIHI9IjYiIGZpbGw9IiMzZDVhZmUiLz4KCiAgPCEtLSBBSSDlrZfmoLcgLS0+CiAgPHRleHQgeD0iNjQiIHk9Ijg2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIgogICAgICAgIGZvbnQtZmFtaWx5PSJ1aS1zYW5zLXNlcmlmLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sICdTZWdvZSBVSScsICdNaWNyb3NvZnQgWWFIZWknLCBzYW5zLXNlcmlmIgogICAgICAgIGZvbnQtc2l6ZT0iMjAiIGZvbnQtd2VpZ2h0PSI3MDAiIGxldHRlci1zcGFjaW5nPSIyIiBmaWxsPSIjNWI0YmZmIj5BSTwvdGV4dD4KCiAgPCEtLSDlpKnnur8gLS0+CiAgPGxpbmUgeDE9IjY0IiB5MT0iMjAiIHgyPSI2NCIgeTI9IjM0IiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIuOSIvPgogIDxjaXJjbGUgY3g9IjY0IiBjeT0iMTciIHI9IjUiIGZpbGw9IiNmZmZmZmYiIG9wYWNpdHk9Ii45NSIvPgo8L3N2Zz4K'
  where id = '11111111-2222-3333-4444-555555555555'::uuid;
 
--- 确认（应该输出一行，avatar_url 是上面那个网址）
-select id, username, avatar_url from public.profiles
+select id, username, left(avatar_url, 60) as avatar_head from public.profiles
  where id = '11111111-2222-3333-4444-555555555555'::uuid;
-
--- ------------------------------------------------------------
--- 备用：如果上面的网址显示不出来（比如前端只认 data: 或 storage 路径），
--- 把 SVG 转成 data URI 塞进去。生成方法（本地跑一次即可）：
---   python -c "import base64,io;print('data:image/svg+xml;base64,'+base64.b64encode(io.open('img/bot-avatar.svg','rb').read()).decode())"
--- 然后把 update 的 avatar_url 换成那串。
--- ------------------------------------------------------------
