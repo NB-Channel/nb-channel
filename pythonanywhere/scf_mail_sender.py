@@ -2061,8 +2061,13 @@ def _comment_bot_reply_text(question, page_path):
              '=== 评论原文开始 ===\n' + str(question)[:500] + '\n=== 评论原文结束 ===\n'
              '请写出你要发的那条评论。')
     try:
+        # 机器人固定用 DeepSeek V4.1 Flash（判断力比 MiniMax Flash 好，
+        # 这几道数学坑题就是靠它）；档位 medium，让它多想一点。
+        # 想换模型：设环境变量 COMMENT_BOT_MODEL = 模型 id 即可。
+        _bot_model = (os.environ.get('COMMENT_BOT_MODEL') or '').strip() \
+            or 'deepseek-ai/DeepSeek-V4.1-Flash-1017'
         ans, _rea, err = nim_chat(usr_p, None, None, None, None,
-                                  'low', False, AI_MODEL)
+                                  'medium', False, _bot_model)
     except Exception as e:
         return None, '%s: %s' % (type(e).__name__, str(e)[:150])
     if err or not ans:
