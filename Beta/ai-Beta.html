@@ -971,8 +971,9 @@ table.rules-table tbody tr:last-child td { border-bottom: none; }
             <div class="a-rows">
                 <div class="a-row"><span>状态</span><b id="cardState">已开放</b></div>
                 <div class="a-row"><span>模型</span><b>7 个可选 · 默认 MiniMax M3.1 Flash</b></div>
-                <div class="a-row"><span>今日额度</span><b id="cardLeft">—</b></div>
+                <div class="a-row"><span>今日额度 &amp; 全站额度</span><b id="cardLeft">—</b></div>
                 <div class="a-row"><span>单次上限</span><b>500 字</b></div>
+<div style="margin-top:14px;font-size:.82rem;opacity:.8;line-height:1.7;">第一次用先去<a href="pricing-Beta.html#usage" style="color:#5aa0ff;">模型价格 &amp; 用量信息 → 用量信息</a>领 <b>1500 赠金</b>，用完再充。</div>
             </div>
         </div>
     </div>
@@ -4056,5 +4057,21 @@ function webOn() {
 })();
 </script>
 
+<script>
+(function () {
+    var el = document.getElementById('cardLeft');
+    if (!el) return;
+    var SCF = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
+    function fill(perUser, global) {
+        var a = perUser == null ? '—' : perUser;
+        var b = global == null ? '—' : global;
+        el.innerHTML = a + ' 次/人 · 全站 ' + b + ' 次/天';
+    }
+    fetch(SCF + '/ping?deep=1').then(function (r) { return r.json(); }).then(function (d) {
+        var s = (d && d.self) || {};
+        fill(s.per_user, s.global);
+    }).catch(function () { fill(null, null); });
+})();
+</script>
 </body>
 </html>
