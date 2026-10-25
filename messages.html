@@ -1281,7 +1281,7 @@
 
             <div class="notification-item" data-conv="${c.conversation_id}" style="display:flex; align-items:center; gap:12px; padding:12px 14px; cursor:pointer; border-bottom:1px solid var(--card-border);">
 
-                <img src="${c.other_avatar || DEFAULT_AVATAR}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" alt="">
+                <img src="${escapeHtml(String(c.other_avatar || DEFAULT_AVATAR))}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" alt="">
 
                 <div style="flex:1; min-width:0;">
 

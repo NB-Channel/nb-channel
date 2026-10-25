@@ -605,7 +605,7 @@
         const DEFAULT_AVATAR = 'data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%2744%27%20height=%2744%27%3E%3Crect%20width=%2744%27%20height=%2744%27%20fill=%27%23b0bec5%27/%3E%3Ccircle%20cx=%2722%27%20cy=%2717%27%20r=%278%27%20fill=%27%23eceff1%27/%3E%3Cpath%20d=%27M8%2040c2-8%208-12%2014-12s12%204%2014%2012z%27%20fill=%27%23eceff1%27/%3E%3C/svg%3E';
         container.innerHTML = data.map(c => `
             <div class="notification-item" data-conv="${c.conversation_id}" style="display:flex; align-items:center; gap:12px; padding:12px 14px; cursor:pointer; border-bottom:1px solid var(--card-border);">
-                <img src="${c.other_avatar || DEFAULT_AVATAR}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" alt="">
+                <img src="${escapeHtml(String(c.other_avatar || DEFAULT_AVATAR))}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;" alt="">
                 <div style="flex:1; min-width:0;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-weight:600; color:var(--text-color);">${escapeHtml(c.other_username)}</span>
