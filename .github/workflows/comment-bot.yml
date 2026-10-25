@@ -1,0 +1,40 @@
+name: comment-bot
+
+# 评论区 AI 自动回复：每 5 分钟叫一次云函数
+#
+# 为什么用 GitHub Actions 而不是腾讯云的定时触发器：
+#   · 云函数走的是「函数 URL」（HTTP + Flask），定时触发器的 event 不是 HTTP 格式，
+#     打不进 Flask 路由
+#   · API 网关触发器已经下线（2025-06-30）
+#   · Actions 的定时任务免费、能发 HTTP 请求、可以直接带 ?k=密钥
+#
+# ⚠️ 需要在仓库里加一个 Secret：
+#      Settings → Secrets and variables → Actions → New repository secret
+#      名称：COMMENT_BOT_KEY
+#      值  ：和云函数环境变量 COMMENT_BOT_KEY 填的一样
+#
+# 注意：定时任务在公开仓库上是免费的，但高峰期可能延迟几分钟，这是正常的。
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'      # 每 5 分钟
+  workflow_dispatch:            # 也可以在 Actions 页面手动点一下跑
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 叫一次 comment_bot
+        env:
+          KEY: ${{ secrets.COMMENT_BOT_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "没有配置 COMMENT_BOT_KEY，跳过"
+            exit 0
+          fi
+          URL="https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com/api/comment_bot?k=${KEY}"
+          echo "请求 comment_bot …"
+          # 只打印前 800 字，别把回复全文刷进日志
+          curl -sS --max-time 120 "$URL" | head -c 800
+          echo
