@@ -2437,7 +2437,7 @@ function webOn() {
             /* 云函数现在会把真实异常放在 error 里 —— 直接显示，别让人干猜 */
             if (d && d.error) msg = '云函数报错：' + d.error;
             /* 余额不够：服务端会带 poor + message，直接显示那句话 */
-            if (d && d.poor) msg = d.message || 'NB 币不够了';
+            if (d && d.poor) msg = (d.message || 'AI 余额不够了') + ' —— 去「模型价格 & 用量信息 → 用量信息」领 1500 赠金或充值';
             else if (d.closed) msg = d.message || 'AI 助手还在内测，暂时不对外开放';
             else if (d.reauth) msg = (d.message || '登录已过期') + ' —— 刷新页面重新登录一下';
             else if (d.misconfig) msg = d.message || 'AI 服务配置有误，请联系站长';
