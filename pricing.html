@@ -24,253 +24,7 @@
 
     <link rel="stylesheet" href="css/beta.css?v=20261011" id="uiBetaCss">
 
-    <style>
-
-        /* ===== 用户守则页专用样式 =====
-
-           颜色一律走 CSS 变量, 这样 新潮 / 经典 / 官网(beta) 三套 UI
-
-           以及日间 / 夜间两套配色都不用单独写一份。 */
-
-        .rules-content { line-height: 1.9; }
-
-        .rules-content h3 {
-
-            margin: 34px 0 14px;
-
-            padding-left: 12px;
-
-            border-left: 5px solid var(--status-border);
-
-            color: var(--status-border);
-
-            font-size: 1.3rem;
-
-            line-height: 1.5;
-
-        }
-
-        .rules-content h3:first-of-type { margin-top: 8px; }
-
-        .rules-content h4 {
-
-            margin: 0 0 8px;
-
-            font-size: 1rem;
-
-            color: var(--text-color);
-
-        }
-
-        .rules-content p { margin-bottom: 14px; }
-
-        .rules-content ul, .rules-content ol {
-
-            margin: 0 0 14px 24px;
-
-            padding: 0;
-
-            border: none !important;
-
-            border-radius: 0 !important;
-
-            box-shadow: none !important;
-
-            background: none !important;
-
-        }
-
-        .rules-content li { margin-bottom: 7px; }
-
-        .rules-content ul ul, .rules-content ol ul { margin: 8px 0 0 22px; }
-
-        .rules-content strong { color: var(--status-border); }
-
-
-
-        .rules-lead {
-
-            margin: 0 0 26px;
-
-            padding: 16px 20px;
-
-            border: 1px solid var(--status-border);
-
-            border-left: 6px solid var(--status-border);
-
-            border-radius: 10px;
-
-            background: var(--status-bg);
-
-            color: var(--status-text);
-
-            font-size: 1.05rem;
-
-            line-height: 1.85;
-
-        }
-
-        .rules-lead strong { color: inherit; }
-
-
-
-        .rules-cat {
-
-            margin: 0 0 16px;
-
-            padding: 14px 18px 4px;
-
-            border: 1px solid var(--card-border);
-
-            border-radius: 12px;
-
-        }
-
-        .rules-cat:last-child { margin-bottom: 6px; }
-
-
-
-        .rules-table-wrap {
-
-            margin: 4px 0 20px;
-
-            overflow-x: auto;
-
-            -webkit-overflow-scrolling: touch;
-
-            border: 1px solid var(--card-border);
-
-            border-radius: 12px;
-
-        }
-
-        table.rules-table {
-
-            width: 100%;
-
-            min-width: 420px;
-
-            margin: 0;
-
-            border: none;
-
-            border-radius: 0;
-
-            border-collapse: collapse;
-
-            font-size: 1rem;
-
-        }
-
-        table.rules-table th, table.rules-table td {
-
-            padding: 11px 14px;
-
-            text-align: left;
-
-            vertical-align: top;
-
-            border-bottom: 1px solid var(--card-border);
-
-        }
-
-        table.rules-table th {
-
-            background: var(--status-bg);
-
-            color: var(--status-text);
-
-            font-weight: 700;
-
-            white-space: nowrap;
-
-        }
-
-        table.rules-table td { color: var(--about-text); }
-
-        table.rules-table td:first-child {
-
-            color: var(--status-text);
-
-            font-weight: 700;
-
-            white-space: nowrap;
-
-        }
-
-        table.rules-table tbody tr:last-child td { border-bottom: none; }
-
-
-
-        @media (max-width: 640px) {
-
-            .rules-content h3 { font-size: 1.15rem; margin-top: 26px; }
-
-            .rules-cat { padding: 12px 14px 2px; }
-
-            .rules-lead { font-size: 1rem; padding: 14px 16px; }
-
-            /* 手机上让表格自己压缩换行, 不要撑出横向滚动 */
-
-            table.rules-table { min-width: 0; font-size: 0.95rem; }
-
-            table.rules-table th, table.rules-table td { padding: 9px 10px; }
-
-        }
-
     
-
-        /* 用户守则：红色警告块（用 color-mix 混主题色，深浅皮肤都适配） */
-
-        .rules-warn {
-
-            margin: 0 0 26px;
-
-            padding: 18px 22px;
-
-            border: 1px solid color-mix(in srgb, #e5484d 55%, var(--card-border));
-
-            border-left: 6px solid #e5484d;
-
-            border-radius: 10px;
-
-            background: color-mix(in srgb, #e5484d 8%, var(--status-bg));
-
-            color: var(--status-text);
-
-            font-size: 1rem;
-
-            line-height: 1.85;
-
-        }
-
-        .rules-warn .rw-title {
-
-            font-size: 1.1rem;
-
-            font-weight: 700;
-
-            color: #c62a2f;
-
-            margin-bottom: 10px;
-
-        }
-
-        html.dark .rules-warn .rw-title { color: #ff8b8f; }
-
-        .rules-warn p { margin: 0 0 10px; }
-
-        .rules-warn ul { margin: 6px 0 10px; padding-left: 22px; }
-
-        .rules-warn li { margin-bottom: 4px; }
-
-        .rules-warn strong { color: #c62a2f; }
-
-        html.dark .rules-warn strong { color: #ff8b8f; }
-
-
-
-</style>
 
 <style>
 /* 两个 Tab：模型价格 / 用量信息 */
@@ -527,6 +281,44 @@
 
 
 
+</style>
+<style>
+.uw-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 18px 0 10px; }
+.uw-card { border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 16px; background: var(--card-bg); }
+.uw-k { font-size: .82rem; color: var(--count-text); }
+.uw-v { font-size: 1.7rem; font-weight: 700; margin: 6px 0 2px; }
+.uw-sub { font-size: .74rem; color: var(--count-text); opacity: .85; }
+.uw-btn { margin-top: 10px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--card-border);
+    background: var(--count-bg); color: var(--text-color); font-size: .82rem; cursor: pointer; }
+.uw-btn:hover:not(:disabled) { border-color: #3988f6; color: #3988f6; }
+.uw-btn:disabled { opacity: .5; cursor: not-allowed; }
+.uw-btn.primary { background: #3988f6; border-color: #3988f6; color: #fff; }
+.uw-btn.ghost { background: transparent; }
+.uw-note { min-height: 20px; font-size: .82rem; margin: 6px 0 2px; }
+.uw-note.ok { color: #1a9a52; }
+.uw-note.err { color: #d9453d; }
+.uw-topup { border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 16px; background: var(--card-bg); }
+.uw-field { display: flex; flex-wrap: wrap; gap: 18px; font-size: .82rem; color: var(--count-text); margin-bottom: 10px; }
+.uw-field b { color: var(--text-color); }
+.uw-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.uw-row input { flex: 1 1 160px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--card-border);
+    background: var(--count-bg); color: var(--text-color); font-size: .85rem; }
+.uw-chart { border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 16px 10px;
+    background: var(--card-bg); margin-bottom: 18px; }
+.uw-bars { display: flex; align-items: flex-end; gap: 3px; height: 130px; }
+.uw-bar { flex: 1 1 0; min-width: 3px; background: linear-gradient(180deg, #5aa0ff, #3988f6);
+    border-radius: 3px 3px 0 0; }
+.uw-bar:hover { background: #2d76dd; }
+.uw-axis { display: flex; justify-content: space-between; font-size: .68rem; color: var(--count-text); margin-top: 6px; }
+.uw-mrow { display: flex; align-items: center; gap: 10px; margin: 7px 0; font-size: .8rem; }
+.uw-mname { flex: 0 0 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uw-mbar { flex: 1 1 auto; height: 10px; border-radius: 5px; background: var(--count-bg); overflow: hidden; }
+.uw-mbar i { display: block; height: 100%; background: linear-gradient(90deg, #5aa0ff, #3988f6); }
+.uw-mcost { flex: 0 0 auto; color: var(--count-text); font-variant-numeric: tabular-nums; }
+.uw-empty { color: var(--count-text); font-size: .82rem; padding: 20px 0; text-align: center; }
+.uw-tip { font-size: .76rem; color: var(--count-text); }
+.uw-tip a { color: #3988f6; }
+@media (max-width: 560px) { .uw-mname { flex-basis: 50%; } }
 </style>
 </head>
 
