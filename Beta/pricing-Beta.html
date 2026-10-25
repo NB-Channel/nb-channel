@@ -770,6 +770,253 @@ html { -webkit-text-size-adjust: 100%; }
 .uw-tab.on { color: #3988f6; border-bottom-color: #3988f6; font-weight: 600; }
 .uw-panel[hidden] { display: none !important; }
 </style>
+<style>
+
+        /* ===== 用户守则页专用样式 =====
+
+           颜色一律走 CSS 变量, 这样 新潮 / 经典 / 官网(beta) 三套 UI
+
+           以及日间 / 夜间两套配色都不用单独写一份。 */
+
+        .rules-content { line-height: 1.9; }
+
+        .rules-content h3 {
+
+            margin: 34px 0 14px;
+
+            padding-left: 12px;
+
+            border-left: 5px solid var(--status-border);
+
+            color: var(--status-border);
+
+            font-size: 1.3rem;
+
+            line-height: 1.5;
+
+        }
+
+        .rules-content h3:first-of-type { margin-top: 8px; }
+
+        .rules-content h4 {
+
+            margin: 0 0 8px;
+
+            font-size: 1rem;
+
+            color: var(--ink);
+
+        }
+
+        .rules-content p { margin-bottom: 14px; }
+
+        .rules-content ul, .rules-content ol {
+
+            margin: 0 0 14px 24px;
+
+            padding: 0;
+
+            border: none !important;
+
+            border-radius: 0 !important;
+
+            box-shadow: none !important;
+
+            background: none !important;
+
+        }
+
+        .rules-content li { margin-bottom: 7px; }
+
+        .rules-content ul ul, .rules-content ol ul { margin: 8px 0 0 22px; }
+
+        .rules-content strong { color: var(--status-border); }
+
+
+
+        .rules-lead {
+
+            margin: 0 0 26px;
+
+            padding: 16px 20px;
+
+            border: 1px solid var(--status-border);
+
+            border-left: 6px solid var(--status-border);
+
+            border-radius: 10px;
+
+            background: var(--status-bg);
+
+            color: var(--status-text);
+
+            font-size: 1.05rem;
+
+            line-height: 1.85;
+
+        }
+
+        .rules-lead strong { color: inherit; }
+
+
+
+        .rules-cat {
+
+            margin: 0 0 16px;
+
+            padding: 14px 18px 4px;
+
+            border: 1px solid var(--line);
+
+            border-radius: 12px;
+
+        }
+
+        .rules-cat:last-child { margin-bottom: 6px; }
+
+
+
+        .rules-table-wrap {
+
+            margin: 4px 0 20px;
+
+            overflow-x: auto;
+
+            -webkit-overflow-scrolling: touch;
+
+            border: 1px solid var(--line);
+
+            border-radius: 12px;
+
+        }
+
+        table.rules-table {
+
+            width: 100%;
+
+            min-width: 420px;
+
+            margin: 0;
+
+            border: none;
+
+            border-radius: 0;
+
+            border-collapse: collapse;
+
+            font-size: 1rem;
+
+        }
+
+        table.rules-table th, table.rules-table td {
+
+            padding: 11px 14px;
+
+            text-align: left;
+
+            vertical-align: top;
+
+            border-bottom: 1px solid var(--line);
+
+        }
+
+        table.rules-table th {
+
+            background: var(--status-bg);
+
+            color: var(--status-text);
+
+            font-weight: 700;
+
+            white-space: nowrap;
+
+        }
+
+        table.rules-table td { color: var(--about-text); }
+
+        table.rules-table td:first-child {
+
+            color: var(--status-text);
+
+            font-weight: 700;
+
+            white-space: nowrap;
+
+        }
+
+        table.rules-table tbody tr:last-child td { border-bottom: none; }
+
+
+
+        @media (max-width: 640px) {
+
+            .rules-content h3 { font-size: 1.15rem; margin-top: 26px; }
+
+            .rules-cat { padding: 12px 14px 2px; }
+
+            .rules-lead { font-size: 1rem; padding: 14px 16px; }
+
+            /* 手机上让表格自己压缩换行, 不要撑出横向滚动 */
+
+            table.rules-table { min-width: 0; font-size: 0.95rem; }
+
+            table.rules-table th, table.rules-table td { padding: 9px 10px; }
+
+        }
+
+    
+
+        /* 用户守则：红色警告块（用 color-mix 混主题色，深浅皮肤都适配） */
+
+        .rules-warn {
+
+            margin: 0 0 26px;
+
+            padding: 18px 22px;
+
+            border: 1px solid color-mix(in srgb, #e5484d 55%, var(--line));
+
+            border-left: 6px solid #e5484d;
+
+            border-radius: 10px;
+
+            background: color-mix(in srgb, #e5484d 8%, var(--status-bg));
+
+            color: var(--status-text);
+
+            font-size: 1rem;
+
+            line-height: 1.85;
+
+        }
+
+        .rules-warn .rw-title {
+
+            font-size: 1.1rem;
+
+            font-weight: 700;
+
+            color: #c62a2f;
+
+            margin-bottom: 10px;
+
+        }
+
+        html.dark .rules-warn .rw-title { color: #ff8b8f; }
+
+        .rules-warn p { margin: 0 0 10px; }
+
+        .rules-warn ul { margin: 6px 0 10px; padding-left: 22px; }
+
+        .rules-warn li { margin-bottom: 4px; }
+
+        .rules-warn strong { color: #c62a2f; }
+
+        html.dark .rules-warn strong { color: #ff8b8f; }
+
+
+
+</style>
 </head>
 <body>
 
