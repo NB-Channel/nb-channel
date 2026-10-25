@@ -1189,6 +1189,12 @@ def ping():
             'build': 'v13-wallet-open',
             'charge': 'after',
             'web_fee': AI_WEB_FEE,
+            'admin_only': bool(AI_ADMIN_ONLY),
+            'per_user': AI_PER_USER_PER_DAY,
+            'per_ip': AI_PER_IP_PER_DAY,
+            'global': AI_GLOBAL_PER_DAY,
+            'model_default': AI_MODEL,
+            'models_n': len(AI_MODELS),
             'ms': bool(MS_KEY),
             'ms_models': sorted(MS_MODEL_IDS) if MS_KEY else [],        # 回答前扣是 before，答完再扣是 after
             'negative_ok': True,      # 允许扣成负数（SQL 里已去掉余额守卫）
