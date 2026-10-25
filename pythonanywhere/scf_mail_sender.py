@@ -1940,6 +1940,31 @@ def api_wallet():
         if not _wallet_check(uid, sess):
             return jsonify({'ok': False, 'reason': 'reauth'})
 
+        if action == 'quota':
+            # 实时额度：算一下当前 IP 的 hash（跟 bump_ai_usage 用的是同一套算法）
+            _ip = ''
+            try:
+                _ip = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
+                if not _ip:
+                    _ip = (request.remote_addr or '')
+            except Exception:
+                _ip = ''
+            import hashlib as _hl
+            _iph = _hl.sha256((_ip + '|' + MAIL_SECRET).encode('utf-8')).hexdigest()[:24]
+            d = supa_rpc('ai_usage_left', {
+                'p_user_id': uid, 'p_ip_hash': _iph, 'p_secret': MAIL_SECRET,
+            })
+            u = (d.get('data') or {}) if d.get('ok') else {}
+            return jsonify({
+                'ok': True,
+                'used_user': u.get('used_user', 0),
+                'used_ip': u.get('used_ip', 0),
+                'used_global': u.get('used_global', 0),
+                'per_user': AI_PER_USER_PER_DAY,
+                'per_ip': AI_PER_IP_PER_DAY,
+                'global': AI_GLOBAL_PER_DAY,
+            })
+
         if action == 'get':
             d = supa_rpc('ai_wallet_get', {'p_user_id': uid, 'p_secret': MAIL_SECRET})
             out = d.get('data') if d.get('ok') else None
