@@ -117,7 +117,7 @@
 <meta property="og:description" content="NB频道（NoBook频道）——从一支试管到一家虚拟公司。">
 <meta name="theme-color" content="#0f172a">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='800' fill='%23fff' text-anchor='middle'%3ENB%3C/text%3E%3C/svg%3E">
-<title>模型 &amp; 价格 · NB频道</title>
+<title>模型价格 &amp; 用量信息 · NB频道</title>
 <script>
     // 夜间模式:第一帧前生效(无显式选择时跟随系统)
     (function () {
@@ -796,7 +796,7 @@ html { -webkit-text-size-adjust: 100%; }
                 <a href="product_share-Beta.html">📦 作品分享</a>
                 <a href="comments-Beta.html">💬 评论区</a>
                 <a href="ban-Beta.html">🚫 小黑屋</a>
-                <a href="feedback-Beta.html">🐞 漏洞/建议</a><a href="pricing-Beta.html">💰 模型 &amp; 价格</a>
+                <a href="feedback-Beta.html">🐞 漏洞/建议</a><a href="pricing-Beta.html">💰 模型价格 &amp; 用量信息</a>
                 <a href="vote-Beta.html">🗳️ 投票中心</a>
             </div>
         </div>
@@ -880,7 +880,7 @@ html { -webkit-text-size-adjust: 100%; }
     <div class="vhero-inner">
         <div class="hero-copy">
             <span class="hero-eyebrow">PRICING · NOBOOK CHANNEL</span>
-            <h1>模型 &amp; <span class="light">价格</span></h1>
+            <h1>模型价格 &amp; <span class="light">用量信息</span></h1>
             <p class="vhero-sub">七个模型、按 token 计费、答完再扣、中断也扣。用站内 NB 币结算；联网搜索每次 500 NB 币，站内数据查询免费。</p>
             <div class="vhero-actions"><a class="hero-link" href="#models">看模型 ↓</a><a class="hero-link" href="ai-Beta.html">去用 AI ↗</a><a class="hero-link" href="feedback-Beta.html">漏洞/建议 ↗</a></div>
         </div>
@@ -968,6 +968,56 @@ html { -webkit-text-size-adjust: 100%; }
     <a class="hero-btn ghost" href="index-Beta.html">回首页</a>
 </div>
 
+
+<h2 id="usage">用量信息</h2>
+<div class="usage-page">
+
+<p class="rules-lead">这里管你用 AI 的两笔钱：<strong>赠金</strong>（送你的）和<strong>充值余额</strong>（用 NB币 充的）。
+用 AI 时<strong>先扣赠金，赠金用完再扣充值余额</strong>，不再直接从 NB币 余额里扣。</p>
+
+<div class="uw-cards">
+    <div class="uw-card">
+        <div class="uw-k">赠金余额</div>
+        <div class="uw-v" id="uwBonus">--</div>
+        <div class="uw-sub" id="uwBonusSub">每人限领一次 1500 NB币</div>
+        <button class="uw-btn" id="uwClaim" type="button" disabled>领取 1500 赠金</button>
+    </div>
+    <div class="uw-card">
+        <div class="uw-k">充值余额</div>
+        <div class="uw-v" id="uwTopup">--</div>
+        <div class="uw-sub">用 NB币 充值 · 每天最多 100000</div>
+    </div>
+    <div class="uw-card">
+        <div class="uw-k">累计消费</div>
+        <div class="uw-v" id="uwSpent">--</div>
+        <div class="uw-sub">所有对话加起来</div>
+    </div>
+</div>
+
+<div class="uw-note" id="uwMsg"></div>
+
+<h2>充值</h2>
+<div class="uw-topup">
+    <div class="uw-field">
+        <span>NB币 余额：<b id="uwNb">--</b></span>
+        <span>今日已充：<b id="uwToday">--</b> / 100000</span>
+    </div>
+    <div class="uw-row">
+        <input id="uwAmount" type="number" min="1" step="1" placeholder="要充多少 NB币">
+        <button class="uw-btn primary" id="uwDoTopup" type="button">充值</button>
+        <button class="uw-btn ghost" id="uwAll" type="button">全部</button>
+    </div>
+</div>
+
+<h2>近 30 天消费</h2>
+<div class="uw-chart" id="uwDayChart"><div class="uw-empty">还没有消费记录</div></div>
+
+<h2>各模型消费</h2>
+<div class="uw-chart" id="uwModelChart"><div class="uw-empty">还没有消费记录</div></div>
+
+<p class="uw-tip">数据可能有几分钟延迟。价格见 <a href="pricing-Beta.html">模型价格 &amp; 用量信息</a>。</p>
+
+</div>
 </div>
 </main>
 
@@ -1039,7 +1089,7 @@ html { -webkit-text-size-adjust: 100%; }
         <a class="d-item" href="product_share-Beta.html">作品分享</a>
         <a class="d-item" href="comments-Beta.html">评论区</a>
         <a class="d-item" href="ban-Beta.html">小黑屋</a>
-        <a class="d-item" href="pricing-Beta.html">💰 模型 &amp; 价格</a>
+        <a class="d-item" href="pricing-Beta.html">💰 模型价格 &amp; 用量信息</a>
     <div class="d-auth">
         <a class="ga" id="dProfileBtn" href="#">个人中心</a>
         <a class="gab" id="dAuthBtn" href="#">登录 / 注册</a>
@@ -1567,5 +1617,140 @@ html { -webkit-text-size-adjust: 100%; }
 </script>
 <script defer src="../js/science-tips.js?v=26"></script>
 <script src="../js/pomodoro.js?v=7" defer></script>
+<script>
+(function () {
+    var SCF = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
+    var $ = function (id) { return document.getElementById(id); };
+
+    function who() {
+        try {
+            var u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+            var s = localStorage.getItem('nb_session') || '';
+            if (u && u.id) return { id: u.id, session: s };
+        } catch (e) {}
+        return null;
+    }
+    function api(action, extra) {
+        var w = who();
+        if (!w) return Promise.resolve({ ok: false, reason: 'reauth' });
+        var body = { action: action, user_id: w.id, session: w.session };
+        if (extra) for (var k in extra) body[k] = extra[k];
+        return fetch(SCF + '/api/wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function (r) { return r.json(); });
+    }
+    function msg(t, cls) {
+        var m = $('uwMsg');
+        m.textContent = t || '';
+        m.className = 'uw-note' + (cls ? ' ' + cls : '');
+    }
+    function fmt(n) {
+        n = Number(n || 0);
+        return n.toLocaleString('zh-CN', { maximumFractionDigits: 0 });
+    }
+
+    function charts(days, models) {
+        var dc = $('uwDayChart');
+        if (!days || !days.length) {
+            dc.innerHTML = '<div class="uw-empty">最近 30 天没有消费</div>';
+        } else {
+            var mx = 1;
+            days.forEach(function (x) { if (Number(x.c) > mx) mx = Number(x.c); });
+            var bars = days.map(function (x) {
+                var h = Math.max(2, Math.round(Number(x.c) / mx * 120));
+                return '<div class="uw-bar" style="height:' + h + 'px" title="' + x.d + '：' + fmt(x.c) + ' NB"></div>';
+            }).join('');
+            dc.innerHTML = '<div class="uw-bars">' + bars + '</div><div class="uw-axis"><span>' +
+                days[0].d + '</span><span>' + days[days.length - 1].d + '</span></div>';
+        }
+        var mc = $('uwModelChart');
+        if (!models || !models.length) {
+            mc.innerHTML = '<div class="uw-empty">还没有按模型的消费记录</div>';
+        } else {
+            var m2 = 1;
+            models.forEach(function (x) { if (Number(x.c) > m2) m2 = Number(x.c); });
+            mc.innerHTML = models.map(function (x) {
+                var w = Math.max(2, Math.round(Number(x.c) / m2 * 100));
+                var esc = String(x.m).replace(/[<>&"]/g, function (ch) {
+                    return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ch];
+                });
+                return '<div class="uw-mrow"><span class="uw-mname" title="' + esc + '">' + esc +
+                    '</span><div class="uw-mbar"><i style="width:' + w + '%"></i></div>' +
+                    '<span class="uw-mcost">' + fmt(x.c) + ' NB · ' + x.n + ' 次</span></div>';
+            }).join('');
+        }
+    }
+
+    function load() {
+        if (!who()) {
+            msg('请先登录，才能领取赠金和充值', 'err');
+            return;
+        }
+        api('get', null).then(function (d) {
+            if (!d || !d.ok) {
+                if (d && d.reason === 'reauth') msg('登录过期了，请重新登录', 'err');
+                else msg('加载失败：' + ((d && (d.reason || d.error)) || '未知'), 'err');
+                return;
+            }
+            $('uwBonus').textContent = fmt(d.bonus);
+            $('uwTopup').textContent = fmt(d.topup);
+            $('uwSpent').textContent = fmt(d.spent);
+            $('uwToday').textContent = fmt(d.today_topup);
+            if (d.nb != null) $('uwNb').textContent = fmt(d.nb);
+            var btn = $('uwClaim');
+            if (d.claimed) {
+                btn.disabled = true;
+                btn.textContent = '已领取';
+                $('uwBonusSub').textContent = '赠金只有一次，用完就没了';
+            } else {
+                btn.disabled = false;
+                btn.textContent = '领取 1500 赠金';
+            }
+            charts(d.days, d.models);
+        }).catch(function () { msg('加载失败，请刷新重试', 'err'); });
+    }
+
+    $('uwClaim').addEventListener('click', function () {
+        var self = this;
+        self.disabled = true;
+        api('claim', { amount: 1500 }).then(function (d) {
+            if (d && d.ok) { msg('领到了 1500 赠金 🎉', 'ok'); load(); }
+            else if (d && d.reason === 'already') { msg('赠金已经领过了', 'err'); load(); }
+            else { msg('领取失败：' + ((d && d.reason) || '未知'), 'err'); self.disabled = false; }
+        }).catch(function () { msg('领取失败，请刷新重试', 'err'); self.disabled = false; });
+    });
+
+    $('uwAll').addEventListener('click', function () {
+        var nb = $('uwNb').textContent.replace(/[^0-9]/g, '');
+        if (nb) $('uwAmount').value = nb;
+    });
+
+    $('uwDoTopup').addEventListener('click', function () {
+        var amt = parseInt($('uwAmount').value, 10);
+        if (!amt || amt <= 0) { msg('先填一个大于 0 的数量', 'err'); return; }
+        if (amt > 100000) { msg('单次最多 100000', 'err'); return; }
+        var self = this;
+        self.disabled = true;
+        api('topup', { amount: amt }).then(function (d) {
+            self.disabled = false;
+            if (d && d.ok) {
+                msg('充好了：' + fmt(d.topped) + ' NB币 → 充值余额', 'ok');
+                $('uwAmount').value = '';
+                load();
+            } else if (d && d.reason === 'daily_limit') {
+                msg('今天最多充 100000，已经充了 ' + fmt(d.used), 'err');
+            } else if (d && d.reason === 'poor') {
+                msg('NB币 余额不够（现在 ' + fmt(d.nb) + '）', 'err');
+            } else {
+                msg('充值失败：' + ((d && d.reason) || '未知'), 'err');
+            }
+        }).catch(function () { self.disabled = false; msg('充值失败，请刷新重试', 'err'); });
+    });
+
+    load();
+})();
+</script>
 </body>
 </html>
