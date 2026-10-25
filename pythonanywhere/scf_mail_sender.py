@@ -801,7 +801,8 @@ def f(x):
 短、能跑、加上必要的注释；超过 60 行就拆开讲，或者只给关键函数。
 
 【NB 币怎么算】
-· 按 token 计费：每 1000 token 基础价 200 NB币，再乘模型倍率。
+· 只算「你说的话 + AI 的回答」，系统提示词、联网资料、站内数据都不计费。
+  按 token 计费：每 1000 token 基础价 200 NB币，再乘模型倍率。
     DeepSeek V4.1 Flash 1.0× → 200 NB / 1K
     Qwen3.8 Flash Next 1.0×  → 200 NB / 1K
     GLM-5.2 1.2×             → 240 NB / 1K
@@ -813,9 +814,9 @@ def f(x):
 · 最低消费 1 NB币。答完才扣，中途停止也会按已经生成的内容扣。
 · 余额扣成 0 或负数就【不能再提问】了，得先去赚币。
 · 内测期间管理员不扣币。
-· 用户问「多少钱一次」就按上面算给他：一句普通问题大约 4400 token，
-  DeepSeek V4.1 Flash 约 880 NB、GLM/Step/Nemotron 约 1056 NB、
-  MiniMax/DeepSeek V4 Pro 约 1320 NB；再开联网就再加 500 NB。
+· 用户问「多少钱一次」就按上面算给他：系统提示词和资料不计费，
+  所以一句普通问答通常只有几百 token —— 大约 150~300 NB；
+  再开联网就再加 500 NB。
 · 详细价格在「模型 & 价格」页面（pricing.html）上，可以直接让用户去看。
 
 【常见问题这样答】
@@ -2204,6 +2205,10 @@ def _api_ai_body():
                + site_ctx + '\n' + db_ctx + '\n' + web_ctx + '\n'
                + ''.join((m.get('content') or '') for m in history))
     _in_tok = _est_tokens_text(_all_in)
+    # 计费口径：只算「用户说的话」——这次的问题 + 历史里用户/AI 的正文，
+    # 系统提示词、联网资料、站内数据、数据库内容一律不计费。
+    _bill_in = _est_tokens_text(question) + \
+        sum(_est_tokens_text(x.get('content') or '') for x in history)
     _charge_state = {'done': False}
     _wal = {'bonus': None, 'topup': None}     # 钱包两个余额（结算后填）
 
@@ -2223,7 +2228,17 @@ def _api_ai_body():
                        int(usage.get('completion_tokens') or 0)
         else:
             _tot = _in_tok + int(out_chars * 0.75) + int(reason_chars * 0.75)
-        _c = _ai_cost(_tot, model_id)
+        # 输出 token：上游给了 completion_tokens 就用真实的，否则按字数估
+        _out_tok = 0
+        if isinstance(usage, dict) and usage.get('completion_tokens'):
+            _out_tok = int(usage.get('completion_tokens') or 0)
+        if _out_tok <= 0:
+            _out_tok = int(out_chars * 0.75) + int(reason_chars * 0.75)
+        _bill_tok = _out_tok + _bill_in
+        print('[AI-BILL] 计费 token = 输出 %d + 用户输入 %d = %d（原 %d，'
+              '系统提示词/资料不计）'
+              % (_out_tok, _bill_in, _bill_tok, _tot), flush=True)
+        _c = _ai_cost(_bill_tok, model_id)
         # 联网搜索额外收费（只有真的搜到结果才算）
         if AI_WEB_FEE > 0 and web_n > 0:
             _c += AI_WEB_FEE
