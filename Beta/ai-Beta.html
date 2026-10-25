@@ -4067,10 +4067,30 @@ function webOn() {
         var b = global == null ? '—' : global;
         el.innerHTML = a + ' 次/人 · 全站 ' + b + ' 次/天';
     }
-    fetch(SCF + '/ping?deep=1').then(function (r) { return r.json(); }).then(function (d) {
-        var s = (d && d.self) || {};
-        fill(s.per_user, s.global);
-    }).catch(function () { fill(null, null); });
+    function caps() {
+        fetch(SCF + '/ping?deep=1').then(function (r) { return r.json(); }).then(function (d) {
+            var s = (d && d.self) || {};
+            fill(s.per_user, s.global);
+        }).catch(function () { fill(null, null); });
+    }
+    // 登录了就拉真·剩余次数（没登录就只显示配额上限）
+    var who = null;
+    try {
+        var u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+        var sess = localStorage.getItem('nb_session') || '';
+        if (u && u.id) who = { id: u.id, session: sess };
+    } catch (e) {}
+    if (!who) { caps(); return; }
+    fetch(SCF + '/api/wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'quota', user_id: who.id, session: who.session })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d || !d.ok) { caps(); return; }
+        var leftU = Math.max(0, (d.per_user || 0) - (d.used_user || 0));
+        var leftG = Math.max(0, (d.global || 0) - (d.used_global || 0));
+        el.innerHTML = '剩 ' + leftU + ' 次/人 · 全站剩 ' + leftG + ' 次';
+    }).catch(function () { caps(); });
 })();
 </script>
 </body>
