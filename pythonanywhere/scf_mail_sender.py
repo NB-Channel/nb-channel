@@ -1770,17 +1770,24 @@ def nim_stream(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
 #  session 用 list_ai_convs 顺手验一下（它本来就是只读的，坏 session 会返回 reauth）。
 # ============================================================
 def _wallet_check(uid, sess):
-    """验 session。返回 True / False。"""
+    """验 session。返回 True / False。
+
+    ⚠️ 必须用 verify_session：它直接返回 true/false。
+    之前用 list_ai_convs 是错的 —— supa_rpc 的外层 ok 只代表 HTTP 成功，
+    坏 session 也能拿到 ok:true，等于谁都能拿别人的 user_id 来花币。
+    """
+    if not uid or not sess:
+        return False
     try:
-        d = supa_rpc('list_ai_convs', {
-            'p_user_id': uid, 'p_session': sess, 'p_limit': 1,
+        d = supa_rpc('verify_session', {
+            'p_user_id': uid, 'p_session': sess,
         })
     except Exception as e:
         print('[WALLET-SESSION-ERR] %s' % str(e)[:200], flush=True)
         return False
     if not d.get('ok'):
         return False
-    return True
+    return bool(d.get('data'))
 
 
 @app.route('/api/wallet', methods=['POST', 'OPTIONS'])
