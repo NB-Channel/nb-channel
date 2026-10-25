@@ -1762,6 +1762,78 @@ def nim_stream(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
                 yield ('a', text)
 
 
+
+# ============================================================
+#  /api/wallet —— 用量信息页面用（赠金 / 充值 / 消费记录）
+#
+#  前端只传 user_id + session + action，密钥留在服务端。
+#  session 用 list_ai_convs 顺手验一下（它本来就是只读的，坏 session 会返回 reauth）。
+# ============================================================
+def _wallet_check(uid, sess):
+    """验 session。返回 True / False。"""
+    try:
+        d = supa_rpc('list_ai_convs', {
+            'p_user_id': uid, 'p_session': sess, 'p_limit': 1,
+        })
+    except Exception as e:
+        print('[WALLET-SESSION-ERR] %s' % str(e)[:200], flush=True)
+        return False
+    if not d.get('ok'):
+        return False
+    return True
+
+
+@app.route('/api/wallet', methods=['POST', 'OPTIONS'])
+def api_wallet():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        data = request.get_json(silent=True) or {}
+        action = str(data.get('action') or 'get').lower()
+        uid = (data.get('user_id') or '').strip()
+        sess = (data.get('session') or '').strip()
+
+        if not uid:
+            return jsonify({'ok': False, 'reason': 'nouser'})
+        if not _wallet_check(uid, sess):
+            return jsonify({'ok': False, 'reason': 'reauth'})
+
+        if action == 'get':
+            d = supa_rpc('ai_wallet_get', {'p_user_id': uid, 'p_secret': MAIL_SECRET})
+            out = d.get('data') if d.get('ok') else None
+            if not out:
+                return jsonify({'ok': False, 'reason': 'rpc'})
+            # 顺手带上 NB币 余额（充值要用）
+            nb = supa_rpc('ai_charge_coins', {
+                'p_user_id': uid, 'p_amount': 0, 'p_secret': MAIL_SECRET,
+            })
+            if nb.get('ok'):
+                out['nb'] = (nb.get('data') or {}).get('balance')
+            return jsonify(out)
+
+        if action == 'claim':
+            d = supa_rpc('ai_bonus_claim', {
+                'p_user_id': uid, 'p_secret': MAIL_SECRET,
+                'p_amount': int(data.get('amount') or 1500),
+            })
+            return jsonify(d.get('data') if d.get('ok') else {'ok': False, 'reason': 'rpc'})
+
+        if action == 'topup':
+            amt = int(data.get('amount') or 0)
+            if amt <= 0 or amt > 100000:
+                return jsonify({'ok': False, 'reason': 'amount'})
+            d = supa_rpc('ai_wallet_topup', {
+                'p_user_id': uid, 'p_amount': amt, 'p_secret': MAIL_SECRET,
+            })
+            return jsonify(d.get('data') if d.get('ok') else {'ok': False, 'reason': 'rpc'})
+
+        return jsonify({'ok': False, 'reason': 'action'})
+    except Exception as e:
+        print('[WALLET-500] %s: %s' % (type(e).__name__, str(e)[:200]), flush=True)
+        return jsonify({'ok': False, 'reason': 'error',
+                        'error': '%s: %s' % (type(e).__name__, str(e)[:200])})
+
+
 @app.route('/api/ai', methods=['POST', 'OPTIONS'])
 def api_ai():
     """路由外壳：把任何异常变成 JSON，别让前端只看到「HTTP 500」。"""
