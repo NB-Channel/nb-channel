@@ -587,7 +587,7 @@
             const img = /^https?:/.test(t.image_url || '') ? t.image_url : base + t.image_url;
             titleEl.innerHTML =
                 `<div style="display:flex; align-items:center; gap:8px;">
-                    <img src="${img}" alt="${escapeHtml(t.name)}" style="height:30px; border-radius:6px;" onerror="this.style.display='none'">
+                    <img src="${escapeHtml(String(img))}" alt="${escapeHtml(t.name)}" style="height:30px; border-radius:6px;" onerror="this.style.display='none'">
                     <span class="comment-title-stars">称号：${escapeHtml(t.name)} · ${'★'.repeat(Math.min(t.stars || 1, 5))}</span>
                  </div>`;
         }
@@ -609,7 +609,7 @@
                 const img = /^https?:/.test(extra.image_url || '') ? extra.image_url : base + extra.image_url;
                 titleEl.insertAdjacentHTML('beforeend',
                     `<div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-                        <img src="${img}" alt="" style="height:30px; border-radius:6px;" onerror="this.style.display='none'">
+                        <img src="${escapeHtml(String(img))}" alt="" style="height:30px; border-radius:6px;" onerror="this.style.display='none'">
                         <span class="comment-title-stars">展示位：${escapeHtml(extra.name)} · ${'★'.repeat(Math.min(extra.stars || 1, 5))}</span>
                      </div>`);
             }
@@ -842,7 +842,7 @@
                     const img = /^https?:/.test(t.image_url || '') ? t.image_url : base + t.image_url;
                     const equipped = t.equipped ? ' <span style="color:#00a1d6; font-size:0.75rem;">(佩戴中)</span>' : '';
                     return `<div class="tab-item" style="display:flex; align-items:center; gap:10px;">
-                        <img src="${img}" alt="" style="height:26px; border-radius:6px;" onerror="this.style.display='none'">
+                        <img src="${escapeHtml(String(img))}" alt="" style="height:26px; border-radius:6px;" onerror="this.style.display='none'">
                         <span class="tab-title">${escapeHtml(t.name)}${equipped}</span>
                         <span style="color:#ffb300; font-size:0.8rem;">${'★'.repeat(Math.min(t.stars || 1, 5))}</span>
                     </div>`;
