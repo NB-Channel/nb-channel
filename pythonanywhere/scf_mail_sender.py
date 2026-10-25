@@ -1507,7 +1507,7 @@ def _web_query(q):
 
     ⚠️ 为什么必须洗：实测「查一下2026诺奖」拿 Bing 搜，返回的是
        「查（汉语文字）_百度百科」「查姓_百度百科」「爱企查」——
-       因为 Bing 把「查」当关键词了。剥掉这些废话之后
+       因为 搜索引擎把「查」当关键词了。剥掉这些废话之后
        「2026诺奖」能搜到正确结果。
     """
     original = (q or '').strip()
@@ -1537,8 +1537,100 @@ def _web_query(q):
     return s[:40]
 
 
+# ============================================================
+#  360 搜索（so.com）
+#
+#  ⚠️ 为什么换：实测这台机器的出口只放行 Bing，而 Bing 对中文问句
+#     一律返回「首字词典页」（问「浓硫酸为什么不能干燥氨气」回来的是
+#     「浓的拼音、浓怎么读」）。维基 / DuckDuckGo / searx / Brave 全部不通。
+#     360（so.com）实测可用，结果也相关。
+# ============================================================
+def so_search(query, count=10):
+    """用 360 搜索。返回 [(标题, 摘要, 链接), ...]，失败返回 []。"""
+    q = _web_query(query)
+    if not q:
+        return []
+    url = ('https://www.so.com/s?q=' + urllib.parse.quote(q)
+           + '&pn=1&src=srp&fr=none')
+    req = urllib.request.Request(url, headers={
+        'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                       'AppleWebKit/537.36 (KHTML, like Gecko) '
+                       'Chrome/125.0 Safari/537.36'),
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            html = r.read().decode('utf-8', 'ignore')
+    except Exception as e:
+        print('[AI-WEB-SO-ERR] %s: %s' % (type(e).__name__, str(e)[:120]), flush=True)
+        return []
+
+    out = []
+    # 360 的结果都在 <li class="res-list"> 里：
+    #   <h3 class="res-title"><a href="...">标题（可能带 <em>）</a></h3>
+    #   摘要：<span class="res-list-summary">...</span> 或 <p class="res-desc">...</p>
+    want = max(3, min(count, 10))
+    for chunk in html.split('<li class="res-list"')[1:]:
+        m = re.search(r'<h3[^>]*>([\s\S]{0,600}?)</h3>', chunk)
+        if not m:
+            continue
+        head = m.group(1)
+        link = ''
+        ml = re.search(r'href="([^"]+)"', head)
+        if ml:
+            link = ml.group(1).strip()
+        title = _strip_tags(head).replace('\xa0', ' ').strip()
+        desc = ''
+        md = re.search(r'class="res-list-summary"[^>]*>([\s\S]{0,600}?)</span>', chunk)
+        if md:
+            desc = _strip_tags(md.group(1))
+        else:
+            md = re.search(r'class="res-desc"[^>]*>([\s\S]{0,600}?)</p>', chunk)
+            if md:
+                desc = _strip_tags(md.group(1))
+        desc = desc.replace('\xa0', ' ').strip()[:300]
+        if not title:
+            continue
+        # 过滤掉「其他人还搜了」这类噪音块
+        if '其他人还搜了' in title or '相关搜索' in title:
+            continue
+        if link.startswith('/'):
+            link = 'https://www.so.com' + link
+        out.append((title[:120], desc, link))
+        if len(out) >= want:
+            break
+
+    print('[AI-WEB-SO] %r -> %d 条' % (q, len(out)), flush=True)
+    return out
+
+
+def web_search(query, count=10):
+    """统一入口：先 360，不行再 Bing，结果带缓存。"""
+    key = 'web:' + str(query)[:80]
+    now = time.time()
+    hit = _WEB_CACHE.get(key)
+    if hit and now - hit[0] < AI_WEB_CACHE_TTL:
+        return hit[1]
+
+    hits = []
+    try:
+        hits = so_search(query, count)
+    except Exception as e:
+        print('[AI-WEB-SO-EXC] %s' % str(e)[:120], flush=True)
+    if not hits:
+        try:
+            hits = bing_search(query, count)
+        except Exception as e:
+            print('[AI-WEB-BING-EXC] %s' % str(e)[:120], flush=True)
+
+    if hits:
+        _WEB_CACHE[key] = (now, hits)
+    return hits
+
+
 def bing_search(query, count=5, timeout=8):
-    """用 Bing 的 RSS 输出搜一下。**不要 API key、不要钱**。
+    """用 360 搜索搜一下。**不要 API key、不要钱**。
 
     实测（2026-10-24，国内网络）：
         https://cn.bing.com/search?q=…&format=rss&count=5
@@ -2128,7 +2220,7 @@ def _api_ai_body():
     web_src = []          # 给前端列「来源链接」用
     if bool(data.get('web')):
         try:
-            _hits = bing_search(question, 10)
+            _hits = web_search(question, 10)
         except Exception as _e:
             _hits = []
             print('[AI-WEB-EXC] %s' % str(_e)[:120], flush=True)
