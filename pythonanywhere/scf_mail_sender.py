@@ -1769,6 +1769,26 @@ def nim_stream(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
 #  前端只传 user_id + session + action，密钥留在服务端。
 #  session 用 list_ai_convs 顺手验一下（它本来就是只读的，坏 session 会返回 reauth）。
 # ============================================================
+_WALLET_RL = {}          # key -> [时间戳]
+_WALLET_RL_MAX = 20      # 每分钟最多这么多次
+_WALLET_RL_WIN = 60
+
+
+def _wallet_rl_ok(key):
+    """简单内存限流：同一个 key 每分钟最多 20 次。"""
+    now = time.time()
+    arr = [x for x in (_WALLET_RL.get(key) or []) if now - x < _WALLET_RL_WIN]
+    if len(arr) >= _WALLET_RL_MAX:
+        _WALLET_RL[key] = arr
+        return False
+    arr.append(now)
+    _WALLET_RL[key] = arr
+    if len(_WALLET_RL) > 800:
+        for k in list(_WALLET_RL)[:300]:
+            _WALLET_RL.pop(k, None)
+    return True
+
+
 def _wallet_check(uid, sess):
     """验 session。返回 True / False。
 
@@ -1802,6 +1822,22 @@ def api_wallet():
 
         if not uid:
             return jsonify({'ok': False, 'reason': 'nouser'})
+
+        # 限流：user_id + 来源 IP 组合，每分钟 20 次
+        _rip = ''
+        try:
+            _rip = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
+            if not _rip:
+                _rip = (request.remote_addr or '')
+        except Exception:
+            _rip = ''
+        if not _wallet_rl_ok(str(uid) + '|' + _rip):
+            print('[WALLET-RL] %s 触发限流' % str(uid)[:8], flush=True)
+            _r429 = jsonify({'ok': False, 'reason': 'rate',
+                             'message': '操作太频繁了，等一分钟再试'})
+            _r429.status_code = 429
+            return _r429
+
         if not _wallet_check(uid, sess):
             return jsonify({'ok': False, 'reason': 'reauth'})
 
