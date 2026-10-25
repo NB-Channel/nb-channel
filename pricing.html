@@ -272,6 +272,15 @@
 
 </style>
 
+<style>
+/* 两个 Tab：模型价格 / 用量信息 */
+.uw-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--card-border, #e5e7ef); margin: 6px 0 18px; }
+.uw-tab { padding: 9px 16px; border: 0; border-bottom: 2px solid transparent; background: none;
+    color: var(--count-text, #6b7280); font-size: .92rem; font-weight: 500; cursor: pointer; }
+.uw-tab:hover { color: var(--text-color, #111827); }
+.uw-tab.on { color: #3988f6; border-bottom-color: #3988f6; font-weight: 600; }
+.uw-panel[hidden] { display: none !important; }
+</style>
 </head>
 
 <body>
@@ -305,6 +314,8 @@
 </div>
 
 <div class="about-content price-page">
+<div class="uw-tabs"><button class="uw-tab on" type="button" data-tab="price">模型价格</button><button class="uw-tab" type="button" data-tab="usage">用量信息</button></div>
+<div class="uw-panel" id="tab-price">
 
 <p class="rules-lead">下表所列价格以 <strong>1000 tokens</strong> 为单位。Token 是模型用来表示自然语言文本的最小单位，可以是一个词、一个数字或一个标点符号等。我们会根据模型<strong>输入和输出的总 token 数</strong>进行计量计费。</p>
 
@@ -370,7 +381,8 @@
 </div>
 
 
-<h2 id="usage">用量信息</h2>
+</div>
+<div class="uw-panel" id="tab-usage" hidden>
 <div class="usage-page">
 
 <p class="rules-lead">这里管你用 AI 的两笔钱：<strong>赠金</strong>（送你的）和<strong>充值余额</strong>（用 NB币 充的）。
@@ -418,6 +430,7 @@
 
 <p class="uw-tip">数据可能有几分钟延迟。价格见 <a href="pricing.html">模型价格 &amp; 用量信息</a>。</p>
 
+</div>
 </div>
 </div>
 
@@ -732,6 +745,33 @@
     load();
 })();
 </script>
+<script>
+(function () {
+    var tabs = document.querySelectorAll('.uw-tab');
+    var panels = { price: document.getElementById('tab-price'), usage: document.getElementById('tab-usage') };
+    if (!tabs.length || !panels.price || !panels.usage) return;
+
+    function show(which) {
+        if (which !== 'usage') which = 'price';
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].classList.toggle('on', tabs[i].getAttribute('data-tab') === which);
+        }
+        panels.price.hidden = (which !== 'price');
+        panels.usage.hidden = (which !== 'usage');
+        try {
+            if (which === 'usage') history.replaceState(null, '', '#usage');
+            else history.replaceState(null, '', location.pathname + location.search);
+        } catch (e) {}
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    for (var i = 0; i < tabs.length; i++) {
+        tabs[i].addEventListener('click', function () { show(this.getAttribute('data-tab')); });
+    }
+    show((location.hash || '').indexOf('usage') >= 0 ? 'usage' : 'price');
+})();
+</script>
+
 </body>
 
 </html>
