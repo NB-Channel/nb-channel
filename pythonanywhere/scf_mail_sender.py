@@ -801,7 +801,7 @@ def f(x):
 短、能跑、加上必要的注释；超过 60 行就拆开讲，或者只给关键函数。
 
 【NB 币怎么算】
-· 只算「你说的话 + AI 的回答」，系统提示词、联网资料、站内数据都不计费。
+· 系统提示词不计费；你发的消息、AI 的回答、联网和站内资料都按 token 计费。
   按 token 计费：每 1000 token 基础价 200 NB币，再乘模型倍率。
     DeepSeek V4.1 Flash 1.0× → 200 NB / 1K
     Qwen3.8 Flash Next 1.0×  → 200 NB / 1K
@@ -1324,7 +1324,7 @@ AI_MODELS = {
 AI_PRICE_PER_1K = _env_int('AI_PRICE_PER_1K', 200, 0, 100000000)
 AI_PRICE_MIN    = _env_int('AI_PRICE_MIN', 1, 0, 1000000)
 # 联网搜索：每次真的搜到结果就额外收这一笔（环境变量可改）
-AI_WEB_FEE      = _env_int('AI_WEB_FEE', 500, 0, 10000000)
+AI_WEB_FEE      = _env_int('AI_WEB_FEE', 0, 0, 10000000)   # 0=不另收固定费，按 token
 AI_CHARGE_ADMIN = _env_int('AI_CHARGE_ADMIN', 0, 0, 1) == 1
 
 # 模型倍率（贵的模型多收）
@@ -2209,6 +2209,7 @@ def _api_ai_body():
     # 系统提示词、联网资料、站内数据、数据库内容一律不计费。
     _bill_in = _est_tokens_text(question) + \
         sum(_est_tokens_text(x.get('content') or '') for x in history)
+    _bill_ctx = 0      # 资料（联网/站内/数据库）也按 token 计费
     _charge_state = {'done': False}
     _wal = {'bonus': None, 'topup': None}     # 钱包两个余额（结算后填）
 
@@ -2234,10 +2235,11 @@ def _api_ai_body():
             _out_tok = int(usage.get('completion_tokens') or 0)
         if _out_tok <= 0:
             _out_tok = int(out_chars * 0.75) + int(reason_chars * 0.75)
-        _bill_tok = _out_tok + _bill_in
-        print('[AI-BILL] 计费 token = 输出 %d + 用户输入 %d = %d（原 %d，'
-              '系统提示词/资料不计）'
-              % (_out_tok, _bill_in, _bill_tok, _tot), flush=True)
+        _bill_ctx = _est_tokens_text(web_ctx) + _est_tokens_text(site_ctx) + \
+            _est_tokens_text(db_ctx)
+        _bill_tok = _out_tok + _bill_in + _bill_ctx
+        print('[AI-BILL] 输出 %d + 用户 %d + 资料 %d = %d token（系统提示词不计，原 %d）'
+              % (_out_tok, _bill_in, _bill_ctx, _bill_tok, _tot), flush=True)
         _c = _ai_cost(_bill_tok, model_id)
         # 联网搜索额外收费（只有真的搜到结果才算）
         if AI_WEB_FEE > 0 and web_n > 0:

@@ -377,7 +377,7 @@
 </table>
 
 <h2>价格</h2>
-<p>单价 = <strong>基础价 200 NB币 / 1000 token</strong> × 模型倍率。只算你发的消息和 AI 的回答；系统提示词、联网资料、站内数据不计费。</p>
+<p>单价 = <strong>基础价 200 NB币 / 1000 token</strong> × 模型倍率。系统提示词不计费；你发的消息、AI 回答、联网和站内资料都按 token 算。</p>
 <table class="price-table">
     <thead>
         <tr><th>模型</th><th>跑在哪</th><th>倍率</th><th>每 1000 token</th><th>一句普通问答<br><span class="price-note">约 200~900 token</span></th></tr>
@@ -397,7 +397,7 @@
 <table class="price-table">
     <thead><tr><th>能力</th><th>计费单位</th><th>价格</th></tr></thead>
     <tbody>
-        <tr><td>联网搜索</td><td>每次请求</td><td><strong>500 NB币</strong>（搜到结果才收，最多 10 条）</td></tr>
+        <tr><td>联网搜索</td><td>按 token</td><td>搜到的摘要计入输入 token，无固定附加费；最多 10 条</td></tr>
         <tr><td>站内数据库查询</td><td>每次请求</td><td><strong>免费</strong></td></tr>
         <tr><td>站内小知识检索</td><td>每次请求</td><td><strong>免费</strong>（799 条）</td></tr>
     </tbody>
@@ -406,7 +406,7 @@
 <h2>扣费规则</h2>
 <ul class="price-rules">
     <li>模型调用费用 = <strong>token 消耗量 × 模型单价</strong>。</li>
-    <li><strong>联网搜索另收 500 NB币 / 次</strong>（真的搜到结果才收；站内数据库查询免费）。</li>
+    <li>联网资料和站内资料都<strong>按 token 计费</strong>，没有固定附加费；系统提示词不计费。</li>
     <li><strong>答完再扣</strong>：等输出结束后，用真实的 token 用量结算。</li>
     <li><strong>中断也扣</strong>：手动停止或中途断开，按已经生成的内容结算。</li>
     <li><strong>余额 ≤ 0 不能提问</strong>：想继续用先去赚 NB 币。</li>
