@@ -1,6 +1,6 @@
 name: comment-bot
 
-# 评论区 AI 自动回复：每 5 分钟叫一次云函数
+# 评论区 AI 自动回复：每 15 分钟叫一次云函数
 #
 # 为什么用 GitHub Actions 而不是腾讯云的定时触发器：
 #   · 云函数走的是「函数 URL」（HTTP + Flask），定时触发器的 event 不是 HTTP 格式，
@@ -17,7 +17,7 @@ name: comment-bot
 
 on:
   schedule:
-    - cron: '*/5 * * * *'      # 每 5 分钟
+    - cron: '*/15 * * * *'     # 每 15 分钟（配合每次最多回 3 条，最多 12 条/小时）
   workflow_dispatch:            # 也可以在 Actions 页面手动点一下跑
 
 jobs:
