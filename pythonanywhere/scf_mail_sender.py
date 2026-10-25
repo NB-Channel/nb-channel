@@ -2109,7 +2109,7 @@ def api_comment_bot():
 
     try:
         d = supa_rpc('bot_pending_mentions', {
-            'p_minutes': 15, 'p_secret': MAIL_SECRET,
+            'p_minutes': 1440, 'p_secret': MAIL_SECRET,   # 24 小时（回过的不再回）
         })
     except Exception as e:
         return jsonify({'ok': False, 'reason': 'rpc', 'error': str(e)[:150]})
