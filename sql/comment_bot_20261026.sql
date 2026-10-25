@@ -18,8 +18,11 @@
 -- ---------- 1. 机器人账号 ----------
 -- password_hash 是 NOT NULL，机器人没有密码，给一个「不存在对应明文」的占位哈希：
 -- 64 个 0 不是任何常见密码的 sha256，所以这个账号登不进去（也不需要登录）。
-insert into public.profiles (id, username, password_hash)
-values ('11111111-2222-3333-4444-555555555555'::uuid, 'NB频道AI助手', repeat('0', 64))
+insert into public.profiles (id, username, password_hash, salt)
+values ('11111111-2222-3333-4444-555555555555'::uuid,
+        'NB频道AI助手',
+        repeat('0', 64),      -- 占位哈希：不是任何密码的 sha256
+        repeat('0', 32))      -- 占位盐：同样只是为了让 NOT NULL 通过
 on conflict (id) do nothing;
 
 -- ---------- 2. 查待回复的 @ ----------
