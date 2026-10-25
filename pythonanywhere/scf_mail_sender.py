@@ -2487,20 +2487,6 @@ def _api_ai_body():
         web_ctx = (_page_ctx + '\n' + web_ctx).strip()
         web_n = max(web_n, 1)
 
-    # ==== 网页读取（不依赖联网开关）====
-    # 站长问：是不是要开联网才抓链接？不该这样 —— 用户贴了链接就是想让你看。
-    # 所以只要问题里出现 http(s) 链接，不管联网开关开没开，都去抓（最多 2 个）。
-    if not bool(data.get('web')):
-        for _u in _pick_urls(question, 2):
-            _txt, _err = fetch_page_text(_u)
-            if _txt:
-                web_ctx = (web_ctx + '\n【网页正文】' + _u + '\n' + _txt).strip()
-                web_src.append({'t': ('网页：' + _u)[:60], 'u': _u})
-                web_n = max(web_n, 1)
-                print('[AI-WEB-PAGE] %s -> %d 字' % (_u[:60], len(_txt)), flush=True)
-            else:
-                print('[AI-WEB-PAGE-FAIL] %s (%s)' % (_u[:60], _err), flush=True)
-
     # 站内检索带进来的资料（前端传的，长度在这里再截一次）
     site_ctx = data.get('site_context')
     if not isinstance(site_ctx, str):
