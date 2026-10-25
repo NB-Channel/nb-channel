@@ -1178,6 +1178,7 @@ def ping():
             'prompt_len': len(AI_SYSTEM_PROMPT),
             'build': 'v12-ms-7models',
             'charge': 'after',
+            'web_fee': AI_WEB_FEE,
             'ms': bool(MS_KEY),
             'ms_models': sorted(MS_MODEL_IDS) if MS_KEY else [],        # 回答前扣是 before，答完再扣是 after
             'negative_ok': True,      # 允许扣成负数（SQL 里已去掉余额守卫）
@@ -1305,6 +1306,8 @@ AI_MODELS = {
 #      AI_CHARGE_ADMIN  管理员要不要也扣（默认 0 = 不扣，方便自己测）
 AI_PRICE_PER_1K = _env_int('AI_PRICE_PER_1K', 200, 0, 100000000)
 AI_PRICE_MIN    = _env_int('AI_PRICE_MIN', 1, 0, 1000000)
+# 联网搜索：每次真的搜到结果就额外收这一笔（环境变量可改）
+AI_WEB_FEE      = _env_int('AI_WEB_FEE', 500, 0, 10000000)
 AI_CHARGE_ADMIN = _env_int('AI_CHARGE_ADMIN', 0, 0, 1) == 1
 
 # 模型倍率（贵的模型多收）
@@ -2089,6 +2092,10 @@ def _api_ai_body():
         else:
             _tot = _in_tok + int(out_chars * 0.75) + int(reason_chars * 0.75)
         _c = _ai_cost(_tot, model_id)
+        # 联网搜索额外收费（只有真的搜到结果才算）
+        if AI_WEB_FEE > 0 and web_n > 0:
+            _c += AI_WEB_FEE
+            print('[AI-COIN] 含联网搜索费 %s 币' % AI_WEB_FEE, flush=True)
         _r = supa_rpc('ai_charge_coins', {
             'p_user_id': uid,
             'p_amount': _c,
