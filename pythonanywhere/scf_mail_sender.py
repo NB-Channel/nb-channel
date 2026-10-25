@@ -540,13 +540,13 @@ NIM_KEY = (os.environ.get('NIM_KEY') or '').strip()
 #    这里把多余的前缀去掉。
 if NIM_KEY.lower().startswith('bearer '):
     NIM_KEY = NIM_KEY[7:].strip()
-AI_PER_IP_PER_DAY = _env_int('AI_PER_IP_PER_DAY', 5, 1, 200)
-AI_PER_USER_PER_DAY = _env_int('AI_PER_USER_PER_DAY', 5, 1, 200)
+AI_PER_IP_PER_DAY = _env_int('AI_PER_IP_PER_DAY', 20, 1, 200)
+AI_PER_USER_PER_DAY = _env_int('AI_PER_USER_PER_DAY', 20, 1, 200)
 # ⚠️ 默认从 60 提到 300。
 #    原来的 60 是按「1,000 次总量」估的，查下来那个数字是旧制度 ——
 #    现在真实的免费天花板是【每分钟 40 次、每天 10,000 次】。
 #    60/天 对 40 个用户的站来说太紧，300/天 仍然远低于 10,000。
-AI_GLOBAL_PER_DAY = _env_int('AI_GLOBAL_PER_DAY', 300, 1, 100000)
+AI_GLOBAL_PER_DAY = _env_int('AI_GLOBAL_PER_DAY', 600, 1, 100000)
 
 # ---------- 内测开关 ----------
 # 站长说：「先只允许我一个人用，等测试完再全站开放」
@@ -564,7 +564,7 @@ AI_GLOBAL_PER_DAY = _env_int('AI_GLOBAL_PER_DAY', 300, 1, 100000)
 #        SELECT id, username FROM public.profiles ORDER BY username;
 #
 # ⚠️ 只填 uuid、不要填用户名 —— 用户名可以改，改了开关就失效了。
-AI_ADMIN_ONLY = (os.environ.get('AI_ADMIN_ONLY') or '1').strip().lower() \
+AI_ADMIN_ONLY = (os.environ.get('AI_ADMIN_ONLY') or '0').strip().lower() \
                 not in ('0', 'false', 'no', 'off')
 AI_ADMIN_IDS = {x.strip().lower() for x in (os.environ.get('AI_ADMIN_IDS') or '').split(',')
                 if x.strip()}
