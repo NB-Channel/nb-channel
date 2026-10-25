@@ -564,7 +564,7 @@ AI_GLOBAL_PER_DAY = _env_int('AI_GLOBAL_PER_DAY', 600, 1, 100000)
 #        SELECT id, username FROM public.profiles ORDER BY username;
 #
 # ⚠️ 只填 uuid、不要填用户名 —— 用户名可以改，改了开关就失效了。
-AI_ADMIN_ONLY = (os.environ.get('AI_ADMIN_ONLY') or '0').strip().lower() \
+AI_ADMIN_ONLY = (os.environ.get('AI_ADMIN_ONLY') or '1').strip().lower() \
                 not in ('0', 'false', 'no', 'off')
 AI_ADMIN_IDS = {x.strip().lower() for x in (os.environ.get('AI_ADMIN_IDS') or '').split(',')
                 if x.strip()}
@@ -2052,12 +2052,12 @@ def _api_ai_body():
     #   余额 <= 0 → 直接拒绝，并把刚用掉的额度退回去
     # 管理员免扣，不受这条限制。
     if AI_PRICE_PER_1K > 0 and not (is_admin and not AI_CHARGE_ADMIN):
-        _br = supa_rpc('ai_charge_coins', {
-            'p_user_id': uid, 'p_amount': 0, 'p_secret': MAIL_SECRET,
+        _br = supa_rpc('ai_wallet_get', {
+            'p_user_id': uid, 'p_secret': MAIL_SECRET,
         })
         if _br.get('ok'):
             _bd = _br.get('data') or {}
-            _bal = _bd.get('balance')
+            _bal = (float(_bd.get('bonus') or 0)) + (float(_bd.get('topup') or 0))
             try:
                 _bal_f = float(_bal) if _bal is not None else None
             except Exception:
@@ -2106,9 +2106,10 @@ def _api_ai_body():
         if AI_WEB_FEE > 0 and web_n > 0:
             _c += AI_WEB_FEE
             print('[AI-COIN] 含联网搜索费 %s 币' % AI_WEB_FEE, flush=True)
-        _r = supa_rpc('ai_charge_coins', {
+        _r = supa_rpc('ai_wallet_charge', {
             'p_user_id': uid,
-            'p_amount': _c,
+            'p_amount': int(_c),
+            'p_model': model_id,
             'p_secret': MAIL_SECRET,
         })
         if not _r.get('ok'):
