@@ -564,7 +564,7 @@ AI_GLOBAL_PER_DAY = _env_int('AI_GLOBAL_PER_DAY', 600, 1, 100000)
 #        SELECT id, username FROM public.profiles ORDER BY username;
 #
 # ⚠️ 只填 uuid、不要填用户名 —— 用户名可以改，改了开关就失效了。
-AI_ADMIN_ONLY = (os.environ.get('AI_ADMIN_ONLY') or '1').strip().lower() \
+AI_ADMIN_ONLY = (os.environ.get('AI_ADMIN_ONLY') or '0').strip().lower() \
                 not in ('0', 'false', 'no', 'off')
 AI_ADMIN_IDS = {x.strip().lower() for x in (os.environ.get('AI_ADMIN_IDS') or '').split(',')
                 if x.strip()}
@@ -1186,7 +1186,7 @@ def ping():
             'web_err': web_err,
             'model': AI_MODEL,
             'prompt_len': len(AI_SYSTEM_PROMPT),
-            'build': 'v12-ms-7models',
+            'build': 'v13-wallet-open',
             'charge': 'after',
             'web_fee': AI_WEB_FEE,
             'ms': bool(MS_KEY),
