@@ -2156,6 +2156,7 @@ def _api_ai_body():
                + ''.join((m.get('content') or '') for m in history))
     _in_tok = _est_tokens_text(_all_in)
     _charge_state = {'done': False}
+    _wal = {'bonus': None, 'topup': None}     # 钱包两个余额（结算后填）
 
     def _settle(out_chars, reason_chars, usage=None):
         """结算一次（幂等）。返回 (cost, balance)。"""
@@ -2188,13 +2189,17 @@ def _api_ai_body():
             print('[AI-COIN-FAIL] %s' % str(_r.get('message', ''))[:120], flush=True)
             return cost, bal
         _d = _r.get('data') or {}
+        _b = float(_d.get('bonus') or 0)
+        _tp = float(_d.get('topup') or 0)
         if not _d.get('ok'):
-            print('[AI-COIN-POOR] 想扣 %s，余额 %s，这次不扣'
-                  % (_c, _d.get('balance')), flush=True)
-            return 0, _d.get('balance')
+            print('[AI-COIN-FAIL] 想扣 %s，钱包回 %s' % (_c, str(_d)[:120]), flush=True)
+            return 0, (_b + _tp)
+        _wal['bonus'] = _b
+        _wal['topup'] = _tp
         cost = _c
-        bal = _d.get('balance')
-        print('[AI-COIN] 扣 %s 币（%d token），剩 %s' % (cost, _tot, bal), flush=True)
+        bal = _b + _tp
+        print('[AI-COIN] 扣 %s 币（%d token），赠金剩 %s、充值剩 %s'
+              % (cost, _tot, _b, _tp), flush=True)
         return cost, bal
 
     # ③-a 流式：前端要 stream:true 时走这条
@@ -2286,6 +2291,8 @@ def _api_ai_body():
                 'db_n': db_n,
                 'db_src': db_src,
                 'web_src': web_src,
+                'bonus': _wal.get('bonus'),
+                'topup': _wal.get('topup'),
                 'effort': effort,
                 'fast': fast_mode,
                 'model_key': model_key,
@@ -2331,6 +2338,8 @@ def _api_ai_body():
         'balance': bal,
         'db_src': db_src,
         'web_src': web_src,
+        'bonus': _wal.get('bonus'),
+        'topup': _wal.get('topup'),
         # 内测期间为 true —— 前端可以显示一个「内测」角标
         'admin': is_admin,
     })
