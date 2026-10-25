@@ -53,6 +53,8 @@ import ssl
 import re
 import urllib.parse
 import urllib.request
+import ipaddress
+import socket
 import xml.etree.ElementTree as ET
 import urllib.error          # supa_rpc 里要 catch urllib.error.HTTPError,显式导入更稳
 from flask import Flask, request, jsonify
@@ -1629,6 +1631,104 @@ def web_search(query, count=10):
     return hits
 
 
+# ============================================================
+#  读网页：把用户给的链接抓下来、抽正文
+#
+#  实测这台机器能直连大多数站点（360 百科、github raw、普通网页都行），
+#  维基和百度百科抓不到（被墙/403）。所以不依赖任何第三方 reader。
+#
+#  ⚠️ 安全三条（必须守着，不然能被用来打内网）：
+#     1. 只放行 http / https
+#     2. 域名解析出来的 IP 是内网/本机/链路本地 → 直接拒
+#     3. 限制大小和超时
+# ============================================================
+def _url_safe(u):
+    """只放行 http(s)，且目标不是内网地址。"""
+    try:
+        p = urllib.parse.urlsplit(u)
+    except Exception:
+        return False
+    if p.scheme not in ('http', 'https'):
+        return False
+    host = p.hostname
+    if not host:
+        return False
+    # 端口只允许默认的
+    if p.port not in (None, 80, 443):
+        return False
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except Exception:
+        return False
+    for fam, _t, _p, _c, sa in infos:
+        ip = sa[0]
+        try:
+            a = ipaddress.ip_address(ip)
+        except Exception:
+            return False
+        if (a.is_private or a.is_loopback or a.is_link_local
+                or a.is_reserved or a.is_multicast or a.is_unspecified):
+            return False
+    return True
+
+
+def fetch_page_text(url, max_chars=2600, timeout=12, max_bytes=600000):
+    """抓一个网页，返回 (正文, 错误)。"""
+    if not _url_safe(url):
+        return None, 'unsafe'
+    req = urllib.request.Request(url, headers={
+        'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                       'AppleWebKit/537.36 (KHTML, like Gecko) '
+                       'Chrome/125.0 Safari/537.36'),
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,text/plain,*/*',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            ctype = (r.headers.get('Content-Type') or '').lower()
+            raw_b = r.read(max_bytes)
+    except Exception as e:
+        return None, '%s: %s' % (type(e).__name__, str(e)[:80])
+
+    if 'application/pdf' in ctype or 'image/' in ctype or 'video/' in ctype:
+        return None, 'unsupported'
+    try:
+        html = raw_b.decode('utf-8', 'ignore')
+    except Exception:
+        return None, 'decode'
+    if 'charset=gb' in ctype or 'charset=gbk' in ctype:
+        try:
+            html = raw_b.decode('gb18030', 'ignore')
+        except Exception:
+            pass
+
+    # 去脚本、样式、注释
+    html = re.sub(r'(?is)<script[^>]*>.*?</script>', ' ', html)
+    html = re.sub(r'(?is)<style[^>]*>.*?</style>', ' ', html)
+    html = re.sub(r'(?is)<!--.*?-->', ' ', html)
+    # 正文可能在 article/main 里，优先取它
+    m = re.search(r'(?is)<(article|main)[^>]*>(.*?)</\1>', html)
+    if m:
+        html = m.group(2)
+    txt = _strip_tags(html)
+    txt = re.sub(r'\s+', ' ', txt).strip()
+    if len(txt) < 40:
+        return None, 'empty'
+    return txt[:max_chars], None
+
+
+def _pick_urls(text, limit=2):
+    """从一段文字里挑出 http(s) 链接。"""
+    out = []
+    for m in re.finditer(r'https?://[^\s<>"\')\]]+', text or ''):
+        u = m.group(0).rstrip('.,;:!?，。；：！？、）】》')
+        if u not in out:
+            out.append(u)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def bing_search(query, count=5, timeout=8):
     """用 360 搜索搜一下。**不要 API key、不要钱**。
 
@@ -2357,6 +2457,17 @@ def _api_ai_body():
         except Exception as _e:
             _hits = []
             print('[AI-WEB-EXC] %s' % str(_e)[:120], flush=True)
+        # ① 先把问题里出现的链接抓下来（最多 2 个）
+        _page_ctx = ''
+        for _u in _pick_urls(question, 2):
+            _txt, _err = fetch_page_text(_u)
+            if _txt:
+                _page_ctx += '\n【网页正文】' + _u + '\n' + _txt + '\n'
+                web_src.append({'t': ('网页：' + _u)[:60], 'u': _u})
+                print('[AI-WEB-PAGE] %s -> %d 字' % (_u[:60], len(_txt)), flush=True)
+            else:
+                print('[AI-WEB-PAGE-FAIL] %s (%s)' % (_u[:60], _err), flush=True)
+
         if _hits:
             _lines, _total = [], 0
             for _t, _d, _l in _hits:
@@ -2371,6 +2482,10 @@ def _api_ai_body():
                 if _t:
                     web_src.append({'t': _t[:60], 'u': _l or ''})
             print('[AI-WEB-CTX] %d 条 / %d 字' % (web_n, len(web_ctx)), flush=True)
+
+    if _page_ctx:
+        web_ctx = (_page_ctx + '\n' + web_ctx).strip()
+        web_n = max(web_n, 1)
 
     # 站内检索带进来的资料（前端传的，长度在这里再截一次）
     site_ctx = data.get('site_context')
