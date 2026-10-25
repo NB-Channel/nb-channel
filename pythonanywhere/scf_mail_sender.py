@@ -886,11 +886,7 @@ def _sys_prompt(site_ctx=None, db_ctx=None, web_ctx=None, fast=False, model_labe
                  '就照这个名字答；不知道具体版本号就说不知道，'
                  '不要编造「最新」「最强」「第几代」这类说法，'
                  '也不要说自己是别的公司的产品。')
-    if fast:
-        base += ('\n\n【极速模式】用户开了极速模式（这个模式消耗双倍额度换速度）。'
-                 '请把回答压到最短：直接给结论和最关键的一两步，'
-                 '不要铺开讲原理、不要举例、不要列举延伸。'
-                 '能一句话说清就一句话。')
+    # 小闪电：站长确认「无实际作用」，所以这里不再往提示词里塞任何东西
 
     if web_ctx:
         base += ('\n\n【联网搜索结果】下面是从网上搜到的几条结果摘要。\n'
@@ -1896,7 +1892,7 @@ def _api_ai_body():
     #    ⚠️ 必须在扣额度之前定义，否则 NameError（这个坑踩过一次了）
     fast_mode = bool(data.get('fast'))
     if fast_mode:
-        print('[AI-FAST] 双倍额度', flush=True)
+        print('[AI-FAST] 小闪电（无实际作用，纯界面开关）', flush=True)
 
     # ② 数据库计数：IP 维度 + 用户维度 + 全站总闸
     # ⚠️ 管理员用放大的额度：不然自己测 5 次就被「每天上限」卡住，
@@ -1905,8 +1901,8 @@ def _api_ai_body():
         'p_ip_hash':  iph,
         'p_user_id':  uid,
         'p_session':  sess,
-        'p_per_ip':   max(1, (200 if is_admin else AI_PER_IP_PER_DAY) - (1 if fast_mode else 0)),
-        'p_per_user': max(1, (200 if is_admin else AI_PER_USER_PER_DAY) - (1 if fast_mode else 0)),
+        'p_per_ip':   max(1, 200 if is_admin else AI_PER_IP_PER_DAY),
+        'p_per_user': max(1, 200 if is_admin else AI_PER_USER_PER_DAY),
         'p_global':   AI_GLOBAL_PER_DAY,
         'p_model':    AI_MODEL,
         'p_secret':   MAIL_SECRET,
