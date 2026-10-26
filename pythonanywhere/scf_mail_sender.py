@@ -1345,6 +1345,10 @@ def _provider_route(mid):
 
 def _model_route(mid):
     """按模型 id 选上游。返回 (url, key)；要魔搭但没配 MS_KEY 时 url 为 None。"""
+    # 新渠道优先（OpenRouter / Groq / Cerebras / Cloudflare）
+    _u0, _k0 = _provider_route(mid)
+    if _u0 is not None or mid in _PROVIDER_OF:
+        return _u0, _k0
     if mid in MS_MODEL_IDS:
         if not MS_KEY:
             return None, ''
