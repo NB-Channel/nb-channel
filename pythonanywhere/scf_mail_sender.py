@@ -1310,8 +1310,14 @@ def _model_label(mid):
 
 
 _PROVIDER_OF = {
+    'nvidia/nemotron-3.5-super-vl:free': 'openrouter',
     'nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter',
     'google/gemma-4-31b-it:free': 'openrouter',
+    'thinkingmachines/inkling:free': 'openrouter',
+    'cohere/north-mini-code:free': 'openrouter',
+    'dots-studio/dots-3-note-preview:free': 'openrouter',
+    'liquid/lfm-2.5-2.6b:free': 'openrouter',
+    'openrouter/free': 'openrouter',
     'llama-3.3-70b-versatile': 'groq',
     'openai/gpt-oss-120b': 'groq',
     'qwen-3-32b': 'cerebras',
@@ -1372,8 +1378,14 @@ AI_MODELS = {
     'glm52':   ('ZhipuAI/GLM-5.2',                      'GLM-5.2'),
     'qwen38':  ('Qwen/Qwen3.8-Flash-Next',              'Qwen3.8 Flash Next'),
     # ==== 新渠道（要配对应环境变量才可用）====
+    'orvl':    ('nvidia/nemotron-3.5-super-vl:free',     'Nemotron 3.5 VL'),
     'orultra': ('nvidia/nemotron-3-ultra-550b-a55b:free', 'Nemotron 3 Ultra 550B'),
     'orgemma': ('google/gemma-4-31b-it:free',            'Gemma 4 31B'),
+    'orink':   ('thinkingmachines/inkling:free',         'Inkling'),
+    'orcode':  ('cohere/north-mini-code:free',           'North Mini Code'),
+    'ordots':  ('dots-studio/dots-3-note-preview:free',  'Dots 3 Note'),
+    'orliquid':('liquid/lfm-2.5-2.6b:free',              'LFM 2.5'),
+    'orfree':  ('openrouter/free',                       'OpenRouter 自动'),
     'groq70':  ('llama-3.3-70b-versatile',               'Llama 3.3 70B'),
     'groqoss': ('openai/gpt-oss-120b',                   'GPT-OSS 120B'),
     'cereqwen': ('qwen-3-32b',                           'Qwen3 32B'),
@@ -1404,8 +1416,14 @@ AI_PRICE_MULT = {
     'minimaxai/minimax-m3.1-flash':          1.5,   # 1500
     'stepfun-ai/step-5-preview':             1.2,   # 1200
     'nvidia/nemotron-3.5-lightning-30b-a3b': 1.2,
+    'nvidia/nemotron-3.5-super-vl:free':     1.0,
     'nvidia/nemotron-3-ultra-550b-a55b:free': 1.2,
     'google/gemma-4-31b-it:free':            0.8,
+    'thinkingmachines/inkling:free':         1.0,
+    'cohere/north-mini-code:free':           0.6,
+    'dots-studio/dots-3-note-preview:free':  0.8,
+    'liquid/lfm-2.5-2.6b:free':              0.3,
+    'openrouter/free':                       0.6,
     'llama-3.3-70b-versatile':               0.6,
     'openai/gpt-oss-120b':                   0.8,
     'qwen-3-32b':                            0.6,
