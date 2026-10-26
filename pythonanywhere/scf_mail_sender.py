@@ -2222,6 +2222,36 @@ def api_comment_bot():
 
     items = (d.get('data') or {}).get('items') or []
 
+    # ?try=模型key&q=问题 —— 用这个口子单独测某个模型通不通
+    # （复用同一个 X-Bot-Key / ?k= 鉴权，不需要另配密钥）
+    _try = str(request.args.get('try') or '').strip()
+    if _try:
+        _q = str(request.args.get('q') or '回一个字：好').strip()[:200]
+        _mid = None
+        if _try in AI_MODELS:
+            _mid = AI_MODELS[_try][0]
+        else:
+            for _k, _v in AI_MODELS.items():
+                if _v[0] == _try:
+                    _mid = _try
+                    break
+        if not _mid:
+            return jsonify({'ok': False, 'reason': 'nomodel',
+                            'keys': list(AI_MODELS.keys())})
+        try:
+            _ans, _rea, _err = nim_chat(_q, None, None, None, None,
+                                        'low', False, _mid)
+            return jsonify({
+                'ok': bool(_ans) and not _err,
+                'tested': _try, 'model': _mid,
+                'answer': (_ans or '')[:300],
+                'reasoning_len': len(_rea or ''),
+                'error': (_err or '')[:300],
+            })
+        except Exception as _e:
+            return jsonify({'ok': False, 'tested': _try, 'model': _mid,
+                            'error': '%s: %s' % (type(_e).__name__, str(_e)[:200])})
+
     # ?debug=1：不解码，只把「查到了几条」原样返回，方便定位断在哪
     if str(request.args.get('debug') or '') == '1':
         return jsonify({
