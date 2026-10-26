@@ -1319,6 +1319,12 @@ _PROVIDER_OF = {
     'cohere/north-mini-code:free': 'openrouter',
     'dots-studio/dots-3-note-preview:free': 'openrouter',
     '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 'cloudflare',
+    '@cf/deepseek-ai/deepseek-v4.1-flash-1017': 'cloudflare',
+    '@cf/zai-org/glm-5.2': 'cloudflare',
+    '@cf/qwen/qwen3.8-27b': 'cloudflare',
+    '@cf/moonshotai/kimi-k2.6': 'cloudflare',
+    '@cf/openai/gpt-oss-120b': 'cloudflare',
+    '@cf/meta/llama-3.2-11b-vision-instruct': 'cloudflare',
 }
 
 
@@ -1384,6 +1390,12 @@ AI_MODELS = {
     # ── Cerebras（要 CEREBRAS_KEY）──
     # ── Cloudflare Workers AI（要 CF_ACCOUNT_ID + CF_AI_KEY）──
     'cfllama': ('@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'Llama 3.3 70B · CF'),
+    'cfds':    ('@cf/deepseek-ai/deepseek-v4.1-flash-1017', 'DeepSeek V4.1 Flash · CF'),
+    'cfglm':   ('@cf/zai-org/glm-5.2',                      'GLM-5.2 · CF'),
+    'cfqwen':  ('@cf/qwen/qwen3.8-27b',                     'Qwen3.8 27B · CF'),
+    'cfkimi':  ('@cf/moonshotai/kimi-k2.6',                 'Kimi K2.6 · CF'),
+    'cfoss':   ('@cf/openai/gpt-oss-120b',                  'GPT-OSS 120B · CF'),
+    'cfvis':   ('@cf/meta/llama-3.2-11b-vision-instruct',   'Llama 3.2 Vision · CF'),
 }
 # ===== NB 币计费 =====
 # 站长要求：每次回答之前按 token 扣 NB 币，需要价格表。
@@ -1422,7 +1434,13 @@ AI_PRICE_MULT = {
     'thinkingmachines/inkling:free':         1.0,
     'cohere/north-mini-code:free':           0.6,
     'dots-studio/dots-3-note-preview:free':  0.8,
-    '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 0.6,   # 1200
+    '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 0.6,
+    '@cf/deepseek-ai/deepseek-v4.1-flash-1017': 0.6,
+    '@cf/zai-org/glm-5.2':                    1.0,
+    '@cf/qwen/qwen3.8-27b':                   0.5,
+    '@cf/moonshotai/kimi-k2.6':               0.8,
+    '@cf/openai/gpt-oss-120b':                0.8,
+    '@cf/meta/llama-3.2-11b-vision-instruct': 0.5,   # 1200
 }
 
 # 输出侧按档位估 token（只用于【估算】，不影响 max_tokens）
