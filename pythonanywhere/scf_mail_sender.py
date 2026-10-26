@@ -1312,18 +1312,12 @@ def _model_label(mid):
 _PROVIDER_OF = {
     'nvidia/nemotron-3.5-super-vl:free': 'openrouter',
     'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 'openrouter',
-    'nvidia/nemotron-3.5-super-vl:free': 'openrouter',
     'nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter',
     'nvidia/nemotron-3-super-120b-a12b:free': 'openrouter',
     'nvidia/nemotron-3.5-lightning:free': 'openrouter',
     'thinkingmachines/inkling:free': 'openrouter',
     'cohere/north-mini-code:free': 'openrouter',
     'dots-studio/dots-3-note-preview:free': 'openrouter',
-    'thinkingmachines/inkling:free': 'openrouter',
-    'cohere/north-mini-code:free': 'openrouter',
-    'dots-studio/dots-3-note-preview:free': 'openrouter',
-    'liquid/lfm-2.5-2.6b:free': 'openrouter',
-    'openrouter/free': 'openrouter',
     'llama-3.3-70b-versatile': 'groq',
     'openai/gpt-oss-120b': 'groq',
     'qwen-3-32b': 'cerebras',
@@ -1369,22 +1363,18 @@ def _model_route(mid):
 
 
 AI_MODELS = {
+    # ── NVIDIA ──
     'minimax':  ('minimaxai/minimax-m3.1-flash',  'MiniMax M3.1'),
     'step':     ('stepfun-ai/step-5-preview',     'Step 5'),
     'nemotron': ('nvidia/nemotron-3.5-lightning-30b-a3b', 'Nemotron 3.5'),
     # ── 魔搭（要 MS_KEY）──
-    # ⚠️ 实测 2026-10-25：魔搭只给「带日期的快照版」开了推理服务，
-    #    不带日期的那几个（DeepSeek-V4.1-Flash / V4-Pro / MiniMax-M3 /
-    #    Step-5-Preview）一律 HTTP 400「has no provider supported」，
-    #    所以这里全部指向能通的快照 id。
     'ds41':    ('deepseek-ai/DeepSeek-V4.1-Flash-1017', 'DeepSeek V4.1 Flash'),
     'ds41s':   ('deepseek-ai/DeepSeek-V4.1-Flash-1017', 'DeepSeek V4.1 Flash 1017'),
     'dspro':   ('deepseek-ai/DeepSeek-V4-Pro-0813',     'DeepSeek V4 Pro'),
     'dspros':  ('deepseek-ai/DeepSeek-V4-Pro-0813',     'DeepSeek V4 Pro 0813'),
     'glm52':   ('ZhipuAI/GLM-5.2',                      'GLM-5.2'),
     'qwen38':  ('Qwen/Qwen3.8-Flash-Next',              'Qwen3.8 Flash Next'),
-    # ==== 新渠道（要配对应环境变量才可用）====
-    'orvl':    ('nvidia/nemotron-3.5-super-vl:free',     'Nemotron 3.5 VL'),
+    # ── OpenRouter（要 OPENROUTER_KEY）──
     'orvl':     ('nvidia/nemotron-3.5-super-vl:free',      'Nemotron 3.5 VL'),
     'oromni':   ('nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', 'Nemotron 3 Omni'),
     'orultra':  ('nvidia/nemotron-3-ultra-550b-a55b:free', 'Nemotron 3 Ultra 550B'),
@@ -1393,14 +1383,12 @@ AI_MODELS = {
     'orink':    ('thinkingmachines/inkling:free',          'Inkling'),
     'orcode':   ('cohere/north-mini-code:free',            'North Mini Code'),
     'ordots':   ('dots-studio/dots-3-note-preview:free',   'Dots 3 Note'),
-    'orink':   ('thinkingmachines/inkling:free',         'Inkling'),
-    'orcode':  ('cohere/north-mini-code:free',           'North Mini Code'),
-    'ordots':  ('dots-studio/dots-3-note-preview:free',  'Dots 3 Note'),
-    'orliquid':('liquid/lfm-2.5-2.6b:free',              'LFM 2.5'),
-    'orfree':  ('openrouter/free',                       'OpenRouter 自动'),
+    # ── Groq（要 GROQ_KEY）──
     'groq70':  ('llama-3.3-70b-versatile',               'Llama 3.3 70B'),
     'groqoss': ('openai/gpt-oss-120b',                   'GPT-OSS 120B'),
+    # ── Cerebras（要 CEREBRAS_KEY）──
     'cereqwen': ('qwen-3-32b',                           'Qwen3 32B'),
+    # ── Cloudflare Workers AI（要 CF_ACCOUNT_ID + CF_AI_KEY）──
     'cfllama': ('@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'Llama 3.3 70B · CF'),
 }
 # ===== NB 币计费 =====
@@ -1440,8 +1428,6 @@ AI_PRICE_MULT = {
     'thinkingmachines/inkling:free':         1.0,
     'cohere/north-mini-code:free':           0.6,
     'dots-studio/dots-3-note-preview:free':  0.8,
-    'liquid/lfm-2.5-2.6b:free':              0.3,
-    'openrouter/free':                       0.6,
     'llama-3.3-70b-versatile':               0.6,
     'openai/gpt-oss-120b':                   0.8,
     'qwen-3-32b':                            0.6,
