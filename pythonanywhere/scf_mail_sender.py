@@ -1311,6 +1311,7 @@ def _model_label(mid):
 
 _PROVIDER_OF = {
     'nvidia/nemotron-3.5-super-vl:free': 'openrouter',
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 'openrouter',
     'nvidia/nemotron-3.5-super-vl:free': 'openrouter',
     'nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter',
     'nvidia/nemotron-3-super-120b-a12b:free': 'openrouter',
@@ -1386,6 +1387,7 @@ AI_MODELS = {
     # ==== 新渠道（要配对应环境变量才可用）====
     'orvl':    ('nvidia/nemotron-3.5-super-vl:free',     'Nemotron 3.5 VL'),
     'orvl':     ('nvidia/nemotron-3.5-super-vl:free',      'Nemotron 3.5 VL'),
+    'oromni':   ('nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', 'Nemotron 3 Omni'),
     'orultra':  ('nvidia/nemotron-3-ultra-550b-a55b:free', 'Nemotron 3 Ultra 550B'),
     'orsuper':  ('nvidia/nemotron-3-super-120b-a12b:free', 'Nemotron 3 Super 120B'),
     'orgemma':  ('google/gemma-4-31b-it:free',             'Gemma 4 31B'),
@@ -1429,6 +1431,7 @@ AI_PRICE_MULT = {
     'stepfun-ai/step-5-preview':             1.2,   # 1200
     'nvidia/nemotron-3.5-lightning-30b-a3b': 1.2,
     'nvidia/nemotron-3.5-super-vl:free':     1.0,
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 0.7,
     'nvidia/nemotron-3.5-super-vl:free':     1.0,
     'nvidia/nemotron-3-ultra-550b-a55b:free': 1.2,
     'nvidia/nemotron-3-super-120b-a12b:free': 0.9,
