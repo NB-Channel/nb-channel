@@ -2109,7 +2109,7 @@ def api_comment_bot():
 
     try:
         d = supa_rpc('bot_pending_mentions', {
-            'p_minutes': 1440, 'p_secret': MAIL_SECRET,   # 24 小时（回过的不再回）
+            'p_minutes': 10080, 'p_secret': MAIL_SECRET,   # 24 小时（回过的不再回）
         })
     except Exception as e:
         return jsonify({'ok': False, 'reason': 'rpc', 'error': str(e)[:150]})
@@ -2117,6 +2117,18 @@ def api_comment_bot():
         return jsonify({'ok': False, 'reason': 'rpc', 'error': str(d)[:150]})
 
     items = (d.get('data') or {}).get('items') or []
+
+    # ?debug=1：不解码，只把「查到了几条」原样返回，方便定位断在哪
+    if str(request.args.get('debug') or '') == '1':
+        return jsonify({
+            'ok': True,
+            'debug': True,
+            'window_minutes': 10080,
+            'items': [{'id': x.get('id'), 'page': x.get('page_path'),
+                       'who': x.get('username'),
+                       'content': (x.get('content') or '')[:80],
+                       'at': x.get('created_at')} for x in items],
+        })
     done = []
     for it in items[:3]:            # 一次最多回 3 条，别把额度烧光
         cid = it.get('id')
