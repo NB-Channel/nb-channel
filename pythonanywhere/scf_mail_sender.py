@@ -1318,9 +1318,6 @@ _PROVIDER_OF = {
     'thinkingmachines/inkling:free': 'openrouter',
     'cohere/north-mini-code:free': 'openrouter',
     'dots-studio/dots-3-note-preview:free': 'openrouter',
-    'llama-3.3-70b-versatile': 'groq',
-    'openai/gpt-oss-120b': 'groq',
-    'qwen-3-32b': 'cerebras',
     '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 'cloudflare',
 }
 
@@ -1384,10 +1381,7 @@ AI_MODELS = {
     'orcode':   ('cohere/north-mini-code:free',            'North Mini Code'),
     'ordots':   ('dots-studio/dots-3-note-preview:free',   'Dots 3 Note'),
     # ── Groq（要 GROQ_KEY）──
-    'groq70':  ('llama-3.3-70b-versatile',               'Llama 3.3 70B'),
-    'groqoss': ('openai/gpt-oss-120b',                   'GPT-OSS 120B'),
     # ── Cerebras（要 CEREBRAS_KEY）──
-    'cereqwen': ('qwen-3-32b',                           'Qwen3 32B'),
     # ── Cloudflare Workers AI（要 CF_ACCOUNT_ID + CF_AI_KEY）──
     'cfllama': ('@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'Llama 3.3 70B · CF'),
 }
@@ -1428,9 +1422,6 @@ AI_PRICE_MULT = {
     'thinkingmachines/inkling:free':         1.0,
     'cohere/north-mini-code:free':           0.6,
     'dots-studio/dots-3-note-preview:free':  0.8,
-    'llama-3.3-70b-versatile':               0.6,
-    'openai/gpt-oss-120b':                   0.8,
-    'qwen-3-32b':                            0.6,
     '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 0.6,   # 1200
 }
 
