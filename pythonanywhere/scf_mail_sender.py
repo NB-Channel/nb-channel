@@ -1325,6 +1325,10 @@ _PROVIDER_OF = {
     '@cf/moonshotai/kimi-k2.6': 'cloudflare',
     '@cf/openai/gpt-oss-120b': 'cloudflare',
     '@cf/meta/llama-3.2-11b-vision-instruct': 'cloudflare',
+    '@cf/qwen/qwq-32b': 'cloudflare',
+    '@cf/qwen/qwen2.5-coder-32b-instruct': 'cloudflare',
+    '@cf/nvidia/nemotron-3-120b-a12b': 'cloudflare',
+    '@cf/cloudflare/clef-omni': 'cloudflare',
 }
 
 
@@ -1396,6 +1400,10 @@ AI_MODELS = {
     'cfkimi':  ('@cf/moonshotai/kimi-k2.6',                 'Kimi K2.6 · CF'),
     'cfoss':   ('@cf/openai/gpt-oss-120b',                  'GPT-OSS 120B · CF'),
     'cfvis':   ('@cf/meta/llama-3.2-11b-vision-instruct',   'Llama 3.2 Vision · CF'),
+    'cfqwq':   ('@cf/qwen/qwq-32b',                          'QwQ 32B · 推理'),
+    'cfcoder': ('@cf/qwen/qwen2.5-coder-32b-instruct',       'Qwen2.5 Coder · CF'),
+    'cfnem':   ('@cf/nvidia/nemotron-3-120b-a12b',           'Nemotron 3 120B · CF'),
+    'cfclef':  ('@cf/cloudflare/clef-omni',                  'CLEF Omni · CF'),
 }
 # ===== NB 币计费 =====
 # 站长要求：每次回答之前按 token 扣 NB 币，需要价格表。
@@ -1440,7 +1448,11 @@ AI_PRICE_MULT = {
     '@cf/qwen/qwen3.8-27b':                   0.5,
     '@cf/moonshotai/kimi-k2.6':               0.8,
     '@cf/openai/gpt-oss-120b':                0.8,
-    '@cf/meta/llama-3.2-11b-vision-instruct': 0.5,   # 1200
+    '@cf/meta/llama-3.2-11b-vision-instruct': 0.5,
+    '@cf/qwen/qwq-32b':                       0.6,
+    '@cf/qwen/qwen2.5-coder-32b-instruct':    0.5,
+    '@cf/nvidia/nemotron-3-120b-a12b':        0.9,
+    '@cf/cloudflare/clef-omni':               0.8,   # 1200
 }
 
 # 输出侧按档位估 token（只用于【估算】，不影响 max_tokens）
