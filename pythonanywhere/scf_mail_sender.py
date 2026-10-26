@@ -1208,6 +1208,13 @@ def ping():
             'global': AI_GLOBAL_PER_DAY,
             'model_default': AI_MODEL,
             'models_n': len(AI_MODELS),
+            'providers': {
+                'openrouter': bool((os.environ.get('OPENROUTER_KEY') or '').strip()),
+                'groq': bool((os.environ.get('GROQ_KEY') or '').strip()),
+                'cerebras': bool((os.environ.get('CEREBRAS_KEY') or '').strip()),
+                'cloudflare': bool((os.environ.get('CF_ACCOUNT_ID') or '').strip()
+                                   and (os.environ.get('CF_AI_KEY') or '').strip()),
+            },
             'ms': bool(MS_KEY),
             'ms_models': sorted(MS_MODEL_IDS) if MS_KEY else [],        # 回答前扣是 before，答完再扣是 after
             'negative_ok': True,      # 允许扣成负数（SQL 里已去掉余额守卫）
@@ -1286,6 +1293,8 @@ ULTRA_OK = ('deepseek-ai/DeepSeek-V4.1-Flash-1017',)
 
 def _effort_for_model(effort, mid):
     """档位适配：模型不认 ultra 就降级成 max，避免上游 400。"""
+    if mid in _PROVIDER_OF:
+        return ''
     if effort == 'ultra' and mid not in ULTRA_OK:
         return 'max'
     return effort
@@ -1297,6 +1306,41 @@ def _model_label(mid):
         if _v[0] == mid:
             return _v[1]
     return mid
+
+
+
+_PROVIDER_OF = {
+    'nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter',
+    'google/gemma-4-31b-it:free': 'openrouter',
+    'llama-3.3-70b-versatile': 'groq',
+    'openai/gpt-oss-120b': 'groq',
+    'qwen-3-32b': 'cerebras',
+    '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 'cloudflare',
+}
+
+
+def _provider_route(mid):
+    """新渠道的 (url, key)；没配 Key 返回 (None, None)，不认识的也返回 (None, None)。"""
+    prov = _PROVIDER_OF.get(mid)
+    if not prov:
+        return None, None
+    if prov == 'openrouter':
+        k = (os.environ.get('OPENROUTER_KEY') or '').strip()
+        return ('https://openrouter.ai/api/v1/chat/completions' if k else None), k
+    if prov == 'groq':
+        k = (os.environ.get('GROQ_KEY') or '').strip()
+        return ('https://api.groq.com/openai/v1/chat/completions' if k else None), k
+    if prov == 'cerebras':
+        k = (os.environ.get('CEREBRAS_KEY') or '').strip()
+        return ('https://api.cerebras.ai/v1/chat/completions' if k else None), k
+    if prov == 'cloudflare':
+        acc = (os.environ.get('CF_ACCOUNT_ID') or '').strip()
+        k = (os.environ.get('CF_AI_KEY') or '').strip()
+        if not acc or not k:
+            return None, None
+        return ('https://api.cloudflare.com/client/v4/accounts/%s/ai/v1'
+                '/chat/completions' % acc), k
+    return None, None
 
 
 def _model_route(mid):
@@ -1323,6 +1367,13 @@ AI_MODELS = {
     'dspros':  ('deepseek-ai/DeepSeek-V4-Pro-0813',     'DeepSeek V4 Pro 0813'),
     'glm52':   ('ZhipuAI/GLM-5.2',                      'GLM-5.2'),
     'qwen38':  ('Qwen/Qwen3.8-Flash-Next',              'Qwen3.8 Flash Next'),
+    # ==== 新渠道（要配对应环境变量才可用）====
+    'orultra': ('nvidia/nemotron-3-ultra-550b-a55b:free', 'Nemotron 3 Ultra 550B'),
+    'orgemma': ('google/gemma-4-31b-it:free',            'Gemma 4 31B'),
+    'groq70':  ('llama-3.3-70b-versatile',               'Llama 3.3 70B'),
+    'groqoss': ('openai/gpt-oss-120b',                   'GPT-OSS 120B'),
+    'cereqwen': ('qwen-3-32b',                           'Qwen3 32B'),
+    'cfllama': ('@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'Llama 3.3 70B · CF'),
 }
 # ===== NB 币计费 =====
 # 站长要求：每次回答之前按 token 扣 NB 币，需要价格表。
@@ -1348,7 +1399,13 @@ AI_PRICE_MULT = {
     'ZhipuAI/GLM-5.2':                       1.2,   # 1200
     'minimaxai/minimax-m3.1-flash':          1.5,   # 1500
     'stepfun-ai/step-5-preview':             1.2,   # 1200
-    'nvidia/nemotron-3.5-lightning-30b-a3b': 1.2,   # 1200
+    'nvidia/nemotron-3.5-lightning-30b-a3b': 1.2,
+    'nvidia/nemotron-3-ultra-550b-a55b:free': 1.2,
+    'google/gemma-4-31b-it:free':            0.8,
+    'llama-3.3-70b-versatile':               0.6,
+    'openai/gpt-oss-120b':                   0.8,
+    'qwen-3-32b':                            0.6,
+    '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 0.6,   # 1200
 }
 
 # 输出侧按档位估 token（只用于【估算】，不影响 max_tokens）
