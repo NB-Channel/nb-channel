@@ -1293,8 +1293,8 @@ ULTRA_OK = ('deepseek-ai/DeepSeek-V4.1-Flash-1017',)
 
 def _effort_for_model(effort, mid):
     """档位适配：模型不认 ultra 就降级成 max，避免上游 400。"""
-    if mid in _PROVIDER_OF:
-        return ''
+    # 新渠道（OpenRouter / Cloudflare）实测同样认这 7 档，正常传；
+    # 只有 ultra 它们不认，降级成 max。
     if effort == 'ultra' and mid not in ULTRA_OK:
         return 'max'
     return effort
