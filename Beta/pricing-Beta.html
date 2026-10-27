@@ -1091,6 +1091,20 @@ html { -webkit-text-size-adjust: 100%; }
 .pr-sbtn:hover { border-color:#3988f6; color:#3988f6; }
 .pr-sbtn.on { background:#3988f6; border-color:#3988f6; color:#fff; font-weight:600; }
 </style>
+<style>
+/* 档位卡片（五色，显眼） */
+.pr-tiers { display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:12px; margin:16px 0 24px; }
+.pr-tier { border-radius:12px; padding:14px 14px 12px; background:var(--card-bg,#fff);
+    border:1px solid var(--card-border,#e5e7ef); border-top:4px solid #ccc; position:relative; }
+.pr-tier .pr-tname { font-size:.86rem; font-weight:700; letter-spacing:.02em; }
+.pr-tier .pr-tprice { font-size:1.55rem; font-weight:800; line-height:1.15; margin:6px 0 2px; }
+.pr-tier .pr-tprice i { font-size:.74rem; font-weight:500; font-style:normal; color:var(--count-text,#6b7280); }
+.pr-tier .pr-tmult { display:inline-block; padding:1px 8px; border-radius:999px;
+    font-size:.72rem; font-weight:600; margin-bottom:6px; }
+.pr-tier .pr-tnote { font-size:.72rem; color:var(--count-text,#6b7280); line-height:1.55; }
+/* 表格里的档位徽章 */
+.pr-tb { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.72rem; font-weight:700; }
+</style>
 </head>
 <body>
 
@@ -1239,11 +1253,11 @@ html { -webkit-text-size-adjust: 100%; }
 <h2>价格档位</h2>
 <p>基础价 <strong>200 NB币 / 1000 token</strong>，再乘档位倍率。只算你发的消息 + AI 的回答 + 参考资料；<strong>系统提示词不计费</strong>。</p>
 <div class="pr-tiers">
-<div class="pr-tier"><b>旗舰</b><i>400 NB / 1K</i><span>2.0× · 最强 / 最大参数</span></div>
-<div class="pr-tier"><b>强</b><i>300 NB / 1K</i><span>1.5× · 很强，贵一点</span></div>
-<div class="pr-tier"><b>主力</b><i>240 NB / 1K</i><span>1.2× · 日常首选</span></div>
-<div class="pr-tier"><b>标准</b><i>200 NB / 1K</i><span>1.0× · 够用，便宜</span></div>
-<div class="pr-tier"><b>轻量</b><i>160 NB / 1K</i><span>0.8× · 最快最便宜</span></div>
+<div class="pr-tier" style="border-top-color:#b45cff;background:#f6f0ff"><div class="pr-tname" style="color:#b45cff">旗舰</div><div class="pr-tprice" style="color:#b45cff">400<i> NB / 1K</i></div><div class="pr-tmult" style="color:#b45cff;background:#f6f0ff">2.0×</div><div class="pr-tnote">最强 / 最大参数</div></div>
+<div class="pr-tier" style="border-top-color:#3988f6;background:#eef5ff"><div class="pr-tname" style="color:#3988f6">强</div><div class="pr-tprice" style="color:#3988f6">300<i> NB / 1K</i></div><div class="pr-tmult" style="color:#3988f6;background:#eef5ff">1.5×</div><div class="pr-tnote">很强，贵一点</div></div>
+<div class="pr-tier" style="border-top-color:#1a9a52;background:#edfbf3"><div class="pr-tname" style="color:#1a9a52">主力</div><div class="pr-tprice" style="color:#1a9a52">240<i> NB / 1K</i></div><div class="pr-tmult" style="color:#1a9a52;background:#edfbf3">1.2×</div><div class="pr-tnote">日常首选</div></div>
+<div class="pr-tier" style="border-top-color:#f08a1d;background:#fff6ea"><div class="pr-tname" style="color:#f08a1d">标准</div><div class="pr-tprice" style="color:#f08a1d">200<i> NB / 1K</i></div><div class="pr-tmult" style="color:#f08a1d;background:#fff6ea">1.0×</div><div class="pr-tnote">够用，便宜</div></div>
+<div class="pr-tier" style="border-top-color:#6b7280;background:#f4f5f8"><div class="pr-tname" style="color:#6b7280">轻量</div><div class="pr-tprice" style="color:#6b7280">160<i> NB / 1K</i></div><div class="pr-tmult" style="color:#6b7280;background:#f4f5f8">0.8×</div><div class="pr-tnote">最快最便宜</div></div>
 </div>
 <h2>四个渠道</h2>
 <div class="pr-ch">
@@ -1270,28 +1284,28 @@ html { -webkit-text-size-adjust: 100%; }
 </div>
 
 <table class="pr-table"><thead><tr><th>模型</th><th>渠道</th><th class="c">档位</th><th class="c">每 1K</th><th class="c">一句约</th></tr></thead><tbody>
-<tr data-ch="nvidia" data-tier="1" data-price="400"><td><strong>MiniMax M3.1 Flash</strong><span class="pr-tag">推理</span></td><td>NVIDIA</td><td class="c">旗舰</td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
-<tr data-ch="nvidia" data-tier="1" data-price="400"><td><strong>Nemotron 3.5</strong><span class="pr-tag">推理</span></td><td>NVIDIA</td><td class="c">旗舰</td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
-<tr data-ch="nvidia" data-tier="2" data-price="300"><td><strong>Step 5 Preview</strong></td><td>NVIDIA</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
-<tr data-ch="ms" data-tier="2" data-price="300"><td><strong>DeepSeek V4.1 Flash</strong><span class="pr-tag">👁 看图</span><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
-<tr data-ch="ms" data-tier="1" data-price="400"><td><strong>DeepSeek V4 Pro</strong><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c">旗舰</td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
-<tr data-ch="ms" data-tier="2" data-price="300"><td><strong>GLM-5.2</strong><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
-<tr data-ch="ms" data-tier="3" data-price="240"><td><strong>Qwen3.8 Flash Next</strong></td><td>魔搭</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
-<tr data-ch="or" data-tier="1" data-price="400"><td><strong>Nemotron 3 Ultra 550B</strong></td><td>OpenRouter</td><td class="c">旗舰</td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
-<tr data-ch="or" data-tier="3" data-price="240"><td><strong>Nemotron 3.5 VL</strong><span class="pr-tag">👁 看图</span></td><td>OpenRouter</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
-<tr data-ch="or" data-tier="3" data-price="240"><td><strong>Nemotron 3 Omni</strong><span class="pr-tag">👁 看图</span><span class="pr-tag">推理</span></td><td>OpenRouter</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
-<tr data-ch="or" data-tier="3" data-price="240"><td><strong>Nemotron 3 Super 120B</strong></td><td>OpenRouter</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
-<tr data-ch="or" data-tier="4" data-price="200"><td><strong>Nemotron 3.5 Lightning</strong></td><td>OpenRouter</td><td class="c">标准</td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
-<tr data-ch="or" data-tier="2" data-price="300"><td><strong>Inkling</strong></td><td>OpenRouter</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
-<tr data-ch="or" data-tier="5" data-price="160"><td><strong>North Mini Code</strong><span class="pr-tag">代码</span></td><td>OpenRouter</td><td class="c">轻量</td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
-<tr data-ch="or" data-tier="4" data-price="200"><td><strong>Dots 3 Note</strong></td><td>OpenRouter</td><td class="c">标准</td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
-<tr data-ch="cf" data-tier="3" data-price="240"><td><strong>GPT-OSS 120B</strong></td><td>Cloudflare</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
-<tr data-ch="cf" data-tier="2" data-price="300"><td><strong>Nemotron 3 120B</strong></td><td>Cloudflare</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
-<tr data-ch="cf" data-tier="4" data-price="200"><td><strong>Llama 3.3 70B</strong></td><td>Cloudflare</td><td class="c">标准</td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
-<tr data-ch="cf" data-tier="5" data-price="160"><td><strong>Llama 3.2 Vision</strong><span class="pr-tag">👁 看图</span></td><td>Cloudflare</td><td class="c">轻量</td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
-<tr data-ch="cf" data-tier="5" data-price="160"><td><strong>Qwen3.8 27B</strong></td><td>Cloudflare</td><td class="c">轻量</td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
-<tr data-ch="cf" data-tier="4" data-price="200"><td><strong>QwQ 32B</strong><span class="pr-tag">推理</span></td><td>Cloudflare</td><td class="c">标准</td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
-<tr data-ch="cf" data-tier="5" data-price="160"><td><strong>Qwen2.5 Coder 32B</strong><span class="pr-tag">代码</span></td><td>Cloudflare</td><td class="c">轻量</td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
+<tr data-ch="nvidia" data-tier="1" data-price="400"><td><strong>MiniMax M3.1 Flash</strong><span class="pr-tag">推理</span></td><td>NVIDIA</td><td class="c"><span class="pr-tb" style="color:#b45cff;background:#f6f0ff">旗舰</span></td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
+<tr data-ch="nvidia" data-tier="1" data-price="400"><td><strong>Nemotron 3.5</strong><span class="pr-tag">推理</span></td><td>NVIDIA</td><td class="c"><span class="pr-tb" style="color:#b45cff;background:#f6f0ff">旗舰</span></td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
+<tr data-ch="nvidia" data-tier="2" data-price="300"><td><strong>Step 5 Preview</strong></td><td>NVIDIA</td><td class="c"><span class="pr-tb" style="color:#3988f6;background:#eef5ff">强</span></td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr data-ch="ms" data-tier="2" data-price="300"><td><strong>DeepSeek V4.1 Flash</strong><span class="pr-tag">👁 看图</span><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c"><span class="pr-tb" style="color:#3988f6;background:#eef5ff">强</span></td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr data-ch="ms" data-tier="1" data-price="400"><td><strong>DeepSeek V4 Pro</strong><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c"><span class="pr-tb" style="color:#b45cff;background:#f6f0ff">旗舰</span></td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
+<tr data-ch="ms" data-tier="2" data-price="300"><td><strong>GLM-5.2</strong><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c"><span class="pr-tb" style="color:#3988f6;background:#eef5ff">强</span></td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr data-ch="ms" data-tier="3" data-price="240"><td><strong>Qwen3.8 Flash Next</strong></td><td>魔搭</td><td class="c"><span class="pr-tb" style="color:#1a9a52;background:#edfbf3">主力</span></td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr data-ch="or" data-tier="1" data-price="400"><td><strong>Nemotron 3 Ultra 550B</strong></td><td>OpenRouter</td><td class="c"><span class="pr-tb" style="color:#b45cff;background:#f6f0ff">旗舰</span></td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
+<tr data-ch="or" data-tier="3" data-price="240"><td><strong>Nemotron 3.5 VL</strong><span class="pr-tag">👁 看图</span></td><td>OpenRouter</td><td class="c"><span class="pr-tb" style="color:#1a9a52;background:#edfbf3">主力</span></td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr data-ch="or" data-tier="3" data-price="240"><td><strong>Nemotron 3 Omni</strong><span class="pr-tag">👁 看图</span><span class="pr-tag">推理</span></td><td>OpenRouter</td><td class="c"><span class="pr-tb" style="color:#1a9a52;background:#edfbf3">主力</span></td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr data-ch="or" data-tier="3" data-price="240"><td><strong>Nemotron 3 Super 120B</strong></td><td>OpenRouter</td><td class="c"><span class="pr-tb" style="color:#1a9a52;background:#edfbf3">主力</span></td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr data-ch="or" data-tier="4" data-price="200"><td><strong>Nemotron 3.5 Lightning</strong></td><td>OpenRouter</td><td class="c"><span class="pr-tb" style="color:#f08a1d;background:#fff6ea">标准</span></td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
+<tr data-ch="or" data-tier="2" data-price="300"><td><strong>Inkling</strong></td><td>OpenRouter</td><td class="c"><span class="pr-tb" style="color:#3988f6;background:#eef5ff">强</span></td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr data-ch="or" data-tier="5" data-price="160"><td><strong>North Mini Code</strong><span class="pr-tag">代码</span></td><td>OpenRouter</td><td class="c"><span class="pr-tb" style="color:#6b7280;background:#f4f5f8">轻量</span></td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
+<tr data-ch="or" data-tier="4" data-price="200"><td><strong>Dots 3 Note</strong></td><td>OpenRouter</td><td class="c"><span class="pr-tb" style="color:#f08a1d;background:#fff6ea">标准</span></td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
+<tr data-ch="cf" data-tier="3" data-price="240"><td><strong>GPT-OSS 120B</strong></td><td>Cloudflare</td><td class="c"><span class="pr-tb" style="color:#1a9a52;background:#edfbf3">主力</span></td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr data-ch="cf" data-tier="2" data-price="300"><td><strong>Nemotron 3 120B</strong></td><td>Cloudflare</td><td class="c"><span class="pr-tb" style="color:#3988f6;background:#eef5ff">强</span></td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr data-ch="cf" data-tier="4" data-price="200"><td><strong>Llama 3.3 70B</strong></td><td>Cloudflare</td><td class="c"><span class="pr-tb" style="color:#f08a1d;background:#fff6ea">标准</span></td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
+<tr data-ch="cf" data-tier="5" data-price="160"><td><strong>Llama 3.2 Vision</strong><span class="pr-tag">👁 看图</span></td><td>Cloudflare</td><td class="c"><span class="pr-tb" style="color:#6b7280;background:#f4f5f8">轻量</span></td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
+<tr data-ch="cf" data-tier="5" data-price="160"><td><strong>Qwen3.8 27B</strong></td><td>Cloudflare</td><td class="c"><span class="pr-tb" style="color:#6b7280;background:#f4f5f8">轻量</span></td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
+<tr data-ch="cf" data-tier="4" data-price="200"><td><strong>QwQ 32B</strong><span class="pr-tag">推理</span></td><td>Cloudflare</td><td class="c"><span class="pr-tb" style="color:#f08a1d;background:#fff6ea">标准</span></td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
+<tr data-ch="cf" data-tier="5" data-price="160"><td><strong>Qwen2.5 Coder 32B</strong><span class="pr-tag">代码</span></td><td>Cloudflare</td><td class="c"><span class="pr-tb" style="color:#6b7280;background:#f4f5f8">轻量</span></td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
 </tbody></table>
 <p class="pr-note">* 一句约 1,200 计费 token（输出约 600 + 你的消息 + 资料）。实际按真实用量结算。</p>
 <h2>能力对比（实测 + 已知规格）</h2>
