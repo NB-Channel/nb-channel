@@ -1206,6 +1206,8 @@ def ping():
             'global': AI_GLOBAL_PER_DAY,
             'model_default': AI_MODEL,
             'models_n': len(AI_MODELS),
+            'image_models': {k: {'label': v[1], 'price': v[2]}
+                             for k, v in AI_IMAGE_MODELS.items()},
             'providers': {
                 'openrouter': bool((os.environ.get('OPENROUTER_KEY') or '').strip()),
                 'groq': bool((os.environ.get('GROQ_KEY') or '').strip()),
@@ -2185,6 +2187,128 @@ def _comment_bot_reply_text(question, page_path):
     if len(txt) > 300:
         txt = txt[:300] + '…'
     return txt, None
+
+
+
+# ============================================================
+#  图像生成：/api/image
+#
+#  站长要求：单独一个分类、单独定价（按张收，不走 token）。
+#  实测 Cloudflare 免费额度内可用：
+#      @cf/bytedance/stable-diffusion-xl-lightning   8.6s / PNG
+#      @cf/lykon/dreamshaper-8-lcm                   3.7s / PNG
+#      @cf/black-forest-labs/flux-1-schnell          6.8s / base64 JSON
+#  图片不产生 token，所以按「张」从钱包扣 NB。
+# ============================================================
+AI_IMAGE_MODELS = {
+    'sdxl':       ('@cf/bytedance/stable-diffusion-xl-lightning', 'SDXL Lightning', 400),
+    'dreamshaper':('@cf/lykon/dreamshaper-8-lcm',                 'Dreamshaper 8 LCM', 250),
+    'flux':       ('@cf/black-forest-labs/flux-1-schnell',        'FLUX.1 schnell', 500),
+}
+AI_IMAGE_MAX_PROMPT = 300
+
+
+def _cf_cfg():
+    acc = (os.environ.get('CF_ACCOUNT_ID') or '').strip()
+    key = (os.environ.get('CF_AI_KEY') or '').strip()
+    return acc, key
+
+
+def gen_image(model_id, prompt, timeout=120):
+    """调 Cloudflare 的 run 接口生成图片。返回 (data_uri, 错误)。"""
+    acc, key = _cf_cfg()
+    if not acc or not key:
+        return None, 'no-cf-key'
+    url = 'https://api.cloudflare.com/client/v4/accounts/%s/ai/run/%s' % (acc, model_id)
+    body = json.dumps({'prompt': prompt}).encode('utf-8')
+    req = urllib.request.Request(url, data=body, method='POST', headers={
+        'Authorization': 'Bearer ' + key,
+        'Content-Type': 'application/json',
+        'User-Agent': 'NB-Channel/1.0',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            ctype = (r.headers.get('Content-Type') or '').lower()
+            raw_b = r.read()
+    except Exception as e:
+        return None, '%s: %s' % (type(e).__name__, str(e)[:150])
+
+    if 'application/json' in ctype:
+        try:
+            j = json.loads(raw_b.decode('utf-8', 'ignore'))
+        except Exception:
+            return None, 'bad-json'
+        img = None
+        if isinstance(j.get('result'), dict):
+            img = j['result'].get('image')
+        if not img:
+            return None, 'no-image: %s' % str(j)[:120]
+        if img.startswith('data:'):
+            return img, None
+        return 'data:image/png;base64,' + img, None
+
+    import base64 as _b64
+    return 'data:image/png;base64,' + _b64.b64encode(raw_b).decode(), None
+
+
+@app.route('/api/image', methods=['POST', 'OPTIONS'])
+def api_image():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        data = request.get_json(silent=True) or {}
+        uid = (data.get('user_id') or '').strip()
+        sess = (data.get('session') or '').strip()
+        key = str(data.get('model') or 'sdxl').strip().lower()
+        prompt = (data.get('prompt') or '').strip()[:AI_IMAGE_MAX_PROMPT]
+
+        if not uid:
+            return jsonify({'ok': False, 'reason': 'nouser'})
+        if not _wallet_check(uid, sess):
+            return jsonify({'ok': False, 'reason': 'reauth'})
+        if key not in AI_IMAGE_MODELS:
+            return jsonify({'ok': False, 'reason': 'nomodel',
+                            'models': {k: {'label': v[1], 'price': v[2]}
+                                       for k, v in AI_IMAGE_MODELS.items()}})
+        if len(prompt) < 2:
+            return jsonify({'ok': False, 'reason': 'noprompt'})
+
+        model_id, label, price = AI_IMAGE_MODELS[key]
+
+        # 先看余额
+        w = supa_rpc('ai_wallet_get', {'p_user_id': uid, 'p_secret': MAIL_SECRET})
+        wd = (w.get('data') or {}) if w.get('ok') else {}
+        bal = float(wd.get('bonus') or 0) + float(wd.get('topup') or 0)
+        if bal < price:
+            return jsonify({'ok': False, 'reason': 'poor', 'need': price,
+                            'balance': bal,
+                            'message': '生成一张要 %d NB，你现在只有 %d NB' % (price, bal)})
+
+        img, err = gen_image(model_id, prompt)
+        if err or not img:
+            print('[AI-IMG-FAIL] %s -> %s' % (model_id, str(err)[:150]), flush=True)
+            return jsonify({'ok': False, 'reason': 'genfail', 'error': str(err)[:200]})
+
+        # 成功了才扣费（按张）
+        ch = supa_rpc('ai_wallet_charge', {
+            'p_user_id': uid, 'p_amount': int(price),
+            'p_model': model_id, 'p_secret': MAIL_SECRET,
+        })
+        cd = (ch.get('data') or {}) if ch.get('ok') else {}
+        new_bal = float(cd.get('bonus') or 0) + float(cd.get('topup') or 0)
+        print('[AI-IMG] %s 扣 %d NB，剩 %s' % (key, price, new_bal), flush=True)
+
+        return jsonify({
+            'ok': True, 'model': key, 'label': label,
+            'price': price, 'balance': new_bal,
+            'image': img,
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print('[AI-IMG-500] %s: %s' % (type(e).__name__, str(e)[:200]), flush=True)
+        return jsonify({'ok': False, 'reason': 'error',
+                        'error': '%s: %s' % (type(e).__name__, str(e)[:200])})
 
 
 @app.route('/api/comment_bot', methods=['POST', 'OPTIONS', 'GET'])
