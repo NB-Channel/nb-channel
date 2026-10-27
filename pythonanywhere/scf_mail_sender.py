@@ -2203,7 +2203,6 @@ def _comment_bot_reply_text(question, page_path):
 AI_IMAGE_MODELS = {
     'sdxl':       ('@cf/bytedance/stable-diffusion-xl-lightning', 'SDXL Lightning', 400),
     'dreamshaper':('@cf/lykon/dreamshaper-8-lcm',                 'Dreamshaper 8 LCM', 250),
-    'flux':       ('@cf/black-forest-labs/flux-1-schnell',        'FLUX.1 schnell', 500),
 }
 AI_IMAGE_MAX_PROMPT = 300
 
