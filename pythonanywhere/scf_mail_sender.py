@@ -814,21 +814,19 @@ def f(x):
 
 【NB 币怎么算】
 · 系统提示词不计费；你发的消息、AI 的回答、联网和站内资料都按 token 计费。
-  按 token 计费：每 1000 token 基础价 200 NB币，再乘模型倍率。
-    DeepSeek V4.1 Flash 1.0× → 200 NB / 1K
-    Qwen3.8 Flash Next 1.0×  → 200 NB / 1K
-    GLM-5.2 1.2×             → 240 NB / 1K
-    Step 5 Preview 1.2×      → 240 NB / 1K
-    Nemotron 3.5 1.2×        → 240 NB / 1K
-    DeepSeek V4 Pro 1.5×     → 300 NB / 1K
-    MiniMax M3.1 Flash 1.5×  → 300 NB / 1K
-· 联网搜索另外收 500 NB币一次（真的搜到结果才收）。
-· 最低消费 1 NB币。答完才扣，中途停止也会按已经生成的内容扣。
-· 余额扣成 0 或负数就【不能再提问】了，得先去赚币。
+· 基础价 200 NB币 / 1000 token，再乘模型档位倍率。五档是：
+    旗舰 2.0×（400 NB/1K）：MiniMax M3.1 Flash、Nemotron 3.5、DeepSeek V4 Pro、Nemotron 3 Ultra 550B
+    强   1.5×（300 NB/1K）：Step 5、GLM-5.2、Nemotron 3.5 VL、Inkling、Nemotron 3 120B
+    主力 1.2×（240 NB/1K）：DeepSeek V4.1 Flash、Qwen3.8 Flash Next、Nemotron 3 Omni、
+                            Nemotron 3 Super 120B、GPT-OSS 120B
+    标准 1.0×（200 NB/1K）：Nemotron 3.5 Lightning、Dots 3 Note、Llama 3.3 70B、QwQ 32B
+    轻量 0.8×（160 NB/1K）：North Mini Code、Qwen3.8 27B、Qwen2.5 Coder、Llama 3.2 Vision
+· 最低消费 1 NB币。答完才扣，中途停止也按已经生成的内容扣。
+· 余额扣成 0 或负数就不能再提问，得先领赠金或充值。
 · 内测期间管理员不扣币。
-· 用户问「多少钱一次」就按上面算给他：系统提示词和资料不计费，
-  所以一句普通问答通常只有几百 token —— 大约 150~300 NB；
-  再开联网就再加 500 NB。
+· 用户问「多少钱一次」：一句普通问答大约 1,200 计费 token，
+  轻量档约 190 NB、标准档约 240 NB、主力档约 290 NB、强档约 360 NB、旗舰档约 480 NB。
+· 详细价格在「模型价格 & 用量信息」页面，可以直接让用户去看。
 · 详细价格在「模型 & 价格」页面（pricing.html）上，可以直接让用户去看。
 
 【常见问题这样答】
@@ -1415,37 +1413,34 @@ AI_CHARGE_ADMIN = _env_int('AI_CHARGE_ADMIN', 0, 0, 1) == 1
 
 # 模型倍率（贵的模型多收）
 AI_PRICE_MULT = {
-    # 站长定的倍率（基础价 200 NB / 1000 token）
-    'deepseek-ai/DeepSeek-V4.1-Flash-1017':  1.0,   # 1000
-    'deepseek-ai/DeepSeek-V4-Pro-0813':      1.5,   # 1500
-    'Qwen/Qwen3.8-Flash-Next':               1.0,   # 1000
-    'ZhipuAI/GLM-5.2':                       1.2,   # 1200
-    'minimaxai/minimax-m3.1-flash':          1.5,   # 1500
-    'stepfun-ai/step-5-preview':             1.2,   # 1200
-    'nvidia/nemotron-3.5-lightning-30b-a3b': 1.2,
-    'nvidia/nemotron-3.5-super-vl:free':     1.0,
-    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 0.7,
-    'nvidia/nemotron-3.5-super-vl:free':     1.0,
-    'nvidia/nemotron-3-ultra-550b-a55b:free': 1.2,
-    'nvidia/nemotron-3-super-120b-a12b:free': 0.9,
-    'nvidia/nemotron-3.5-lightning:free':    0.8,
-    'thinkingmachines/inkling:free':         1.0,
-    'cohere/north-mini-code:free':           0.6,
-    'dots-studio/dots-3-note-preview:free':  0.8,
-    'thinkingmachines/inkling:free':         1.0,
-    'cohere/north-mini-code:free':           0.6,
-    'dots-studio/dots-3-note-preview:free':  0.8,
-    '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 0.6,
-    '@cf/zai-org/glm-5.2':                    1.0,
-    '@cf/qwen/qwen3.8-27b':                   0.5,
-    '@cf/moonshotai/kimi-k2.6':               0.8,
-    '@cf/openai/gpt-oss-120b':                0.8,
-    '@cf/meta/llama-3.2-11b-vision-instruct': 0.5,
-    '@cf/qwen/qwq-32b':                       0.6,
-    '@cf/qwen/qwen2.5-coder-32b-instruct':    0.5,
-    '@cf/meta/llama-3.2-11b-vision-instruct': 0.5,
-    '@cf/nvidia/nemotron-3-120b-a12b':        0.9,
-    '@cf/cloudflare/clef-omni':               0.8,   # 1200
+    # 五档定价（基础价 200 NB / 1000 token）
+    # ── 旗舰 2.0× = 400 NB/1K ──
+    'minimaxai/minimax-m3.1-flash':            2.0,
+    'nvidia/nemotron-3.5-lightning-30b-a3b':   2.0,
+    'deepseek-ai/DeepSeek-V4-Pro-0813':        2.0,
+    'nvidia/nemotron-3-ultra-550b-a55b:free':  2.0,
+    # ── 强 1.5× = 300 NB/1K ──
+    'stepfun-ai/step-5-preview':               1.5,
+    'ZhipuAI/GLM-5.2':                         1.5,
+    'nvidia/nemotron-3.5-super-vl:free':       1.5,
+    'thinkingmachines/inkling:free':           1.5,
+    '@cf/nvidia/nemotron-3-120b-a12b':         1.5,
+    # ── 主力 1.2× = 240 NB/1K ──
+    'deepseek-ai/DeepSeek-V4.1-Flash-1017':    1.2,
+    'Qwen/Qwen3.8-Flash-Next':                 1.2,
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 1.2,
+    'nvidia/nemotron-3-super-120b-a12b:free':  1.2,
+    '@cf/openai/gpt-oss-120b':                 1.2,
+    # ── 标准 1.0× = 200 NB/1K ──
+    'nvidia/nemotron-3.5-lightning:free':      1.0,
+    'dots-studio/dots-3-note-preview:free':    1.0,
+    '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 1.0,
+    '@cf/qwen/qwq-32b':                        1.0,
+    # ── 轻量 0.8× = 160 NB/1K ──
+    'cohere/north-mini-code:free':             0.8,
+    '@cf/qwen/qwen3.8-27b':                    0.8,
+    '@cf/qwen/qwen2.5-coder-32b-instruct':     0.8,
+    '@cf/meta/llama-3.2-11b-vision-instruct':  0.8,
 }
 
 # 输出侧按档位估 token（只用于【估算】，不影响 max_tokens）
