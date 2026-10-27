@@ -607,7 +607,7 @@ body.dark-mode .ai-notice.is-warn { color: #ff9c8a; }
 .ai-effort-popup.show-burst .ai-effort-burst { opacity: 1; }
 
 /* 模型选择页 */
-.pane-models { height: 320px; }
+.pane-models { height: 392px; }
 .ai-model-title {
     position: absolute;
     top: 6px; left: 12px;
@@ -647,7 +647,7 @@ body.dark-mode .ai-notice.is-warn { color: #ff9c8a; }
     color: var(--count-text);
     opacity: .85;
 }
-.ai-model-list { position: absolute; top: 46px; left: 0; right: 0; max-height: 268px; overflow-y: auto; }
+.ai-model-list { position: absolute; top: 46px; left: 0; right: 0; max-height: 336px; overflow-y: auto; }
 .ai-model-grouprow {
     height: 18px;
     line-height: 18px;
@@ -1636,13 +1636,28 @@ body.dark-mode .ai-notice.is-warn { color: #ff9c8a; }
     /* ===== 模型 ===== */
     /* [key, 界面名（带版本号）, 适用场景] */
     var MODELS = [
-        ['minimax',  'MiniMax M3.1 Flash',      '均衡 · 默认',      '其它模型（3）',     0],
-        ['step',     'Step 5 Preview',          '最快 · 赶时间',    '',                 0],
-        ['nemotron', 'Nemotron 3.5 Lightning',  '想得最细 · 难题',  '',                 0],
-        ['ds41',     'DeepSeek V4.1 Flash',     '推荐 · 1.2 秒',    'DeepSeek 系列（2）', 1],
-        ['dspro',    'DeepSeek V4 Pro',         '更强 · 4.2 秒',    '',                 0],
-        ['glm52',    'GLM-5.2',                 '魔搭 · 想得多',    '智谱 GLM 系列（1）', 0],
-        ['qwen38',   'Qwen3.8 Flash Next',      '魔搭 · 通义',      '通义千问系列（1）', 0]
+        ['minimax',  'MiniMax M3.1 Flash',      '旗舰 400/1K',      'NVIDIA（3）',      0],
+        ['step',     'Step 5 Preview',          '强 300/1K',        '',                 0],
+        ['nemotron', 'Nemotron 3.5 Lightning',  '旗舰 400/1K',      '',                 0],
+        ['ds41',     'DeepSeek V4.1 Flash',     '强 300/1K · 看图',  'DeepSeek（2）',    1],
+        ['dspro',    'DeepSeek V4 Pro',         '旗舰 400/1K',      '',                 0],
+        ['glm52',    'GLM-5.2',                 '强 300/1K',        '智谱 / 通义（2）',  0],
+        ['qwen38',   'Qwen3.8 Flash Next',      '主力 240/1K',      '',                 0],
+        ['orultra',  'Nemotron 3 Ultra 550B',   '旗舰 400/1K · 1M', 'OpenRouter（8）',  0],
+        ['orsuper',  'Nemotron 3 Super 120B',   '主力 240/1K',      '',                 0],
+        ['orvl',     'Nemotron 3.5 VL',         '主力 240/1K · 看图','',                 0],
+        ['oromni',   'Nemotron 3 Omni',         '主力 240/1K · 全模态','',               0],
+        ['orlight',  'Nemotron 3.5 Lightning',  '标准 200/1K',      '',                 0],
+        ['orink',    'Inkling',                 '强 300/1K · 1M',   '',                 0],
+        ['orcode',   'North Mini Code',         '轻量 160/1K · 代码','',                 0],
+        ['ordots',   'Dots 3 Note',             '标准 200/1K',      '',                 0],
+        ['cfoss',    'GPT-OSS 120B',            '主力 240/1K',      'Cloudflare（7）',  0],
+        ['cfnem',    'Nemotron 3 120B',         '强 300/1K',        '',                 0],
+        ['cfllama',  'Llama 3.3 70B',           '标准 200/1K',      '',                 0],
+        ['cfqwen',   'Qwen3.8 27B',             '轻量 160/1K',      '',                 0],
+        ['cfqwq',    'QwQ 32B',                 '标准 200/1K · 推理','',                 0],
+        ['cfcoder',  'Qwen2.5 Coder 32B',       '轻量 160/1K · 代码','',                 0],
+        ['cfvis',    'Llama 3.2 Vision',        '轻量 160/1K · 看图','',                 0]
     ];
 
     /* 当前模型认不认第 8 档 Ultra（只有 DeepSeek V4.1 Flash 认） */
@@ -1870,7 +1885,7 @@ body.dark-mode .ai-notice.is-warn { color: #ff9c8a; }
             var m = which === 'models';
             modelsPane.classList.toggle('hidden', !m);
             mainPane.classList.toggle('hidden', m);
-            popup.style.height = m ? '320px' : '104px';
+            popup.style.height = m ? '392px' : '104px';
             popup.style.setProperty('--pane', which);
         }
 
