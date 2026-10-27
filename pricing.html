@@ -27,6 +27,29 @@
     
 
 <style>
+.pr-tiers { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:16px 0 22px; }
+.pr-tier { border:1px solid var(--card-border,#e5e7ef); border-radius:10px; padding:10px 12px; background:var(--card-bg,#fff); }
+.pr-tier b { display:block; font-size:.95rem; margin-bottom:2px; }
+.pr-tier i { font-style:normal; font-size:1.05rem; font-weight:700; color:#3988f6; }
+.pr-tier span { display:block; font-size:.72rem; color:var(--count-text,#6b7280); margin-top:3px; }
+.pr-table { width:100%; border-collapse:collapse; font-size:.84rem; margin-bottom:22px; }
+.pr-table th, .pr-table td { border-bottom:1px solid var(--card-border,#eceef4); padding:7px 8px; text-align:left; vertical-align:middle; }
+.pr-table th { background:var(--count-bg,#f7f8fb); font-weight:600; font-size:.78rem; color:var(--count-text,#6b7280); }
+.pr-table tr:hover td { background:var(--count-bg,#fafbfe); }
+.pr-table td.c, .pr-table th.c { text-align:center; }
+.pr-ok { color:#1a9a52; font-weight:700; }
+.pr-no { color:#b9bec9; }
+.pr-bar { position:relative; height:9px; border-radius:5px; background:var(--count-bg,#eef1f7); min-width:110px; }
+.pr-bar i { position:absolute; left:0; top:0; bottom:0; border-radius:5px;
+    background:linear-gradient(90deg,#5aa0ff,#3988f6); }
+.pr-bar.fast i { background:linear-gradient(90deg,#34c77b,#1a9a52); }
+.pr-bar.slow i { background:linear-gradient(90deg,#ffb74d,#f08a1d); }
+.pr-note { font-size:.76rem; color:var(--count-text,#6b7280); margin:-10px 0 20px; }
+.pr-tag { display:inline-block; padding:1px 6px; border-radius:999px; font-size:.7rem;
+    border:1px solid var(--card-border,#e5e7ef); color:var(--count-text,#6b7280); margin-left:4px; }
+</style>
+
+<style>
 /* 两个 Tab：模型价格 / 用量信息 */
 .uw-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--card-border, #e5e7ef); margin: 6px 0 18px; }
 .uw-tab { padding: 9px 16px; border: 0; border-bottom: 2px solid transparent; background: none;
@@ -355,71 +378,107 @@
 <div class="about-content price-page">
 <div class="uw-tabs"><button class="uw-tab on" type="button" data-tab="price">模型价格</button><button class="uw-tab" type="button" data-tab="usage">用量信息</button></div>
 <div class="uw-panel" id="tab-price">
-
-<p class="rules-lead">下表所列价格以 <strong>1000 tokens</strong> 为单位。Token 是模型用来表示自然语言文本的最小单位，可以是一个词、一个数字或一个标点符号等。我们会根据模型<strong>输入和输出的总 token 数</strong>进行计量计费。</p>
-
-<h2>模型细节</h2>
-<table class="price-table">
-    <thead>
-        <tr><th>项目</th><th>说明</th></tr>
-    </thead>
-    <tbody>
-        <tr><td><strong>可选模型</strong></td><td>7 个，分四组：DeepSeek / 智谱 GLM / 通义千问 / 其它</td></tr>
-        <tr><td><strong>接入方式</strong></td><td>站内 AI 页面 · OpenAI 兼容格式</td></tr>
-        <tr><td><strong>思考模式</strong></td><td>滑块 7 档（None / Minimal / Low / Medium / High / XHigh / Max）<br>DeepSeek V4.1 Flash 多一档 <strong>Ultra</strong>（共 8 档）</td></tr>
-        <tr><td><strong>输出长度</strong></td><td>最大 4096 tokens</td></tr>
-        <tr><td><strong>联网搜索</strong></td><td>支持 · 每次最多 10 条结果 · <strong>免费</strong></td></tr>
-        <tr><td><strong>站内数据库</strong></td><td>报纸 / 道具 / 称号 / 成就 / 公司 / 行情 / 投票 / 天气 / 小黑屋 · <strong>免费</strong></td></tr>
-        <tr><td><strong>多轮对话</strong></td><td>支持 · 每次对话最多 100 轮 · 保留最近 20 个对话</td></tr>
-        <tr><td><strong>每日次数</strong></td><td>每人 5 次 / 天（内测期管理员 200 次）</td></tr>
-        <tr><td><strong>余额门槛</strong></td><td>NB 币 ≤ 0 时无法提问</td></tr>
-    </tbody>
-</table>
-
-<h2>价格</h2>
-<p>单价 = <strong>基础价 200 NB币 / 1000 token</strong> × 模型倍率。系统提示词不计费；你发的消息、AI 回答、联网和站内资料都按 token 算。</p>
-<table class="price-table">
-    <thead>
-        <tr><th>模型</th><th>跑在哪</th><th>倍率</th><th>每 1000 token</th><th>一句普通问答<br><span class="price-note">约 200~900 token</span></th></tr>
-    </thead>
-    <tbody>
-        <tr><td><strong>DeepSeek V4.1 Flash</strong><br><span class="price-note">推荐 · 最快</span></td><td>魔搭</td><td>1.0×</td><td><strong>200 NB币</strong></td><td>约 880 NB币</td></tr>
-        <tr><td><strong>Qwen3.8 Flash Next</strong><br><span class="price-note">通义 · 便宜</span></td><td>魔搭</td><td>1.0×</td><td><strong>200 NB币</strong></td><td>约 880 NB币</td></tr>
-        <tr><td><strong>GLM-5.2</strong><br><span class="price-note">智谱旗舰 · 想得多</span></td><td>魔搭</td><td>1.2×</td><td><strong>240 NB币</strong></td><td>约 1056 NB币</td></tr>
-        <tr><td><strong>Step 5 Preview</strong><br><span class="price-note">最快 · 赶时间</span></td><td>NVIDIA</td><td>1.2×</td><td><strong>240 NB币</strong></td><td>约 1056 NB币</td></tr>
-        <tr><td><strong>Nemotron 3.5 Lightning</strong><br><span class="price-note">想得最细 · 难题</span></td><td>NVIDIA</td><td>1.2×</td><td><strong>240 NB币</strong></td><td>约 1056 NB币</td></tr>
-        <tr><td><strong>DeepSeek V4 Pro</strong><br><span class="price-note">更强 · 贵一点</span></td><td>魔搭</td><td>1.5×</td><td><strong>300 NB币</strong></td><td>约 1320 NB币</td></tr>
-        <tr><td><strong>MiniMax M3.1 Flash</strong><br><span class="price-note">均衡 · 默认</span></td><td>NVIDIA</td><td>1.5×</td><td><strong>300 NB币</strong></td><td>约 1320 NB币</td></tr>
-    </tbody>
-</table>
-
-<h2>网页搜索</h2>
-<table class="price-table">
-    <thead><tr><th>能力</th><th>计费单位</th><th>价格</th></tr></thead>
-    <tbody>
-        <tr><td>联网搜索</td><td>按 token</td><td>搜到的摘要计入输入 token，无固定附加费；最多 10 条</td></tr>
-        <tr><td>站内数据库查询</td><td>每次请求</td><td><strong>免费</strong></td></tr>
-        <tr><td>站内小知识检索</td><td>每次请求</td><td><strong>免费</strong>（799 条）</td></tr>
-    </tbody>
-</table>
-
+<h2>价格档位</h2>
+<p>基础价 <strong>200 NB币 / 1000 token</strong>，再乘档位倍率。只算你发的消息 + AI 的回答 + 参考资料；<strong>系统提示词不计费</strong>。</p>
+<div class="pr-tiers">
+<div class="pr-tier"><b>旗舰</b><i>400 NB / 1K</i><span>2.0× · 最强 / 最大参数</span></div>
+<div class="pr-tier"><b>强</b><i>300 NB / 1K</i><span>1.5× · 很强，贵一点</span></div>
+<div class="pr-tier"><b>主力</b><i>240 NB / 1K</i><span>1.2× · 日常首选</span></div>
+<div class="pr-tier"><b>标准</b><i>200 NB / 1K</i><span>1.0× · 够用，便宜</span></div>
+<div class="pr-tier"><b>轻量</b><i>160 NB / 1K</i><span>0.8× · 最快最便宜</span></div>
+</div>
+<h2>全部模型与单价</h2>
+<table class="pr-table"><thead><tr><th>模型</th><th>渠道</th><th class="c">档位</th><th class="c">每 1K</th><th class="c">一句约</th></tr></thead><tbody>
+<tr><td><strong>MiniMax M3.1 Flash</strong><span class="pr-tag">推理</span></td><td>NVIDIA</td><td class="c">旗舰</td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
+<tr><td><strong>Nemotron 3.5</strong><span class="pr-tag">推理</span></td><td>NVIDIA</td><td class="c">旗舰</td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
+<tr><td><strong>Step 5 Preview</strong></td><td>NVIDIA</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr><td><strong>DeepSeek V4.1 Flash</strong><span class="pr-tag">👁 看图</span><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr><td><strong>DeepSeek V4 Pro</strong><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c">旗舰</td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
+<tr><td><strong>GLM-5.2</strong><span class="pr-tag">推理</span></td><td>魔搭</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr><td><strong>Qwen3.8 Flash Next</strong></td><td>魔搭</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr><td><strong>Nemotron 3 Ultra 550B</strong></td><td>OpenRouter</td><td class="c">旗舰</td><td class="c"><strong>400 NB</strong></td><td class="c">约 480 NB</td></tr>
+<tr><td><strong>Nemotron 3.5 VL</strong><span class="pr-tag">👁 看图</span></td><td>OpenRouter</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr><td><strong>Nemotron 3 Omni</strong><span class="pr-tag">👁 看图</span><span class="pr-tag">推理</span></td><td>OpenRouter</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr><td><strong>Nemotron 3 Super 120B</strong></td><td>OpenRouter</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr><td><strong>Nemotron 3.5 Lightning</strong></td><td>OpenRouter</td><td class="c">标准</td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
+<tr><td><strong>Inkling</strong></td><td>OpenRouter</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr><td><strong>North Mini Code</strong><span class="pr-tag">代码</span></td><td>OpenRouter</td><td class="c">轻量</td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
+<tr><td><strong>Dots 3 Note</strong></td><td>OpenRouter</td><td class="c">标准</td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
+<tr><td><strong>GPT-OSS 120B</strong></td><td>Cloudflare</td><td class="c">主力</td><td class="c"><strong>240 NB</strong></td><td class="c">约 288 NB</td></tr>
+<tr><td><strong>Nemotron 3 120B</strong></td><td>Cloudflare</td><td class="c">强</td><td class="c"><strong>300 NB</strong></td><td class="c">约 360 NB</td></tr>
+<tr><td><strong>Llama 3.3 70B</strong></td><td>Cloudflare</td><td class="c">标准</td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
+<tr><td><strong>Llama 3.2 Vision</strong><span class="pr-tag">👁 看图</span></td><td>Cloudflare</td><td class="c">轻量</td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
+<tr><td><strong>Qwen3.8 27B</strong></td><td>Cloudflare</td><td class="c">轻量</td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
+<tr><td><strong>QwQ 32B</strong><span class="pr-tag">推理</span></td><td>Cloudflare</td><td class="c">标准</td><td class="c"><strong>200 NB</strong></td><td class="c">约 240 NB</td></tr>
+<tr><td><strong>Qwen2.5 Coder 32B</strong><span class="pr-tag">代码</span></td><td>Cloudflare</td><td class="c">轻量</td><td class="c"><strong>160 NB</strong></td><td class="c">约 192 NB</td></tr>
+</tbody></table>
+<p class="pr-note">* 一句约 1,200 计费 token（输出约 600 + 你的消息 + 资料）。实际按真实用量结算。</p>
+<h2>能力对比（实测 + 已知规格）</h2>
+<table class="pr-table"><thead><tr><th>模型</th><th class="c">首问实测</th><th class="c">上下文</th><th class="c">看图</th><th class="c">代码</th><th class="c">推理</th></tr></thead><tbody>
+<tr><td>MiniMax M3.1 Flash</td><td class="c">11.0 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td></tr>
+<tr><td>Nemotron 3.5</td><td class="c">9.4 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td></tr>
+<tr><td>Step 5 Preview</td><td class="c">4.8 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>DeepSeek V4.1 Flash</td><td class="c">1.2 s</td><td class="c">—</td><td class="c"><span class="pr-ok">✓</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td></tr>
+<tr><td>DeepSeek V4 Pro</td><td class="c">4.2 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td></tr>
+<tr><td>GLM-5.2</td><td class="c">4.8 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td></tr>
+<tr><td>Qwen3.8 Flash Next</td><td class="c">2.1 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Nemotron 3 Ultra 550B</td><td class="c">1.6 s</td><td class="c">1000k</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Nemotron 3.5 VL</td><td class="c">2.7 s</td><td class="c">1000k</td><td class="c"><span class="pr-ok">✓</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Nemotron 3 Omni</td><td class="c">2.6 s</td><td class="c">256k</td><td class="c"><span class="pr-ok">✓</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td></tr>
+<tr><td>Nemotron 3 Super 120B</td><td class="c">—</td><td class="c">262k</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Nemotron 3.5 Lightning</td><td class="c">3.6 s</td><td class="c">1000k</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Inkling</td><td class="c">—</td><td class="c">1048k</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>North Mini Code</td><td class="c">1.7 s</td><td class="c">256k</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Dots 3 Note</td><td class="c">—</td><td class="c">512k</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>GPT-OSS 120B</td><td class="c">1.6 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Nemotron 3 120B</td><td class="c">1.4 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Llama 3.3 70B</td><td class="c">1.1 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Llama 3.2 Vision</td><td class="c">—</td><td class="c">—</td><td class="c"><span class="pr-ok">✓</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>Qwen3.8 27B</td><td class="c">1.7 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+<tr><td>QwQ 32B</td><td class="c">1.9 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td></tr>
+<tr><td>Qwen2.5 Coder 32B</td><td class="c">1.8 s</td><td class="c">—</td><td class="c"><span class="pr-no">-</span></td><td class="c"><span class="pr-ok">✓</span></td><td class="c"><span class="pr-no">-</span></td></tr>
+</tbody></table>
+<p class="pr-note">「—」表示没有测到 / 渠道不公开该指标，不代表不支持。实测为同一条简单问题的首字到完成时间，网络状况不同会有波动。</p>
+<h2>速度对比（实测耗时，越短越快）</h2>
+<table class="pr-table"><thead><tr><th>模型</th><th class="c">秒</th><th>速度条</th></tr></thead><tbody>
+<tr><td>Llama 3.3 70B</td><td class="c" style="color:#1a9a52;font-weight:600">1.1</td><td><div class="pr-bar fast"><i style="width:10%"></i></div></td></tr>
+<tr><td>DeepSeek V4.1 Flash</td><td class="c" style="color:#1a9a52;font-weight:600">1.2</td><td><div class="pr-bar fast"><i style="width:11%"></i></div></td></tr>
+<tr><td>Nemotron 3 120B</td><td class="c" style="color:#1a9a52;font-weight:600">1.4</td><td><div class="pr-bar fast"><i style="width:13%"></i></div></td></tr>
+<tr><td>Nemotron 3 Ultra 550B</td><td class="c" style="color:#1a9a52;font-weight:600">1.6</td><td><div class="pr-bar fast"><i style="width:15%"></i></div></td></tr>
+<tr><td>GPT-OSS 120B</td><td class="c" style="color:#1a9a52;font-weight:600">1.6</td><td><div class="pr-bar fast"><i style="width:15%"></i></div></td></tr>
+<tr><td>North Mini Code</td><td class="c" style="color:#1a9a52;font-weight:600">1.7</td><td><div class="pr-bar fast"><i style="width:15%"></i></div></td></tr>
+<tr><td>Qwen3.8 27B</td><td class="c" style="color:#1a9a52;font-weight:600">1.7</td><td><div class="pr-bar fast"><i style="width:15%"></i></div></td></tr>
+<tr><td>Qwen2.5 Coder 32B</td><td class="c" style="color:#1a9a52;font-weight:600">1.8</td><td><div class="pr-bar fast"><i style="width:16%"></i></div></td></tr>
+<tr><td>QwQ 32B</td><td class="c" style="color:#1a9a52;font-weight:600">1.9</td><td><div class="pr-bar fast"><i style="width:17%"></i></div></td></tr>
+<tr><td>Qwen3.8 Flash Next</td><td class="c" style="color:#3988f6;font-weight:600">2.1</td><td><div class="pr-bar "><i style="width:19%"></i></div></td></tr>
+<tr><td>Nemotron 3 Omni</td><td class="c" style="color:#3988f6;font-weight:600">2.6</td><td><div class="pr-bar "><i style="width:24%"></i></div></td></tr>
+<tr><td>Nemotron 3.5 VL</td><td class="c" style="color:#3988f6;font-weight:600">2.7</td><td><div class="pr-bar "><i style="width:25%"></i></div></td></tr>
+<tr><td>Nemotron 3.5 Lightning</td><td class="c" style="color:#3988f6;font-weight:600">3.6</td><td><div class="pr-bar "><i style="width:33%"></i></div></td></tr>
+<tr><td>DeepSeek V4 Pro</td><td class="c" style="color:#3988f6;font-weight:600">4.2</td><td><div class="pr-bar "><i style="width:38%"></i></div></td></tr>
+<tr><td>Step 5 Preview</td><td class="c" style="color:#3988f6;font-weight:600">4.8</td><td><div class="pr-bar "><i style="width:44%"></i></div></td></tr>
+<tr><td>GLM-5.2</td><td class="c" style="color:#3988f6;font-weight:600">4.8</td><td><div class="pr-bar "><i style="width:44%"></i></div></td></tr>
+<tr><td>Nemotron 3.5</td><td class="c" style="color:#f08a1d;font-weight:600">9.4</td><td><div class="pr-bar slow"><i style="width:85%"></i></div></td></tr>
+<tr><td>MiniMax M3.1 Flash</td><td class="c" style="color:#f08a1d;font-weight:600">11.0</td><td><div class="pr-bar slow"><i style="width:100%"></i></div></td></tr>
+</tbody></table>
+<p class="pr-note">同一道简单问题的实测完成时间。模型第一次调用可能有冷启动，会慢一些。</p>
+<h2>🎨 图像生成（单独计价，按张收）</h2>
+<p>图像不产生 token，所以<strong>按张计费</strong>，不是按 token 算。提示词最多 300 字，生成失败不扣费。</p>
+<table class="pr-table"><thead><tr><th>模型</th><th>特点</th><th class="c">实测</th><th class="c">单价</th></tr></thead><tbody>
+<tr><td><strong>SDXL Lightning</strong></td><td>字节跳动 · 画面最稳</td><td class="c">8.6 s</td><td class="c"><strong>400 NB / 张</strong></td></tr>
+<tr><td><strong>Dreamshaper 8 LCM</strong></td><td>出图最快 · 便宜</td><td class="c">3.7 s</td><td class="c"><strong>250 NB / 张</strong></td></tr>
+</tbody></table>
+<p class="pr-note">生成后的图片会按屏幕宽度缩放显示；想看原尺寸点「保存原图」下载。</p>
 <h2>扣费规则</h2>
 <ul class="price-rules">
-    <li>模型调用费用 = <strong>token 消耗量 × 模型单价</strong>。</li>
-    <li>联网资料和站内资料都<strong>按 token 计费</strong>，没有固定附加费；系统提示词不计费。</li>
-    <li><strong>答完再扣</strong>：等输出结束后，用真实的 token 用量结算。</li>
-    <li><strong>中断也扣</strong>：手动停止或中途断开，按已经生成的内容结算。</li>
-    <li><strong>余额 ≤ 0 不能提问</strong>：想继续用先去赚 NB 币。</li>
-    <li>最低消费 <strong>1 NB币</strong>；内测期间<strong>管理员免扣</strong>。</li>
+    <li>文字模型：<strong>计费 token = AI 输出 + 你的消息 + 参考资料</strong>；系统提示词不计费。</li>
+    <li>图像模型：<strong>按张</strong>收，生成失败不扣。</li>
+    <li><strong>答完再扣</strong>，用真实用量结算；中途停止也按已生成内容扣。</li>
+    <li>先扣<strong>赠金</strong>，赠金用完再扣<strong>充值余额</strong>，不会动你的 NB币 余额。</li>
+    <li>余额 ≤ 0 时无法提问 / 生图，需要充值或领赠金。</li>
+    <li>最低消费 <strong>1 NB币</strong>；管理员免扣。</li>
     <li>价格可能调整，以本页面为准。</li>
 </ul>
-
-<div class="hero-btns" style="margin-top:24px;">
-    <a class="hero-btn" href="ai.html">去用 AI</a>
-    <a class="hero-btn ghost" href="index.html">回首页</a>
-</div>
-
-
+<div class="hero-btns" style="margin-top:24px;"><a class="hero-btn" href="ai.html">去用 AI</a><a class="hero-btn ghost" href="index.html">回首页</a></div>
 </div>
 <div class="uw-panel" id="tab-usage" hidden>
 <div class="usage-page">
