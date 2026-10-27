@@ -1324,6 +1324,7 @@ _PROVIDER_OF = {
     '@cf/meta/llama-3.2-11b-vision-instruct': 'cloudflare',
     '@cf/qwen/qwq-32b': 'cloudflare',
     '@cf/qwen/qwen2.5-coder-32b-instruct': 'cloudflare',
+    '@cf/meta/llama-3.2-11b-vision-instruct': 'cloudflare',
     '@cf/nvidia/nemotron-3-120b-a12b': 'cloudflare',
 }
 
@@ -1394,6 +1395,7 @@ AI_MODELS = {
     'cfoss':   ('@cf/openai/gpt-oss-120b',                  'GPT-OSS 120B · CF'),
     'cfqwq':   ('@cf/qwen/qwq-32b',                          'QwQ 32B · 推理'),
     'cfcoder': ('@cf/qwen/qwen2.5-coder-32b-instruct',       'Qwen2.5 Coder · CF'),
+    'cfvis':   ('@cf/meta/llama-3.2-11b-vision-instruct',   'Llama 3.2 Vision · CF'),
     'cfnem':   ('@cf/nvidia/nemotron-3-120b-a12b',           'Nemotron 3 120B · CF'),
 }
 # ===== NB 币计费 =====
@@ -1441,6 +1443,7 @@ AI_PRICE_MULT = {
     '@cf/meta/llama-3.2-11b-vision-instruct': 0.5,
     '@cf/qwen/qwq-32b':                       0.6,
     '@cf/qwen/qwen2.5-coder-32b-instruct':    0.5,
+    '@cf/meta/llama-3.2-11b-vision-instruct': 0.5,
     '@cf/nvidia/nemotron-3-120b-a12b':        0.9,
     '@cf/cloudflare/clef-omni':               0.8,   # 1200
 }
