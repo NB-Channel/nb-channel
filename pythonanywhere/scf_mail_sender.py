@@ -1077,6 +1077,13 @@ def nim_chat(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
         detail = e.read().decode('utf-8', 'ignore')[:300]
         # 限流 / 额度用完 / 网关错误 → 换兜底模型再来一次
         _fb = _fallback_model(_mid)
+        # 上游说「这个档位不支持」→ 换成 medium 再试一次（GPT-OSS 这类）
+        if (e.code == 400 and 'reasoning_effort' in (detail or '')
+                and (effort or '') != 'medium'):
+            print('[AI-EFFORT-RETRY] %s 不支持 %r，改 medium 重试'
+                  % (_mid, effort), flush=True)
+            return nim_chat(question, history, site_ctx, db_ctx, web_ctx,
+                            'medium', fast, _mid)
         if e.code in (402, 403, 429, 500, 502, 503, 504) and _fb and _fb != _mid:
             print('[AI-FALLBACK] %s -> %s（HTTP %s）'
                   % (_mid, _fb, e.code), flush=True)
@@ -1291,13 +1298,43 @@ def _fallback_model(mid):
 ULTRA_OK = ('deepseek-ai/DeepSeek-V4.1-Flash-1017',)
 
 
+# 有些模型只支持部分档位（实测）：
+#   GPT-OSS（Harmony 格式）只认 high / medium / low
+EFFORT_ORDER = ('none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra')
+EFFORT_ALLOWED = {
+    '@cf/openai/gpt-oss-120b': ('low', 'medium', 'high'),
+    '@cf/openai/gpt-oss-20b':  ('low', 'medium', 'high'),
+}
+
+
+def _clamp_effort(effort, mid):
+    """把档位收敛到该模型支持的集合里（取最接近的，偏保守往低走）。"""
+    allowed = EFFORT_ALLOWED.get(mid)
+    if not allowed or effort in allowed:
+        return effort
+    try:
+        want = EFFORT_ORDER.index(effort)
+    except ValueError:
+        return allowed[0]
+    best = allowed[0]
+    best_d = 99
+    for a in allowed:
+        try:
+            d = abs(EFFORT_ORDER.index(a) - want)
+        except ValueError:
+            continue
+        if d < best_d:
+            best_d, best = d, a
+    return best
+
+
 def _effort_for_model(effort, mid):
     """档位适配：模型不认 ultra 就降级成 max，避免上游 400。"""
     # 新渠道（OpenRouter / Cloudflare）实测同样认这 7 档，正常传；
     # 只有 ultra 它们不认，降级成 max。
     if effort == 'ultra' and mid not in ULTRA_OK:
-        return 'max'
-    return effort
+        effort = 'max'
+    return _clamp_effort(effort, mid)
 
 
 def _model_label(mid):
