@@ -1352,7 +1352,6 @@ _PROVIDER_OF = {
     'nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter',
     'nvidia/nemotron-3-super-120b-a12b:free': 'openrouter',
     'nvidia/nemotron-3.5-lightning:free': 'openrouter',
-    'thinkingmachines/inkling:free': 'openrouter',
     'cohere/north-mini-code:free': 'openrouter',
     'dots-studio/dots-3-note-preview:free': 'openrouter',
     '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 'cloudflare',
@@ -1421,7 +1420,6 @@ AI_MODELS = {
     'orultra':  ('nvidia/nemotron-3-ultra-550b-a55b:free', 'Nemotron 3 Ultra 550B'),
     'orsuper':  ('nvidia/nemotron-3-super-120b-a12b:free', 'Nemotron 3 Super 120B'),
     'orlight':  ('nvidia/nemotron-3.5-lightning:free',     'Nemotron 3.5 Lightning · OR'),
-    'orink':    ('thinkingmachines/inkling:free',          'Inkling'),
     'orcode':   ('cohere/north-mini-code:free',            'North Mini Code'),
     'ordots':   ('dots-studio/dots-3-note-preview:free',   'Dots 3 Note'),
     # ── Groq（要 GROQ_KEY）──
