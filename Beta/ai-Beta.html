@@ -810,6 +810,33 @@ table.rules-table tbody tr:last-child td { border-bottom: none; }
 <!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
 <link rel="stylesheet" href="../css/themes.css?v=35">
 <script src="../js/theme.js?v=9"></script>
+<style>
+/* AI 页面：对话 / 画图 两个 Tab */
+.ai-tabbar { display: flex; gap: 6px; padding: 8px 12px 0; border-bottom: 1px solid var(--card-border, #e5e7ef); }
+.ai-tabbtn { padding: 8px 16px; border: 0; background: none; cursor: pointer;
+    color: var(--count-text, #6b7280); font-size: .9rem; border-bottom: 2px solid transparent; }
+.ai-tabbtn:hover { color: var(--text-color, #111827); }
+.ai-tabbtn.on { color: #3988f6; border-bottom-color: #3988f6; font-weight: 600; }
+.ai-draw[hidden] { display: none !important; }
+.ai-draw { padding: 16px 14px 20px; }
+.ai-draw-hint { font-size: .8rem; color: var(--count-text, #6b7280); line-height: 1.7; margin-bottom: 10px; }
+.ai-draw-input { width: 100%; box-sizing: border-box; min-height: 84px; padding: 10px 12px;
+    border-radius: 10px; border: 1px solid var(--card-border, #e5e7ef); resize: vertical;
+    background: var(--count-bg, #f7f8fb); color: var(--text-color, #111827); font-size: .9rem; }
+.ai-draw-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.ai-draw-models { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-draw-m { display: flex; align-items: center; gap: 5px; font-size: .82rem; padding: 6px 10px;
+    border: 1px solid var(--card-border, #e5e7ef); border-radius: 8px; cursor: pointer;
+    color: var(--count-text, #6b7280); }
+.ai-draw-m.on { border-color: #3988f6; color: #3988f6; }
+.ai-draw-go { padding: 8px 18px; border-radius: 8px; border: 0; background: #3988f6; color: #fff;
+    font-size: .88rem; cursor: pointer; }
+.ai-draw-go:disabled { opacity: .5; cursor: not-allowed; }
+.ai-draw-status { font-size: .8rem; margin-top: 10px; min-height: 18px; }
+.ai-draw-out { margin-top: 14px; text-align: center; }
+.ai-draw-out img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--card-border, #e5e7ef); }
+.ai-draw-save { display: inline-block; margin-top: 8px; font-size: .82rem; color: #3988f6; }
+</style>
 </head>
 <body>
 
@@ -1005,6 +1032,8 @@ table.rules-table tbody tr:last-child td { border-bottom: none; }
         </aside>
 
         <div class="ai-main">
+<div class="ai-tabbar" id="aiTabbar"><button class="ai-tabbtn on" type="button" data-tab="chat">💬 对话</button><button class="ai-tabbtn" type="button" data-tab="draw">🎨 画图</button></div>
+
             <div class="ai-chat" id="aiChat">
                 <div class="ai-empty" id="aiEmpty">还没有对话 —— 在下面问一句试试<br>思考过程会一个字一个字滚出来</div>
             </div>
@@ -1063,7 +1092,25 @@ table.rules-table tbody tr:last-child td { border-bottom: none; }
                     <span class="ai-meta" id="aiConv"></span>
                 </div>
             </div>
-        </div>
+        
+                        <!-- 画图面板 -->
+                        <div class="ai-draw" id="aiDraw" hidden>
+                            <div class="ai-draw-hint">
+                                写清楚要什么画面（景别、主体、风格、光线），最多 300 字。<br>
+                                按<strong>张</strong>计费，生成失败不扣费；显示会按屏幕缩放，点「保存原图」拿全尺寸。
+                            </div>
+                            <textarea class="ai-draw-input" id="aiDrawPrompt"
+                                      placeholder="例：夜晚的赛博朋克街道，霓虹灯，雨后积水反光，竖构图"></textarea>
+                            <div class="ai-draw-row">
+                                <div class="ai-draw-models" id="aiDrawModels"></div>
+                            </div>
+                            <div class="ai-draw-row">
+                                <button class="ai-draw-go" id="aiDrawGo" type="button">生成图片</button>
+                                <span class="ai-draw-status" id="aiDrawStatus"></span>
+                            </div>
+                            <div class="ai-draw-out" id="aiDrawOut"></div>
+                        </div>
+</div>
     </div>
 
 </main>
@@ -4093,5 +4140,122 @@ function webOn() {
     }).catch(function () { caps(); });
 })();
 </script>
+<script>
+(function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var bar = $('aiTabbar');
+    if (!bar) return;
+    var chatEl = document.querySelector('.ai-chat');
+    var composeEl = document.querySelector('.ai-compose');
+    var drawEl = $('aiDraw');
+    var loaded = false;
+    var minfo = {};
+
+    function setTab(which) {
+        var btns = bar.querySelectorAll('.ai-tabbtn');
+        for (var i = 0; i < btns.length; i++) {
+            btns[i].classList.toggle('on', btns[i].getAttribute('data-tab') === which);
+        }
+        var isDraw = which === 'draw';
+        if (chatEl) chatEl.style.display = isDraw ? 'none' : '';
+        if (composeEl) composeEl.style.display = isDraw ? 'none' : '';
+        if (drawEl) drawEl.hidden = !isDraw;
+        if (isDraw && !loaded) { loaded = true; loadModels(); }
+    }
+    bar.addEventListener('click', function (e) {
+        var t = e.target.getAttribute && e.target.getAttribute('data-tab');
+        if (t) setTab(t);
+    });
+
+    function status(msg, color) {
+        var el = $('aiDrawStatus');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.style.color = color || '';
+    }
+
+    function loadModels() {
+        var SCF = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
+        fetch(SCF + '/ping?deep=1').then(function (r) { return r.json(); }).then(function (d) {
+            var im = (d && d.self && d.self.image_models) || {};
+            var box = $('aiDrawModels');
+            box.innerHTML = '';
+            var first = true;
+            Object.keys(im).forEach(function (k) {
+                minfo[k] = im[k];
+                var lab = document.createElement('label');
+                lab.className = 'ai-draw-m' + (first ? ' on' : '');
+                lab.setAttribute('data-k', k);
+                lab.textContent = im[k].label + ' · ' + im[k].price + ' NB';
+                lab.addEventListener('click', function () {
+                    var all = box.querySelectorAll('.ai-draw-m');
+                    for (var i = 0; i < all.length; i++) all[i].classList.remove('on');
+                    lab.classList.add('on');
+                });
+                box.appendChild(lab);
+                first = false;
+            });
+            if (!box.children.length) status('服务端没返回图像模型（云函数可能是旧版）', '#d9453d');
+        }).catch(function () { status('拿不到图像模型列表', '#d9453d'); });
+    }
+
+    $('aiDrawGo').addEventListener('click', function () {
+        var self = this;
+        var prompt = ($('aiDrawPrompt').value || '').trim();
+        if (prompt.length < 2) { status('先写点要画什么', '#d9453d'); return; }
+        if (prompt.length > 300) { status('提示词最多 300 字', '#d9453d'); return; }
+        var sel = $('aiDrawModels').querySelector('.ai-draw-m.on');
+        var key = sel ? sel.getAttribute('data-k') : 'sdxl';
+        var who = null;
+        try {
+            var u = JSON.parse(localStorage.getItem('nb_user') || 'null');
+            who = u && u.id ? { id: u.id, session: localStorage.getItem('nb_session') || '' } : null;
+        } catch (e) {}
+        if (!who) { status('请先登录', '#d9453d'); return; }
+
+        self.disabled = true;
+        status('生成中…通常 4~10 秒');
+        $('aiDrawOut').innerHTML = '';
+        var SCF = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
+        fetch(SCF + '/api/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: who.id, session: who.session,
+                                   model: key, prompt: prompt })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            self.disabled = false;
+            if (d && d.ok && d.image) {
+                var img = document.createElement('img');
+                img.src = d.image;
+                img.alt = prompt.slice(0, 40);
+                var a = document.createElement('a');
+                a.className = 'ai-draw-save';
+                a.href = d.image;
+                a.download = 'nb-' + key + '-' + Date.now() + '.png';
+                a.textContent = '保存原图';
+                $('aiDrawOut').innerHTML = '';
+                $('aiDrawOut').appendChild(img);
+                $('aiDrawOut').appendChild(document.createElement('br'));
+                $('aiDrawOut').appendChild(a);
+                status('生成完成 · 本次扣 ' + d.price + ' NB，余额 ' +
+                       Math.round(d.balance || 0) + ' NB', '#1a9a52');
+                return;
+            }
+            var msg = '';
+            if (!d || !d.reason) msg = '生成失败，稍后再试';
+            else if (d.reason === 'reauth') msg = '登录过期了，刷新页面重新登录';
+            else if (d.reason === 'poor') msg = d.message || '余额不够，先领赠金或充值';
+            else if (d.reason === 'nomodel') msg = '这个模型没配好，换一个试试';
+            else if (d.reason === 'genfail') msg = '上游生成失败：' + (d.error || '');
+            else msg = '生成失败：' + (d.reason || '未知');
+            status(msg, '#d9453d');
+        }).catch(function () {
+            self.disabled = false;
+            status('请求失败，检查网络或稍后再试', '#d9453d');
+        });
+    });
+})();
+</script>
+
 </body>
 </html>
