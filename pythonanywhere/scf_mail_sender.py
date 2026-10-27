@@ -816,8 +816,8 @@ def f(x):
 · 系统提示词不计费；你发的消息、AI 的回答、联网和站内资料都按 token 计费。
 · 基础价 200 NB币 / 1000 token，再乘模型档位倍率。五档是：
     旗舰 2.0×（400 NB/1K）：MiniMax M3.1 Flash、Nemotron 3.5、DeepSeek V4 Pro、Nemotron 3 Ultra 550B
-    强   1.5×（300 NB/1K）：Step 5、GLM-5.2、Nemotron 3.5 VL、Inkling、Nemotron 3 120B
-    主力 1.2×（240 NB/1K）：DeepSeek V4.1 Flash、Qwen3.8 Flash Next、Nemotron 3 Omni、
+    强   1.5×（300 NB/1K）：Step 5、GLM-5.2、DeepSeek V4.1 Flash、Inkling、Nemotron 3 120B
+    主力 1.2×（240 NB/1K）：Nemotron 3.5 VL、Qwen3.8 Flash Next、Nemotron 3 Omni、
                             Nemotron 3 Super 120B、GPT-OSS 120B
     标准 1.0×（200 NB/1K）：Nemotron 3.5 Lightning、Dots 3 Note、Llama 3.3 70B、QwQ 32B
     轻量 0.8×（160 NB/1K）：North Mini Code、Qwen3.8 27B、Qwen2.5 Coder、Llama 3.2 Vision
@@ -1422,11 +1422,11 @@ AI_PRICE_MULT = {
     # ── 强 1.5× = 300 NB/1K ──
     'stepfun-ai/step-5-preview':               1.5,
     'ZhipuAI/GLM-5.2':                         1.5,
-    'nvidia/nemotron-3.5-super-vl:free':       1.5,
+    'deepseek-ai/DeepSeek-V4.1-Flash-1017':    1.5,
     'thinkingmachines/inkling:free':           1.5,
     '@cf/nvidia/nemotron-3-120b-a12b':         1.5,
     # ── 主力 1.2× = 240 NB/1K ──
-    'deepseek-ai/DeepSeek-V4.1-Flash-1017':    1.2,
+    'nvidia/nemotron-3.5-super-vl:free':       1.2,
     'Qwen/Qwen3.8-Flash-Next':                 1.2,
     'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 1.2,
     'nvidia/nemotron-3-super-120b-a12b:free':  1.2,
