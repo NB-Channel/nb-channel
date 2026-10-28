@@ -997,6 +997,36 @@ def _clean_history(raw):
     return out
 
 
+
+# ============================================================
+#  模型能力表：哪些模型能读图（AI 页面据此显示「上传图片」按钮）
+#  实测能读图的：DeepSeek V4.1 Flash / Nemotron 3.5 VL /
+#                Nemotron 3 Omni / Llama 3.2 Vision
+# ============================================================
+AI_MODEL_VISION = {
+    'deepseek-ai/DeepSeek-V4.1-Flash-1017',
+    'nvidia/nemotron-3.5-super-vl:free',
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    '@cf/meta/llama-3.2-11b-vision-instruct',
+}
+
+# 每个请求的附带图片（线程安全：Flask 每个请求一个线程）
+import threading as _threading
+_tls = _threading.local()
+
+
+def _user_content(question):
+    """把用户消息组装成 OpenAI 多模态格式（有图就带图）。"""
+    imgs = [u for u in (getattr(_tls, 'images', None) or [])
+            if isinstance(u, str) and u.startswith('data:image/')]
+    if not imgs:
+        return question
+    parts = [{'type': 'text', 'text': question or '看这张图，按要求回答。'}]
+    for u in imgs[:3]:
+        parts.append({'type': 'image_url', 'image_url': {'url': u}})
+    return parts
+
+
 def nim_chat(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
              effort=None, fast=False, model=None):
     """调 NVIDIA NIM。
@@ -1012,7 +1042,7 @@ def nim_chat(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
     msgs = [{'role': 'system', 'content': _sys_prompt(site_ctx, db_ctx, web_ctx, fast, _model_label(_mid))}]
     if history:
         msgs.extend(history)
-    msgs.append({'role': 'user', 'content': question})
+    msgs.append({'role': 'user', 'content': _user_content(question)})
 
     _url, _key = _model_route(_mid)
     if _url is None:
@@ -1213,6 +1243,9 @@ def ping():
             'global': AI_GLOBAL_PER_DAY,
             'model_default': AI_MODEL,
             'models_n': len(AI_MODELS),
+            'model_caps': {k: {'vision': (v[0] in AI_MODEL_VISION),
+                              'file': True}
+                           for k, v in AI_MODELS.items()},
             'image_models': {k: {'label': v[1], 'price': v[2]}
                              for k, v in AI_IMAGE_MODELS.items()},
             'providers': {
@@ -2019,7 +2052,7 @@ def nim_stream(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
     msgs = [{'role': 'system', 'content': _sys_prompt(site_ctx, db_ctx, web_ctx, fast, _model_label(_mid))}]
     if history:
         msgs.extend(history)
-    msgs.append({'role': 'user', 'content': question})
+    msgs.append({'role': 'user', 'content': _user_content(question)})
 
     _mid = model if model in [x[0] for x in AI_MODELS.values()] else AI_MODEL
     _url, _key = _model_route(_mid)
