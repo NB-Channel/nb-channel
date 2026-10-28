@@ -2091,7 +2091,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
                 var noind = /^::\s*/.test(p);
                 if (noind) p = p.replace(/^::\s*/, '');
                 return '<p' + (noind ? ' class="noindent"' : '') + '>' +
-                       boldify(esc(p)).replace(/\n/g, '<br>') + '</p>';
+                       linkify(boldify(esc(p))).replace(/\n/g, '<br>') + '</p>';
             }).join('');
     }
 

@@ -337,6 +337,10 @@
             .np-cover, .np-cover-ph { width: 100%; height: 150px; }
         }
     </style>
+<style>
+.np-link { color: #3988f6; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
+.np-link:hover { color: #1f6fd0; }
+</style>
 </head>
 <body>
 <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
@@ -478,14 +482,25 @@
         return boldify(esc(String(s == null ? '' : s))).replace(/\n/g, '<br>');
     }
     // 正文按空行分段；段首写 :: 表示这段不缩进（对应旧版的 <p class="noindent">）
-    function paras(txt) {
+        function linkify(s) {
+        // 把正文里的网址变成可点的链接（报纸正文原先只渲染纯文本）
+        return String(s || '').replace(/(https?:\/\/[^\s<>　-\u303f\uff00-\uffef"'，。！？、）】]+)/g,
+            function (u) {
+                var href = u.replace(/[.,;:]+$/, '');
+                var tail = u.slice(href.length);
+                return '<a class="np-link" href="' + href + '" target="_blank" rel="noopener">'
+                     + href + '</a>' + tail;
+            });
+    }
+
+function paras(txt) {
         return String(txt || '').split(/\n\s*\n/).filter(function (x) { return x.trim(); })
             .map(function (p) {
                 p = p.trim();
                 var noind = /^::\s*/.test(p);
                 if (noind) p = p.replace(/^::\s*/, '');
                 return '<p' + (noind ? ' class="noindent"' : '') + '>' +
-                       boldify(esc(p)).replace(/\n/g, '<br>') + '</p>';
+                       linkify(boldify(esc(p))).replace(/\n/g, '<br>') + '</p>';
             }).join('');
     }
 
