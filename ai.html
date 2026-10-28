@@ -870,6 +870,21 @@ body.dark-mode .ai-notice.is-warn { color: #ff9c8a; }
 .ai-draw-out img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--card-border, #e5e7ef); }
 .ai-draw-save { display: inline-block; margin-top: 8px; font-size: .82rem; color: #3988f6; }
 </style>
+<style>
+.ai-attach { display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    min-width: 38px; height: 38px; padding: 0 10px; border-radius: 9px;
+    border: 1px solid var(--card-border, #e5e7ef); background: var(--count-bg, #f7f8fb);
+    color: var(--count-text, #6b7280); font-size: .9rem; cursor: pointer; }
+.ai-attach:hover { border-color: #3988f6; color: #3988f6; }
+.ai-attach[hidden] { display: none !important; }
+.ai-attach-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px;
+    margin: 4px 6px 0 0; border-radius: 8px; font-size: .74rem;
+    border: 1px solid #cfdcf5; background: #eef5ff; color: #2f6fd0; }
+.ai-attach-chip img { width: 22px; height: 22px; object-fit: cover; border-radius: 4px; }
+.ai-attach-chip b { cursor: pointer; font-weight: 700; opacity: .7; }
+.ai-attach-chip b:hover { opacity: 1; color: #d9453d; }
+.ai-attach-bar { padding: 0 12px; }
+</style>
 </head>
 
 <body>
@@ -2280,7 +2295,7 @@ function webOn() {
                 web: webOn(),
                 effort: EFFORTS[effortIdx()],
                 fast: fastOn(),
-                model: modelKey()
+                model: modelKey(), images: (window.__aiImgs || [])
             })
         };
         if (ctrl) opts.signal = ctrl.signal;
@@ -2769,6 +2784,113 @@ function webOn() {
             status('请求失败，检查网络或稍后再试', '#d9453d');
         });
     });
+})();
+</script>
+
+<script>
+/* AI 页面：上传图片（只在支持看图的模型下显示按钮） */
+(function () {
+    var SCF_BASE = 'https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com';
+    var caps = {};
+    var imgs = [];
+    window.__aiImgs = imgs;
+
+    function mid() {
+        try { return (typeof modelKey === 'function') ? modelKey() : ''; } catch (e) { return ''; }
+    }
+    function canSee() {
+        var k = mid();
+        return !!(caps[k] && caps[k].vision);
+    }
+
+    var row = document.querySelector('.ai-row');
+    if (!row) return;
+
+    var bar = document.createElement('div');
+    bar.className = 'ai-attach-bar';
+    row.parentNode.insertBefore(bar, row);
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ai-attach';
+    btn.id = 'aiAttach';
+    btn.title = '上传图片（当前模型能看图）';
+    btn.textContent = '📎 图片';
+    btn.hidden = true;
+    row.appendChild(btn);
+
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    input.multiple = true;
+    input.style.display = 'none';
+    row.appendChild(input);
+
+    function refresh() {
+        btn.hidden = !canSee();
+        if (btn.hidden && imgs.length) { imgs.length = 0; render(); }
+    }
+
+    function render() {
+        bar.innerHTML = '';
+        imgs.forEach(function (src, i) {
+            var chip = document.createElement('span');
+            chip.className = 'ai-attach-chip';
+            var im = document.createElement('img');
+            im.src = src;
+            var t = document.createElement('span');
+            t.textContent = '图' + (i + 1);
+            var x = document.createElement('b');
+            x.textContent = '×';
+            x.addEventListener('click', function () {
+                imgs.splice(i, 1);
+                render();
+            });
+            chip.appendChild(im);
+            chip.appendChild(t);
+            chip.appendChild(x);
+            bar.appendChild(chip);
+        });
+    }
+
+    btn.addEventListener('click', function () { input.click(); });
+
+    input.addEventListener('change', function () {
+        var files = [].slice.call(input.files || []);
+        input.value = '';
+        files.forEach(function (f) {
+            if (!/^image\//.test(f.type)) return;
+            if (imgs.length >= 3) return;
+            if (f.size > 2 * 1024 * 1024) {
+                alert(f.name + ' 太大了（上限 2 MB）');
+                return;
+            }
+            var fr = new FileReader();
+            fr.onload = function () {
+                imgs.push(String(fr.result));
+                render();
+            };
+            fr.readAsDataURL(f);
+        });
+    });
+
+    fetch(SCF_BASE + '/ping?deep=1').then(function (r) { return r.json(); }).then(function (d) {
+        caps = (d && d.self && d.self.model_caps) || {};
+        refresh();
+    }).catch(function () {});
+
+    setInterval(refresh, 500);
+
+    // 发送后清空（监听发送按钮）
+    document.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t) return;
+        var isSend = (t.id === 'aiSend') || (t.className && String(t.className).indexOf('ai-send') >= 0) ||
+                     (t.textContent && t.textContent.trim() === '发送');
+        if (isSend && imgs.length) {
+            setTimeout(function () { imgs.length = 0; render(); }, 800);
+        }
+    }, true);
 })();
 </script>
 
