@@ -533,10 +533,12 @@
 </tbody></table>
 <p class="pr-note">同一道简单问题的实测完成时间。模型第一次调用可能有冷启动，会慢一些。</p>
 <h2>🎨 图像生成（单独计价，按张收）</h2>
-<p>图像不产生 token，所以<strong>按张计费</strong>，不是按 token 算。提示词最多 300 字，生成失败不扣费。</p>
+<p>图像不产生 token，所以<strong>按张计费</strong>，不是按 token 算。提示词最多 300 字；
+中文会自动翻成英文再画（这几个模型读不懂中文，不翻会画歪），翻译不额外收费。生成失败不扣费。</p>
 <table class="pr-table"><thead><tr><th>模型</th><th>特点</th><th class="c">实测</th><th class="c">单价</th></tr></thead><tbody>
-<tr><td><strong>SDXL Lightning</strong></td><td>字节跳动 · 画面最稳</td><td class="c">8.6 s</td><td class="c"><strong>400 NB / 张</strong></td></tr>
-<tr><td><strong>Dreamshaper 8 LCM</strong></td><td>出图最快 · 便宜</td><td class="c">3.7 s</td><td class="c"><strong>250 NB / 张</strong></td></tr>
+<tr><td><strong>Lucid 高画质</strong></td><td>Leonardo 出品，相片级质感，1120×1120</td><td class="c">9.3 s</td><td class="c"><strong>500 NB / 张</strong></td></tr>
+<tr><td><strong>SDXL 快速</strong></td><td>字节跳动，出图快，适合随手玩</td><td class="c">5.4 s</td><td class="c"><strong>250 NB / 张</strong></td></tr>
+<tr><td><strong>Dreamshaper 风格化</strong></td><td>插画 / 水彩风，便宜</td><td class="c">5.0 s</td><td class="c"><strong>200 NB / 张</strong></td></tr>
 </tbody></table>
 <p class="pr-note">生成后的图片会按屏幕宽度缩放显示；想看原尺寸点「保存原图」下载。</p>
 <h2>扣费规则</h2>

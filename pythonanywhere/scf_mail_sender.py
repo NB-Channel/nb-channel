@@ -1028,7 +1028,7 @@ def _user_content(question):
 
 
 def nim_chat(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
-             effort=None, fast=False, model=None):
+              effort=None, fast=False, model=None, sys_prompt=None):
     """调 NVIDIA NIM。
 
     返回三元组 (answer, reasoning, err)：
@@ -1039,7 +1039,8 @@ def nim_chat(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
     ⚠️ User-Agent 要带 —— 有些网关对空 UA 直接拒。
     """
     _mid = model if model in [x[0] for x in AI_MODELS.values()] else AI_MODEL
-    msgs = [{'role': 'system', 'content': _sys_prompt(site_ctx, db_ctx, web_ctx, fast, _model_label(_mid))}]
+    msgs = [{'role': 'system', 'content': (sys_prompt if sys_prompt else
+            _sys_prompt(site_ctx, db_ctx, web_ctx, fast, _model_label(_mid)))}]
     if history:
         msgs.extend(history)
     msgs.append({'role': 'user', 'content': _user_content(question)})
@@ -2269,8 +2270,13 @@ def _comment_bot_reply_text(question, page_path):
 #  图片不产生 token，所以按「张」从钱包扣 NB。
 # ============================================================
 AI_IMAGE_MODELS = {
-    'sdxl':       ('@cf/bytedance/stable-diffusion-xl-lightning', 'SDXL Lightning', 400),
-    'dreamshaper':('@cf/lykon/dreamshaper-8-lcm',                 'Dreamshaper 8 LCM', 250),
+    # 实测（英文提示词）：
+    #   SDXL-Lightning  5.4s  123KB  够快，画质一般
+    #   Lucid Origin    9.3s  725KB  相片级，明显更好
+    #   Dreamshaper     5.0s  393KB  风格化
+    'sdxl':       ('@cf/bytedance/stable-diffusion-xl-lightning', 'SDXL 快速', 250),
+    'lucid':      ('@cf/leonardo/lucid-origin',                   'Lucid 高画质', 500),
+    'dreamshaper':('@cf/lykon/dreamshaper-8-lcm',                 'Dreamshaper 风格化', 200),
 }
 AI_IMAGE_MAX_PROMPT = 300
 
@@ -2279,6 +2285,43 @@ def _cf_cfg():
     acc = (os.environ.get('CF_ACCOUNT_ID') or '').strip()
     key = (os.environ.get('CF_AI_KEY') or '').strip()
     return acc, key
+
+
+
+# ============================================================
+#  提示词翻译：这几个生图模型都读不懂中文
+#
+#  实测：输入「一个人在喝水」→ SDXL 画出风景照（完全无关）；
+#        输入英文同样意思 → 正确画出喝水的画面。
+#  所以先把中文翻成英文提示词，再交给生图模型。
+#  翻译用便宜的文字模型（Llama 3.3 70B），一次约 100 token。
+# ============================================================
+def _has_cjk(txt):
+    return any('\u4e00' <= ch <= '\u9fff' for ch in (txt or ''))
+
+
+def _translate_prompt(prompt):
+    """中文提示词 → 英文生图提示词。失败就原样返回。"""
+    if not _has_cjk(prompt):
+        return prompt, None
+    sys_q = ('You are a prompt translator for image generation. '
+             'Translate the user text into a SHORT English image prompt. '
+             'Keep concrete visual details (subject, scene, style, lighting, composition). '
+             'Output ONLY the English prompt, no quotes, no explanation, max 60 words.')
+    try:
+        out, _rea, err = nim_chat(prompt, None, None, None, None, 'none', True,
+                                  '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+                                  sys_prompt=sys_q)
+        if err or not out:
+            return prompt, None
+        txt = ' '.join(str(out).strip().split())
+        txt = txt.strip('"\' ').replace('\n', ' ')[:400]
+        if txt and not _has_cjk(txt) and len(txt) > 5:
+            return txt, None
+        return prompt, None
+    except Exception as e:
+        print('[AI-IMG-TR] 翻译失败 %s' % str(e)[:80], flush=True)
+        return prompt, None
 
 
 def gen_image(model_id, prompt, timeout=120):
@@ -2351,7 +2394,11 @@ def api_image():
                             'balance': bal,
                             'message': '生成一张要 %d NB，你现在只有 %d NB' % (price, bal)})
 
-        img, err = gen_image(model_id, prompt)
+        # 中文提示词先翻成英文，否则生图模型基本是瞎画
+        _en, _ = _translate_prompt(prompt)
+        if _en != prompt:
+            print('[AI-IMG-TR] %r -> %r' % (prompt[:40], _en[:80]), flush=True)
+        img, err = gen_image(model_id, _en)
         if err or not img:
             print('[AI-IMG-FAIL] %s -> %s' % (model_id, str(err)[:150]), flush=True)
             return jsonify({'ok': False, 'reason': 'genfail', 'error': str(err)[:200]})
