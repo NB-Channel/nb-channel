@@ -1115,6 +1115,7 @@ def nim_chat(question, history=None, site_ctx=None, db_ctx=None, web_ctx=None,
                   % (_mid, effort), flush=True)
             return nim_chat(question, history, site_ctx, db_ctx, web_ctx,
                             'medium', fast, _mid)
+        _mark_bad(_mid, e.code)
         if e.code in (402, 403, 429, 500, 502, 503, 504) and _fb and _fb != _mid:
             print('[AI-FALLBACK] %s -> %s（HTTP %s）'
                   % (_mid, _fb, e.code), flush=True)
@@ -1244,6 +1245,7 @@ def ping():
             'global': AI_GLOBAL_PER_DAY,
             'model_default': AI_MODEL,
             'models_n': len(AI_MODELS),
+            'fb_cooling': list(_BAD_UNTIL.keys()),
             'model_caps': {k: {'vision': (v[0] in AI_MODEL_VISION),
                               'file': True}
                            for k, v in AI_MODELS.items()},
@@ -1319,13 +1321,74 @@ AI_FALLBACK = {
 AI_FALLBACK_MS = 'minimaxai/minimax-m3.1-flash'
 
 
-def _fallback_model(mid):
-    """出事后该换哪个模型继续。没有可换的返回 None。"""
-    if mid in AI_FALLBACK:
-        return AI_FALLBACK[mid]
+# ============================================================
+#  跨渠道自动降级
+#
+#  实测问题：Cloudflare 免费额度会打光（429）、OpenRouter 免费模型会突然下架（404）。
+#  处理：出事的模型进「冷却名单」（10 分钟），降级时按渠道优先级挑一个还能用的。
+# ============================================================
+_BAD_UNTIL = {}          # mid -> 冷却到期时间戳
+_BAD_SECONDS = 600       # 冷却 10 分钟
+
+# 每个渠道出事后优先换哪：
+#   免费渠道（OpenRouter/Cloudflare）先换到「不用花钱的另一个免费渠道」，
+#   再换魔搭，最后换 NVIDIA（NIM 按请求数计费，留作兜底）。
+FB_CHAIN = {
+    'openrouter': ['@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+                   'deepseek-ai/DeepSeek-V4.1-Flash-1017',
+                   'nvidia/nemotron-3.5-lightning-30b-a3b'],
+    'cloudflare': ['nvidia/nemotron-3.5-lightning:free',
+                   'deepseek-ai/DeepSeek-V4.1-Flash-1017',
+                   'stepfun-ai/step-5-preview'],
+    'modelscope': ['nvidia/nemotron-3.5-lightning-30b-a3b',
+                   '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+                   'minimaxai/minimax-m3.1-flash'],
+    'nvidia':     ['deepseek-ai/DeepSeek-V4.1-Flash-1017',
+                   '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+                   'nvidia/nemotron-3.5-lightning:free'],
+}
+
+
+def _channel_of(mid):
+    if mid in _PROVIDER_OF:
+        return _PROVIDER_OF[mid]
     if mid in MS_MODEL_IDS:
+        return 'modelscope'
+    return 'nvidia'
+
+
+def _usable(mid):
+    """这个模型现在还能不能调：没冷却 + 渠道 Key 在。"""
+    import time as _t
+    if _BAD_UNTIL.get(mid, 0) > _t.time():
+        return False
+    u, k = _model_route(mid)
+    return u is not None and bool(k)
+
+
+def _mark_bad(mid, code):
+    """把它们标记成暂时不可用（429/404/5xx 都算）。"""
+    import time as _t
+    if code in (404, 429, 500, 502, 503, 504, 529):
+        _BAD_UNTIL[mid] = _t.time() + _BAD_SECONDS
+        print('[AI-FB] %s 冷却 %ds（HTTP %s）' % (mid, _BAD_SECONDS, code), flush=True)
+
+
+def _fallback_model(mid):
+    """出事后换哪个模型：按渠道链挑第一个还能用的。没有就 None。"""
+    ch = _channel_of(mid)
+    for cand in FB_CHAIN.get(ch, []):
+        if cand != mid and _usable(cand):
+            print('[AI-FB] %s(%s) -> %s' % (mid, ch, cand), flush=True)
+            return cand
+    # 链条都用不了，退回老逻辑
+    if mid in AI_FALLBACK and _usable(AI_FALLBACK[mid]):
+        return AI_FALLBACK[mid]
+    if mid in MS_MODEL_IDS and _usable(AI_FALLBACK_MS):
         return AI_FALLBACK_MS
     return None
+
+
 
 
 # 哪些模型认第 8 档 ultra（实测：只有 DeepSeek-V4.1 系列）
