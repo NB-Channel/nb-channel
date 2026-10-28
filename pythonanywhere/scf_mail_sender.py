@@ -2628,6 +2628,18 @@ def _api_ai_body():
         return jsonify({'ok': False, 'message': '问得太快了，歇 60 秒再来'})
 
     question = str(data.get('message') or data.get('question') or '').strip()
+
+    # ---- 附带图片（最多 3 张，只收 data:image/*）----
+    _imgs = [u for u in (data.get('images') or [])
+             if isinstance(u, str) and u.startswith('data:image/')][:3]
+    _mid_pref = str(data.get('model') or '').strip()
+    _mid_full = AI_MODELS[_mid_pref][0] if _mid_pref in AI_MODELS else None
+    _can_vis = bool(_mid_full and _mid_full in AI_MODEL_VISION)
+    _tls.images = _imgs if _can_vis else []
+    if _imgs and not _can_vis:
+        return jsonify({'ok': False, 'reason': 'novision',
+                        'message': '当前模型看不了图片，换一个能看图的模型'
+                                   '（带 VL / Vision 字样，或 DeepSeek V4.1 Flash）'})
     if len(question) < 2:
         return jsonify({'ok': False, 'message': '问题太短了'})
 
