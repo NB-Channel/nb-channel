@@ -482,30 +482,14 @@
         return boldify(esc(String(s == null ? '' : s))).replace(/\n/g, '<br>');
     }
     // 正文按空行分段；段首写 :: 表示这段不缩进（对应旧版的 <p class="noindent">）
-            function linkify(s) {
-        // 报纸正文链接化（照旧版 npLinkify 的规则）：
-        //   ① http(s)://…  → 新窗口打开
-        //   ② xxx.html     → 站内页面，本窗口打开
-        // 注意：s 必须是【已经 esc 过】的文本，否则会注入 HTML
-        var safe = String(s || '');
-        return safe.replace(
-            /(https?:\/\/[^\s<>"']+)|((?:[\w\u4e00-\u9fa5][\w\u4e00-\u9fa5 .\-]*?)\.html\b)/g,
-            function (all, url, page) {
-                var href = url || page;
-                return '<a class="np-link" href="' + href + '"' +
-                       (url ? ' target="_blank" rel="noopener noreferrer"' : '') +
-                       '>' + href + '</a>';
-            });
-    }
-
-function paras(txt) {
+        function paras(txt) {
         return String(txt || '').split(/\n\s*\n/).filter(function (x) { return x.trim(); })
             .map(function (p) {
                 p = p.trim();
                 var noind = /^::\s*/.test(p);
                 if (noind) p = p.replace(/^::\s*/, '');
                 return '<p' + (noind ? ' class="noindent"' : '') + '>' +
-                       linkify(boldify(esc(p))).replace(/\n/g, '<br>') + '</p>';
+                       npLinkify(p).replace(/\n/g, '<br>') + '</p>';
             }).join('');
     }
 
