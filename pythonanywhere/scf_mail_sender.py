@@ -1384,7 +1384,6 @@ _PROVIDER_OF = {
     'nvidia/nemotron-3.5-super-vl:free': 'openrouter',
     'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 'openrouter',
     'nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter',
-    'nvidia/nemotron-3-super-120b-a12b:free': 'openrouter',
     'nvidia/nemotron-3.5-lightning:free': 'openrouter',
     'cohere/north-mini-code:free': 'openrouter',
     'dots-studio/dots-3-note-preview:free': 'openrouter',
@@ -1452,7 +1451,6 @@ AI_MODELS = {
     'orvl':     ('nvidia/nemotron-3.5-super-vl:free',      'Nemotron 3.5 VL'),
     'oromni':   ('nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', 'Nemotron 3 Omni'),
     'orultra':  ('nvidia/nemotron-3-ultra-550b-a55b:free', 'Nemotron 3 Ultra 550B'),
-    'orsuper':  ('nvidia/nemotron-3-super-120b-a12b:free', 'Nemotron 3 Super 120B'),
     'orlight':  ('nvidia/nemotron-3.5-lightning:free',     'Nemotron 3.5 Lightning · OR'),
     'orcode':   ('cohere/north-mini-code:free',            'North Mini Code'),
     'ordots':   ('dots-studio/dots-3-note-preview:free',   'Dots 3 Note'),
@@ -1500,7 +1498,6 @@ AI_PRICE_MULT = {
     'nvidia/nemotron-3.5-super-vl:free':       1.2,
     'Qwen/Qwen3.8-Flash-Next':                 1.2,
     'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': 1.2,
-    'nvidia/nemotron-3-super-120b-a12b:free':  1.2,
     '@cf/openai/gpt-oss-120b':                 1.2,
     # ── 标准 1.0× = 200 NB/1K ──
     'nvidia/nemotron-3.5-lightning:free':      1.0,
