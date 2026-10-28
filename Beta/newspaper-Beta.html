@@ -1721,9 +1721,21 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
                 return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
             });
         }
-        function linkify(s) {
-            return s.replace(/(https?:\/\/[^\s<>"']+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:var(--brand); text-decoration:underline;">$1</a>');
-        }
+            function linkify(s) {
+        // 报纸正文链接化（照旧版 npLinkify 的规则）：
+        //   ① http(s)://…  → 新窗口打开
+        //   ② xxx.html     → 站内页面，本窗口打开
+        // 注意：s 必须是【已经 esc 过】的文本，否则会注入 HTML
+        var safe = String(s || '');
+        return safe.replace(
+            /(https?:\/\/[^\s<>"']+)|((?:[\w\u4e00-\u9fa5][\w\u4e00-\u9fa5 .\-]*?)\.html\b)/g,
+            function (all, url, page) {
+                var href = url || page;
+                return '<a class="np-link" href="' + href + '"' +
+                       (url ? ' target="_blank" rel="noopener noreferrer"' : '') +
+                       '>' + href + '</a>';
+            });
+    }
         fetch('https://pbaafgjkwdbwcmsikcmg.supabase.co/rest/v1/admin_config?select=value&key=eq.announcement', {
             headers: {
                 'apikey': 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg',
