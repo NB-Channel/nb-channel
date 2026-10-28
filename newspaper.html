@@ -341,6 +341,10 @@
 .np-link { color: #3988f6; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
 .np-link:hover { color: #1f6fd0; }
 </style>
+<style>
+/* 标题对齐：无论后台填了什么前导空格，都不带缩进、不偏移 */
+.np-h1, .np-h2, .np-h1-sub, .np-sec-title { text-indent: 0 !important; }
+</style>
 </head>
 <body>
 <script>(function(){if(localStorage.getItem('theme')==='dark')document.body.classList.add('dark-mode');})();</script>
@@ -468,6 +472,11 @@
     function esc(s) {
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // 去掉标题/副标题的首尾空白（含全角空格 \u3000），避免标题看起来「偏了」
+    function trimSp(x) {
+        return String(x == null ? '' : x).replace(/^[\s\u3000]+|[\s\u3000]+$/g, '');
     }
     // 正文/标题里的行内标记。旧版是直接写 <b> / <br>，改数据驱动后正文是纯文本，
     // 所以给两个等价写法：
@@ -766,8 +775,8 @@
         // ── 头条 ──
         if (lead) {
             h += '<article class="np-lead">' +
-                   '<h2 class="np-h1">' + npTxt(lead.headline) + '</h2>' +
-                   (lead.subhead ? '<div class="np-h1-sub">' + esc(lead.subhead) + '</div>' : '') +
+                   '<h2 class="np-h1">' + npTxt(trimSp(lead.headline)) + '</h2>' +
+                   (lead.subhead ? '<div class="np-h1-sub">' + esc(trimSp(lead.subhead)) + '</div>' : '') +
                    '<div class="np-byline">本报记者 · NB频道唯一正式员工 · 报道</div>' +
                    '<div class="np-cols">' + paras(lead.body) + '</div>' +
                    figures.map(figureHtml).join('') +
@@ -779,8 +788,8 @@
         // ── 次条 ──
         second.forEach(function (a) {
             h += '<article class="np-second">' +
-                   '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(a.tag) + '</span>' : '') +
-                     npTxt(a.headline) + '</h3>' +
+                   '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(trimSp(a.tag)) + '</span>' : '') +
+                     npTxt(trimSp(a.headline)) + '</h3>' +
                    (a.body ? '<div class="np-cols">' + paras(a.body) + '</div>' : '') +
                  '</article>';
         });
@@ -880,7 +889,7 @@
         if (looksImg) {
             return '<figure class="np-figure">' +
                      '<img class="np-figimg" src="' + esc(src) + '" alt="' +
-                       esc(a.headline || '插图') + '" loading="lazy">' +
+                       esc(trimSp(a.headline) || '插图') + '" loading="lazy">' +
                      (a.headline ? '<figcaption>' + esc(a.headline) + '</figcaption>' : '') +
                    '</figure>';
         }
@@ -908,7 +917,7 @@
                 // 插图（假图片）：headline 是图注，body 是框里那句话
                 h += '<figure class="np-figure">' +
                        '<div class="box">' +
-                         (a.tag ? '<span class="tag">' + esc(a.tag) + '</span><br>' : '') +
+                         (a.tag ? '<span class="tag">' + esc(trimSp(a.tag)) + '</span><br>' : '') +
                          esc(a.body || '') +
                        '</div>' +
                        (a.headline ? '<figcaption>' + esc(a.headline) + '</figcaption>' : '') +
@@ -918,10 +927,10 @@
                      '<div class="np-service"><pre>' + npLinkify(a.body) + '</pre></div>';
             } else if (a.subhead) {
                 h += '<h2 class="np-h1">' + esc(a.headline) + '</h2>' +
-                     '<div class="np-hsub">' + esc(a.subhead) + '</div>' +
+                     '<div class="np-hsub">' + esc(trimSp(a.subhead)) + '</div>' +
                      '<div class="np-cols">' + paras(a.body) + '</div>';
             } else {
-                h += '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(a.tag) + '</span>' : '') +
+                h += '<h3 class="np-h2">' + (a.tag ? '<span class="tag">' + esc(trimSp(a.tag)) + '</span>' : '') +
                      esc(a.headline) + '</h3>' +
                      (a.body ? '<div class="np-cols">' + paras(a.body) + '</div>' : '');
             }
