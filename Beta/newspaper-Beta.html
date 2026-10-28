@@ -1721,139 +1721,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
                 return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
             });
         }
-            function linkify(s) {
-        // 报纸正文链接化（照旧版 npLinkify 的规则）：
-        //   ① http(s)://…  → 新窗口打开
-        //   ② xxx.html     → 站内页面，本窗口打开
-        // 注意：s 必须是【已经 esc 过】的文本，否则会注入 HTML
-        var safe = String(s || '');
-        return safe.replace(
-            /(https?:\/\/[^\s<>"']+)|((?:[\w\u4e00-\u9fa5][\w\u4e00-\u9fa5 .\-]*?)\.html\b)/g,
-            function (all, url, page) {
-                var href = url || page;
-                return '<a class="np-link" href="' + href + '"' +
-                       (url ? ' target="_blank" rel="noopener noreferrer"' : '') +
-                       '>' + href + '</a>';
-            });
-    }
-        fetch('https://pbaafgjkwdbwcmsikcmg.supabase.co/rest/v1/admin_config?select=value&key=eq.announcement', {
-            headers: {
-                'apikey': 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg',
-                'Authorization': 'Bearer sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg'
-            }
-        })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (rows) {
-            if (!rows || !rows.length) return;
-            var raw = String(rows[0].value || '').trim();
-            if (!raw) return;
-            bar.style.display = 'flex';
-            var one = '<span class="ba-item">' + linkify(escA(raw)) + '</span>';
-            track.innerHTML = one;
-            var item = track.querySelector('.ba-item');
-            var itemW = item ? item.offsetWidth : 0;
-            if (itemW <= 0) return;
-            var wrapEl = bar.querySelector('.ba-track-wrap');
-            var barW = wrapEl ? wrapEl.clientWidth : 0;
-            var copies = Math.max(2, Math.ceil(barW / itemW) + 1);
-            var all = '';
-            for (var ci = 0; ci < copies; ci++) all += '<span class="ba-item">' + linkify(escA(raw)) + '</span>';
-            track.innerHTML = all;
-            var dur = Math.max(8, itemW / 45);
-            if (track.animate) {
-                track.animate(
-                    [{ transform: 'translateX(0)' }, { transform: 'translateX(-' + itemW + 'px)' }],
-                    { duration: dur * 1000, iterations: Infinity, easing: 'linear' }
-                );
-            }
-        })
-        .catch(function () {});
-    })();
-</script>
-
-<script>
-    // ===== 会话令牌自动注入(安全修复):高危 RPC 自动附带 nb_session =====
-    (function () {
-        function patch(sb) {
-            if (!sb || sb.__secPatched) return;
-            sb.__secPatched = true;
-            var names = ['update_bio', 'bankrupt_company', 'transfer_nb', 'claim_redpacket', 'do_check_in', 'do_lottery', 'buy_shop_item', 'sell_shop_item', 'use_shop_item', 'set_item_settings', 'get_bank_account', 'get_bank_logs', 'get_my_items', 'get_my_titles', 'sync_my_titles', 'get_my_achievements', 'check_achievements', 'get_my_lottery_records', 'get_my_transfers', 'get_checkin_status'];
-            var orig = sb.rpc.bind(sb);
-            sb.rpc = function (fn, args) {
-                if (names.indexOf(fn) !== -1) {
-                    args = Object.assign({}, args || {});
-                    var t = null;
-                    try { t = localStorage.getItem('nb_session'); } catch (e) {}
-                    args.p_session = t;
-                }
-                return orig(fn, args);
-            };
-        }
-        var cands = [];
-        try { if (window.supabaseClient) cands.push(window.supabaseClient); } catch (e) {}
-        try { if (window.__nbSupabase) cands.push(window.__nbSupabase); } catch (e) {}
-        try { if (typeof supabaseClient !== 'undefined') cands.push(supabaseClient); } catch (e) {}
-        cands.forEach(patch);
-    })();
-</script>
-
-
-<script>
-    // ===== 安全强制重登:本地有用户信息但无会话令牌 => 视为未登录 =====
-    (function () {
-        try {
-            var u = localStorage.getItem('nb_user');
-            var s = localStorage.getItem('nb_session');
-            if (u && !s) {
-                localStorage.removeItem('nb_user');
-                location.reload();
-            }
-        } catch (e) {}
-    })();
-</script>
-
-
-<script>
-    // ===== 余额自动刷新补丁(v3 后改用 get_my_balance RPC) =====
-    (function () {
-        function applyBal() {
-            var u = null, t = null;
-            try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); t = localStorage.getItem('nb_session'); } catch (e) {}
-            if (!u || !u.id || !t) return;
-            var el = document.getElementById('balanceDisplay') ||
-                     document.getElementById('balanceSpan') ||
-                     document.getElementById('tradeBalance');
-            if (!el) return;
-            var sb = null;
-            try { if (window.supabaseClient) sb = window.supabaseClient; } catch (e) {}
-            try { if (!sb && typeof supabaseClient !== 'undefined') sb = supabaseClient; } catch (e) {}
-            if (!sb) return;
-            sb.rpc('get_my_balance', { p_user_id: u.id, p_session: t }).then(function (r) {
-                if (r && r.data && r.data.ok && el) el.textContent = Number(r.data.balance).toLocaleString('zh-CN');
-            }).catch(function () {});
-        }
-        var tries = 0;
-        (function loop() { applyBal(); if (++tries < 6) setTimeout(loop, 1300); })();
-    })();
-</script>
-
-
-<script>
-// ===== APP 自更新(仅 APP 内生效) =====
-(function () {
-    var ua = navigator.userAgent || '';
-    var m = /NBChannelApp\/([0-9.]+)/i.exec(ua);
-    if (!m) return;                       // 不是 APP 环境,不打扰网页用户
-    var localVer = m[1];
-    var APK = '/download/NBChannel.apk';
-
-    function cmp(a, b) {
-        var x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
-        for (var i = 0; i < 3; i++) { var p = x[i] || 0, q = y[i] || 0; if (p !== q) return p - q; }
-        return 0;
-    }
-
-    var checking = false;
+            var checking = false;
     function check(manual) {
         if (checking) return;
         checking = true;
@@ -2103,7 +1971,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
                 var noind = /^::\s*/.test(p);
                 if (noind) p = p.replace(/^::\s*/, '');
                 return '<p' + (noind ? ' class="noindent"' : '') + '>' +
-                       linkify(boldify(esc(p))).replace(/\n/g, '<br>') + '</p>';
+                       npLinkify(p).replace(/\n/g, '<br>') + '</p>';
             }).join('');
     }
 
