@@ -4294,7 +4294,11 @@ function webOn() {
     window.__aiImgs = imgs;
 
     function mid() {
-        try { return (typeof modelKey === 'function') ? modelKey() : ''; } catch (e) { return ''; }
+        // ⚠️ modelKey() 在 AI 主脚本的闭包里，这里够不着 —— 直接读它用的同一个 localStorage 键
+        try {
+            var v = localStorage.getItem('nb_ai_model');
+            return v || 'minimax';
+        } catch (e) { return 'minimax'; }
     }
     function canSee() {
         var k = mid();
@@ -4377,7 +4381,12 @@ function webOn() {
         refresh();
     }).catch(function () {});
 
-    setInterval(refresh, 500);
+    setInterval(refresh, 400);
+    // 点模型列表时立刻刷新（不等定时器）
+    document.addEventListener('click', function (e) {
+        var t = e.target;
+        if (t && t.closest && t.closest('.ai-model-list')) setTimeout(refresh, 30);
+    }, true);
 
     // 发送后清空（监听发送按钮）
     document.addEventListener('click', function (e) {
