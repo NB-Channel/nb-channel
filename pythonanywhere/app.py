@@ -407,6 +407,50 @@ def api_bili_fans():
     return _err('UPSTREAM_ERROR', 'B站接口暂时不可用: %s' % err, 502)
 
 
+
+# ============================================================
+#  /__sync —— 让 PythonAnywhere 跟着 GitHub 自动更新
+#
+#  问题：这里是个独立部署，GitHub 推了代码它不会自己拉。
+#  做法：GitHub Actions 每次 push 完，带密钥敲一下这个地址，
+#       这边执行 git pull --rebase --autostash，页面就更新了。
+#
+#  需要的环境变量（PythonAnywhere → Web → Environment variables）：
+#      PA_SYNC_KEY   随便一串长随机字符（跟 GitHub Secret 里填一致）
+#      PA_REPO_DIR   仓库目录，默认 /home/nbchannel/nb-channel
+# ============================================================
+@app.route('/__sync', methods=['GET', 'POST'])
+def _pa_sync():
+    import os as _os
+    import subprocess as _sp
+    want = (_os.environ.get('PA_SYNC_KEY') or '').strip()
+    got = (request.args.get('k') or request.headers.get('X-Sync-Key') or '').strip()
+    if not want or len(want) < 8:
+        return jsonify({'ok': False, 'reason': 'no-key-configured'}), 500
+    if got != want:
+        return jsonify({'ok': False, 'reason': 'bad-key'}), 403
+
+    repo = (_os.environ.get('PA_REPO_DIR') or '/home/nbchannel/nb-channel').strip()
+    if not _os.path.isdir(repo):
+        return jsonify({'ok': False, 'reason': 'no-repo', 'dir': repo}), 500
+
+    try:
+        out = _sp.run(['git', '-C', repo, 'pull', '--rebase', '--autostash', 'origin', 'main'],
+                      capture_output=True, timeout=120)
+        txt = (out.stdout or b'').decode('utf-8', 'ignore')[-1200:]
+        err = (out.stderr or b'').decode('utf-8', 'ignore')[-600:]
+        head = _sp.run(['git', '-C', repo, 'rev-parse', '--short', 'HEAD'],
+                       capture_output=True, timeout=30)
+        rev = (head.stdout or b'').decode('utf-8', 'ignore').strip()
+        ok = (out.returncode == 0)
+        print('[PA-SYNC] rc=%s rev=%s' % (out.returncode, rev), flush=True)
+        return jsonify({'ok': ok, 'returncode': out.returncode, 'revision': rev,
+                        'out': txt, 'err': err})
+    except Exception as e:
+        return jsonify({'ok': False, 'reason': 'error',
+                        'error': '%s: %s' % (type(e).__name__, str(e)[:200])}), 500
+
+
 @app.route('/health')
 def health():
     return jsonify({'ok': True, 'time': datetime.datetime.now().isoformat()})
