@@ -1355,6 +1355,57 @@ html { -webkit-text-size-adjust: 100%; }
 <tr><td>Qwen2.5 Coder 32B</td><td class="c"><span class="mx-sec mx-fast">1.8 s</span></td><td class="c"><span class="mx-ctx-s">≥13k</span></td><td class="c"><span class="mx-dot">·</span></td><td class="c"><span class="mx-spec mx-sp-code">代码</span></td><td class="c"><span class="mx-quota">免费额度</span></td></tr>
 </tbody></table>
 <p class="pr-note">「上下文」是我们实测跑出来的下限（发超长输入看它能吃多少），「≥」表示至少这么大；OpenRouter 那几个按官方公布的窗口标。「看图」打 ✓ 的是真能读图的，· 表示纯文本。「专精」只标出专门为代码 / 推理 / 长文训练过的；「通用」表示没有特别专精，写代码也一样能写。「首问实测」是同一条简单问题的耗时，网络不同会有波动。</p>
+<h2>高考真题实测（15 道）</h2>
+<p>题库来源：<strong>1984 年全国理科数学</strong>（那一年数学平均 26 分）、<strong>1979 年全国化学</strong>（平均 19 分、及格率 0.26 %）、<strong>2003 年全国理综物理</strong>。每题都是可自动判分的短答案题，温度 0、单轮、判分归一化比对。</p>
+<svg viewBox="0 0 1060 396" width="100%" style="max-width:1060px;font-family:system-ui,sans-serif">
+<text x="270" y="26" font-size="12.5" fill="#6b7280">竖条长度 = 15 道高考真题的通过数 · 右侧是该档位的每任务费用与耗时</text>
+<text x="258" y="60" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · low</text>
+<rect x="270" y="48" width="500.0" height="17" rx="4" fill="#1a9a52" opacity=".88"/>
+<text x="778.0" y="60" font-size="11.5" font-weight="600" fill="#111827">15/15</text>
+<text x="810" y="60" font-size="11" fill="#6b7280">109.1 NB · 2.56s · 363.5 tok</text>
+<text x="258" y="90" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · medium</text>
+<rect x="270" y="78" width="466.7" height="17" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="744.7" y="90" font-size="11.5" font-weight="600" fill="#111827">14/15</text>
+<text x="810" y="90" font-size="11" fill="#6b7280">110.3 NB · 4.98s · 367.6 tok</text>
+<text x="258" y="120" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · high</text>
+<rect x="270" y="108" width="466.7" height="17" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="744.7" y="120" font-size="11.5" font-weight="600" fill="#111827">14/15</text>
+<text x="810" y="120" font-size="11" fill="#6b7280">143.4 NB · 4.23s · 477.9 tok</text>
+<text x="258" y="150" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · low</text>
+<rect x="270" y="138" width="433.3" height="17" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="711.3" y="150" font-size="11.5" font-weight="600" fill="#111827">13/15</text>
+<text x="810" y="150" font-size="11" fill="#6b7280">218.3 NB · 11.13s · 545.8 tok</text>
+<text x="258" y="180" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · medium</text>
+<rect x="270" y="168" width="433.3" height="17" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="711.3" y="180" font-size="11.5" font-weight="600" fill="#111827">13/15</text>
+<text x="810" y="180" font-size="11" fill="#6b7280">268.6 NB · 11.66s · 671.5 tok</text>
+<text x="258" y="210" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · high</text>
+<rect x="270" y="198" width="433.3" height="17" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="711.3" y="210" font-size="11.5" font-weight="600" fill="#111827">13/15</text>
+<text x="810" y="210" font-size="11" fill="#6b7280">278.9 NB · 11.83s · 697.3 tok</text>
+<text x="258" y="240" font-size="12" fill="#374151" text-anchor="end">Nemotron 3 Ultra 550B · low</text>
+<rect x="270" y="228" width="433.3" height="17" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="711.3" y="240" font-size="11.5" font-weight="600" fill="#111827">13/15</text>
+<text x="810" y="240" font-size="11" fill="#6b7280">333.3 NB · 26.86s · 833.2 tok</text>
+<text x="258" y="270" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · high</text>
+<rect x="270" y="258" width="400.0" height="17" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="678.0" y="270" font-size="11.5" font-weight="600" fill="#111827">12/15</text>
+<text x="810" y="270" font-size="11" fill="#6b7280">211.6 NB · 12.19s · 529.0 tok</text>
+<text x="258" y="300" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · low</text>
+<rect x="270" y="288" width="366.7" height="17" rx="4" fill="#f08a1d" opacity=".88"/>
+<text x="644.7" y="300" font-size="11.5" font-weight="600" fill="#111827">11/15</text>
+<text x="810" y="300" font-size="11" fill="#6b7280">186.2 NB · 10.79s · 465.4 tok</text>
+<text x="258" y="330" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · medium</text>
+<rect x="270" y="318" width="366.7" height="17" rx="4" fill="#f08a1d" opacity=".88"/>
+<text x="644.7" y="330" font-size="11.5" font-weight="600" fill="#111827">11/15</text>
+<text x="810" y="330" font-size="11" fill="#6b7280">218.6 NB · 13.57s · 546.4 tok</text>
+<text x="258" y="360" font-size="12" fill="#374151" text-anchor="end">Nemotron 3.5 VL · low</text>
+<rect x="270" y="348" width="333.3" height="17" rx="4" fill="#f08a1d" opacity=".88"/>
+<text x="611.3" y="360" font-size="11.5" font-weight="600" fill="#111827">10/15</text>
+<text x="810" y="360" font-size="11" fill="#6b7280">191.5 NB · 17.84s · 797.9 tok</text>
+</svg>
+<p class="pr-note">⚠️ 只列出跑通的组合：Cloudflare（当天 1 万免费额度用完）、魔搭部分模型（魔粒额度用完）、以及超时的配置没有数据。同一配置重复跑会有 ±2 题的波动，看趋势，别当排名定论。</p>
+
 <h2>速度对比（实测耗时，越短越快）</h2>
 <table class="pr-table"><thead><tr><th>模型</th><th class="c">秒</th><th>速度条</th></tr></thead><tbody>
 <tr><td>Llama 3.3 70B</td><td class="c" style="color:#1a9a52;font-weight:600">1.1</td><td><div class="pr-bar fast"><i style="width:10%"></i></div></td></tr>
