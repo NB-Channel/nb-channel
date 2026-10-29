@@ -885,6 +885,17 @@ body.dark-mode .ai-notice.is-warn { color: #ff9c8a; }
 .ai-attach-chip b:hover { opacity: 1; color: #d9453d; }
 .ai-attach-bar { padding: 0 12px; }
 </style>
+<style>
+@media (max-width: 560px) {
+    .ai-draw { padding: 12px 10px 16px; }
+    .ai-draw-input { min-height: 70px; font-size: 16px; }
+    .ai-draw-models { gap: 6px; }
+    .ai-draw-m { font-size: .76rem; padding: 5px 8px; }
+    .ai-draw-go { width: 100%; }
+    .ai-draw-out img { max-width: 100%; height: auto; }
+    .ai-tabbtn { padding: 8px 12px; font-size: .86rem; }
+}
+</style>
 </head>
 
 <body>
@@ -2691,6 +2702,13 @@ function webOn() {
         if (drawEl) drawEl.hidden = !isDraw;
         if (isDraw && !loaded) { loaded = true; loadModels(); }
     }
+    // 手机/书签可以直接用 ai.html#draw 打开画图
+    function applyHash() {
+        if (location.hash === '#draw') setTab('draw');
+    }
+    window.addEventListener('hashchange', applyHash);
+    setTimeout(applyHash, 300);
+
     bar.addEventListener('click', function (e) {
         var t = e.target.getAttribute && e.target.getAttribute('data-tab');
         if (t) setTab(t);
