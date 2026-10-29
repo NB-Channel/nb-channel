@@ -2820,7 +2820,23 @@ function webOn() {
     btn.title = '上传图片（当前模型能看图）';
     btn.textContent = '📎 图片';
     btn.hidden = true;
-    row.appendChild(btn);
+    // 放到「联网搜索」按钮右边；找不到就放到行尾
+    (function () {
+        var target = null;
+        var kids = [].slice.call(row.children || []);
+        for (var i = 0; i < kids.length; i++) {
+            var el = kids[i];
+            if (!el || el === btn) continue;
+            var txt = (el.textContent || '').replace(/\s/g, '');
+            if (txt.indexOf('联网搜索') >= 0) { target = el; break; }
+        }
+        if (target && target.parentNode) {
+            target.parentNode.insertBefore(btn, target.nextSibling);
+            btn.style.marginLeft = '6px';
+        } else {
+            row.appendChild(btn);
+        }
+    })();
 
     var input = document.createElement('input');
     input.type = 'file';
