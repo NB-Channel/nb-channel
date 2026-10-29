@@ -2356,6 +2356,33 @@ def _cf_cfg():
 #  所以先把中文翻成英文提示词，再交给生图模型。
 #  翻译用便宜的文字模型（Llama 3.3 70B），一次约 100 token。
 # ============================================================
+
+# ============================================================
+#  生图安全
+#
+#  实测教训：输入「一个人在喝水」，模型画出了赤裸上身的画面。
+#  这几个生图模型对「人」几乎没有默认着装约束，必须自己加。
+#    · 提示词末尾统一追加「穿着整齐 / 适合工作场合」类约束
+#    · 命中敏感词的直接拒绝，不花额度也不扣费
+# ============================================================
+AI_IMG_SAFE_SUFFIX = (', fully clothed in casual clothing, modest outfit, '
+                      'safe for work, family friendly, no nudity')
+
+AI_IMG_BLOCK_WORDS = (
+    '裸', '赤裸', '全裸', '裸体', 'luo', 'nude', 'naked', 'nsfw', 'porn',
+    '色情', '情色', '性爱', '做爱', 'sexy nude', 'topless', 'undress',
+    '内衣模特', '成人内容', 'hentai', 'r18', '18禁',
+)
+
+
+def _img_blocked(prompt):
+    """提示词里有没有明显不该画的词。命中返回那个词，否则 None。"""
+    low = str(prompt or '').lower()
+    for w in AI_IMG_BLOCK_WORDS:
+        if w in low:
+            return w
+    return None
+
 def _has_cjk(txt):
     return any('\u4e00' <= ch <= '\u9fff' for ch in (txt or ''))
 
@@ -2458,6 +2485,12 @@ def api_image():
         _en, _ = _translate_prompt(prompt)
         if _en != prompt:
             print('[AI-IMG-TR] %r -> %r' % (prompt[:40], _en[:80]), flush=True)
+        _blocked = _img_blocked(prompt) or _img_blocked(_en)
+        if _blocked:
+            print('[AI-IMG-BLOCK] 命中敏感词 %r，拒绝生成' % _blocked, flush=True)
+            return jsonify({'ok': False, 'reason': 'blocked',
+                            'message': '这个描述画不了，换个说法试试'})
+        _en = (_en or prompt).strip() + AI_IMG_SAFE_SUFFIX
         img, err = gen_image(model_id, _en)
         if err or not img:
             print('[AI-IMG-FAIL] %s -> %s' % (model_id, str(err)[:150]), flush=True)

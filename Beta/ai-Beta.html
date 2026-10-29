@@ -4190,6 +4190,13 @@ function webOn() {
         if (drawEl) drawEl.hidden = !isDraw;
         if (isDraw && !loaded) { loaded = true; loadModels(); }
     }
+    // 手机/书签可以直接用 ai.html#draw 打开画图
+    function applyHash() {
+        if (location.hash === '#draw') setTab('draw');
+    }
+    window.addEventListener('hashchange', applyHash);
+    setTimeout(applyHash, 300);
+
     bar.addEventListener('click', function (e) {
         var t = e.target.getAttribute && e.target.getAttribute('data-tab');
         if (t) setTab(t);
