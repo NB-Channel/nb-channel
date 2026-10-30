@@ -2518,6 +2518,55 @@ def api_image():
                         'error': '%s: %s' % (type(e).__name__, str(e)[:200])})
 
 
+
+# ============================================================
+#  /__syncblock —— 从 GitHub 拉一次性邮箱域名列表，写进数据库
+#
+#  列表来源（社区持续维护，9200+ 域名）：
+#    https://raw.githubusercontent.com/disposable-email-domains/#        disposable-email-domains/master/disposable_email_blocklist.conf
+#
+#  鉴权：MAIL_SECRET（跟其它管理接口一样）
+#  调用：https://<函数URL>/__syncblock?k=<MAIL_SECRET>
+# ============================================================
+BLOCKLIST_URL = ('https://raw.githubusercontent.com/disposable-email-domains/'
+                 'disposable-email-domains/master/disposable_email_blocklist.conf')
+
+
+@app.route('/__syncblock', methods=['GET', 'POST'])
+def _sync_blocklist():
+    if not MAIL_SECRET:
+        return jsonify({'ok': False, 'reason': 'no-secret'}), 500
+    got = (request.args.get('k') or request.headers.get('X-Sync-Key') or '').strip()
+    if got != MAIL_SECRET:
+        return jsonify({'ok': False, 'reason': 'bad-key'}), 403
+    try:
+        req = urllib.request.Request(BLOCKLIST_URL, headers={'User-Agent': 'NB-Channel/1.0'})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            body = r.read().decode('utf-8', 'ignore')
+        doms = []
+        for line in body.splitlines():
+            line = line.strip().lower()
+            if not line or line.startswith('#'):
+                continue
+            doms.append(line)
+        print('[BLOCKLIST] 拉到 %d 个域名' % len(doms), flush=True)
+
+        total = 0
+        for i in range(0, len(doms), 500):
+            chunk = doms[i:i + 500]
+            d = supa_rpc('admin_import_banned_domains',
+                         {'p_domains': chunk, 'p_secret': MAIL_SECRET})
+            if d.get('ok'):
+                total += 1
+            else:
+                print('[BLOCKLIST] 批次 %d 失败：%s' % (i // 500, str(d)[:200]), flush=True)
+        return jsonify({'ok': True, 'fetched': len(doms), 'batches': total})
+    except Exception as e:
+        print('[BLOCKLIST-ERR] %s: %s' % (type(e).__name__, str(e)[:200]), flush=True)
+        return jsonify({'ok': False, 'reason': 'error',
+                        'error': '%s: %s' % (type(e).__name__, str(e)[:200])}), 500
+
+
 @app.route('/api/comment_bot', methods=['POST', 'OPTIONS', 'GET'])
 def api_comment_bot():
     if request.method == 'OPTIONS':
