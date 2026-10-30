@@ -409,7 +409,7 @@ def api_bili_fans():
 
 
 # ============================================================
-#  /__sync —— 让 PythonAnywhere 跟着 GitHub 自动更新
+#  /__sync —— 手动兜底（正式同步走 /webhook；这个只在 webhook 出问题时用）
 #
 #  问题：这里是个独立部署，GitHub 推了代码它不会自己拉。
 #  做法：GitHub Actions 每次 push 完，带密钥敲一下这个地址，
@@ -1060,7 +1060,14 @@ def github_webhook():
         log_path = os.path.join('/tmp', log_name)
         try:
             with open(log_path, 'a') as log:
-                subprocess.Popen(['git', '-C', d, 'pull'], stdout=log, stderr=log, cwd=d)
+                # ⚠️ 用 rebase + autostash：强推（force push）之后普通 pull 会直接失败，
+                #    这正是之前「网站一直不更新」的原因。
+                log.write('\n=== %s 开始同步 %s ===\n'
+                          % (datetime.datetime.now().isoformat(), d))
+                log.flush()
+                subprocess.Popen(
+                    ['git', '-C', d, 'pull', '--rebase', '--autostash', 'origin', 'main'],
+                    stdout=log, stderr=log, cwd=d)
             print('[webhook] 已在后台触发 git pull: %s' % d)
         except Exception as e:
             print('[webhook] 触发失败 %s: %s' % (d, e))
