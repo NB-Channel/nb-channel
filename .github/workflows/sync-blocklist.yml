@@ -11,7 +11,8 @@ jobs:
     steps:
       - name: 拉列表并写进数据库
         env:
-          MAIL_SECRET: ${{ secrets.MAIL_SECRET }}
+          # GitHub 里这个 Secret 叫 MAIL_SECRET2，也兼容叫 MAIL_SECRET 的情况
+          MAIL_SECRET: ${{ secrets.MAIL_SECRET2 || secrets.MAIL_SECRET }}
         run: |
           if [ -z "$MAIL_SECRET" ]; then
             echo "没有配 MAIL_SECRET，跳过"
