@@ -150,7 +150,8 @@ def _rt_check(key, limit, window):
 
 # 发码密钥。数据库那边开关打开后，不带这个密钥的 store_email_code 调用一律被拒。
 # 密钥只在环境变量里，不写死在代码里（这个文件在公开仓库中）。
-MAIL_SECRET = os.environ.get('MAIL_SECRET', '').strip()
+# MAIL_SECRET 是主名字；兼容历史上被改名成 MAIL_SECRET2 的情况
+MAIL_SECRET = (_env_str('MAIL_SECRET', '') or _env_str('MAIL_SECRET2', '')).strip()
 
 
 def supa_rpc(fn, params):
