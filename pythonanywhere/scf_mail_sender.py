@@ -3298,3 +3298,53 @@ def _api_ai_body():
         # 内测期间为 true —— 前端可以显示一个「内测」角标
         'admin': is_admin,
     })
+
+
+# ============================================================
+#  密钥分角色（拆钥匙）
+#
+#  原来一把 MAIL_SECRET 管全部：发码 / 钱包 / 评论机器人 / 黑名单。
+#  一把泄露 = 全线沦陷。现在分三类：
+#      发码、登录查询      → MAIL_SECRET
+#      评论机器人          → BOT_SECRET   （没配就退回 MAIL_SECRET）
+#      钱包 / AI 用量 / 黑名单 → ADMIN_SECRET （同上）
+#
+#  实现方式：不逐个改调用点，而是在 supa_rpc 外面包一层，
+#  按 RPC 名字把 p_secret 换成对应的那把。
+# ============================================================
+_SECRET_KIND = {
+    'admin_import_banned_domains':       'admin',
+    'ai_bonus_claim':                    'admin',
+    'ai_charge_coins':                   'admin',
+    'ai_site_search':                    'admin',
+    'ai_site_stats':                     'admin',
+    'ai_usage_left':                     'admin',
+    'ai_wallet_charge':                  'admin',
+    'ai_wallet_get':                     'admin',
+    'ai_wallet_topup':                   'admin',
+    'bot_insert_comment':                'bot',
+    'bot_pending_mentions':              'bot',
+}
+
+
+def _sec_of(kind):
+    if kind == 'bot':
+        return _env_str('BOT_SECRET', MAIL_SECRET) or MAIL_SECRET
+    if kind == 'admin':
+        return _env_str('ADMIN_SECRET', MAIL_SECRET) or MAIL_SECRET
+    return MAIL_SECRET
+
+
+try:
+    _supa_rpc_raw = supa_rpc
+
+    def supa_rpc(fn, payload=None, *a, **kw):
+        """包一层：按 RPC 名字换密钥。其它行为完全不变。"""
+        _k = _SECRET_KIND.get(str(fn))
+        if _k and isinstance(payload, dict) and 'p_secret' in payload:
+            payload = dict(payload)
+            payload['p_secret'] = _sec_of(_k)
+        return _supa_rpc_raw(fn, payload, *a, **kw)
+except Exception as _e:
+    print('[SEC-SPLIT] 包装失败，继续用单密钥: %s' % _e)
+
