@@ -1,0 +1,27 @@
+name: Sync disposable email blocklist
+
+on:
+  schedule:
+    - cron: '23 3 * * 1'      # 每周一 UTC 03:23（北京时间 11:23）
+  workflow_dispatch:           # 也能手动点
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉列表并写进数据库
+        env:
+          MAIL_SECRET: ${{ secrets.MAIL_SECRET }}
+        run: |
+          if [ -z "$MAIL_SECRET" ]; then
+            echo "没有配 MAIL_SECRET，跳过"
+            exit 0
+          fi
+          code=$(curl -s -o /tmp/r.json -w '%{http_code}' --max-time 120 \
+            "https://1404832368-3y4ud8ufi1.ap-guangzhou.tencentscf.com/__syncblock?k=$MAIL_SECRET")
+          echo "HTTP $code"
+          cat /tmp/r.json || true
+          if [ "$code" != "200" ]; then
+            echo "同步失败（HTTP $code）"
+            exit 1
+          fi
