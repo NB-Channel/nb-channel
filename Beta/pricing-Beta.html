@@ -1357,85 +1357,241 @@ html { -webkit-text-size-adjust: 100%; }
 <p class="pr-note">「上下文」是我们实测跑出来的下限（发超长输入看它能吃多少），「≥」表示至少这么大；OpenRouter 那几个按官方公布的窗口标。「看图」打 ✓ 的是真能读图的，· 表示纯文本。「专精」只标出专门为代码 / 推理 / 长文训练过的；「通用」表示没有特别专精，写代码也一样能写。「首问实测」是同一条简单问题的耗时，网络不同会有波动。</p>
 <h2>实测一 · 高考真题（15 道）</h2>
 <p>题库：1984 年全国理科数学（那年数学平均 26 分）+ 1979 年全国化学（平均 19 分、及格率 0.26 %）+ 2003 年全国理综物理。每题可自动判分，温度 0、单轮。</p>
-<svg viewBox="0 0 1040 390" width="100%" style="max-width:1040px;font-family:system-ui,sans-serif">
-<text x="250" y="24" font-size="12.5" fill="#6b7280">竖条 = 通过率 · 右边是答对/题数、每任务费用、耗时</text>
-<text x="238" y="59" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · low</text>
-<rect x="250" y="46" width="470.0" height="18" rx="4" fill="#1a9a52" opacity=".88"/>
-<text x="728.0" y="59" font-size="11" fill="#374151">100% · 15/15 · 109.1 NB · 2.56s</text>
-<text x="238" y="89" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · medium</text>
-<rect x="250" y="76" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="696.7" y="89" font-size="11" fill="#374151">93% · 14/15 · 110.3 NB · 4.98s</text>
-<text x="238" y="119" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · high</text>
-<rect x="250" y="106" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="696.7" y="119" font-size="11" fill="#374151">93% · 14/15 · 143.4 NB · 4.23s</text>
-<text x="238" y="149" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · low</text>
-<rect x="250" y="136" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="149" font-size="11" fill="#374151">87% · 13/15 · 218.3 NB · 11.13s</text>
-<text x="238" y="179" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · medium</text>
-<rect x="250" y="166" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="179" font-size="11" fill="#374151">87% · 13/15 · 268.6 NB · 11.66s</text>
-<text x="238" y="209" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · high</text>
-<rect x="250" y="196" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="209" font-size="11" fill="#374151">87% · 13/15 · 278.9 NB · 11.83s</text>
-<text x="238" y="239" font-size="12" fill="#374151" text-anchor="end">Nemotron 3 Ultra 550B · low</text>
-<rect x="250" y="226" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="239" font-size="11" fill="#374151">87% · 13/15 · 333.3 NB · 26.86s</text>
-<text x="238" y="269" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · high</text>
-<rect x="250" y="256" width="376.0" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
-<text x="634.0" y="269" font-size="11" fill="#374151">80% · 12/15 · 211.6 NB · 12.19s</text>
-<text x="238" y="299" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · low</text>
-<rect x="250" y="286" width="344.7" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
-<text x="602.7" y="299" font-size="11" fill="#374151">73% · 11/15 · 186.2 NB · 10.79s</text>
-<text x="238" y="329" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · medium</text>
-<rect x="250" y="316" width="344.7" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
-<text x="602.7" y="329" font-size="11" fill="#374151">73% · 11/15 · 218.6 NB · 13.57s</text>
-<text x="238" y="359" font-size="12" fill="#374151" text-anchor="end">Nemotron 3.5 VL · low</text>
-<rect x="250" y="346" width="313.3" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
-<text x="571.3" y="359" font-size="11" fill="#374151">67% · 10/15 · 191.5 NB · 17.84s</text>
+<svg viewBox="0 0 1000 386" width="100%" style="max-width:1000px;font-family:system-ui,sans-serif">
+<text x="240" y="22" font-size="12.5" fill="#6b7280">竖条 = 通过率 · 右边是答对/题数、每任务费用、耗时</text>
+<text x="228" y="57" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · low</text>
+<rect x="240" y="44" width="470.0" height="18" rx="4" fill="#1a9a52" opacity=".88"/>
+<text x="718.0" y="57" font-size="11" fill="#374151">100% · 15/15 · 109.1 NB · 2.56s</text>
+<text x="228" y="87" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · medium</text>
+<rect x="240" y="74" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="686.7" y="87" font-size="11" fill="#374151">93% · 14/15 · 110.3 NB · 4.98s</text>
+<text x="228" y="117" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · high</text>
+<rect x="240" y="104" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="686.7" y="117" font-size="11" fill="#374151">93% · 14/15 · 143.4 NB · 4.23s</text>
+<text x="228" y="147" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · low</text>
+<rect x="240" y="134" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="147" font-size="11" fill="#374151">87% · 13/15 · 218.3 NB · 11.13s</text>
+<text x="228" y="177" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · medium</text>
+<rect x="240" y="164" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="177" font-size="11" fill="#374151">87% · 13/15 · 268.6 NB · 11.66s</text>
+<text x="228" y="207" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · high</text>
+<rect x="240" y="194" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="207" font-size="11" fill="#374151">87% · 13/15 · 278.9 NB · 11.83s</text>
+<text x="228" y="237" font-size="12" fill="#374151" text-anchor="end">Nemotron 3 Ultra 550B · low</text>
+<rect x="240" y="224" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="237" font-size="11" fill="#374151">87% · 13/15 · 333.3 NB · 26.86s</text>
+<text x="228" y="267" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · high</text>
+<rect x="240" y="254" width="376.0" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
+<text x="624.0" y="267" font-size="11" fill="#374151">80% · 12/15 · 211.6 NB · 12.19s</text>
+<text x="228" y="297" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · low</text>
+<rect x="240" y="284" width="344.7" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
+<text x="592.7" y="297" font-size="11" fill="#374151">73% · 11/15 · 186.2 NB · 10.79s</text>
+<text x="228" y="327" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · medium</text>
+<rect x="240" y="314" width="344.7" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
+<text x="592.7" y="327" font-size="11" fill="#374151">73% · 11/15 · 218.6 NB · 13.57s</text>
+<text x="228" y="357" font-size="12" fill="#374151" text-anchor="end">Nemotron 3.5 VL · low</text>
+<rect x="240" y="344" width="313.3" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
+<text x="561.3" y="357" font-size="11" fill="#374151">67% · 10/15 · 191.5 NB · 17.84s</text>
 </svg>
+<svg viewBox="0 0 1000 480" width="100%" style="max-width:1000px;font-family:system-ui,sans-serif">
+<text x="86" y="20" font-size="12.5" fill="#6b7280">通过率 vs 费用（同模型不同档位连线）</text>
+<line x1="86" y1="414.0" x2="750" y2="414.0" stroke="#f5f7fa"/>
+<line x1="86" y1="372.9" x2="750" y2="372.9" stroke="#e8ecf3"/>
+<text x="76" y="376.9" font-size="11" fill="#6b7280" text-anchor="end">60%</text>
+<line x1="86" y1="331.8" x2="750" y2="331.8" stroke="#f5f7fa"/>
+<line x1="86" y1="290.7" x2="750" y2="290.7" stroke="#e8ecf3"/>
+<text x="76" y="294.7" font-size="11" fill="#6b7280" text-anchor="end">70%</text>
+<line x1="86" y1="249.7" x2="750" y2="249.7" stroke="#f5f7fa"/>
+<line x1="86" y1="208.6" x2="750" y2="208.6" stroke="#e8ecf3"/>
+<text x="76" y="212.6" font-size="11" fill="#6b7280" text-anchor="end">80%</text>
+<line x1="86" y1="167.5" x2="750" y2="167.5" stroke="#f5f7fa"/>
+<line x1="86" y1="126.4" x2="750" y2="126.4" stroke="#e8ecf3"/>
+<text x="76" y="130.4" font-size="11" fill="#6b7280" text-anchor="end">90%</text>
+<line x1="86" y1="85.3" x2="750" y2="85.3" stroke="#f5f7fa"/>
+<line x1="86" y1="44.2" x2="750" y2="44.2" stroke="#e8ecf3"/>
+<text x="76" y="48.2" font-size="11" fill="#6b7280" text-anchor="end">100%</text>
+<line x1="120.3" y1="36" x2="120.3" y2="414" stroke="#f6f8fb"/>
+<text x="120.3" y="434" font-size="11" fill="#6b7280" text-anchor="middle">100</text>
+<line x1="304.5" y1="36" x2="304.5" y2="414" stroke="#f6f8fb"/>
+<text x="304.5" y="434" font-size="11" fill="#6b7280" text-anchor="middle">150</text>
+<line x1="435.2" y1="36" x2="435.2" y2="414" stroke="#f6f8fb"/>
+<text x="435.2" y="434" font-size="11" fill="#6b7280" text-anchor="middle">200</text>
+<line x1="619.4" y1="36" x2="619.4" y2="414" stroke="#f6f8fb"/>
+<text x="619.4" y="434" font-size="11" fill="#6b7280" text-anchor="middle">300</text>
+<text x="418" y="468" font-size="12" fill="#374151" text-anchor="middle">每任务费用（NB，对数刻度）</text>
+<polyline points="159.8,44.2 164.8,99.0 284.0,99.0" fill="none" stroke="#0aa3a3" stroke-width="2" opacity=".6"/>
+<circle cx="159.8" cy="44.2" r="5.5" fill="#0aa3a3"/>
+<text x="159.8" y="35.2" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<circle cx="164.8" cy="99.0" r="5.5" fill="#0aa3a3"/>
+<text x="164.8" y="90.0" font-size="8.5" fill="#aab0bb" text-anchor="middle">m</text>
+<circle cx="284.0" cy="99.0" r="5.5" fill="#0aa3a3"/>
+<text x="284.0" y="90.0" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<text x="169.8" y="47.2" font-size="10.5" font-weight="600" fill="#0aa3a3" text-anchor="start">DeepSeek V4.1 Flash</text>
+<polyline points="402.7,263.3 460.8,208.6 475.6,263.3" fill="none" stroke="#3988f6" stroke-width="2" opacity=".6"/>
+<circle cx="402.7" cy="263.3" r="5.5" fill="#3988f6"/>
+<text x="402.7" y="254.3" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<circle cx="460.8" cy="208.6" r="5.5" fill="#3988f6"/>
+<text x="460.8" y="199.6" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<circle cx="475.6" cy="263.3" r="5.5" fill="#3988f6"/>
+<text x="475.6" y="254.3" font-size="8.5" fill="#aab0bb" text-anchor="middle">m</text>
+<text x="412.7" y="266.3" font-size="10.5" font-weight="600" fill="#3988f6" text-anchor="start">MiniMax M3.1 Flash</text>
+<circle cx="415.4" cy="318.1" r="5.5" fill="#1a9a52"/>
+<text x="415.4" y="309.1" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<text x="425.4" y="321.1" font-size="10.5" font-weight="600" fill="#1a9a52" text-anchor="start">Nemotron 3.5 VL</text>
+<polyline points="474.9,153.8 569.1,153.8 586.2,153.8" fill="none" stroke="#9c4ce3" stroke-width="2" opacity=".6"/>
+<circle cx="474.9" cy="153.8" r="5.5" fill="#9c4ce3"/>
+<text x="474.9" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<circle cx="569.1" cy="153.8" r="5.5" fill="#9c4ce3"/>
+<text x="569.1" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">m</text>
+<circle cx="586.2" cy="153.8" r="5.5" fill="#9c4ce3"/>
+<text x="586.2" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<text x="484.9" y="156.8" font-size="10.5" font-weight="600" fill="#9c4ce3" text-anchor="start">DeepSeek V4 Pro</text>
+<circle cx="667.2" cy="153.8" r="5.5" fill="#f08a1d"/>
+<text x="667.2" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<text x="677.2" y="156.8" font-size="10.5" font-weight="600" fill="#f08a1d" text-anchor="start">Nemotron 3 Ultra 550B</text>
+</svg>
+<details class="pr-note" style="margin:10px 0"><summary style="cursor:pointer;font-weight:600">展开看 15 道原题</summary><ol style="margin:10px 0 0 18px;line-height:1.9;font-size:.84rem">
+<li>数集 X={(2n+1)π，n 是整数}，Y={(4k±1)π，k 是整数}。两者的关系是？只回答以下之一：X真包含于Y / X真包含Y / X=Y / X≠Y</li>
+<li>圆 x²+y²+Gx+Ey+F=0 与 x 轴相切于原点，则 G、E、F 满足什么条件？只回答三个等式，用逗号分隔，例如 G=0,E=1,F=0</li>
+<li>arccos(−x) 大于 arccos x 的充分条件是 x 属于哪个区间？只回答区间。</li>
+<li>圆柱的侧面展开图是边长 2 与 4 的矩形，求圆柱的体积。只回答所有可能值，用「或」分开。</li>
+<li>函数 y=log₀.₅(x²+4x+4) 在什么区间上是增函数？只回答区间。</li>
+<li>求 (|x|+1/|x|−2)³ 展开式中的常数项。只回答数字。</li>
+<li>6 个歌唱节目和 4 个舞蹈节目排节目单，任何两个舞蹈节目不得相邻，共有多少种排法？只回答数字。</li>
+<li>10 mL 0.1N 醋酸溶液与 10 mL 0.1N 氨水混合后，溶液的 pH 与 7 的大小关系？只回答：大于 / 小于 / 等于</li>
+<li>在 0.1N 醋酸溶液中加入固体醋酸钠，溶液的 pH 会怎样变化？只回答：增大 / 减小 / 不变</li>
+<li>100℃ 时乙醇与乙酸反应，乙醇初始浓度 2 mol/L、乙酸 4 mol/L，平衡时有 85% 的乙醇参加了反应。求平衡时乙醇的浓度和乙酸乙酯的浓度（mol/L）。只回答两个数字，用逗号分隔。</li>
+<li>反应 3Cl₂+8NH₃=6NH₄Cl+N₂↑。使 1.12 L 氯氮混合气（90% Cl₂、10% N₂）通过浓氨水，测得逸出气体（除 NH₃ 外）0.672 L（50% Cl₂、50% N₂）。反应中有多少克氨被氧化？只回答数字（克）。</li>
+<li>一束单色光从空气射入玻璃中，它的频率和波长如何变化？只回答「频率X，波长Y」的形式。</li>
+<li>简谐机械波在给定媒质中传播，下列说法正确的是：A 振幅越大波速越快；B 振幅越大波速越慢；C 一个周期内质元路程等于一个波长；D 频率越高，传播一个波长距离所用时间越短。只回答字母。</li>
+<li>中子星自转周期 T=1/30 s，视为均匀球体，求维持它不因自转而瓦解的最小密度（kg/m³，G=6.67×10⁻¹¹）。只回答数字，科学计数法即可。</li>
+<li>自行车发电机：线框 N=800 匝、每匝面积 S=20 cm²、B=0.010 T；摩擦小轮 r₀=1.0 cm，车轮 R₁=35 cm，小齿轮 R₂=4.0 cm，大齿轮 R₃=10.0 cm。求使输出电压有效值 U=3.2 V 时大齿轮的角速度（s⁻¹）。只回答一位小数。</li>
+</ol></details>
 <p class="pr-note">只列跑通的组合（Cloudflare 额度、魔搭魔粒、超时配置无数据）。</p>
 
 <h2>实测二 · 变态难题（15 道）</h2>
-<p>题目：2024²⁰²⁴ 的末三位 / C(100,50) mod 7 / F(200) 末三位 / 100! 尾零 / ∫₀¹xˣdx / (1+i)¹⁰⁰ 的模 / Σ1/n² / 三骰子和为 10 的概率 / sin18° / n! 尾零反解 / 0.1M 醋酸 pH / AgCl 溶解度 / 单摆周期 / 光子能量 / 电子回旋频率。<strong>答案全部由程序现算</strong>，温度 0、单轮、超时 240 秒。</p>
-<svg viewBox="0 0 1040 420" width="100%" style="max-width:1040px;font-family:system-ui,sans-serif">
-<text x="250" y="24" font-size="12.5" fill="#6b7280">有效通过率 = 对 ÷（对+错），超时和接口错误不计入 · 右边是答对/答题、费用、耗时、答错数</text>
-<text x="238" y="59" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · low</text>
-<rect x="250" y="46" width="470.0" height="18" rx="4" fill="#1a9a52" opacity=".88"/>
-<text x="728.0" y="59" font-size="11" fill="#374151">100% · 15/15 · 142.8 NB · 6.43s · 错0</text>
-<text x="238" y="89" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · low</text>
-<rect x="250" y="76" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="696.7" y="89" font-size="11" fill="#374151">93% · 14/15 · 71.1 NB · 1.56s · 错1</text>
-<text x="238" y="119" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · low</text>
-<rect x="250" y="106" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="696.7" y="119" font-size="11" fill="#374151">93% · 14/15 · 144.5 NB · 11.62s · 错1</text>
-<text x="238" y="149" font-size="12" fill="#374151" text-anchor="end">Nemotron 3.5 · high</text>
-<rect x="250" y="136" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="696.7" y="149" font-size="11" fill="#374151">93% · 14/15 · 386.7 NB · 11.23s · 错1</text>
-<text x="238" y="179" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · high</text>
-<rect x="250" y="166" width="436.4" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="694.4" y="179" font-size="11" fill="#374151">93% · 13/14 · 162.2 NB · 12.41s · 错1</text>
-<text x="238" y="209" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · high</text>
-<rect x="250" y="196" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="209" font-size="11" fill="#374151">87% · 13/15 · 74.9 NB · 1.76s · 错2</text>
-<text x="238" y="239" font-size="12" fill="#374151" text-anchor="end">GLM-5.2 · high</text>
-<rect x="250" y="226" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="239" font-size="11" fill="#374151">87% · 13/15 · 145.5 NB · 5.67s · 错2</text>
-<text x="238" y="269" font-size="12" fill="#374151" text-anchor="end">GLM-5.2 · low</text>
-<rect x="250" y="256" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="269" font-size="11" fill="#374151">87% · 13/15 · 148.8 NB · 5.68s · 错2</text>
-<text x="238" y="299" font-size="12" fill="#374151" text-anchor="end">Qwen3.8 Flash Next · high</text>
-<rect x="250" y="286" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="299" font-size="11" fill="#374151">87% · 13/15 · 181.4 NB · 9.15s · 错2</text>
-<text x="238" y="329" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · high</text>
-<rect x="250" y="316" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="329" font-size="11" fill="#374151">87% · 13/15 · 211.7 NB · 7.4s · 错2</text>
-<text x="238" y="359" font-size="12" fill="#374151" text-anchor="end">Nemotron 3.5 · low</text>
-<rect x="250" y="346" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
-<text x="665.3" y="359" font-size="11" fill="#374151">87% · 13/15 · 366.9 NB · 24.92s · 错2</text>
-<text x="238" y="389" font-size="12" fill="#374151" text-anchor="end">Qwen3.8 Flash Next · low</text>
-<rect x="250" y="376" width="376.0" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
-<text x="634.0" y="389" font-size="11" fill="#374151">80% · 12/15 · 149.0 NB · 6.13s · 错3</text>
+<p>答案全部由程序现算（pow / math.comb / 数值积分 / 物理公式），温度 0、单轮、超时 240 秒。</p>
+<svg viewBox="0 0 1000 416" width="100%" style="max-width:1000px;font-family:system-ui,sans-serif">
+<text x="240" y="22" font-size="12.5" fill="#6b7280">有效通过率 = 对 ÷（对+错）· 右边是答对/答题、费用、耗时、答错数</text>
+<text x="228" y="57" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · low</text>
+<rect x="240" y="44" width="470.0" height="18" rx="4" fill="#1a9a52" opacity=".88"/>
+<text x="718.0" y="57" font-size="11" fill="#374151">100% · 15/15 · 142.8 NB · 6.43s · 错0</text>
+<text x="228" y="87" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · low</text>
+<rect x="240" y="74" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="686.7" y="87" font-size="11" fill="#374151">93% · 14/15 · 71.1 NB · 1.56s · 错1</text>
+<text x="228" y="117" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · low</text>
+<rect x="240" y="104" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="686.7" y="117" font-size="11" fill="#374151">93% · 14/15 · 144.5 NB · 11.62s · 错1</text>
+<text x="228" y="147" font-size="12" fill="#374151" text-anchor="end">Nemotron 3.5 · high</text>
+<rect x="240" y="134" width="438.7" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="686.7" y="147" font-size="11" fill="#374151">93% · 14/15 · 386.7 NB · 11.23s · 错1</text>
+<text x="228" y="177" font-size="12" fill="#374151" text-anchor="end">MiniMax M3.1 Flash · high</text>
+<rect x="240" y="164" width="436.4" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="684.4" y="177" font-size="11" fill="#374151">93% · 13/14 · 162.2 NB · 12.41s · 错1</text>
+<text x="228" y="207" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4.1 Flash · high</text>
+<rect x="240" y="194" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="207" font-size="11" fill="#374151">87% · 13/15 · 74.9 NB · 1.76s · 错2</text>
+<text x="228" y="237" font-size="12" fill="#374151" text-anchor="end">GLM-5.2 · high</text>
+<rect x="240" y="224" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="237" font-size="11" fill="#374151">87% · 13/15 · 145.5 NB · 5.67s · 错2</text>
+<text x="228" y="267" font-size="12" fill="#374151" text-anchor="end">GLM-5.2 · low</text>
+<rect x="240" y="254" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="267" font-size="11" fill="#374151">87% · 13/15 · 148.8 NB · 5.68s · 错2</text>
+<text x="228" y="297" font-size="12" fill="#374151" text-anchor="end">Qwen3.8 Flash Next · high</text>
+<rect x="240" y="284" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="297" font-size="11" fill="#374151">87% · 13/15 · 181.4 NB · 9.15s · 错2</text>
+<text x="228" y="327" font-size="12" fill="#374151" text-anchor="end">DeepSeek V4 Pro · high</text>
+<rect x="240" y="314" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="327" font-size="11" fill="#374151">87% · 13/15 · 211.7 NB · 7.4s · 错2</text>
+<text x="228" y="357" font-size="12" fill="#374151" text-anchor="end">Nemotron 3.5 · low</text>
+<rect x="240" y="344" width="407.3" height="18" rx="4" fill="#3988f6" opacity=".88"/>
+<text x="655.3" y="357" font-size="11" fill="#374151">87% · 13/15 · 366.9 NB · 24.92s · 错2</text>
+<text x="228" y="387" font-size="12" fill="#374151" text-anchor="end">Qwen3.8 Flash Next · low</text>
+<rect x="240" y="374" width="376.0" height="18" rx="4" fill="#f08a1d" opacity=".88"/>
+<text x="624.0" y="387" font-size="11" fill="#374151">80% · 12/15 · 149.0 NB · 6.13s · 错3</text>
 </svg>
+<svg viewBox="0 0 1000 480" width="100%" style="max-width:1000px;font-family:system-ui,sans-serif">
+<text x="86" y="20" font-size="12.5" fill="#6b7280">有效通过率 vs 费用（同模型不同档位连线）</text>
+<line x1="86" y1="414.0" x2="750" y2="414.0" stroke="#f5f7fa"/>
+<line x1="86" y1="372.9" x2="750" y2="372.9" stroke="#e8ecf3"/>
+<text x="76" y="376.9" font-size="11" fill="#6b7280" text-anchor="end">60%</text>
+<line x1="86" y1="331.8" x2="750" y2="331.8" stroke="#f5f7fa"/>
+<line x1="86" y1="290.7" x2="750" y2="290.7" stroke="#e8ecf3"/>
+<text x="76" y="294.7" font-size="11" fill="#6b7280" text-anchor="end">70%</text>
+<line x1="86" y1="249.7" x2="750" y2="249.7" stroke="#f5f7fa"/>
+<line x1="86" y1="208.6" x2="750" y2="208.6" stroke="#e8ecf3"/>
+<text x="76" y="212.6" font-size="11" fill="#6b7280" text-anchor="end">80%</text>
+<line x1="86" y1="167.5" x2="750" y2="167.5" stroke="#f5f7fa"/>
+<line x1="86" y1="126.4" x2="750" y2="126.4" stroke="#e8ecf3"/>
+<text x="76" y="130.4" font-size="11" fill="#6b7280" text-anchor="end">90%</text>
+<line x1="86" y1="85.3" x2="750" y2="85.3" stroke="#f5f7fa"/>
+<line x1="86" y1="44.2" x2="750" y2="44.2" stroke="#e8ecf3"/>
+<text x="76" y="48.2" font-size="11" fill="#6b7280" text-anchor="end">100%</text>
+<line x1="177.4" y1="36" x2="177.4" y2="414" stroke="#f6f8fb"/>
+<text x="177.4" y="434" font-size="11" fill="#6b7280" text-anchor="middle">80</text>
+<line x1="250.0" y1="36" x2="250.0" y2="414" stroke="#f6f8fb"/>
+<text x="250.0" y="434" font-size="11" fill="#6b7280" text-anchor="middle">100</text>
+<line x1="382.1" y1="36" x2="382.1" y2="414" stroke="#f6f8fb"/>
+<text x="382.1" y="434" font-size="11" fill="#6b7280" text-anchor="middle">150</text>
+<line x1="475.8" y1="36" x2="475.8" y2="414" stroke="#f6f8fb"/>
+<text x="475.8" y="434" font-size="11" fill="#6b7280" text-anchor="middle">200</text>
+<line x1="607.9" y1="36" x2="607.9" y2="414" stroke="#f6f8fb"/>
+<text x="607.9" y="434" font-size="11" fill="#6b7280" text-anchor="middle">300</text>
+<text x="418" y="468" font-size="12" fill="#374151" text-anchor="middle">每任务费用（NB，对数刻度）</text>
+<polyline points="138.9,99.0 155.9,153.8" fill="none" stroke="#0aa3a3" stroke-width="2" opacity=".6"/>
+<circle cx="138.9" cy="99.0" r="5.5" fill="#0aa3a3"/>
+<text x="138.9" y="90.0" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<circle cx="155.9" cy="153.8" r="5.5" fill="#0aa3a3"/>
+<text x="155.9" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<text x="148.9" y="102.0" font-size="10.5" font-weight="600" fill="#0aa3a3" text-anchor="start">DeepSeek V4.1 Flash</text>
+<polyline points="366.1,44.2 494.4,153.8" fill="none" stroke="#3988f6" stroke-width="2" opacity=".6"/>
+<circle cx="366.1" cy="44.2" r="5.5" fill="#3988f6"/>
+<text x="366.1" y="35.2" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<circle cx="494.4" cy="153.8" r="5.5" fill="#3988f6"/>
+<text x="494.4" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<text x="376.1" y="47.2" font-size="10.5" font-weight="600" fill="#3988f6" text-anchor="start">DeepSeek V4 Pro</text>
+<polyline points="370.0,99.0 407.6,102.9" fill="none" stroke="#1a9a52" stroke-width="2" opacity=".6"/>
+<circle cx="370.0" cy="99.0" r="5.5" fill="#1a9a52"/>
+<text x="370.0" y="90.0" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<circle cx="407.6" cy="102.9" r="5.5" fill="#1a9a52"/>
+<text x="407.6" y="93.9" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<text x="380.0" y="102.0" font-size="10.5" font-weight="600" fill="#1a9a52" text-anchor="start">MiniMax M3.1 Flash</text>
+<polyline points="372.2,153.8 379.5,153.8" fill="none" stroke="#9c4ce3" stroke-width="2" opacity=".6"/>
+<circle cx="372.2" cy="153.8" r="5.5" fill="#9c4ce3"/>
+<text x="372.2" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<circle cx="379.5" cy="153.8" r="5.5" fill="#9c4ce3"/>
+<text x="379.5" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<text x="382.2" y="156.8" font-size="10.5" font-weight="600" fill="#9c4ce3" text-anchor="start">GLM-5.2</text>
+<polyline points="379.9,208.6 444.0,153.8" fill="none" stroke="#f08a1d" stroke-width="2" opacity=".6"/>
+<circle cx="379.9" cy="208.6" r="5.5" fill="#f08a1d"/>
+<text x="379.9" y="199.6" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<circle cx="444.0" cy="153.8" r="5.5" fill="#f08a1d"/>
+<text x="444.0" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<text x="389.9" y="211.6" font-size="10.5" font-weight="600" fill="#f08a1d" text-anchor="start">Qwen3.8 Flash Next</text>
+<polyline points="673.5,153.8 690.6,99.0" fill="none" stroke="#d6459b" stroke-width="2" opacity=".6"/>
+<circle cx="673.5" cy="153.8" r="5.5" fill="#d6459b"/>
+<text x="673.5" y="144.8" font-size="8.5" fill="#aab0bb" text-anchor="middle">l</text>
+<circle cx="690.6" cy="99.0" r="5.5" fill="#d6459b"/>
+<text x="690.6" y="90.0" font-size="8.5" fill="#aab0bb" text-anchor="middle">h</text>
+<text x="683.5" y="156.8" font-size="10.5" font-weight="600" fill="#d6459b" text-anchor="start">Nemotron 3.5</text>
+</svg>
+<details class="pr-note" style="margin:10px 0"><summary style="cursor:pointer;font-weight:600">展开看 15 道原题</summary><ol style="margin:10px 0 0 18px;line-height:1.9;font-size:.84rem">
+<li>求 2024^2024 的末三位数字。只回答三位数字。</li>
+<li>求 C(100,50) 除以 7 的余数。只回答数字。</li>
+<li>斐波那契数列 F(1)=1, F(2)=1, F(n)=F(n-1)+F(n-2)。求 F(200) 的末三位数字。只回答三位数字。</li>
+<li>100! 末尾有多少个连续的零？只回答数字。</li>
+<li>求定积分 ∫(0→1) x^x dx 的近似值（保留四位小数）。只回答数字。</li>
+<li>求 (1+i)^100 的模（i 是虚数单位）。只回答数字。</li>
+<li>求级数 1/1² + 1/2² + 1/3² + … 的极限值（保留四位小数）。只回答数字。</li>
+<li>同时掷三枚均匀六面骰子，点数之和为 10 的概率是多少？只回答最简分数。</li>
+<li>求 sin18° 的精确值（保留四位小数）。只回答数字。</li>
+<li>最小的正整数 n，使得 n! 末尾恰好有 100 个连续的零是多少？只回答数字。</li>
+<li>25℃ 时 0.10 mol/L 醋酸溶液的 pH 是多少？（Ka=1.8×10⁻⁵，保留两位小数）只回答数字。</li>
+<li>25℃ 时 AgCl 的 Ksp=1.8×10⁻¹⁰。求 AgCl 在纯水中的溶解度（mol/L），科学计数法保留三位有效数字。只回答数字。</li>
+<li>一个单摆摆长 1.000 m，g=9.80 m/s²。求它的周期（秒，保留三位小数）。只回答数字。</li>
+<li>波长 500 nm 的光子能量是多少焦耳？（h=6.63×10⁻³⁴，c=3.00×10⁸，科学计数法保留四位有效数字）只回答数字。</li>
+<li>电子在磁感应强度 1.0 T 的匀强磁场中做圆周运动，求回旋频率（GHz，保留两位小数）。（e=1.60×10⁻¹⁹ C，m=9.11×10⁻³¹ kg）只回答数字。</li>
+</ol></details>
 <p class="pr-note">「有效通过率」把超时和接口错误排除在外 —— 免得额度不够被误读成模型不行。</p>
 
 <h2>速度对比（实测耗时，越短越快）</h2>
