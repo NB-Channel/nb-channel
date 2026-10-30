@@ -1060,6 +1060,16 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
 /* 标题对齐：无论后台填了什么前导空格，都不带缩进、不偏移 */
 .np-h1, .np-h2, .np-h1-sub, .np-sec-title { text-indent: 0 !important; }
 </style>
+<style>
+/* 齐喜的报刊亭入口（外链） */
+.np-qx { display: inline-block; margin: 10px 0 0 auto; padding: 7px 16px;
+    border-radius: 999px; font-size: .84rem; font-weight: 600; text-decoration: none;
+    color: #fff; background: linear-gradient(135deg,#3988f6,#7c3aed);
+    box-shadow: 0 3px 12px rgba(57,136,246,.35); transition: transform .15s, box-shadow .15s; }
+.np-qx:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(57,136,246,.45); color: #fff; }
+.np-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+@media (max-width: 520px) { .np-qx { margin-left: 0; font-size: .78rem; padding: 6px 12px; } }
+</style>
 </head>
 <body>
 <nav class="nav">
@@ -1311,6 +1321,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
         <button class="np-tab active" data-view="free">🆓 免费刊</button>
         <button class="np-tab" data-view="paid">💰 付费刊</button>
         <button class="np-tab" data-view="mine">📖 我可以直接读的报纸</button>
+        <a class="np-qx" href="https://nb-qx.top/code" target="_blank" rel="noopener noreferrer">前往齐喜的报刊亭↗</a>
     </div>
 
     <div class="np-kiosk">
