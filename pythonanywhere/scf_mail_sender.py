@@ -2590,7 +2590,13 @@ def api_comment_bot():
     if not d.get('ok'):
         return jsonify({'ok': False, 'reason': 'rpc', 'error': str(d)[:150]})
 
-    items = (d.get('data') or {}).get('items') or []
+    _d = d.get('data') or {}
+    # RPC 明确失败（比如密钥不匹配）→ 直接把原因抛出来，别假装「查到 0 条」
+    if isinstance(_d, dict) and _d.get('ok') is False:
+        return jsonify({'ok': False, 'reason': _d.get('reason') or 'rpc',
+                        'rpc': _d,
+                        'hint': 'bot_pending_mentions 返回失败：' + str(_d.get('reason'))})
+    items = _d.get('items') or []
 
     # ?try=模型key&q=问题 —— 用这个口子单独测某个模型通不通
     # （复用同一个 X-Bot-Key / ?k= 鉴权，不需要另配密钥）
