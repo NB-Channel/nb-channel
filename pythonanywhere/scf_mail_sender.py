@@ -3331,9 +3331,9 @@ _SECRET_KIND = {
 
 def _sec_of(kind):
     if kind == 'bot':
-        return _env_str('BOT_SECRET', MAIL_SECRET) or MAIL_SECRET
+        return (os.environ.get('BOT_SECRET') or MAIL_SECRET).strip()
     if kind == 'admin':
-        return _env_str('ADMIN_SECRET', MAIL_SECRET) or MAIL_SECRET
+        return (os.environ.get('ADMIN_SECRET') or MAIL_SECRET).strip()
     return MAIL_SECRET
 
 
