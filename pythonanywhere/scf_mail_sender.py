@@ -2264,6 +2264,27 @@ def _wallet_check(uid, sess):
 #    · 只在句号/问号/感叹号/分号处收尾
 #    · 结尾补一句引导，别让读者觉得话说一半
 # ============================================================
+# ============================================================
+#  回复开头清理
+#
+#  模型经常把「@NB频道AI助手」照着写进回复开头（因为它把被 @ 的内容当成了要复述的），
+#  评论区里看起来像在自言自语。这里把开头的 @ 提及全部剥掉。
+# ============================================================
+_MENTION_RE = re.compile(
+    r'^[\s@]*@?\s*(?:NB频道AI助手|AI助手|NB频道\s*AI\s*助手)[\s:：，,。.！!~～\-]*')
+
+
+def _strip_mention(txt):
+    t0 = (txt or '').strip()
+    prev = None
+    while prev != t0:
+        prev = t0
+        t0 = _MENTION_RE.sub('', t0).strip()
+    # 还有一种：「@NB频道AI助手 的评论：」这种带引子的写法
+    t0 = re.sub(r'^(?:收到|好的|明白)[，,。.\s]*', '', t0).strip()
+    return t0 or (txt or '').strip()
+
+
 def _trim_reply(txt, limit=480):
     t = (txt or '').strip()
     if len(t) <= limit:
@@ -2286,6 +2307,7 @@ def _comment_bot_reply_text(question, page_path):
         '要求：\n'
         '· 简体中文，40~120 字，直接给答案或者关键一步，不要客套。\n'
         '· 就是在评论区说话，不要写成文章，不要加标题。\n'
+        '· 不要以 @ 开头，也不要复述对方的话，直接给答案。\n'
         '· 默认 40~120 字。但如果对方明确要求「长一点」「越长越好」，'
         '最多写到 200 字，用 3~5 个短句把主线说清，'
         '然后补一句「想细看可以去站里的 AI 页面问，那里能展开」。\n'
@@ -2674,7 +2696,7 @@ def api_comment_bot():
             done.append({'id': cid, 'ok': False, 'err': str(err)[:120]})
             continue
         r = supa_rpc('bot_insert_comment', {
-            'p_page_path': page, 'p_content': _trim_reply(txt),
+            'p_page_path': page, 'p_content': _trim_reply(_strip_mention(txt)),
             'p_parent_id': cid, 'p_secret': MAIL_SECRET,
         })
         ok = bool((r.get('data') or {}).get('ok'))
