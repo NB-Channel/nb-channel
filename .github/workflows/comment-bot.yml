@@ -13,12 +13,18 @@ name: comment-bot
 #      名称：COMMENT_BOT_KEY
 #      值  ：和云函数环境变量 COMMENT_BOT_KEY 填的一样
 #
-# 注意：定时任务在公开仓库上是免费的，但高峰期可能延迟几分钟，这是正常的。
+# 注意：GitHub 免费仓库的 cron 不可靠 —— 实测实际间隔 4 小时以上。
+#       想要真正每 15 分钟，需要外部 cron（如 cron-job.org / Cloudflare Worker）。
 
 on:
   schedule:
-    - cron: '*/15 * * * *'     # 每 15 分钟（配合每次最多回 3 条，最多 12 条/小时）
-  workflow_dispatch:            # 也可以在 Actions 页面手动点一下跑
+    # GitHub 免费仓库的 cron 会被降频：实际可能几小时才跑一次（不是 15 分钟）
+    # 下面两条是"补刀"：
+    - cron: '*/15 * * * *'
+    - cron: '7,22,37,52 * * * *'   # 错开 7 分钟，增加被调度到的概率
+  push:
+    branches: [main]               # 每次推送也顺手扫一次
+  workflow_dispatch:                # 也能在 Actions 页面手动点
 
 jobs:
   ping:
