@@ -2255,6 +2255,29 @@ def _wallet_check(uid, sess):
 #        没配 COMMENT_BOT_KEY 就直接 403（默认关闭，避免被外面刷）。
 #  防注入：评论原文用 === 包裹，明确告诉模型那是「待回复的文本」，不是指令。
 # ============================================================
+# ============================================================
+#  评论回复长度控制
+#
+#  数据库那边（bot_insert_comment）原本 600 字硬截断，会在句子中间断掉。
+#  现在这里先做一次「按句子收尾」，保证：
+#    · 不超过 480 字（留余量给数据库的 4000 上限）
+#    · 只在句号/问号/感叹号/分号处收尾
+#    · 结尾补一句引导，别让读者觉得话说一半
+# ============================================================
+def _trim_reply(txt, limit=480):
+    t = (txt or '').strip()
+    if len(t) <= limit:
+        return t
+    cut = -1
+    for ch in ('。', '！', '？', '；', '\n'):
+        pos = t.rfind(ch, 0, limit)
+        if pos > cut:
+            cut = pos + 1
+    if cut < 160:
+        cut = limit
+    return t[:cut].rstrip() + '……（这条太长，完整回答可以在站内 AI 页面问～）'
+
+
 def _comment_bot_reply_text(question, page_path):
     """让模型生成一句评论区回复。返回 (文本, 错误)。"""
     sys_p = (
@@ -2651,7 +2674,7 @@ def api_comment_bot():
             done.append({'id': cid, 'ok': False, 'err': str(err)[:120]})
             continue
         r = supa_rpc('bot_insert_comment', {
-            'p_page_path': page, 'p_content': txt,
+            'p_page_path': page, 'p_content': _trim_reply(txt),
             'p_parent_id': cid, 'p_secret': MAIL_SECRET,
         })
         ok = bool((r.get('data') or {}).get('ok'))
