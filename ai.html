@@ -2733,7 +2733,8 @@ function webOn() {
                 var lab = document.createElement('label');
                 lab.className = 'ai-draw-m' + (first ? ' on' : '');
                 lab.setAttribute('data-k', k);
-                lab.textContent = im[k].label + ' · ' + im[k].price + ' NB';
+                var _pv = (im[k].provider === 'ms') ? '魔搭 · ' : 'CF · ';
+                lab.textContent = _pv + im[k].label + ' · ' + im[k].price + ' NB';
                 lab.addEventListener('click', function () {
                     var all = box.querySelectorAll('.ai-draw-m');
                     for (var i = 0; i < all.length; i++) all[i].classList.remove('on');
@@ -2784,8 +2785,12 @@ function webOn() {
                 $('aiDrawOut').appendChild(img);
                 $('aiDrawOut').appendChild(document.createElement('br'));
                 $('aiDrawOut').appendChild(a);
+                var _usedTx = '';
+                if (d.used_label) {
+                    _usedTx = ' · ' + (d.fallback ? '已自动切换为 ' : '模型 ') + d.used_label;
+                }
                 status('生成完成 · 本次扣 ' + d.price + ' NB，余额 ' +
-                       Math.round(d.balance || 0) + ' NB', '#1a9a52');
+                       Math.round(d.balance || 0) + ' NB' + _usedTx, '#1a9a52');
                 return;
             }
             var msg = '';
@@ -2793,7 +2798,14 @@ function webOn() {
             else if (d.reason === 'reauth') msg = '登录过期了，刷新页面重新登录';
             else if (d.reason === 'poor') msg = d.message || '余额不够，先领赠金或充值';
             else if (d.reason === 'nomodel') msg = '这个模型没配好，换一个试试';
-            else if (d.reason === 'genfail') msg = '上游生成失败：' + (d.error || '');
+            else if (d.reason === 'genfail') {
+                var _e = String(d.error || '');
+                if (_e.indexOf('429') >= 0 || /quota|rate limit/i.test(_e)) {
+                    msg = '这家今日额度用完了（两家都试过），换个模型或过几小时再试';
+                } else {
+                    msg = '上游生成失败：' + _e.slice(0, 120);
+                }
+            }
             else msg = '生成失败：' + (d.reason || '未知');
             status(msg, '#d9453d');
         }).catch(function () {
