@@ -2806,7 +2806,8 @@ function webOn() {
                     msg = '上游生成失败：' + _e.slice(0, 120);
                 }
             }
-            else msg = '生成失败：' + (d.reason || '未知');
+            else msg = '生成失败：' + (d.reason || '未知')
+                        + (d.error ? '（' + String(d.error).slice(0, 140) + '）' : '');
             status(msg, '#d9453d');
         }).catch(function () {
             self.disabled = false;
