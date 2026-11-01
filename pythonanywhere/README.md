@@ -145,3 +145,27 @@ curl "https://nbchannel.pythonanywhere.com/api/market/1"
 - `git pull` 在后台执行（不阻塞 webhook 响应），约 1-3 秒完成
 - 免费版 PythonAnywhere 出站流量/磁盘有限，作品文件（uploads/）请勿上传过大文件
 - 若 `SITE_DIR` 路径不对，网站会 404，检查环境变量是否生效（Web 面板设置后必须 **Reload** 才生效）
+# 后端与数据库已迁到私有仓
+
+`sql/`（建表、RPC、限流、黑名单、机器人窗口等）和
+`pythonanywhere/scf_mail_sender.py`（云函数：AI 路由、计费、提示词读取、生图、评论机器人）
+已经搬到私有仓：
+
+    https://github.com/NB-Channel/nb-channel-core
+
+## 为什么
+
+公开仓只放网页与安卓壳。提示词、判定规则、数据库函数这些是核心资产，
+放在公开仓等于把实现细节公开给所有人看。
+
+## 这个仓里还留了什么
+
+- 所有 `*.html` / `css` / `js` / `images`（网站本体，本来就公开）
+- `app/`（Capacitor 安卓壳 + `build-apk.yml`）
+- `pythonanywhere/app.py`（PythonAnywhere 后端：上传、市场、通知、webhook。无密钥，且 PA 靠拉本仓运行，故留下）
+
+## 改后端怎么改
+
+1. 在 `nb-channel-core` 改并 push
+2. 腾讯云函数：手动贴 `scf_mail_sender.py`
+3. PythonAnywhere：仍从本仓拉网站，后端逻辑改动看私有仓
