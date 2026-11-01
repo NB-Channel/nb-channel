@@ -118,3 +118,13 @@ A: 用 Safari 打开官网 → 分享 → 添加到主屏幕,得到独立图标 
 **Q: 能上应用商店吗?**
 A: 当前是 debug 版(Android 默认调试证书签名),不能上架国内商店 ——
    国内商店要求软著 + APP 备案,而备案又要求域名先有 ICP 备案(需境内服务器)。
+
+## 签名密钥（重要）
+
+APK 的签名私钥**不在本仓库**。
+
+- CI 从 `Settings → Secrets and variables → Actions → ANDROID_KEYSTORE_BASE64` 取（base64 编码的 keystore）
+- 本地构建放在 `D:\Dev\keystore\debug.keystore`（仓库外）
+- 别名 `nb-channelapp`，口令 `android`，所有者 `CN=nb-channelAPP`
+
+⚠️ 以前这里有一份 `debug.keystore`，等于把签名私钥公开了 —— 任何人都能签出「同签名」的假 APK 覆盖安装。已删除。
