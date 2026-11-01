@@ -56,20 +56,13 @@
 
 ### 不在这里的部分
 
-后端与数据库脚本放在私有仓 **`NB-Channel/nb-channel-core`**：
-
-- `sql/` —— 建表、RLS、RPC、限流、黑名单、定时任务
-- `pythonanywhere/app.py` —— PythonAnywhere 后端
-- `pythonanywhere/scf_mail_sender.py` —— 腾讯云函数
-
-本仓只保留「静态网站 + 安卓壳 + APK 构建流水线」。
+后端服务与数据库脚本不在本仓库。本仓只包含「静态网站 + 安卓壳 + APK 构建流水线」。
 
 ## 🔐 安全模型
 
 - 前端只用 **Supabase anon key**（公开设计）：所有写操作走 **SECURITY DEFINER RPC**，权限在数据库层校验
-- **密钥永不入仓**：service key、S3 密钥、webhook secret、签名 keystore 全部走服务器环境变量 / GitHub Secrets / 服务器本地文件
-- AI 系统提示词存在数据库（`admin_settings.ai_system_prompt`），云函数用密钥读取并缓存，仓库里没有明文
-- 匿名 key 实测打不动：`admin_settings` / `user_sessions` / `email_codes` / `banned_*` / `ai_wallet` / `ai_usage` / `bank_accounts` 一律 401
+- **密钥永不入仓**：服务端密钥、webhook secret、签名 keystore 全部走服务器本地配置 / GitHub Secrets
+- 内部配置与判定规则存在数据库，服务端按需读取并缓存，仓库里没有明文
 
 ## 📱 安卓版
 
