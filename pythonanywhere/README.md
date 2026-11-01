@@ -169,3 +169,22 @@ curl "https://nbchannel.pythonanywhere.com/api/market/1"
 1. 在 `nb-channel-core` 改并 push
 2. 腾讯云函数：手动贴 `scf_mail_sender.py`
 3. PythonAnywhere：仍从本仓拉网站，后端逻辑改动看私有仓
+# 后端代码已迁到私有仓
+
+`app.py`（PythonAnywhere 后端：上传、市场、通知、webhook 同步）
+现在位于私有仓：
+
+    https://github.com/NB-Channel/nb-channel-core
+
+## 服务器怎么跑的
+
+PythonAnywhere 的 WSGI 现在从私有仓加载：
+
+    BASE_DIR = '/home/nbchannel/nb-channel-core/pythonanywhere'
+    SITE_DIR = '/home/nbchannel/nb-channel'      # 静态网站仍从这个公开仓
+
+## 更新流程
+
+1. 改私有仓 → push（webhook 会浅拉 + 硬重置那台机器上的私有仓）
+2. PA 后台 → Web → Reload
+3. 站点静态文件仍随本公开仓自动同步
