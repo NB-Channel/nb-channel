@@ -103,6 +103,25 @@ public class MainActivity extends BridgeActivity {
         setupNotifications();
         setupScanner();
         startWatchdog();
+
+        // 原生底部导航（10 项，横向可滑，全部指向 Beta 版页面）
+        // ⚠️ 用 post 等 Capacitor 把 WebView 真正挂上来之后再叠，否则 getBridge() 还是 null
+        final android.webkit.WebView[] wvRef = new android.webkit.WebView[1];
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+            @Override public void run() {
+                try {
+                    if (getBridge() != null) {
+                        wvRef[0] = getBridge().getWebView();
+                        if (wvRef[0] != null) {
+                            BottomNav.install(MainActivity.this, wvRef[0]);
+                            return;
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this, 300);
+            }
+        });
     }
 
     // ==================== 5) 扫码（给网页调） ====================

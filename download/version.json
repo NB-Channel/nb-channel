@@ -1,8 +1,8 @@
 {
-  "version": 21,
-  "versionName": "1.0.6",
+  "version": 1,
+  "versionName": "1.0.0",
   "url": "https://github.nb-channel.top/download/NBChannel.apk",
   "apkSize": "约 3.6MB",
-  "note": "新增扫一扫",
-  "updatedAt": "2026-09-27"
+  "note": "NB频道官网 1.0.0 正式版 · 新增镜像站（Netlify）",
+  "updatedAt": "2026-10-31"
 }
