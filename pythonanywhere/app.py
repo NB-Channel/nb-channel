@@ -381,6 +381,30 @@ def _fetch_bili_fans():
         return data, None
 
 
+def _git_sync(repo):
+    """把仓库更新到远端 main（浅拉 + 硬重置）。
+
+    为什么不用 git pull：
+      · 仓库历史被重写过（filter-repo 清了含密钥的旧提交）
+      · 老克隆的 pull 会撞 "unrelated histories" 或反复冲突
+      · 浅拉只下一个提交，省空间（PythonAnywhere 免费额度 512 MB）
+
+    返回 (returncode, out, err)。
+    """
+    import subprocess as _sp
+    out1 = _sp.run(['git', '-C', repo, 'fetch', '--depth=1', 'origin', 'main'],
+                   capture_output=True, timeout=120)
+    if out1.returncode != 0:
+        return (out1.returncode,
+                (out1.stdout or b'').decode('utf-8', 'ignore')[-800:],
+                (out1.stderr or b'').decode('utf-8', 'ignore')[-600:])
+    out2 = _sp.run(['git', '-C', repo, 'reset', '--hard', 'FETCH_HEAD'],
+                   capture_output=True, timeout=120)
+    txt = ((out1.stdout or b'') + (out2.stdout or b'')).decode('utf-8', 'ignore')[-1200:]
+    err = ((out1.stderr or b'') + (out2.stderr or b'')).decode('utf-8', 'ignore')[-600:]
+    return (out2.returncode, txt, err)
+
+
 @app.route('/api/bili-fans')
 def api_bili_fans():
     """公开只读:当前 B站粉丝数。首页每 30s 轮询,无需刷新即可看到数字变化。
@@ -435,10 +459,9 @@ def _pa_sync():
         return jsonify({'ok': False, 'reason': 'no-repo', 'dir': repo}), 500
 
     try:
-        out = _sp.run(['git', '-C', repo, 'pull', '--rebase', '--autostash', 'origin', 'main'],
-                      capture_output=True, timeout=120)
-        txt = (out.stdout or b'').decode('utf-8', 'ignore')[-1200:]
-        err = (out.stderr or b'').decode('utf-8', 'ignore')[-600:]
+        rc, txt, err = _git_sync(repo)
+        class _R: pass
+        out = _R(); out.returncode = rc
         head = _sp.run(['git', '-C', repo, 'rev-parse', '--short', 'HEAD'],
                        capture_output=True, timeout=30)
         rev = (head.stdout or b'').decode('utf-8', 'ignore').strip()
@@ -1060,14 +1083,19 @@ def github_webhook():
         log_path = os.path.join('/tmp', log_name)
         try:
             with open(log_path, 'a') as log:
-                # ⚠️ 用 rebase + autostash：强推（force push）之后普通 pull 会直接失败，
-                #    这正是之前「网站一直不更新」的原因。
+                # ⚠️ 用「浅拉 + 硬重置」而不是 git pull：
+                #    · 仓库历史被重写过（清掉了含密钥的旧提交），老克隆 pull 会撞冲突
+                #    · --depth=1 只下一个提交，省 PythonAnywhere 的 512 MB 配额
                 log.write('\n=== %s 开始同步 %s ===\n'
                           % (datetime.datetime.now().isoformat(), d))
                 log.flush()
-                subprocess.Popen(
-                    ['git', '-C', d, 'pull', '--rebase', '--autostash', 'origin', 'main'],
+                _rc1 = subprocess.run(
+                    ['git', '-C', d, 'fetch', '--depth=1', 'origin', 'main'],
                     stdout=log, stderr=log, cwd=d)
+                if _rc1.returncode == 0:
+                    subprocess.run(
+                        ['git', '-C', d, 'reset', '--hard', 'FETCH_HEAD'],
+                        stdout=log, stderr=log, cwd=d)
             print('[webhook] 已在后台触发 git pull: %s' % d)
         except Exception as e:
             print('[webhook] 触发失败 %s: %s' % (d, e))
