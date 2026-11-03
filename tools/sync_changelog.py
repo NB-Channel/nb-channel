@@ -22,7 +22,11 @@ MAIN = os.path.join(ROOT, "changelog.html")
 BETA = os.path.join(ROOT, "Beta", "changelog-Beta.html")
 ABOUT = os.path.join(ROOT, "about.html")
 
-HEAD_RE = re.compile(r"<p><strong>NB频道 V ([\d.]+)（(\d{4}-\d{2}-\d{2})）·([^<]*)</strong></p>")
+# 放宽分隔符：老版本写法不统一（有的没 '·'、有的全角半角括号混用），
+# 之前只认出 24 条，导致 Beta 更新日志只能翻到 0.9。
+HEAD_RE = re.compile(
+    r"<p><strong>NB频道\s*V\s*([\d.]+)\s*[（(]\s*(\d{4}-\d{2}-\d{2})\s*[）)]\s*[·・]?\s*([^<]*)</strong></p>"
+)
 LI_RE = re.compile(r"<li>([^<]*)</li>")
 
 
