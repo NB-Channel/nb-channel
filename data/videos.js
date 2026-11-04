@@ -1,6 +1,26 @@
 // data/videos.js
 window.VIDEOS = /*<VIDEOS>*/[
     {
+        "bvid": "BV1WGxW6kEdD",
+        "title": "小小炸弹",
+        "cover": "https://i2.hdslb.com/bfs/archive/e7c0cc5acf071dac7037dee6d00613ca9732616f.jpg",
+        "play": "467",
+        "duration": "00:39",
+        "pubdate": 1793497913,
+        "category_key": "其他",
+        "category_name": "《其他》"
+    },
+    {
+        "bvid": "BV1wWJa61ERh",
+        "title": "【神人以待】《 鹰 警 进 小 学 》.exe#EP03",
+        "cover": "https://i0.hdslb.com/bfs/archive/de79908c23f0d931186ab25e1b4c00191d2a07bd.jpg",
+        "play": "1511",
+        "duration": "07:31",
+        "pubdate": 1792210327,
+        "category_key": "其他",
+        "category_name": "《其他》"
+    },
+    {
         "bvid": "BV1Nr3i63ENL",
         "title": "《 行 星 发 动 机 》",
         "cover": "https://i1.hdslb.com/bfs/archive/7fc0a17bb56a553d152776e86ea34e604b9fdbf6.jpg",
@@ -81,6 +101,26 @@ window.VIDEOS = /*<VIDEOS>*/[
         "category_name": "《官网》"
     },
     {
+        "bvid": "BV1CfcqzhEkU",
+        "title": "⚡ N B 不 妙 曲 ⚡",
+        "cover": "https://i0.hdslb.com/bfs/archive/5e3124312a620a2ca534552b47f9c488ff09b423.jpg",
+        "play": "1.3万",
+        "duration": "02:48",
+        "pubdate": 1770900917,
+        "category_key": "其他",
+        "category_name": "《其他》"
+    },
+    {
+        "bvid": "BV16gcbzAE5R",
+        "title": "《 假 如 N B 实 验 室 有 加 载 动 画 》",
+        "cover": "https://i2.hdslb.com/bfs/archive/0576171bbe8f4fd9e366d4d0b19a99a6cd2f979c.jpg",
+        "play": "1.3万",
+        "duration": "00:33",
+        "pubdate": 1770820996,
+        "category_key": "其他",
+        "category_name": "《其他》"
+    },
+    {
         "bvid": "BV1D5zXBcECp",
         "title": "《 3 0 0 V 电 池 》",
         "cover": "https://i0.hdslb.com/bfs/archive/2e0b55ba1f902deed1b1706f2ef7cd00490d6354.jpg",
@@ -129,6 +169,26 @@ window.VIDEOS = /*<VIDEOS>*/[
         "pubdate": 1759921312,
         "category_key": "化学",
         "category_name": "《逝验室·化学》"
+    },
+    {
+        "bvid": "BV1WytCzJEZd",
+        "title": "你还没有过IDM这种变态的下载器？？？",
+        "cover": "https://i0.hdslb.com/bfs/archive/0dbcccb1de09135ccc3de14a19663869570dfcac.jpg",
+        "play": "6863",
+        "duration": "07:58",
+        "pubdate": 1754626865,
+        "category_key": "其他",
+        "category_name": "《其他》"
+    },
+    {
+        "bvid": "BV17gTRzSEDL",
+        "title": "《 美 式 居 合 》",
+        "cover": "https://i0.hdslb.com/bfs/archive/19ac70b1dfb404a212fdef7f636cc9dda7b3f934.jpg",
+        "play": "4567",
+        "duration": "15:55",
+        "pubdate": 1749391294,
+        "category_key": "其他",
+        "category_name": "《其他》"
     },
     {
         "bvid": "BV1YXEuzCEPS",
@@ -274,7 +334,7 @@ window.VIDEOS = /*<VIDEOS>*/[
         "bvid": "BV11gNbe4ExW",
         "title": "《 不 要 让 化 学 老 师 看 到 》",
         "cover": "https://i2.hdslb.com/bfs/archive/7504c36d5c933726a7ecdcfbb0d6f98085a8dc2f.jpg",
-        "play": "55.3万",
+        "play": "55.4万",
         "duration": "6:01",
         "pubdate": 1738904567,
         "category_key": "化学",
