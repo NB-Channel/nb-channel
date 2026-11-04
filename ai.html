@@ -2245,7 +2245,8 @@ function webOn() {
         }
 
         var text = ($q.value || '').trim();
-        if (text.length < 2) { setNotice('先写个问题吧', true); return; }
+        // 允许单字提问（有人会发单个假名/符号测着玩），只有全空才拦
+            if (!text || !text.trim()) { setNotice('先写个问题吧', true); return; }
 
         setNotice('');
 
