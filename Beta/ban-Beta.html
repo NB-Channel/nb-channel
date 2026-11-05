@@ -1132,6 +1132,29 @@ html.dark .bn-case-ev { background: rgba(217,69,61,.10); }
 html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
 .bn-case-tag.bn-case-mute { background: rgba(240,138,29,.14); color: #c9751a; border-color: rgba(240,138,29,.45); }
 </style>
+
+<style id="nb-ban-emphasis">
+/* 大标题 */
+.bn-case-banner { display: flex; align-items: center; gap: 12px; margin: 0 0 20px;
+                  padding: 14px 18px; border-radius: 14px;
+                  background: rgba(229,72,77,.08); border: 1px solid rgba(229,72,77,.28); }
+html.dark .bn-case-banner { background: rgba(229,72,77,.12); }
+.bcb-ico { font-size: 1.5rem; line-height: 1; }
+.bcb-title { font-size: 1.06rem; font-weight: 800; letter-spacing: 1px; color: #e5484d; }
+.bcb-sub { font-size: .78rem; opacity: .7; margin-top: 3px; line-height: 1.6; }
+
+/* 名字 / 标签 放大加粗 */
+.bn-case .bn-case-name { font-size: 1.25rem; letter-spacing: .5px; }
+.bn-case .bn-case-tag { font-weight: 800; font-size: .78rem; padding: 5px 14px; }
+.bn-case .bn-case-ava { width: 48px; height: 48px; flex: 0 0 48px; font-size: 1.15rem; }
+
+/* 禁言卡片：橙色系 */
+.bn-case.bn-case-risk { border-left-color: #f08a1d; background: rgba(240,138,29,.045); }
+html.dark .bn-case.bn-case-risk { background: rgba(240,138,29,.09); }
+.bn-case.bn-case-risk .bn-case-name { color: #c9751a; text-decoration-color: rgba(240,138,29,.55); }
+.bn-case.bn-case-risk .bn-case-ico { filter: saturate(1.1); }
+.bn-case.bn-case-risk .bn-case-tag { background: rgba(240,138,29,.16); color: #b8690f; border: 1px solid rgba(240,138,29,.42); }
+</style>
 </head>
 <body>
 <nav class="nav">
@@ -1278,7 +1301,15 @@ html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
     </div>
 
     <!-- 重大案例(已删除的账号,名单里不会再出现,单独公示) -->
-        <div class="bn-case">
+            <div class="bn-case-banner">
+        <span class="bcb-ico">⚠️</span>
+        <div>
+            <div class="bcb-title">违规公示 · 重大案例</div>
+            <div class="bcb-sub">以下账号/公司已按用户守则处理，记录长期保留；有异议可在「反馈」区申诉</div>
+        </div>
+    </div>
+
+<div class="bn-case">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB官号">官</span>
@@ -1332,7 +1363,7 @@ html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
         </ul>
     </div>
 
-    <div class="bn-case">
+    <div class="bn-case bn-case-risk">
         <div class="bn-case-head">
             <span class="bn-case-ico">🔇</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="蓝色大肥鱼">鱼</span>
@@ -1361,7 +1392,7 @@ html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
             </div>
     </div>
 
-    <div class="bn-case">
+    <div class="bn-case bn-case-risk">
         <div class="bn-case-head">
             <span class="bn-case-ico">🔇</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="豆包">豆</span>
