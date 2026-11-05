@@ -1267,7 +1267,7 @@ html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <div>
-                <span class="bn-case-ava bn-case-ava-txt">官</span>
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB官号">官</span>
                 <div class="bn-case-name">小NB官号</div>
                 <div class="bn-case-date">公示日期 2026-09-10</div>
             </div>
@@ -1285,7 +1285,7 @@ html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <div>
-                <span class="bn-case-ava bn-case-ava-txt">2</span>
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB2">2</span>
                 <div class="bn-case-name">小NB2</div>
                 <div class="bn-case-date">公示日期 2026-09-25</div>
             </div>
@@ -1303,7 +1303,7 @@ html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <div>
-                <img class="bn-case-ava" src="https://pbaafgjkwdbwcmsikcmg.supabase.co/storage/v1/object/public/avatars/user_59788e5a-290d-4f94-a6ef-8dd51f81a3d4_1790412674163.jpg" alt="小NB3" onerror="this.outerHTML='<span class="bn-case-ava bn-case-ava-txt">3</span>'">
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB3">3</span>3</span>'">
                 <div class="bn-case-name">小NB3</div>
                 <div class="bn-case-date">公示日期 2026-10-04</div>
             </div>
@@ -1321,8 +1321,7 @@ html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
     <div class="bn-case">
         <div class="bn-case-head">
             <span class="bn-case-ico">🔇</span>
-                <img class="bn-case-ava" src="https://pbaafgjkwdbwcmsikcmg.supabase.co/storage/v1/object/public/avatars/user_c19bb6ec-57ef-4a84-b9f2-bd085725b1ae_1792927700662.png" alt="蓝色大肥鱼"
-                 onerror="this.outerHTML='<span class=\'bn-case-ava bn-case-ava-txt\'>鱼</span>'">
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="蓝色大肥鱼">鱼</span>鱼</span>'">
             <div>
                 <div class="bn-case-name">蓝色大肥鱼</div>
                 <div class="bn-case-date">公示日期 2026-11-05</div>
@@ -1340,7 +1339,7 @@ html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
     <div class="bn-case">
         <div class="bn-case-head">
             <span class="bn-case-ico">🔇</span>
-                <span class="bn-case-ava bn-case-ava-txt">豆</span>
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="豆包">豆</span>
             <div>
                 <div class="bn-case-name">豆包</div>
                 <div class="bn-case-date">公示日期 2026-11-05</div>
@@ -1674,6 +1673,23 @@ function companiesHtml() {
     return html + '</div>';
 }
 
+function fillCaseAvatars(users) {
+    var map = {};
+    (users || []).forEach(function (u) { if (u && u.username) map[u.username] = u.avatar_url || ''; });
+    document.querySelectorAll('.bn-case-ava[data-uname]').forEach(function (el) {
+        var uname = el.getAttribute('data-uname');
+        var url = map[uname];
+        if (!url) return;                       // 没头像就保留首字
+        var img = document.createElement('img');
+        img.className = 'bn-case-ava';
+        img.alt = uname;
+        img.src = url;
+        img.onerror = function () { /* 加载失败保留原样 */ };
+        el.parentNode.replaceChild(img, el);
+        img.removeAttribute('data-uname');
+    });
+}
+
 function renderTab() {
     var body = document.getElementById('bnBody');
     var inner = (CUR_TAB === 'users') ? usersHtml() : companiesHtml();
@@ -1698,6 +1714,7 @@ async function loadList() {
             return EXCLUDE_NAMES.indexOf(u.username) === -1;
         });
         BL.companies = d.companies || [];
+        fillCaseAvatars(BL.users);
         renderTab();
     } catch (e) {
         body.innerHTML = '<div class="ac-state"><div class="ac-st-ico">⚠️</div><h3>名单加载失败</h3>' +
