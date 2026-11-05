@@ -1302,9 +1302,9 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
             </div>
         </div>
         <div class="pd-stats">
-            <div class="pd-row"><span class="k">刊期</span><b>第 1 期</b></div>
+            <div class="pd-row"><span class="k">刊期</span><b id="pdIssueNo">第 1 期</b></div>
             <div class="pd-row"><span class="k">出版</span><b>NB频道 · 虚拟公司</b></div>
-            <div class="pd-row"><span class="k">版次</span><b>第一版 · 共一版</b></div>
+            <div class="pd-row"><span class="k">版次</span><b id="pdPageCount">第一版 · 共一版</b></div>
             <div class="pd-row"><span class="k">定价</span><b>免费取阅</b></div>
             <div class="pd-tip">仅供娱乐 · 请勿代入现实</div>
         </div>
@@ -2175,6 +2175,12 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
 
     /* ── 某一期 ── */
     function openIssue(no) {
+        // 同步顶部信息卡的「刊期 / 版次」（之前是写死的「第 1 期」）
+        (function () {
+            var noEl = document.getElementById('pdIssueNo');
+            if (noEl) noEl.textContent = '第 ' + no + ' 期';
+        })();
+
         body.innerHTML = '<div class="np-loading">正在展开第 ' + no + ' 期…</div>';
         var u = me();
         rpc('get_news_issue', { p_user_id: u ? u.id : null, p_issue_no: no }).then(function (d) {
@@ -2249,6 +2255,17 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
 
         var h = '<button class="np-back" id="npBack">← 回各期</button>' +
             '<div class="np-wrap"><div class="np-paper" id="npPaper">';
+
+        // 数据到齐后再校正一次信息卡（含版次）
+        (function () {
+            var noEl = document.getElementById('pdIssueNo');
+            if (noEl && d.issue_no) noEl.textContent = '第 ' + d.issue_no + ' 期';
+            var pcEl = document.getElementById('pdPageCount');
+            if (pcEl) {
+                var _t = (typeof total === 'number' && total > 0) ? total : 1;
+                pcEl.textContent = '第一版 · 共' + (_t > 1 ? _t : '一') + '版';
+            }
+        })();
 
         // ── 报头 ──
         h += '<header class="np-masthead">' +
