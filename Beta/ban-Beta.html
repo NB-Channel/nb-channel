@@ -1098,6 +1098,14 @@ html { -webkit-text-size-adjust: 100%; }
 <!-- nb-theme: 主题包（国庆 / 科技）—— 必须在页面样式之后加载 -->
 <link rel="stylesheet" href="../css/themes.css?v=35">
 <script src="../js/theme.js?v=9"></script>
+
+<style id="nb-ban-tabs-css">
+.bn-tabs { display:flex; gap:8px; margin:0 0 14px; }
+.bn-tab { padding:7px 14px; border-radius:999px; font-size:.85rem; cursor:pointer;
+          border:1px solid rgba(120,130,150,.28); background:transparent; color:inherit; }
+.bn-tab:hover { border-color:#3988f6; }
+.bn-tab.on { background:#3988f6; border-color:#3988f6; color:#fff; }
+</style>
 </head>
 <body>
 <nav class="nav">
@@ -1555,36 +1563,89 @@ function renderEmpty() {
         '<div class="ac-state"><div class="ac-st-ico">✅</div><h3>当前没有被封禁的账号</h3>' +
         '<p>社区很干净,保持下去</p></div>';
 }
-function renderList(rows) {
+var CUR_TAB = 'users';
+var BL = { users: [], companies: [] };
+
+function tabBar() {
+    return '<div class="bn-tabs">' +
+        '<button class="bn-tab' + (CUR_TAB === 'users' ? ' on' : '') + '" data-tab="users">用户（' + BL.users.length + '）</button>' +
+        '<button class="bn-tab' + (CUR_TAB === 'companies' ? ' on' : '') + '" data-tab="companies">分公司（' + BL.companies.length + '）</button>' +
+        '</div>';
+}
+
+function emptyBox(title, sub) {
+    return '<div class="ac-state"><div class="ac-st-ico">✓</div><h3>' + esc(title) + '</h3>' +
+        '<p>' + esc(sub) + '</p></div>';
+}
+
+function usersHtml() {
+    var rows = BL.users || [];
     document.getElementById('bnCount').innerText = '共 ' + rows.length + ' 个';
-    if (!rows.length) return renderEmpty();
+    if (!rows.length) return emptyBox('当前没有被封禁的账号', '社区很干净，保持下去');
     var html = '<div class="bn-list">';
     for (var i = 0; i < rows.length; i++) {
         var u = rows[i];
-        var reason = u.banned_reason || '违规封禁';
+        var until = u.until_text || '';
+        var badge = (until === '永久') ? '已封禁' : '禁言中';
         html += '<div class="bn-item">' +
             avatarHtml(u) +
             '<div class="bn-main">' +
-            '<div class="bn-user">' + esc(u.username) + '<span class="bn-badge">已封禁</span></div>' +
-            '<div class="bn-reason">' + esc(reason) + '</div>' +
+            '<div class="bn-user">' + esc(u.username) + '<span class="bn-badge">' + badge + '</span></div>' +
+            '<div class="bn-reason">' + esc(u.reason || '违规') + '</div>' +
             '</div>' +
-            '<div class="bn-when">注册于<br>' + fmtDate(u.created_at) + '</div>' +
+            '<div class="bn-when">' + (until ? esc(until) : '永久') + '</div>' +
             '</div>';
     }
-    html += '</div>';
-    document.getElementById('bnBody').innerHTML = html;
+    return html + '</div>';
 }
+
+function companiesHtml() {
+    var rows = BL.companies || [];
+    document.getElementById('bnCount').innerText = '共 ' + rows.length + ' 家';
+    if (!rows.length) return emptyBox('暂无被下架的分公司', '都还好好开着');
+    var html = '<div class="bn-list">';
+    for (var i = 0; i < rows.length; i++) {
+        var c = rows[i];
+        html += '<div class="bn-item">' +
+            '<span class="bn-ava bn-ava-txt">' + esc((c.company_name || '?').slice(0, 1)) + '</span>' +
+            '<div class="bn-main">' +
+            '<div class="bn-user">' + esc(c.company_name) +
+            '<span class="bn-badge">已下架</span></div>' +
+            '<div class="bn-reason">' + esc(c.reason || '违规') +
+            (c.market_value != null ? ' · 下架时市值 ' + Math.round(c.market_value) + ' NB' : '') +
+            (c.owner_name ? ' · 业主 ' + esc(c.owner_name) : '') + '</div>' +
+            '</div>' +
+            '<div class="bn-when">下架于<br>' + fmtDate(c.blocked_at) + '</div>' +
+            '</div>';
+    }
+    return html + '</div>';
+}
+
+function renderTab() {
+    var body = document.getElementById('bnBody');
+    var inner = (CUR_TAB === 'users') ? usersHtml() : companiesHtml();
+    body.innerHTML = tabBar() + inner;
+    var btns = body.querySelectorAll('.bn-tab');
+    for (var k = 0; k < btns.length; k++) {
+        btns[k].addEventListener('click', function () {
+            CUR_TAB = this.getAttribute('data-tab');
+            renderTab();
+        });
+    }
+}
+
 async function loadList() {
     var body = document.getElementById('bnBody');
     try {
         if (!sbClient) sbClient = window.supabase.createClient(SB_URL, SB_KEY);
-        var res = await sbClient.from('profiles')
-            .select('id, username, avatar_url, created_at, is_banned, banned_reason')
-            .eq('is_banned', true)
-            .order('created_at', { ascending: true });
-        if (res.error) throw res.error;
-        var list = (res.data || []).filter(function (u) { return EXCLUDE_NAMES.indexOf(u.username) === -1; });
-        renderList(list);
+        var r = await sbClient.rpc('get_blacklist');
+        if (r.error) throw r.error;
+        var d = r.data || {};
+        BL.users = (d.users || []).filter(function (u) {
+            return EXCLUDE_NAMES.indexOf(u.username) === -1;
+        });
+        BL.companies = d.companies || [];
+        renderTab();
     } catch (e) {
         body.innerHTML = '<div class="ac-state"><div class="ac-st-ico">⚠️</div><h3>名单加载失败</h3>' +
             '<p>' + esc(e && e.message ? e.message : e) + '</p></div>';
