@@ -1741,11 +1741,15 @@ async function loadList() {
         var r = await sbClient.rpc('get_blacklist');
         if (r.error) throw r.error;
         var d = r.data || {};
-        BL.users = (d.users || []).filter(function (u) {
+        // ⚠️ 头像映射要用【过滤前】的全量用户，
+        //    因为 5 张重大案例卡片上的账号都被 EXCLUDE_NAMES 排除了，
+        //    用过滤后的列表去查头像永远查不到。
+        var _allUsers = d.users || [];
+        BL.users = _allUsers.filter(function (u) {
             return EXCLUDE_NAMES.indexOf(u.username) === -1;
         });
         BL.companies = d.companies || [];
-        fillCaseAvatars(BL.users);
+        fillCaseAvatars(_allUsers);
         renderTab();
     } catch (e) {
         body.innerHTML = '<div class="ac-state"><div class="ac-st-ico">⚠️</div><h3>名单加载失败</h3>' +
