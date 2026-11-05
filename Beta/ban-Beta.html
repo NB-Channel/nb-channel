@@ -1586,7 +1586,8 @@ function usersHtml() {
     for (var i = 0; i < rows.length; i++) {
         var u = rows[i];
         var until = u.until_text || '';
-        var badge = (until === '永久') ? '已封禁' : '禁言中';
+        // kind 由后端给：ban = 封号，mute = 禁言；不要再靠文案猜
+        var badge = (u.kind === 'ban') ? '已封禁' : '禁言中';
         html += '<div class="bn-item">' +
             avatarHtml(u) +
             '<div class="bn-main">' +
