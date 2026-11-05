@@ -2091,6 +2091,7 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
 
     // ---- 在导航「更多功能」下拉 + 手机抽屉里注入入口 ----
     function inject() {
+        if (!/NBChannelApp/i.test(navigator.userAgent)) return;  // 只在 APP 里显示
         var panel = document.querySelector('.nav-more-panel');
         if (panel && !panel.querySelector('[data-nb-upd]')) {
             var a = document.createElement('a');
@@ -2122,8 +2123,10 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
     setTimeout(inject, 1200);      // 兜底:导航是脚本渲染时再试一次
 
     // 启动自动查一次,之后每 30 分钟
-    setTimeout(function () { check(false); }, 2000);
-    setInterval(function () { check(false); }, 30 * 60 * 1000);
+    if (/NBChannelApp/i.test(navigator.userAgent)) {
+        setTimeout(function () { check(false); }, 2000);
+        setInterval(function () { check(false); }, 30 * 60 * 1000);
+    }
 })();
 </script>
 
