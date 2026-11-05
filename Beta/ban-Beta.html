@@ -1126,6 +1126,10 @@ html.dark .bn-case-ev { background: rgba(217,69,61,.10); }
 .bn-ev-list { margin: 0; padding-left: 18px; }
 .bn-ev-list li { font-size: .82rem; line-height: 1.75; margin: 4px 0; }
 .bn-ev-meta { display: inline-block; min-width: 132px; opacity: .6; font-family: ui-monospace, Menlo, monospace; }
+.bn-case-ava { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: 0 0 44px;
+               display: flex; align-items: center; justify-content: center;
+               background: rgba(120,130,150,.16); font-weight: 800; font-size: 1.05rem; }
+html.dark .bn-case-ava { background: rgba(255,255,255,.10); }
 </style>
 </head>
 <body>
@@ -1275,8 +1279,94 @@ html.dark .bn-case-ev { background: rgba(217,69,61,.10); }
     <!-- 重大案例(已删除的账号,名单里不会再出现,单独公示) -->
     <div class="bn-case">
         <div class="bn-case-head">
-                <span class="bn-case-ico">🔇</span>
+            <span class="bn-case-ico">🚫</span>
+            <div>
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB官号">官</span>
+                <div class="bn-case-name">小NB官号</div>
+                <div class="bn-case-date">公示日期 2026-09-10</div>
+            </div>
+            <span class="bn-case-tag">已永久封禁</span>
+        </div>
+        <ul class="bn-case-list">
+            <li><b>违规行为</b>盗取官方账号,恶意修改账号数据,性质恶劣</li>
+            <li><b>处理结果</b>账号已永久封禁,名下数据全部清除,关联来源已列入访问黑名单</li>
+            <li><b>补充说明</b>相关操作记录已完整留存,同类行为一律从严处理</li>
+        </ul>
+    </div>
+
+    <!-- 重大案例:小NB2(与上一条同一人,换号复犯) -->
+    <div class="bn-case">
+        <div class="bn-case-head">
+            <span class="bn-case-ico">🚫</span>
+            <div>
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB2">2</span>
+                <div class="bn-case-name">小NB2</div>
+                <div class="bn-case-date">公示日期 2026-09-25</div>
+            </div>
+            <span class="bn-case-tag">已永久封禁</span>
+        </div>
+        <ul class="bn-case-list">
+            <li><b>违规行为</b>注册后数分钟内即在评论区刷屏辱骂,与已封禁的「小NB官号」为同一人,系换号复犯</li>
+            <li><b>处理结果</b>账号已永久封禁,全部违规评论清除,其使用的网络来源与一次性临时邮箱域名均已列入黑名单</li>
+            <li><b>补充说明</b>本站注册需邮箱验证,用临时邮箱规避验证同样会被识别并拦截;换号复犯一律从重处理</li>
+        </ul>
+    </div>
+
+    <!-- 重大案例:小NB3(冒充站方发布分裂国家言论) -->
+    <div class="bn-case">
+        <div class="bn-case-head">
+            <span class="bn-case-ico">🚫</span>
+            <div>
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB3">3</span>3</span>'">
+                <div class="bn-case-name">小NB3</div>
+                <div class="bn-case-date">公示日期 2026-10-04</div>
+            </div>
+            <span class="bn-case-tag">已永久封禁</span>
+        </div>
+        <ul class="bn-case-list">
+            <li><b>违规行为</b>在评论区连续刷屏辱骂，并<b>冒用本站名义编造、散布分裂国家的言论</b>，严重损害本站声誉</li>
+            <li><b>处理结果</b>账号已永久封禁，全部违规评论清除，其使用的网络来源与一次性临时邮箱域名均已列入黑名单</li>
+            <li><b>严正声明</b><b>本站是个人兴趣项目，与任何政治立场无关。</b>上述言论均为该账号凭空捏造，本站从未发表、也绝不会发表此类言论。任何人冒用本站名义发布政治或违法内容，一律永久封禁并完整留存证据</li>
+        </ul>
+    </div>
+
+
+    <!-- 处分案例:蓝色大肥鱼(人格化刷屏 + 挑衅言论) -->
+    <div class="bn-case">
+        <div class="bn-case-head">
+            <span class="bn-case-ico">🔇</span>
+                <span class="bn-case-ava bn-case-ava-txt" data-uname="蓝色大肥鱼">鱼</span>鱼</span>'">
+            <div>
+                <div class="bn-case-name">蓝色大肥鱼</div>
+                <div class="bn-case-date">公示日期 2026-11-05</div>
+            </div>
+            <span class="bn-case-tag bn-case-mute">禁言 7 天</span>
+        </div>
+        <ul class="bn-case-list">
+            <li><b>违规行为</b>长期以固定人格口癖在他人评论下高频跟帖（累计 105 条），内容多为挑衅、挑事，干扰正常讨论</li>
+            <li><b>处理结果</b>禁言 7 天（至 2026-11-12 12:29），期间可正常浏览、登录，但不能发评论或回复；不封号</li>
+            <li><b>补充说明</b>若解禁后继续同类行为，按累犯处理，升级为永久封禁</li>
+        </ul>
+    
+        <div class="bn-case-ev">
+            <div class="bn-ev-title">📎 证据（原文摘录 · 5 条最严重的，可在评论区按编号查到）</div>
+            <ul class="bn-ev-list">
+                <li><span class="bn-ev-meta">#9333 · 11-03 11:47</span>「死妈仔」<em>（咒骂家人）</em></li>
+                <li><span class="bn-ev-meta">#9353 · 11-04 09:28</span>「@NB频道官方 __富__//文//((本))全部报废💥你的脑子是装屎的吗💩赶紧修bug💼」</li>
+                <li><span class="bn-ev-meta">#9121 · 10-31 07:51</span>「@摸鱼的齐喜 连我都不知道😡fw脑子装屎💩gun的越远越好👎🏻」</li>
+                <li><span class="bn-ev-meta">#8869 · 10-26 11:27</span>「@AWM1111 连这都不知道🤬 fw脑子装屎💩 NB加多少关你屁事👎 去数清楚再回来😡」</li>
+                <li><span class="bn-ev-meta">#9024 · 10-30 11:40</span>「…但是这个死妈的AWM1111，把我的饭都弄臭了(ò_ó)」</li>
+                <li><span class="bn-ev-meta">统计</span>注册 2026-10-25，累计 105 条评论；同类辱骂在 10-26 / 10-31 / 11-03 / 11-04 反复出现</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 处分案例:豆包(冒充第三方产品名) -->
+    <div class="bn-case">
+        <div class="bn-case-head">
+            <span class="bn-case-ico">🔇</span>
                 <span class="bn-case-ava bn-case-ava-txt" data-uname="豆包">豆</span>
+            <div>
                 <div class="bn-case-name">豆包</div>
                 <div class="bn-case-date">公示日期 2026-11-05</div>
             </div>
@@ -1287,16 +1377,15 @@ html.dark .bn-case-ev { background: rgba(217,69,61,.10); }
             <li><b>处理结果</b>禁言 7 天（至 2026-11-12 12:29），期间可正常浏览、登录，但不能发评论或回复；不封号</li>
             <li><b>补充说明</b>解禁后若继续同类挑衅行为，按累犯升级处理</li>
         </ul>
-
+    
         <div class="bn-case-ev">
             <div class="bn-ev-title">📎 证据（原文摘录，可在评论 #9083~#9345 查到）</div>
             <ul class="bn-ev-list">
-                <li><span class="bn-ev-meta">#9345 · 11-03 12:48</span>「我是第五版哦 密码：shabi 邮箱：doubao@ugu.me」（公开他人/自身账号凭据，并含粗俗用语）</li>
+                <li><span class="bn-ev-meta">#9345 · 11-03 12:48</span>「我是第五版哦 密码：shabi 邮箱：doubao@ugu.me」（公开账号凭据，并含粗俗用语）</li>
                 <li><span class="bn-ev-meta">#9343 · 11-03 12:45</span>「@摸鱼的齐喜 你从Utw那里偷的提示词确实好用 我感觉说话都利索了」（在他人评论下挑衅）</li>
                 <li><span class="bn-ev-meta">#9108 / #9127 / #9316 / #9318 / #9328</span>「我直接用最不直接、最虚假、最不直白…」同一段文字重复 6 次以上（刷屏）</li>
             </ul>
         </div>
-
     </div>
 
     <!-- 当前封禁名单(实时读取) -->
@@ -1625,14 +1714,12 @@ function fillCaseAvatars(users) {
     document.querySelectorAll('.bn-case-ava[data-uname]').forEach(function (el) {
         var uname = el.getAttribute('data-uname');
         var url = map[uname];
-        if (!url) return;                       // 没头像就保留首字
+        if (!url) return;
         var img = document.createElement('img');
         img.className = 'bn-case-ava';
         img.alt = uname;
         img.src = url;
-        img.onerror = function () { /* 加载失败保留原样 */ };
         el.parentNode.replaceChild(img, el);
-        img.removeAttribute('data-uname');
     });
 }
 
