@@ -3427,5 +3427,96 @@ html { -webkit-text-size-adjust: 100%; }
 </script>
 <script defer src="../js/science-tips.js?v=26"></script>
 <script src="../js/pomodoro.js?v=7" defer></script>
+
+<script>
+/* ===== 禁言：锁住评论框和回复框 =====
+   —— 数据库那边也有触发器兜底（禁言中直接插不进去），
+      这里只是让用户提前看到原因，不至于点了半天没反应。 */
+(function () {
+    var MUTED_UNTIL = null;
+
+    function fmt(t) {
+        try {
+            var d = new Date(t);
+            function p(n) { return (n < 10 ? '0' : '') + n; }
+            return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+                   ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+        } catch (e) { return t; }
+    }
+
+    function banner() {
+        var el = document.getElementById('nb-muted-banner');
+        if (el) return el;
+        el = document.createElement('div');
+        el.id = 'nb-muted-banner';
+        el.style.cssText = 'margin:10px 0;padding:10px 14px;border-radius:10px;font-size:.86rem;' +
+            'line-height:1.7;background:rgba(217,69,61,.10);border:1px solid rgba(217,69,61,.35);' +
+            'color:#d9453d;';
+        var host = document.getElementById('comment-text');
+        var box = host ? host.closest('form') || host.parentNode : document.body;
+        box.insertBefore(el, box.firstChild);
+        return el;
+    }
+
+    function lock() {
+        var msg = '你已被禁言至 ' + fmt(MUTED_UNTIL) + '，期间不能发评论或回复。' +
+                  '（见「用户守则」，有异议可在反馈区申诉）';
+        var b = banner();
+        b.textContent = '🔇 ' + msg;
+
+        // 主评论框
+        var ta = document.getElementById('comment-text');
+        if (ta) {
+            ta.readOnly = true;
+            ta.style.opacity = '.55';
+            ta.placeholder = '禁言中，暂时不能发表评论';
+        }
+        // 所有回复框（动态生成的）
+        document.querySelectorAll('textarea').forEach(function (t) {
+            if (t.id === 'report-reason') return;      // 举报框要能用
+            t.readOnly = true;
+            t.style.opacity = '.55';
+            t.placeholder = '禁言中，暂时不能回复';
+        });
+        // 提交/回复按钮
+        document.querySelectorAll('button, .btn').forEach(function (bt) {
+            var txt = (bt.textContent || '').trim();
+            if (/发表评论|发布|发送|回复/.test(txt) && !/举报/.test(txt)) {
+                bt.style.opacity = '.45';
+                bt.style.pointerEvents = 'none';
+            }
+        });
+    }
+
+    function check() {
+        var u = null;
+        try { u = JSON.parse(localStorage.getItem('nb_user') || 'null'); } catch (e) {}
+        if (!u || !u.id) return;
+        var sb = window.supabaseClient || window.sbClient ||
+                 (window.supabase && window.SB_URL && window.supabase.createClient(window.SB_URL, window.SB_KEY));
+        if (!sb) return;
+        sb.from('profiles').select('muted_until, is_banned').eq('id', u.id).maybeSingle()
+          .then(function (r) {
+              var p = r && r.data;
+              if (!p) return;
+              if (p.is_banned) return;                 // 封号另有处理
+              if (p.muted_until && new Date(p.muted_until) > new Date()) {
+                  MUTED_UNTIL = p.muted_until;
+                  lock();
+                  // 回复框是动态插进来的，用观察器持续锁
+                  var mo = new MutationObserver(function () { lock(); });
+                  mo.observe(document.body, { childList: true, subtree: true });
+              }
+          })
+          .catch(function () {});
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(check, 1200); });
+    } else {
+        setTimeout(check, 1200);
+    }
+})();
+</script>
 </body>
 </html>
