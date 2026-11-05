@@ -1616,7 +1616,7 @@ var BL = { users: [], companies: [] };
 function tabBar() {
     return '<div class="bn-tabs">' +
         '<button class="bn-tab' + (CUR_TAB === 'users' ? ' on' : '') + '" data-tab="users">用户（' + BL.users.length + '）</button>' +
-        '<button class="bn-tab' + (CUR_TAB === 'companies' ? ' on' : '') + '" data-tab="companies">分公司（' + BL.companies.length + '）</button>' +
+        '<button class="bn-tab' + (CUR_TAB === 'companies' ? ' on' : '') + '" data-tab="companies">公司（' + BL.companies.length + '）</button>' +
         '</div>';
 }
 
@@ -1650,7 +1650,7 @@ function usersHtml() {
 function companiesHtml() {
     var rows = BL.companies || [];
     document.getElementById('bnCount').innerText = '共 ' + rows.length + ' 家';
-    if (!rows.length) return emptyBox('暂无被下架的分公司', '都还好好开着');
+    if (!rows.length) return emptyBox('暂无被下架的公司', '都还好好开着');
     var html = '<div class="bn-list">';
     for (var i = 0; i < rows.length; i++) {
         var c = rows[i];
