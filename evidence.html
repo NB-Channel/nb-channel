@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>关于「字符串蛇抄袭」指控的核查说明 · NB频道</title>
+<style>
+  :root{--bg:#f6f8fb;--panel:#fff;--ink:#101828;--soft:#475467;--faint:#98a2b3;--line:#e4e7ec;
+        --brand:#2563eb;--red:#d93a3f;--ok:#067647;--code:#0f172a;--codeink:#e2e8f0}
+  @media (prefers-color-scheme:dark){:root{--bg:#0b1020;--panel:#121a2e;--ink:#e6edf7;--soft:#a9b6cc;
+        --faint:#6b7a94;--line:#22304a;--brand:#7aa7ff;--red:#ff6b70;--ok:#4ade80;--code:#0a0f1c;--codeink:#dbe5f5}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:44px 20px 90px}
+  h1{font-size:1.65rem;line-height:1.4;margin:0 0 6px}
+  .sub{color:var(--faint);font-size:.86rem;margin-bottom:26px}
+  h2{font-size:1.1rem;margin:2em 0 .6em;padding-left:11px;border-left:4px solid var(--brand)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0}
+  .verdict{border-left:4px solid var(--ok);background:color-mix(in srgb,var(--ok) 8%,transparent)}
+  .bad{border-left:4px solid var(--red);background:color-mix(in srgb,var(--red) 7%,transparent)}
+  pre{background:var(--code);color:var(--codeink);padding:13px 15px;border-radius:10px;overflow:auto;
+      font:12.5px/1.75 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;
+       background:color-mix(in srgb,var(--brand) 10%,transparent);padding:1px 6px;border-radius:5px}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.9rem}
+  th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+  th{color:var(--faint);font-size:.78rem;font-weight:600}
+  .tag{display:inline-block;font-size:.74rem;font-weight:800;padding:2px 9px;border-radius:6px;
+       background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+  .tag.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+  a{color:var(--brand)}
+  footer{margin-top:44px;color:var(--faint);font-size:.82rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>关于「字符串蛇（strsnake）抄袭」指控的核查说明</h1>
+  <div class="sub">NB频道 · 2026-11-06 · 本文所有结论均可用公开数据复核</div>
+
+  <div class="card verdict">
+    <b>结论</b><br>
+    本站<b>从未有过</b>「字符串蛇 / strsnake / get-u-coins」这类页面，<b>不存在抄袭</b>。<br>
+    对方所指「本站页面调用其 Supabase 后端」中的那个项目（<code>stgdkwnpxdyhghfgywqj</code>），
+    是<b>本站站长本人早年的旧评论项目</b>，早已停用，与对方无关。<br>
+    两项指控均不成立。
+  </div>
+
+  <h2>一、关于「页面存在」的核查</h2>
+  <table>
+    <tr><th>检查项</th><th>结果</th></tr>
+    <tr><td><code>cloudflare.nb-channel.top/strsnake</code></td><td><span class="tag">HTTP 404</span></td></tr>
+    <tr><td><code>cloudflare.nb-channel.top/strsnake.html</code></td><td><span class="tag">HTTP 404</span></td></tr>
+    <tr><td><code>nb-channel.top/strsnake</code></td><td>返回网站入口页（单页应用兜底），不是游戏页</td></tr>
+    <tr><td>仓库文件名含 <code>strsnake</code> / <code>snake</code> / <code>coins</code></td><td><span class="tag ok">0 个</span></td></tr>
+    <tr><td>全历史所有 git 对象（1345 次提交）里含 <code>snake</code></td><td><span class="tag ok">0 个</span></td></tr>
+  </table>
+
+  <h2>二、用 git 全历史自证（可复现）</h2>
+  <p>本站代码仓库公开，任何人都能跑下面三条命令。如果本站真做过这个页面，历史里必定留下痕迹：</p>
+<pre># ① 全历史里有没有文件名带 strsnake / snake 的
+git log --all --oneline -- '*strsnake*' '*snake*'
+# → 输出为空
+
+# ② 全历史所有对象（1345 次提交涉及的每一个文件）里有没有
+git rev-list --all --objects | grep -i snake
+# → 输出为空
+
+# ③ 任意一次提交的增删里有没有出现 get-u-coins 这串
+git log --all -S 'get-u-coins' --oneline
+# → 除本站 2026-11-06 新增的这份说明外，输出为空</pre>
+  <p class="sub">说明：第 ③ 条现在会命中本文档自己（因为这段话里写了这个词），除此之外全历史无记录。</p>
+
+  <h2>三、关于「调用对方后端」的说明</h2>
+  <p>本站部分<b>已归档的旧页面</b>（<code>archive/</code>、<code>legacy/</code>、<code>classic-legacy/</code>、<code>preview/</code> 下的 comments 页）
+     引用过一个 Supabase 项目：<code>stgdkwnpxdyhghfgywqj.supabase.co</code>。</p>
+  <ul>
+    <li>那是<b>本站站长本人早年建立的旧评论项目</b>，不是对方的项目；</li>
+    <li>该项目现已失效（域名已无法解析），页面本身也只是历史归档；</li>
+    <li>本站现用项目是 <code>pbaafgjkwdbwcmsikcmg.supabase.co</code>，与对方无关。</li>
+  </ul>
+
+  <h2>四、对方言论时间线</h2>
+  <table>
+    <tr><th>时间</th><th>内容</th><th>编号</th></tr>
+    <tr><td>11-05 12:31</td><td>发帖指控本站「有一块 script 代码与我方逐字相同，相似度 99.9%」</td><td>#9398</td></tr>
+    <tr><td>11-05 12:32</td><td>继续称本站「用的是我方的 key」，要求删除页面</td><td>#9399</td></tr>
+    <tr><td>11-05 12:32</td><td>「确实误伤了你，这是我的问题，我认。但封号是另一件事，跟抄站没关系」</td><td>#9400</td></tr>
+    <tr><td>11-05 14:51</td><td>「之前 IP 段封禁误伤到你，是我这边的问题，已经删掉了」</td><td>#9405</td></tr>
+    <tr><td>11-05 14:59</td><td>反指控本站对其分站发起 120 万次请求（未提供任何日志或证据）</td><td>#9406</td></tr>
+  </table>
+  <div class="card bad">
+    对方在自己的站点上另有一页（403 封禁提示页）以「DDoS 网站、恶意泄漏站长 IP、连点器、
+    修改 IP 省份经纬度、试图把站长公司干倒闭」等理由对本站作出指控 ——
+    这些行为本站从未实施，也从未有任何一方提供证据。<br><br>
+    本站已完整留存上述页面截图（含时间、URL、页面内容），用于必要时的维权。
+  </div>
+
+  <h2>五、本站的处理与声明</h2>
+  <ul>
+    <li>对发布上述言论的账号：<b>封禁 7 天</b>，并在「<a href="ban-Beta.html">小黑屋</a>」公示（含证据编号）；</li>
+    <li>解封后若再次发布同类无证据指控或人身攻击，<b>永久封禁</b>；</li>
+    <li>本站不参与对骂，也不会删除这些帖子 —— 让证据留在原地；</li>
+    <li>若对方继续在其站点散布不实指控，本站保留依法维权的权利（含要求删除、赔礼道歉）。</li>
+  </ul>
+
+  <h2>六、欢迎复核</h2>
+  <p>本文所有命令、URL、评论编号都是公开可查的。任何人（包括对方）都可以自行验证：
+     仓库地址 <a href="https://github.com/NB-Channel/nb-channel">github.com/NB-Channel/nb-channel</a>，
+     评论页 <a href="comments-beta.html">评论区</a>（搜索编号即可定位原帖）。</p>
+
+  <footer>NB频道 · 2026-11-06 · 本站为个人兴趣项目，所有结论基于可公开复核的数据</footer>
+</div>
+</body>
+</html>
