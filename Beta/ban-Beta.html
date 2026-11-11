@@ -2498,6 +2498,15 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
         }
 };
 
+    // 实时用户名 → META 里的键（有的卡在 META 里用的是长名字）
+    var ALIAS = {
+        'Utw': 'Utw（主号 + Veo 小号）',
+        'Veo': 'Utw（主号 + Veo 小号）',
+        '嘉豪': '嘉豪（小NB 新号）',
+        '小NB新号': '小NB新号（售卖源码）',
+        'NBchannel': 'NBchannel'
+    };
+
     function esc(s) {
         return String(s == null ? '' : s).replace(/[&<>"]/g, function (m) {
             return m === '&' ? '&amp;' : m === '<' ? '&lt;' : m === '>' ? '&gt;' : '&quot;';
@@ -2514,7 +2523,7 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
 
     function cardHtml(u, isCompany) {
         var name = u.username || u.name || '未命名';
-        var meta = META[name] || { cats: isCompany ? ['公司类'] : [], ico: isCompany ? '🏢' : '🚫',
+        var meta = META[ALIAS[name] || name] || { cats: isCompany ? ['公司类'] : [], ico: isCompany ? '🏢' : '🚫',
             items: [{ k: '', v: isCompany ? '已被下架，历史记录已归档' : '已按《用户守则》处理，相关记录已在后台留档' }],
             ev: isCompany ? ['可在反馈区提出异议'] : ['如需申诉，可邮件 nbchannel@163.com'] };
         var cats = (meta.cats || []).slice();
