@@ -1177,6 +1177,23 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
 .bn-cat:hover { border-color:#3988f6; color:#3988f6; }
 .bn-cat.on { background:#3988f6; border-color:#3988f6; color:#fff; font-weight:700; }
 </style>
+<style id="nb-ban-grid-css">
+.bn-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; margin: 0 0 8px; }
+@media (max-width: 860px) { .bn-grid { grid-template-columns:1fr; } }
+.bn-grid .bn-case { margin:0; height:100%; display:flex; flex-direction:column; }
+.bn-grid .bn-case-list { margin:0; padding-left:18px; }
+.bn-grid .bn-case-list li { font-size:.86rem; line-height:1.75; }
+.bn-grid .bn-case-ev { margin-top:10px; }
+.bn-grid .bn-case-ev-title, .bn-grid .bn-ev-title { font-size:.78rem; font-weight:800; opacity:.75; }
+.bn-grid .bn-ev-list li { font-size:.78rem; }
+.bn-grid .bn-state { margin-left:auto; font-size:.74rem; font-weight:800; padding:4px 10px; border-radius:999px;
+                     background:rgba(229,72,77,.12); color:#d93a3f; white-space:nowrap; }
+.bn-grid .bn-state.mute { background:rgba(240,138,29,.14); color:#b8690f; }
+.bn-grid .bn-cat-tags { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 0; }
+.bn-grid .bn-cat-tag { font-size:.7rem; padding:2px 8px; border-radius:999px;
+                       background:rgba(57,136,246,.12); color:#2f6fd0; }
+.bn-grid .bn-case-name { text-decoration:none !important; }
+</style>
 </head>
 <body>
 <nav class="nav">
@@ -1326,26 +1343,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
     </div>
 
     <!-- 重大案例(已删除的账号,名单里不会再出现,单独公示) -->
-            <a class="bn-case-banner" href="evidence-Beta.html"
-       style="text-decoration:none;margin:0 0 20px;display:flex;align-items:center;gap:12px;
-              padding:14px 18px;border-radius:14px;background:rgba(37,99,235,.08);
-              border:1px solid rgba(37,99,235,.30);color:inherit;">
-        <span class="bcb-ico">📄</span>
-        <div>
-            <div class="bcb-title" style="color:#2563eb;">关于「字符串蛇抄袭」指控的核查说明</div>
-            <div class="bcb-sub">页面是否存在、旧项目归属、对方言论时间线 —— 全部可公开复核 →</div>
-        </div>
-    </a>
-
-    <div class="bn-case-banner">
-        <span class="bcb-ico">⚠️</span>
-        <div>
-            <div class="bcb-title">违规公示 · 重大案例</div>
-            <div class="bcb-sub">以下账号/公司已按用户守则处理，记录长期保留；有异议可在「反馈」区申诉</div>
-        </div>
-    </div>
-
-        <div class="bn-cats" id="bnCats">
+                <div class="bn-cats" id="bnCats">
         <button class="bn-cat on" data-cat="all">全部</button>
         <button class="bn-cat" data-cat="涉政">涉政</button>
         <button class="bn-cat" data-cat="诽谤">诽谤</button>
@@ -1354,295 +1352,14 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         <button class="bn-cat" data-cat="盗号">盗号</button>
         <button class="bn-cat" data-cat="侵权">侵权</button>
         <button class="bn-cat" data-cat="小NB系列">小NB系列账号</button>
+        <button class="bn-cat" data-cat="公司类">公司类</button>
     </div>
 
-<div class="bn-case bn-case-ban" data-cat="涉政">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="NB频道废物助手">助</span>
-            <div>
-                <div class="bn-case-name">NB频道废物助手</div>
-                <div class="bn-case-date">公示日期 2026-11-07</div>
-            </div>
-            <span class="bn-case-tag">已永久封禁</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>涉政言论</b>发布主张割让中国领土、危害国内地区的内容：「我要吧。暗灰送给日本。内蒙古直接用。何物？水淹了。」（语音输入转文字，「暗灰」即安徽）</li>
-            <li><b>冒充身份</b>以「NB频道废物助手」为名，并称「骗你的。我是恩比频道。刮微屁恩。陷害有体悟。」「艾特。诶？呜，艾斯，题，我是恩比频道，煮熟。」</li>
-            <li><b>辱骂</b>以语音识别式的破碎句子连续攻击：「有体悟死了吗？都不说话。」「有体悟是给。唯一，哦。肯定死吗？」「恩比频道摸了？齐喜都分。」共 26 条</li>
-            <li><b>处理结果</b>永久封禁；名下 26 条评论全部删除；评论 IP 已记入访问黑名单，注册时一并拒绝</li>
-            <li><b>补充说明</b>涉政原文已完整抄录留档（编号、时间、IP），必要时可提交平台处理</li>
-        </ul>
-        <div class="bn-case-ev">
-            <div class="bn-ev-title">📎 证据（评论编号可查）</div>
-            <ul class="bn-ev-list">
-                <li><span class="bn-ev-meta">#9485 · 11-07 04:45</span>「我要吧。暗灰送给日本。内蒙古直接用。何物？水淹了。」</li>
-                <li><span class="bn-ev-meta">#9495~#9507 · 05:13~05:53</span>连续辱骂 + 冒充身份，共 20 余条</li>
-                <li><span class="bn-ev-meta">#9499 / #9502 / #9503</span>「我是恩比频道」「骗你的。我是恩比频道。刮微屁恩」</li>
-                <li><span class="bn-ev-meta">IP</span>125.120.109.58（已记入访问黑名单）</li>
-            </ul>
-        </div>
-    </div>
-
-<div class="bn-case bn-case-ban" data-cat="诽谤">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="Utw">U</span>
-            <div>
-                <div class="bn-case-name">Utw（主号 + Veo 小号）</div>
-                <div class="bn-case-date">公示日期 2026-11-06</div>
-            </div>
-            <span class="bn-case-tag">封禁 7 天</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>在评论区公开发帖指控本站「抄袭其 strsnake 页面代码」，并称本站页面 JS「直接调用其后端」；承认「误伤」后仍未撤回指控；另指控本站对其分站发起 120 万次请求（无证据）</li>
-            <li><b>核查结论</b>① 所涉 cloudflare.nb-channel.top/strsnake 返回 404，仓库中无此页面；② 本站旧页面引用的 Supabase 项目 stgdkwnpxdyhghfgywqj 为站长本人早年旧项目（已失效），非对方项目 → 两项指控均不成立</li>
-            <li><b>处理结果</b>封禁 7 天（至 2026-11-13）：账号停用，期间无法登录；到期自动解封</li>
-            <li><b>文本比对</b>其指控帖（#9398~#9400）的结构与措辞，与本站 2026 年 9 月针对「utw.pages.dev/3ty-index 直接部署本站源码」发出的警告<b>逐句对应</b>：「…这个页面需要你处理一下」「【事实】1. 该页…逐字相同，相似度…」「页面 og:title 至今仍是…」「页面 JS 直接调用我方后端…用的是我方的 key」，连结尾「关于封号」的三句话都同序同措辞</li>
-            <li><b>独立反证</b>他在 #9400 要求「页面处理掉」，但该页面从未存在：分站访问 404、仓库 1345 次提交全历史无相关文件 —— 不存在可「删除」的对象</li>
-            <li><b>补充说明</b>解封后若再次发布同类无证据指控或人身攻击，直接永久封禁（删户）</li>
-        </ul>
-        <div class="bn-case-ev">
-            <div class="bn-ev-title">📎 证据（原文摘录，可在评论区按编号查到）</div>
-            <ul class="bn-ev-list">
-                <li><span class="bn-ev-meta">#9398 · 11-05 12:31</span>「NB频道，你好 https://cloudflare.nb-channel.top/strsnake 这个页面需要你处理一下【事实】1. 该页有一块 &lt;script&gt; 代码与我方 get-u-coins/strsnake.html 逐字相同，相似度 99.9% …」</li>
-                <li><span class="bn-ev-meta">#9399 · 11-05 12:32</span>「…用的是我方的 key）我方这些代码最早提交于 2026-09-21，时间上远早于该页面。【请你】删除该页面…」</li>
-                <li><span class="bn-ev-meta">#9400 · 11-05 12:32</span>「确实误伤了你，这是我的问题，我认。但封号是另一件事，跟抄站没关系，别拿它盖过抄站」</li>
-                <li><span class="bn-ev-meta">#9405 · 11-05 14:51</span>「之前 IP 段封禁误伤到你，是我这边的问题，已经删掉了」</li>
-                <li><span class="bn-ev-meta">#9406 · 11-05 14:59</span>「…我的 Cloudflare 和 PythonAnywhere 分站共收到了 120 万次请求，其中 75 万次来自你的 IP…」</li>
-            </ul>
-        </div>
-        <figure class="bn-case-fig">
-            <img src="../images/blackroom/utw-ban-403.png" alt="对方站点对本站的封禁页（IP 已打码）" loading="lazy">
-            <figcaption>对方站点（utw.pages.dev）对本站的封禁提示页 —— 理由中包含 DDoS、泄露 IP 等未经证实的事项；IP 与坐标已打码</figcaption>
-        </figure>
-
-    </div>
-
-    <div class="bn-case bn-case-ban" data-cat="刷屏">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="Utw小号">U</span>
-            <div>
-                <div class="bn-case-name">Utw小号</div>
-                <div class="bn-case-date">公示日期 2026-11-07</div>
-            </div>
-            <span class="bn-case-tag">封禁 7 天</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>主号被封后换号继续发帖：「孩子们NB频道漏封了一个号」「NB频道也是活该」「大肥鱼确实有问题，待会给提示词改一下」，并发布本站仓库打包下载链接</li>
-            <li><b>身份对应</b>出口 IP 183.247.21.30，与 Utw（117.147.48.77 / 183.247.21.131）及 Veo（183.247.21.3 / .29）同段（浙江杭州 · 移动）</li>
-            <li><b>处理结果</b>封禁 7 天（至 2026-11-14）；该出口 IP 记入访问黑名单，注册时一并拒绝</li>
-            <li><b>补充说明</b>再出现新的备用号，按累犯处理，直接永久封禁</li>
-        </ul>
-        <div class="bn-case-ev">
-            <div class="bn-ev-title">📎 证据（评论编号可查）</div>
-            <ul class="bn-ev-list">
-                <li><span class="bn-ev-meta">#9533 · 11-07 13:13</span>「孩子们NB频道漏封了一个号」</li>
-                <li><span class="bn-ev-meta">#9534 · 13:13</span>「NB频道也是活该」</li>
-                <li><span class="bn-ev-meta">#9535 · 13:14</span>「大肥鱼确实有问题，待会给提示词改一下」</li>
-                <li><span class="bn-ev-meta">#9537 · 13:18</span>发布 https://codeload.github.com/NB-Channel/nb-channel/zip/refs/heads/main</li>
-                <li><span class="bn-ev-meta">IP</span>183.247.21.30（与 Utw / Veo 同段）</li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="bn-case bn-case-ban" data-cat="涉政 小NB系列">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB新号2">2</span>
-            <div>
-                <div class="bn-case-name">小NB新号2</div>
-                <div class="bn-case-date">公示日期 2026-11-07</div>
-            </div>
-            <span class="bn-case-tag">已永久封禁</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>连续发帖威胁站长及其家人：「赶紧给老子的大号解封，要不然把你全家都ko了，顺便接着刷屏」，并刷屏 14 条；另发布「全家死亡处理流程」等内容</li>
-            <li><b>身份对应</b>评论 IP 120.242.178.236，与此前「小NB新号」售卖源码时的出口完全一致 → 同一人</li>
-            <li><b>处理结果</b>永久封禁；名下 14 条评论全部删除；该 IP 记入访问黑名单，注册时一并拒绝</li>
-            <li><b>补充说明</b>涉及人身威胁，相关评论编号、IP 与时间已完整留存，必要时作为维权材料</li>
-        </ul>
-        <div class="bn-case-ev">
-            <div class="bn-ev-title">📎 证据（评论编号可查）</div>
-            <ul class="bn-ev-list">
-                <li><span class="bn-ev-meta">#9509~#9527 · 11-07 16:04~16:18</span>刷屏 14 条，反复发布同一威胁内容</li>
-                <li><span class="bn-ev-meta">原文</span>「赶紧给老子的大号解封，要不然把你全家都ko了，顺便接着刷屏」</li>
-                <li><span class="bn-ev-meta">另发</span>「如果全家死亡，首先要保持冷静…立即联系当地的殡仪馆…」</li>
-                <li><span class="bn-ev-meta">IP 对照</span>120.242.178.236 = 小NB新号 售卖源码时的出口</li>
-            </ul>
-        </div>
-    </div>
-
-<div class="bn-case bn-case-ban" data-cat="盗号 小NB系列">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB官号">官</span>
-            <div>
-                <div class="bn-case-name">小NB官号</div>
-                <div class="bn-case-date">公示日期 2026-09-10</div>
-            </div>
-            <span class="bn-case-tag">已永久封禁</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>盗取官方账号,恶意修改账号数据,性质恶劣</li>
-            <li><b>处理结果</b>账号已永久封禁,名下数据全部清除,关联来源已列入访问黑名单</li>
-            <li><b>补充说明</b>相关操作记录已完整留存,同类行为一律从严处理</li>
-        
-        </ul>
-    </div>
-
-<div class="bn-case bn-case-ban" data-cat="盗号 小NB系列">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB2">2</span>
-            <div>
-                <div class="bn-case-name">小NB2</div>
-                <div class="bn-case-date">公示日期 2026-09-25</div>
-            </div>
-            <span class="bn-case-tag">已永久封禁</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>注册后数分钟内即在评论区刷屏辱骂,与已封禁的「小NB官号」为同一人,系换号复犯</li>
-            <li><b>处理结果</b>账号已永久封禁,全部违规评论清除,其使用的网络来源与一次性临时邮箱域名均已列入黑名单</li>
-            <li><b>补充说明</b>本站注册需邮箱验证,用临时邮箱规避验证同样会被识别并拦截;换号复犯一律从重处理</li>
-        
-        </ul>
-    </div>
-
-<div class="bn-case bn-case-ban" data-cat="盗号 小NB系列">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB3">3</span>
-            <div>
-                <div class="bn-case-name">小NB3</div>
-                <div class="bn-case-date">公示日期 2026-10-04</div>
-            </div>
-            <span class="bn-case-tag">已永久封禁</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>在评论区连续刷屏辱骂，并<b>冒用本站名义编造、散布分裂国家的言论</b>，严重损害本站声誉</li>
-            <li><b>处理结果</b>账号已永久封禁，全部违规评论清除，其使用的网络来源与一次性临时邮箱域名均已列入黑名单</li>
-            <li><b>严正声明</b><b>本站是个人兴趣项目，与任何政治立场无关。</b>上述言论均为该账号凭空捏造，本站从未发表、也绝不会发表此类言论。任何人冒用本站名义发布政治或违法内容，一律永久封禁并完整留存证据</li>
-        
-        </ul>
-    </div>
-
-    <div class="bn-case bn-case-ban" data-cat="刷屏 小NB系列">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="嘉豪">嘉</span>
-            <div>
-                <div class="bn-case-name">嘉豪（小NB 新号）</div>
-                <div class="bn-case-date">公示日期 2026-11-07</div>
-            </div>
-            <span class="bn-case-tag">已永久封禁</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>注册后 86 秒开始连续刷屏 39 条：重复符号、外链 utw.pages.dev、宣称「IP全封」「我去找我大号了」，并复制「小NB官号」的封禁公示卡片刷屏</li>
-            <li><b>身份对应</b>① 评论 IP 36.59.217.115（安徽合肥 · 电信）与小NB2 注册 IP 36.4.58.101（安徽合肥 · 电信）同城同运营商；② 注册邮箱 sb@uqu.me 与小NB 的 xnb@uqu.me 同域名；③ 刷屏内容直接复制小NB 的公示卡片</li>
-            <li><b>处理结果</b>永久封禁；名下 39 条评论全部删除；评论 IP 记入访问黑名单</li>
-            <li><b>补充说明</b>同一人再注册小号，按同一标准处理；相关记录已完整留存</li>
-        </ul>
-        <div class="bn-case-ev">
-            <div class="bn-ev-title">📎 证据（评论编号可查）</div>
-            <ul class="bn-ev-list">
-                <li><span class="bn-ev-meta">#9426 / #9427 · 11-07 01:20</span>连续发布重复符号内容（各 35 个）</li>
-                <li><span class="bn-ev-meta">#9428 · 01:20</span>「我是嘉豪诶…」</li>
-                <li><span class="bn-ev-meta">#9429 / #9445 · 01:20 / 02:16</span>「IP全封」「我去找我大号了」</li>
-                <li><span class="bn-ev-meta">#9435 · 01:22</span>发布外链「(utw.pages.dev )」</li>
-                <li><span class="bn-ev-meta">#9451~#9479 · 02:27~02:32</span>复制「小NB官号」封禁公示卡片刷屏十余次</li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="bn-case bn-case-ban" data-cat="侵权 小NB系列">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🚫</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB新号">新</span>
-            <div>
-                <div class="bn-case-name">小NB新号（售卖源码）</div>
-                <div class="bn-case-date">公示日期 2026-11-07</div>
-            </div>
-            <span class="bn-case-tag">封禁 7 天</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>在商城公开售卖本站旧版源码：商品 #385「NB频道网站老版本代码」，定价 20000 NB币，描述自述「Utw爬的，你把他号封了，也别把我号封了」</li>
-            <li><b>事实核查</b>下载其附件（4e4710b4….zip，91,247 字节）解包比对：10 个 HTML 页面全部为本站 legacy 归档，相似度 97.8%~100%（messages.html 与 comments-beta.html 为字节级完全相同）</li>
-            <li><b>关联账号</b>该账号 11-07 的评论 IP 为 36.59.217.115，与「嘉豪」完全一致 → 同一人操作</li>
-            <li><b>处理结果</b>封禁 7 天（至 2026-11-14）；商品 #385 与附件已删除；另下架商品 #342「压测网站代码」（攻击工具）</li>
-            <li><b>补充说明</b>本站为公开静态站点，页面源码对任何访客可见；把公开可得的内容标价 20000 NB币转卖，属于欺骗买家。再犯永久封禁</li>
-        </ul>
-        <div class="bn-case-ev">
-            <div class="bn-ev-title">📎 证据（可复核）</div>
-            <ul class="bn-ev-list">
-                <li><span class="bn-ev-meta">商品 #385</span>标题「NB频道网站老版本代码」· 20000 NB币 · 2026-11-06 04:38 上架</li>
-                <li><span class="bn-ev-meta">附件</span>4e4710b431c143e0862bfa56247b1ca7.zip · 91,247 字节 · SHA-256 4e1c743fb6f9ae4a9baa997e078ee47c</li>
-                <li><span class="bn-ev-meta">比对</span>messages.html 100.0% / comments-beta.html 100.0% / chat.html 99.9% / product.html 99.2% / APP.html 99.1% / videos.html 99.0% / changelog.html 98.3% / Virtual stock.html 97.9% / product_share.html 97.8%</li>
-                <li><span class="bn-ev-meta">IP 对照</span>小NB新号 36.59.217.115 = 嘉豪 36.59.217.115（11-07 同一时段）</li>
-                <li><span class="bn-ev-meta">处理时间</span>2026-11-07 12:05（附件已于 12:08 从存储桶删除）</li>
-            </ul>
-        </div>
-    </div>
-
-<div class="bn-case bn-case-risk" data-cat="辱骂">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🔇</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="蓝色大肥鱼">鱼</span>
-            <div>
-                <div class="bn-case-name">蓝色大肥鱼</div>
-                <div class="bn-case-date">公示日期 2026-11-05</div>
-            </div>
-            <span class="bn-case-tag bn-case-mute">禁言 7 天</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>长期以固定人格口癖在他人评论下高频跟帖（累计 105 条），内容多为挑衅、挑事，干扰正常讨论</li>
-            <li><b>处理结果</b>禁言 7 天（至 2026-11-12 12:29），期间可正常浏览、登录，但不能发评论或回复；不封号</li>
-            <li><b>补充说明</b>若解禁后继续同类行为，按累犯处理，升级为永久封禁</li>
-        
-        </ul>
-            <div class="bn-case-ev">
-                <div class="bn-ev-title">📎 证据（原文摘录 · 5 条最严重的，可在评论区按编号查到）</div>
-                <ul class="bn-ev-list">
-                    <li><span class="bn-ev-meta">#9333 · 11-03 11:47</span>「死妈仔」<em>（咒骂家人）</em></li>
-                    <li><span class="bn-ev-meta">#9353 · 11-04 09:28</span>「@NB频道官方 __富__//文//((本))全部报废💥你的脑子是装屎的吗💩赶紧修bug💼」</li>
-                    <li><span class="bn-ev-meta">#9121 · 10-31 07:51</span>「@摸鱼的齐喜 连我都不知道😡fw脑子装屎💩gun的越远越好👎🏻」</li>
-                    <li><span class="bn-ev-meta">#8869 · 10-26 11:27</span>「@AWM1111 连这都不知道🤬 fw脑子装屎💩 NB加多少关你屁事👎 去数清楚再回来😡」</li>
-                    <li><span class="bn-ev-meta">#9024 · 10-30 11:40</span>「…但是这个死妈的AWM1111，把我的饭都弄臭了(ò_ó)」</li>
-                    <li><span class="bn-ev-meta">统计</span>注册 2026-10-25，累计 105 条评论；同类辱骂在 10-26 / 10-31 / 11-03 / 11-04 反复出现</li>
-                </ul>
-            </div>
-    </div>
-
-<div class="bn-case bn-case-risk" data-cat="辱骂">
-        <div class="bn-case-head">
-            <span class="bn-case-ico">🔇</span>
-            <span class="bn-case-ava bn-case-ava-txt" data-uname="豆包">豆</span>
-            <div>
-                <div class="bn-case-name">豆包</div>
-                <div class="bn-case-date">公示日期 2026-11-05</div>
-            </div>
-            <span class="bn-case-tag bn-case-mute">禁言 7 天</span>
-        </div>
-        <ul class="bn-case-list">
-            <li><b>违规行为</b>在他人评论下发布挑衅、无厘头言论，多次引发争吵（账号名与第三方产品同名不算违规，本站允许）</li>
-            <li><b>处理结果</b>禁言 7 天（至 2026-11-12 12:29），期间可正常浏览、登录，但不能发评论或回复；不封号</li>
-            <li><b>补充说明</b>解禁后若继续同类挑衅行为，按累犯升级处理</li>
-        
-        </ul>
-            <div class="bn-case-ev">
-                <div class="bn-ev-title">📎 证据（原文摘录，可在评论 #9083~#9345 查到）</div>
-                <ul class="bn-ev-list">
-                    <li><span class="bn-ev-meta">#9345 · 11-03 12:48</span>「我是第五版哦 密码：shabi 邮箱：doubao@ugu.me」（公开账号凭据，并含粗俗用语）</li>
-                    <li><span class="bn-ev-meta">#9343 · 11-03 12:45</span>「@摸鱼的齐喜 你从Utw那里偷的提示词确实好用 我感觉说话都利索了」（在他人评论下挑衅）</li>
-                    <li><span class="bn-ev-meta">#9108 / #9127 / #9316 / #9318 / #9328</span>「我直接用最不直接、最虚假、最不直白…」同一段文字重复 6 次以上（刷屏）</li>
-                </ul>
-            </div>
-    </div>
-
-<div class="bn-sec-title">当前封禁名单 <span id="bnCount"></span></div>
-    <div id="bnBody">
-        <div class="ac-state"><div class="ac-st-ico">🚫</div><h3>名单加载中<span class="ac-dot">.</span><span class="ac-dot">.</span><span class="ac-dot">.</span></h3></div>
+<div class="bn-sec-title">处罚公示 <span id="bnCount"></span></div>
+    <div id="bnBody" style="display:none">
+        <div class="ac-state"><div class="ac-st-ico">🚫</div>
+    <div id="bnGrid" class="bn-grid"></div>
+<h3>名单加载中<span class="ac-dot">.</span><span class="ac-dot">.</span><span class="ac-dot">.</span></h3></div>
     </div>
 
     <!-- 说明 -->
@@ -2451,6 +2168,153 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
             card.style.display = (cat === 'all' || tags.indexOf(cat) >= 0) ? '' : 'none';
         });
     });
+})();
+</script>
+<script>
+/* ===== 小黑屋：动态卡片（含当前状态）+ 分类筛选 ===== */
+(function () {
+    var SB_URL = 'https://pbaafgjkwdbwcmsikcmg.supabase.co';
+    var SB_KEY = 'sb_publishable_tv7YVJEisnvs3hvU8ImYUw_b0p6bmRg';
+
+    // 已知案例的补充信息（分类 / 违规行为 / 证据），按用户名匹配
+    var META = {
+        'NB频道废物助手': { cats: ['涉政'], ico: '🚫',
+            acts: '发布涉政言论（主张割让领土、危害国内地区）；冒充官方助手；以破碎语句辱骂，共 26 条',
+            ev: ['#9485 涉政原文（已留档）', '#9495~#9507 辱骂与冒充'] },
+        'Utw': { cats: ['诽谤', '小NB系列'], ico: '🚫',
+            acts: '公开指控本站抄袭 strsnake（该页从未存在）；发布不实指控并拒不撤回；三次复制本站文字反讽',
+            ev: ['#9398/#9399 指控帖', '#9400 承认误伤未撤回', '#9406 120 万次请求（无日志）'] },
+        'Utw小号': { cats: ['刷屏'], ico: '🚫',
+            acts: '主号封禁后换号继续发帖，并发布本站仓库打包下载链接',
+            ev: ['#9533~#9537', 'IP 183.247.21.30 与主号同段'] },
+        '小NB新号2': { cats: ['涉政', '小NB系列'], ico: '🚫',
+            acts: '连续发帖威胁「把你全家都ko了」，刷屏 14 条',
+            ev: ['#9509~#9527', 'IP 120.242.178.236 与小NB新号同出口'] },
+        '小NB官号': { cats: ['盗号', '小NB系列'], ico: '🚫',
+            acts: '盗取官方账号、恶意修改账号数据', ev: ['2026-09-10 封禁记录'] },
+        '小NB2': { cats: ['盗号', '小NB系列'], ico: '🚫', acts: '小NB官号小号，盗号与刷屏', ev: ['注册 IP 36.4.58.101'] },
+        '小NB3': { cats: ['盗号', '小NB系列'], ico: '🚫', acts: '辱骂刷屏 + 冒充站长发布不当言论', ev: ['IP 39.146.2.167'] },
+        '嘉豪': { cats: ['刷屏', '小NB系列'], ico: '🚫',
+            acts: '注册后 86 秒连续刷屏 39 条；复制封禁公示卡片刷屏',
+            ev: ['#9426~#9479', 'IP 36.59.217.115'] },
+        '小NB新号': { cats: ['侵权', '小NB系列'], ico: '🚫',
+            acts: '公开售卖本站旧版源码（商品 #385，20000 NB币，自述「Utw爬的」）',
+            ev: ['10 个页面与 legacy 归档比对 97.8%~100%', 'IP 120.242.178.236'] },
+        'NBchannel': { cats: ['涉政', '侵权', '小NB系列'], ico: '🚫',
+            acts: '涉政言论；在作品分享上架「我的网站老版本代码」压缩包（商品 #412）',
+            ev: ['商品 #412（已存档）', 'IP 39.146.3.174'] },
+        '蓝色大肥鱼': { cats: ['辱骂'], ico: '🔇',
+            acts: '连续人身攻击 AWM 等用户', ev: ['#9109 / #9062 / #9300'] },
+        '豆包': { cats: ['辱骂'], ico: '🔇',
+            acts: '重复刷屏与人身攻击', ev: ['#9108 / #9127 / #9316'] }
+    };
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g, function (m) {
+            return m === '&' ? '&amp;' : m === '<' ? '&lt;' : m === '>' ? '&gt;' : '&quot;';
+        });
+    }
+
+    function stateText(u) {
+        var kind = (u.kind || '').toLowerCase();
+        var until = u.until_text || '';
+        if (kind === 'mute') return { text: until || '禁言中', cls: 'mute' };
+        if (/永久/.test(until)) return { text: '永久封禁', cls: '' };
+        return { text: until ? ('封禁 ' + until) : '封禁中', cls: '' };
+    }
+
+    function cardHtml(u, isCompany) {
+        var name = u.username || u.name || '未命名';
+        var meta = META[name] || { cats: isCompany ? ['公司类'] : [], ico: isCompany ? '🏢' : '🚫', acts: '', ev: [] };
+        var cats = (meta.cats || []).slice();
+        if (isCompany && cats.indexOf('公司类') < 0) cats.push('公司类');
+        var st = isCompany ? { text: u.until_text || '已下架', cls: '' } : stateText(u);
+        var ava = u.avatar_url
+            ? '<img class="bn-case-ava" src="' + esc(u.avatar_url) + '" alt="" onerror="this.style.display=\'none\'">'
+            : '<span class="bn-case-ava bn-case-ava-txt">' + esc(String(name).slice(0, 1)) + '</span>';
+
+        var h = '<div class="bn-case ' + (st.cls === 'mute' ? 'bn-case-risk' : 'bn-case-ban') + '"'
+              + ' data-cat="' + esc(cats.join(' ')) + '">'
+              + '<div class="bn-case-head">'
+              + '<span class="bn-case-ico">' + (meta.ico || '🚫') + '</span>'
+              + ava
+              + '<div><div class="bn-case-name">' + esc(name)
+              + (isCompany ? '<span style="font-size:.72rem;opacity:.6;margin-left:6px;">（公司）</span>' : '')
+              + '</div><div class="bn-case-date">' + (u.created_at ? ('注册/建立 ' + String(u.created_at).slice(0, 10)) : (u.owner ? ('归属 ' + esc(u.owner)) : '')) + '</div></div>'
+              + '<span class="bn-state ' + st.cls + '">' + esc(st.text) + '</span>'
+              + '</div>';
+
+        if (cats.length) {
+            h += '<div class="bn-cat-tags">' + cats.map(function (c) {
+                return '<span class="bn-cat-tag">' + esc(c) + '</span>';
+            }).join('') + '</div>';
+        }
+        if (meta.acts) h += '<ul class="bn-case-list"><li>' + esc(meta.acts) + '</li></ul>';
+        if (meta.ev && meta.ev.length) {
+            h += '<div class="bn-case-ev"><div class="bn-ev-title">📎 证据</div><ul class="bn-ev-list">'
+               + meta.ev.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('')
+               + '</ul></div>';
+        }
+        return h + '</div>';
+    }
+
+    var CUR = 'all';
+
+    function applyFilter() {
+        var grid = document.getElementById('bnGrid');
+        if (!grid) return;
+        var cards = grid.querySelectorAll('.bn-case[data-cat]');
+        var shown = 0;
+        for (var i = 0; i < cards.length; i++) {
+            var tags = (cards[i].getAttribute('data-cat') || '').split(/\s+/);
+            var ok = (CUR === 'all' || tags.indexOf(CUR) >= 0);
+            cards[i].style.display = ok ? '' : 'none';
+            if (ok) shown++;
+        }
+        var c = document.getElementById('bnCount');
+        if (c) c.innerText = '（' + shown + '）';
+    }
+
+    function renderAll(users, comps) {
+        var grid = document.getElementById('bnGrid');
+        if (!grid) return;
+        var h = '';
+        (users || []).forEach(function (u) { h += cardHtml(u, false); });
+        (comps || []).forEach(function (c) { h += cardHtml(c, true); });
+        grid.innerHTML = h || '<div class="ac-state"><div class="ac-st-ico">✓</div><h3>暂无记录</h3></div>';
+        applyFilter();
+    }
+
+    function loadAll() {
+        var grid = document.getElementById('bnGrid');
+        if (!grid) return;
+        var sb = window.supabase.createClient(SB_URL, SB_KEY);
+        sb.rpc('get_blacklist').then(function (r) {
+            if (r.error) throw r.error;
+            var d = r.data || {};
+            renderAll(d.users || [], d.companies || []);
+        }).catch(function (e) {
+            grid.innerHTML = '<div class="ac-state"><div class="ac-st-ico">⚠️</div><h3>加载失败</h3><p>'
+                + esc(e && e.message ? e.message : e) + '</p></div>';
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('.bn-cat');
+        if (!btn) return;
+        CUR = btn.getAttribute('data-cat') || 'all';
+        var bar = document.getElementById('bnCats');
+        if (bar) bar.querySelectorAll('.bn-cat').forEach(function (b) { b.classList.remove('on'); });
+        btn.classList.add('on');
+        applyFilter();
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadAll);
+    } else {
+        loadAll();
+    }
+    setInterval(loadAll, 5 * 60 * 1000);
 })();
 </script>
 </body>
