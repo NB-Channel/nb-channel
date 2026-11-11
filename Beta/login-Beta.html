@@ -1660,7 +1660,18 @@ html { -webkit-text-size-adjust: 100%; }
         window.addEventListener('beforeunload', function () { qrStop(true); });
     })();
 
-    function sendCodeApi(payload) {
+    function nbMsg(m) {
+    var t = String(m || '');
+    var i = t.indexOf('MAIL_SUFFIX_DENIED:');
+    if (i >= 0) {
+        var dom = t.slice(i + 'MAIL_SUFFIX_DENIED:'.length).trim();
+        return '暂不支持该邮箱后缀' + (dom ? '（' + dom + '）' : '') +
+               '，请使用 QQ、163、126、139、189、Outlook、Gmail 等常用邮箱';
+    }
+    return t;
+}
+
+function sendCodeApi(payload) {
         return fetch(SCF_MAIL_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1689,7 +1700,7 @@ html { -webkit-text-size-adjust: 100%; }
                     errBox('bindError', '');
                     return;
                 }
-                if (!r || !r.ok) { errorDiv.innerText = (r && r.message) || '发送失败'; btn.textContent = '登录'; return; }
+                if (!r || !r.ok) { errorDiv.innerText = nbMsg(r && r.message) || '发送失败'; btn.textContent = '登录'; return; }
                 loginStep = 'code';
                 document.getElementById('loginHint').style.display = 'block';
                 document.getElementById('loginHint').textContent = '验证码已发送至 ' + (r.masked || '你的邮箱') + ',10 分钟内有效';
@@ -1745,7 +1756,7 @@ html { -webkit-text-size-adjust: 100%; }
         btn.disabled = true; btn.textContent = '发送中…';
         sendCodeApi({ kind: 'bind', email: email, username: bindUser.username, password: bindUser.password }).then(function (r) {
             btn.disabled = false; btn.textContent = '重新发送';
-            if (!r || !r.ok) { errBox('bindError', (r && r.message) || '发送失败'); return; }
+            if (!r || !r.ok) { errBox('bindError', nbMsg(r && r.message) || '发送失败'); return; }
             document.getElementById('bindHint').style.display = 'block';
             document.getElementById('bindHint').textContent = '验证码已发送至 ' + (r.masked || email);
             document.getElementById('bindCodeWrap').style.display = 'block';
@@ -1810,7 +1821,7 @@ html { -webkit-text-size-adjust: 100%; }
         sendCodeApi({ kind: 'register', email: email }).then(function (r) {
             if (!r || !r.ok) {
                 btn.disabled = false; btn.textContent = '发送验证码';
-                errBox('regError', (r && r.message) || '发送失败');
+                errBox('regError', nbMsg(r && r.message) || '发送失败');
                 return;
             }
             document.getElementById('regCodeWrap').style.display = 'block';
