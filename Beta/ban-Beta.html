@@ -1169,6 +1169,14 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
 .bn-case-fig img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line, #e4e7ec); display: block; }
 .bn-case-fig figcaption { font-size: .78rem; opacity: .65; margin-top: 6px; line-height: 1.7; }
 </style>
+<style id="nb-ban-cats-css">
+.bn-cats { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px; }
+.bn-cat { padding:6px 14px; border-radius:999px; font-size:.82rem; cursor:pointer;
+          border:1px solid var(--line,#e4e7ec); background:var(--card,#fff);
+          color:var(--ink-soft,#475467); transition:.18s; font-family:inherit; }
+.bn-cat:hover { border-color:#3988f6; color:#3988f6; }
+.bn-cat.on { background:#3988f6; border-color:#3988f6; color:#fff; font-weight:700; }
+</style>
 </head>
 <body>
 <nav class="nav">
@@ -1337,7 +1345,18 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </div>
     </div>
 
-    <div class="bn-case bn-case-ban">
+        <div class="bn-cats" id="bnCats">
+        <button class="bn-cat on" data-cat="all">全部</button>
+        <button class="bn-cat" data-cat="涉政">涉政</button>
+        <button class="bn-cat" data-cat="诽谤">诽谤</button>
+        <button class="bn-cat" data-cat="辱骂">辱骂</button>
+        <button class="bn-cat" data-cat="刷屏">刷屏</button>
+        <button class="bn-cat" data-cat="盗号">盗号</button>
+        <button class="bn-cat" data-cat="侵权">侵权</button>
+        <button class="bn-cat" data-cat="小NB系列">小NB系列账号</button>
+    </div>
+
+<div class="bn-case bn-case-ban" data-cat="涉政">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="NB频道废物助手">助</span>
@@ -1365,7 +1384,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </div>
     </div>
 
-<div class="bn-case bn-case-ban">
+<div class="bn-case bn-case-ban" data-cat="诽谤">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="Utw">U</span>
@@ -1400,7 +1419,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
 
     </div>
 
-    <div class="bn-case bn-case-ban">
+    <div class="bn-case bn-case-ban" data-cat="刷屏">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="Utw小号">U</span>
@@ -1428,7 +1447,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </div>
     </div>
 
-    <div class="bn-case bn-case-ban">
+    <div class="bn-case bn-case-ban" data-cat="涉政 小NB系列">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB新号2">2</span>
@@ -1455,7 +1474,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </div>
     </div>
 
-<div class="bn-case bn-case-ban">
+<div class="bn-case bn-case-ban" data-cat="盗号 小NB系列">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB官号">官</span>
@@ -1473,7 +1492,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </ul>
     </div>
 
-<div class="bn-case bn-case-ban">
+<div class="bn-case bn-case-ban" data-cat="盗号 小NB系列">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB2">2</span>
@@ -1491,7 +1510,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </ul>
     </div>
 
-<div class="bn-case bn-case-ban">
+<div class="bn-case bn-case-ban" data-cat="盗号 小NB系列">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB3">3</span>
@@ -1509,7 +1528,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </ul>
     </div>
 
-    <div class="bn-case bn-case-ban">
+    <div class="bn-case bn-case-ban" data-cat="刷屏 小NB系列">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="嘉豪">嘉</span>
@@ -1537,7 +1556,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </div>
     </div>
 
-    <div class="bn-case bn-case-ban">
+    <div class="bn-case bn-case-ban" data-cat="侵权 小NB系列">
         <div class="bn-case-head">
             <span class="bn-case-ico">🚫</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="小NB新号">新</span>
@@ -1566,7 +1585,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
         </div>
     </div>
 
-<div class="bn-case bn-case-risk">
+<div class="bn-case bn-case-risk" data-cat="辱骂">
         <div class="bn-case-head">
             <span class="bn-case-ico">🔇</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="蓝色大肥鱼">鱼</span>
@@ -1595,7 +1614,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
             </div>
     </div>
 
-<div class="bn-case bn-case-risk">
+<div class="bn-case bn-case-risk" data-cat="辱骂">
         <div class="bn-case-head">
             <span class="bn-case-ico">🔇</span>
             <span class="bn-case-ava bn-case-ava-txt" data-uname="豆包">豆</span>
@@ -2417,5 +2436,22 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
 <script defer src="../js/science-tips.js?v=26"></script>
 <script src="../js/pomodoro.js?v=7" defer></script>
 <script src="../js/nav-badge.js?v=1" defer></script>
+<script>
+(function () {
+    var bar = document.getElementById('bnCats');
+    if (!bar) return;
+    bar.addEventListener('click', function (e) {
+        var btn = e.target.closest('.bn-cat');
+        if (!btn) return;
+        var cat = btn.getAttribute('data-cat');
+        bar.querySelectorAll('.bn-cat').forEach(function (b) { b.classList.remove('on'); });
+        btn.classList.add('on');
+        document.querySelectorAll('.bn-case[data-cat]').forEach(function (card) {
+            var tags = (card.getAttribute('data-cat') || '').split(/\s+/);
+            card.style.display = (cat === 'all' || tags.indexOf(cat) >= 0) ? '' : 'none';
+        });
+    });
+})();
+</script>
 </body>
 </html>
