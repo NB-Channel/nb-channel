@@ -44,7 +44,7 @@ def parse_main():
         ul = re.search(r"<ul>([\s\S]*?)</ul>", seg)
         lines = [x.strip() for x in LI_RE.findall(ul.group(1))] if ul else []
         out.append({"ver": ver, "date": date, "id": ver.replace(".", "-"),
-                    "title": title, "lines": [("%s · %s" % (title, lines[0])) if lines else title] + lines[1:]})
+                    "title": title, "lines": lines})
     return out
 
 
