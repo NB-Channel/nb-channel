@@ -1738,9 +1738,9 @@ html { -webkit-text-size-adjust: 100%; }
     // ===== 老账号绑定邮箱 =====
     function doBindSend() {
         if (!bindUser) return;
-        var email = document.getElementById('bindEmail').value.trim();
+        var email = (window.NBMail ? NBMail.value('bindEmail') : document.getElementById('bindEmail').value.trim());
         errBox('bindError', '');
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errBox('bindError', '邮箱格式不正确'); return; }
+        if (window.NBMail ? !NBMail.valid('bindEmail') : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errBox('bindError', '请填写邮箱用户名（2~32 位），并从右侧选择邮箱后缀'); return; }
         var btn = document.getElementById('bindSend');
         btn.disabled = true; btn.textContent = '发送中…';
         sendCodeApi({ kind: 'bind', email: email, username: bindUser.username, password: bindUser.password }).then(function (r) {
@@ -1755,7 +1755,7 @@ html { -webkit-text-size-adjust: 100%; }
     }
     function doBind() {
         if (!bindUser) return;
-        var email = document.getElementById('bindEmail').value.trim();
+        var email = (window.NBMail ? NBMail.value('bindEmail') : document.getElementById('bindEmail').value.trim());
         var code = document.getElementById('bindCode').value.trim();
         var btn = document.getElementById('doBind');
         errBox('bindError', '');
@@ -1802,9 +1802,9 @@ html { -webkit-text-size-adjust: 100%; }
 
     // ===== 注册(邮箱 -> 验证码) =====
     function doRegSend() {
-        var email = document.getElementById('regEmail').value.trim();
+        var email = (window.NBMail ? NBMail.value('regEmail') : document.getElementById('regEmail').value.trim());
         errBox('regError', '');
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errBox('regError', '邮箱格式不正确'); return; }
+        if (window.NBMail ? !NBMail.valid('regEmail') : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errBox('regError', '请填写邮箱用户名（2~32 位字母、数字、点、下划线或减号），并从右侧选择邮箱后缀'); return; }
         var btn = document.getElementById('regSend');
         btn.disabled = true; btn.textContent = '发送中…';
         sendCodeApi({ kind: 'register', email: email }).then(function (r) {
@@ -1833,7 +1833,7 @@ html { -webkit-text-size-adjust: 100%; }
         var username = rawName.replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00AD]/g, '').trim();
         var password = document.getElementById('regPassword').value;
         var password2 = document.getElementById('regPassword2').value;
-        var email = document.getElementById('regEmail').value.trim();
+        var email = (window.NBMail ? NBMail.value('regEmail') : document.getElementById('regEmail').value.trim());
         var code = document.getElementById('regCode').value.trim();
         var errorDiv = document.getElementById('regError');
         errorDiv.innerText = '';
@@ -2241,5 +2241,6 @@ html { -webkit-text-size-adjust: 100%; }
 <script defer src="../js/science-tips.js?v=26"></script>
 <script src="../js/pomodoro.js?v=7" defer></script>
 <script src="../js/nav-badge.js?v=1" defer></script>
+<script src="../js/email-suffix.js?v=1"></script>
 </body>
 </html>
