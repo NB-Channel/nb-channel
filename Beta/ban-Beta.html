@@ -1178,7 +1178,7 @@ html.dark .bn-case.bn-case-ban { background: rgba(229,72,77,.10); }
 .bn-cat.on { background:#3988f6; border-color:#3988f6; color:#fff; font-weight:700; }
 </style>
 <style id="nb-ban-grid-css">
-.bn-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px; margin: 0 0 8px; }
+.bn-grid { display:grid; grid-template-columns:1fr; gap:16px; margin: 0 0 8px; }
 @media (max-width: 860px) { .bn-grid { grid-template-columns:1fr; } }
 .bn-grid .bn-case { margin:0; height:100%; display:flex; flex-direction:column; }
 .bn-grid .bn-case-list { margin:0; padding-left:18px; }
@@ -2180,6 +2180,21 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
 
     // 已知案例的补充信息（分类 / 违规行为 / 证据），按用户名匹配
     var META = {
+        'Veo': { cats: ['诽谤'], ico: '🚫',
+            acts: 'Utw 的小号：在评论区发帖指控本站抄袭（#9398/#9399），承认「误伤」后仍不撤回（#9400），并指控本站对其分站发起 120 万次请求（#9406，无任何日志）',
+            ev: ['#9398 / #9399 指控帖', '#9400 承认误伤', '#9406 120 万次请求'] },
+        '小NB官号': { cats: ['盗号', '小NB系列'], ico: '🚫',
+            acts: '盗取官方账号、恶意修改账号数据，性质恶劣；名下数据全部清除',
+            ev: ['2026-09-10 永久封禁', '关联 IPv6 段 2409:8a30:9c84::/64'] },
+        '小NB2': { cats: ['盗号', '小NB系列'], ico: '🚫',
+            acts: '小NB官号的小号，用于盗号与刷屏',
+            ev: ['注册 IP 36.4.58.101（安徽合肥·电信）'] },
+        '小NB3': { cats: ['盗号', '小NB系列'], ico: '🚫',
+            acts: '辱骂刷屏 + 冒充站长发布不当言论',
+            ev: ['IP 39.146.2.167（安徽合肥·移动）'] },
+        '豆包': { cats: ['辱骂'], ico: '🔇',
+            acts: '重复刷屏与人身攻击（同一段文字连续发布十余次）',
+            ev: ['#9108 / #9127 / #9316 / #9318 / #9328'] },
         'NB频道废物助手': { cats: ['涉政'], ico: '🚫',
             acts: '发布涉政言论（主张割让领土、危害国内地区）；冒充官方助手；以破碎语句辱骂，共 26 条',
             ev: ['#9485 涉政原文（已留档）', '#9495~#9507 辱骂与冒充'] },
@@ -2227,7 +2242,9 @@ setInterval(loadList, 5 * 60 * 1000);   // 5 分钟自动刷新
 
     function cardHtml(u, isCompany) {
         var name = u.username || u.name || '未命名';
-        var meta = META[name] || { cats: isCompany ? ['公司类'] : [], ico: isCompany ? '🏢' : '🚫', acts: '', ev: [] };
+        var meta = META[name] || { cats: isCompany ? ['公司类'] : [], ico: isCompany ? '🏢' : '🚫',
+            acts: isCompany ? '已被下架，历史记录已归档' : '已按《用户守则》处理，相关记录已在后台留档',
+            ev: isCompany ? ['可在反馈区提出异议'] : ['如需申诉，可邮件 nbchannel@163.com'] };
         var cats = (meta.cats || []).slice();
         if (isCompany && cats.indexOf('公司类') < 0) cats.push('公司类');
         var st = isCompany ? { text: u.until_text || '已下架', cls: '' } : stateText(u);
