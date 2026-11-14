@@ -122,7 +122,7 @@
         /* 用户没选过 → 一律用「默认」。
            节日主题只是「那几天在选项里出现」，不会自动套上。 */
         var real = 'default';
-        if (choice && choice !== 'default' && BY_ID[choice] && available(choice)) {
+        if (choice && choice !== 'default' && BY_ID[choice] && (_pv || available(choice))) {
             real = choice;
         }
         /* 先记下当前是不是深色模式，再摘掉 dark 类。
