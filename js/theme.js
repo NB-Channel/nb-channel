@@ -49,8 +49,7 @@
           desc: '红金配色，限时 10 月 1 日 ~ 7 日',
           fixed: [10, 1, 7] },
         { id: 'spring',    name: '春节',      icon: '\uD83E\uDDE7',
-          desc: '红金新春，春节前后各 5 天可选',
-          festival: 'spring' },
+          desc: '朱红 + 鎏金，随时可选' },
     ];
 
     var BY_ID = {};
