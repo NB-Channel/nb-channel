@@ -47,6 +47,30 @@
         return b;
     }
 
+    // Beta 版把「消息 / 好友」放进「更多功能」下拉 —— 收起时看不到数字，
+    // 这里在下拉按钮上补一个圆点（展开后仍显示具体数字）。
+    function markMoreBtn(link, n) {
+        var panel = link.closest ? link.closest('.nav-more-panel') : null;
+        if (!panel) return;
+        var box = panel.closest ? panel.closest('.nav-more') : null;
+        if (!box) return;
+        var btn = box.querySelector('.nav-more-btn');
+        if (!btn) return;
+        var dot = btn.querySelector('.navMoreDot');
+        if (n > 0) {
+            if (!dot) {
+                dot = document.createElement('span');
+                dot.className = 'navMoreDot';
+                dot.style.cssText = 'display:inline-block;width:7px;height:7px;' +
+                    'border-radius:50%;background:#ff4757;margin-left:4px;vertical-align:middle;';
+                btn.appendChild(dot);
+            }
+            dot.style.display = 'inline-block';
+        } else if (dot) {
+            dot.style.display = 'none';
+        }
+    }
+
     function setBadge(link, n) {
         var b = ensureBadge(link);
         if (n > 0) {
@@ -55,6 +79,7 @@
         } else {
             b.style.display = 'none';
         }
+        markMoreBtn(link, n);
     }
 
     function rpc(fn, body) {
