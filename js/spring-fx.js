@@ -39,7 +39,7 @@
         top.textContent = COUPLET.top;
         box.appendChild(top);
 
-        hero.appendChild(box);
+        document.body.appendChild(box);   /* 挂 body：hero 上的 transform 会让 fixed 失效 */
     }
 
     /* ---------- ② 烟花：升空 → 炸开 ---------- */
