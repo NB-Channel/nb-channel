@@ -1969,7 +1969,7 @@ html[theme="spring"][data-dark] .spring-strip::before {
 /* ---- 🏮 灯笼：挂在每副对联顶端，轻微摆动 ---- */
 html[theme="spring"] .spring-lantern {
     position: absolute;
-    top: -104px;
+    top: -132px;
     left: 50%;
     width: 54px;
     height: 74px;
@@ -2180,3 +2180,78 @@ html[theme="spring"] .jny-progress .bar i {
 }
 html[theme="spring"] .jny-svg .go { stroke: rgba(255, 176, 92, .85); }
 html[theme="spring"][data-dark] .jny-node.lit { color: #ffe9cf; }
+
+
+/* ---- 大事记（首页 sticky 旅程）：整套换成主题色 ---- */
+html[theme="spring"] .jny-stage {
+    background:
+        radial-gradient(760px 420px at 18% 16%, rgba(255, 176, 92, .16), transparent 60%),
+        radial-gradient(700px 460px at 90% 85%, rgba(255, 96, 60, .14), transparent 60%),
+        linear-gradient(168deg, #4a0709 0%, #6b0c11 60%, #8a1015 100%);
+    color: #fff6e8;
+    box-shadow: 0 60px 120px -50px rgba(40, 2, 4, .75);
+}
+html[theme="spring"] .jny-bg {
+    background: radial-gradient(320px 320px at 50% 50%, rgba(255, 176, 92, .18), transparent 65%);
+}
+html[theme="spring"] .jny-svg .base { stroke: rgba(255, 220, 180, .12); }
+html[theme="spring"] .jny-svg .go {
+    stroke: rgba(255, 186, 100, .95);
+    filter: drop-shadow(0 0 6px rgba(255, 186, 100, .7));
+}
+html[theme="spring"] .jny-node { color: rgba(255, 244, 226, .9); }
+html[theme="spring"] .jny-batt b { border-color: rgba(255, 186, 100, .6); }
+html[theme="spring"] .jny-batt.dragging i {
+    box-shadow: 0 0 30px rgba(255, 176, 92, 1), 0 0 70px rgba(255, 120, 60, .75);
+}
+html[theme="spring"] .jny-card {
+    background: rgba(58, 6, 9, .58);
+    border-color: rgba(255, 200, 130, .16);
+}
+html[theme="spring"] .jny-h { color: #fff6e8; }
+html[theme="spring"] .jny-d { color: rgba(255, 240, 220, .78); }
+html[theme="spring"] .jny-progress { color: rgba(255, 240, 220, .6); }
+
+/* 夜里：舞台更暗，只留线性光 */
+html[theme="spring"][data-dark] .jny-stage,
+html[theme="spring"].dark .jny-stage {
+    background:
+        radial-gradient(700px 400px at 18% 16%, rgba(255, 160, 80, .10), transparent 60%),
+        radial-gradient(640px 420px at 90% 85%, rgba(255, 96, 60, .08), transparent 60%),
+        linear-gradient(168deg, #250305 0%, #360508 60%, #470708 100%);
+}
+html[theme="spring"][data-dark] .jny-card,
+html[theme="spring"].dark .jny-card {
+    background: rgba(30, 3, 5, .72);
+}
+
+
+/* 站点自己的夜间按钮加的是 html.dark，这里把同一套规则复制一份 */
+html[theme="spring"].dark body {
+    background:
+        radial-gradient(760px 520px at 6% 36%, rgba(255, 150, 80, .10), transparent 66%),
+        radial-gradient(760px 520px at 94% 36%, rgba(255, 150, 80, .10), transparent 66%),
+        radial-gradient(900px 600px at 50% 108%, rgba(10, 0, 2, .7), transparent 72%),
+        #32070a;
+    background-attachment: fixed;
+}
+html[theme="spring"].dark .spring-lantern .body {
+    background:
+        repeating-linear-gradient(90deg, rgba(255, 210, 140, .30) 0 1px, transparent 1px 8px),
+        radial-gradient(circle at 34% 30%, #ff9a74 0%, #f0332a 42%, #c2181d 70%, #86121a 100%);
+    box-shadow:
+        inset -6px 0 10px rgba(50, 2, 4, .55),
+        inset 6px 0 10px rgba(255, 170, 120, .3),
+        0 0 34px rgba(255, 140, 70, .55),
+        0 0 90px rgba(255, 120, 50, .28);
+}
+html[theme="spring"].dark .spring-strip {
+    background: linear-gradient(180deg, #7a1016 0%, #5c0a10 55%, #47070c 100%);
+    border-color: rgba(255, 205, 130, .45);
+    box-shadow: 0 16px 40px -18px rgba(0, 0, 0, .9),
+                0 0 42px rgba(255, 150, 80, .18),
+                inset 0 0 22px rgba(255, 140, 70, .12);
+}
+html[theme="spring"].dark .spring-strip::before {
+    background: radial-gradient(closest-side, rgba(255, 176, 92, .30), rgba(255, 120, 60, .10) 46%, transparent 74%);
+}

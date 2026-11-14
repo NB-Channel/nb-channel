@@ -192,6 +192,18 @@
         else unloadFx();
     }
 
+
+    /* 站点自己的夜间按钮只切 html.dark，不会重跑 apply()，
+       这里盯一下 class，把状态同步到 data-dark（春节的暗色规则靠它） */
+    try {
+        new MutationObserver(function () {
+            var el = document.documentElement;
+            var dark = el.classList.contains('dark');
+            if (dark) el.setAttribute('data-dark', '1');
+            else el.removeAttribute('data-dark');
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    } catch (e) {}
+
     /* ---------- 对外接口 ---------- */
     var API = {
         KEY: KEY,
