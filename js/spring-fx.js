@@ -113,7 +113,7 @@
                 x: W * (0.18 + Math.random() * 0.64),
                 y: H * 0.92,
                 vx: (Math.random() - 0.5) * 0.5,
-                vy: -(7.6 + Math.random() * 1.4),
+                vy: -(5.4 + Math.random() * 1.0),
                 targetY: H * (0.18 + Math.random() * 0.22),
                 c: COLORS[(Math.random() * COLORS.length) | 0]
             });
@@ -123,11 +123,11 @@
             var n = 34 + ((Math.random() * 14) | 0);
             for (var i = 0; i < n; i++) {
                 var a = (Math.PI * 2 * i) / n + Math.random() * 0.06;
-                var sp = 2.4 + Math.random() * 3.2;
+                var sp = 1.5 + Math.random() * 2.1;
                 sparks.push({
                     x: x, y: y,
                     vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-                    life: 40 + ((Math.random() * 24) | 0), age: 0,
+                    life: 62 + ((Math.random() * 34) | 0), age: 0,
                     c: (i % 6 === 0) ? '#fff3c4' : c,
                     r: 2.2 + Math.random() * 1.6
                 });
@@ -162,7 +162,7 @@
 
             for (var i = rockets.length - 1; i >= 0; i--) {
                 var r = rockets[i], px = r.x, py = r.y;
-                r.x += r.vx; r.y += r.vy; r.vy += 0.05;
+                r.x += r.vx; r.y += r.vy; r.vy += 0.032;
 
                 ctx.strokeStyle = r.c;
                 ctx.lineWidth = 2.4;
@@ -171,7 +171,7 @@
                 var s1 = sprite('#fff6dc');
                 ctx.drawImage(s1, r.x - 4, r.y - 4, 8, 8);
 
-                if (r.y <= r.targetY || r.vy >= -0.6) {
+                if (r.y <= r.targetY || r.vy >= -0.35) {
                     burst(r.x, r.y, r.c);
                     rockets.splice(i, 1);
                 }
@@ -181,8 +181,8 @@
                 var p = sparks[k];
                 p.age++;
                 p.x += p.vx; p.y += p.vy;
-                p.vy += 0.05;
-                p.vx *= 0.986; p.vy *= 0.986;
+                p.vy += 0.032;
+                p.vx *= 0.9915; p.vy *= 0.9915;
                 var f = 1 - p.age / p.life;
                 if (f <= 0) { sparks.splice(k, 1); continue; }
 
