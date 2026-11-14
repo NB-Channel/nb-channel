@@ -2102,11 +2102,16 @@ html[theme="spring"][data-dark] body {
         #7d0d13;
 }
 html[theme="spring"][data-dark] .hero,
-html[theme="spring"][data-dark] .vhero {
+html[theme="spring"][data-dark] .vhero,
+html[theme="spring"].dark .hero,
+html[theme="spring"].dark .vhero {
     background-image:
-        radial-gradient(820px 440px at 12% 2%, rgba(255, 176, 92, .16), transparent 62%),
-        radial-gradient(720px 460px at 90% 22%, rgba(255, 96, 60, .13), transparent 60%),
-        linear-gradient(166deg, #5c080c 0%, #7d0d13 46%, #98121a 100%);
+        radial-gradient(760px 420px at 12% 2%, rgba(255, 160, 80, .10), transparent 62%),
+        radial-gradient(680px 430px at 90% 22%, rgba(255, 90, 60, .08), transparent 60%),
+        linear-gradient(166deg, #220205 0%, #2e0407 46%, #3a0608 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, right top, center !important;
+    background-size: auto, auto, auto !important;
 }
 
 
@@ -2123,12 +2128,13 @@ html[theme="spring"][data-dark] {
     --brand:     #ffbe6a;
     --card:      #43100f;
 }
-html[theme="spring"][data-dark] body {
+html[theme="spring"][data-dark] body,
+html[theme="spring"].dark body {
     background:
         radial-gradient(760px 520px at 6% 36%, rgba(255, 150, 80, .10), transparent 66%),
         radial-gradient(760px 520px at 94% 36%, rgba(255, 150, 80, .10), transparent 66%),
         radial-gradient(900px 600px at 50% 108%, rgba(10, 0, 2, .7), transparent 72%),
-        var(--bg);
+        #2a0507 !important;
     background-attachment: fixed;
 }
 /* 灯笼在夜里更亮 */
