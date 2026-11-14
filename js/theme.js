@@ -155,6 +155,43 @@
         }
     } catch (e) {}
 
+
+    /* ---------- 春节主题的动态装饰（对联 + 烟花）----------
+       只在主题真正生效时加载 js/spring-fx.js，别的主题零开销。 */
+    var SELF = document.currentScript;
+    function fxBase() {
+        try {
+            if (SELF && SELF.src) return SELF.src.replace(/theme\.js.*$/, '');
+        } catch (e) {}
+        return (/\/Beta\//.test(location.pathname) ? '../js/' : 'js/');
+    }
+    function loadFx() {
+        if (window.__nbSpringFxLoaded) return;
+        window.__nbSpringFxLoaded = true;
+        try {
+            var el = document.createElement('script');
+            el.src = fxBase() + 'spring-fx.js?v=1';
+            el.defer = true;
+            document.head.appendChild(el);
+        } catch (e) {}
+    }
+    function unloadFx() {
+        try {
+            document.querySelectorAll('.spring-couplet').forEach(function (n) { n.remove(); });
+            var cv = document.querySelector('.spring-fireworks');
+            if (cv) cv.remove();
+            document.querySelectorAll('.spring-wrap').forEach(function (w) {
+                var v = w.querySelector('video, .hero-video');
+                if (v) w.parentNode.insertBefore(v, w);
+                w.remove();
+            });
+        } catch (e) {}
+    }
+    function syncFx() {
+        if (document.documentElement.getAttribute('theme') === 'spring') loadFx();
+        else unloadFx();
+    }
+
     /* ---------- 对外接口 ---------- */
     var API = {
         KEY: KEY,
@@ -164,6 +201,7 @@
             var real = (choice && BY_ID[choice] && available(choice)) ? choice : 'default';
             try { localStorage.setItem(KEY, real); } catch (e) {}
             apply(real);
+            syncFx();
             try {
                 window.dispatchEvent(new CustomEvent('nb-theme-change', {
                     detail: { theme: real }
@@ -190,5 +228,6 @@
     };
 
     apply(readChoice());
+    syncFx();
     window.NBTheme = API;
 })();
