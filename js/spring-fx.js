@@ -198,8 +198,25 @@
         requestAnimationFrame(frame);
     }
 
+
+    /* ---------- ③ 首页专属小装饰：倒福 + 上沿剪纸 ---------- */
+    function addHeroDeco() {
+        var hero = document.querySelector('.hero');
+        if (!hero || hero.querySelector('.spring-fu')) return;
+
+        var fu = document.createElement('div');
+        fu.className = 'spring-fu';
+        fu.textContent = '福';
+        hero.appendChild(fu);
+
+        var trim = document.createElement('div');
+        trim.className = 'spring-trim';
+        hero.insertBefore(trim, hero.firstChild);
+    }
+
     function boot() {
         try { addCouplets(); } catch (e) {}
+        try { addHeroDeco(); } catch (e) {}
         try { fireworks(); } catch (e) {}
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

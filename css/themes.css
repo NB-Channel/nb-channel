@@ -2261,3 +2261,107 @@ html[theme="spring"].dark .spring-strip {
 html[theme="spring"].dark .spring-strip::before {
     background: radial-gradient(closest-side, rgba(255, 176, 92, .30), rgba(255, 120, 60, .10) 46%, transparent 74%);
 }
+
+
+/* ============================================================
+   🧧 春节 · 首页专属装饰
+   ============================================================ */
+/* 倒福：贴在 hero 右下角，半透明，像贴了张福字 */
+html[theme="spring"] .spring-fu {
+    position: absolute;
+    right: 6%;
+    bottom: 9%;
+    width: 128px; height: 128px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "KaiTi", "STKaiti", "Kaiti SC", serif;
+    font-size: 96px;
+    font-weight: 700;
+    color: rgba(255, 236, 200, .16);
+    transform: rotate(180deg);          /* 倒贴=福到 */
+    border: 3px solid rgba(255, 220, 160, .16);
+    border-radius: 10px;
+    pointer-events: none;
+    user-select: none;
+    z-index: 2;
+}
+html[theme="spring"][data-dark] .spring-fu,
+html[theme="spring"].dark .spring-fu { color: rgba(255, 236, 200, .22); border-color: rgba(255, 220, 160, .2); }
+
+/* hero 上沿：剪纸花边 */
+html[theme="spring"] .spring-trim {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 14px;
+    pointer-events: none;
+    z-index: 3;
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 210, 140, .55) 0 2px,
+            transparent 2px 9px),
+        linear-gradient(180deg, rgba(255, 190, 110, .35), transparent);
+    mask-image: linear-gradient(180deg, #000 0 8px, transparent 14px);
+    -webkit-mask-image: linear-gradient(180deg, #000 0 8px, transparent 14px);
+}
+
+/* 分区标题：前面加一枚小红点 + 金色细线 */
+html[theme="spring"] .section-head h2::before {
+    content: '';
+    display: inline-block;
+    width: 10px; height: 10px;
+    margin-right: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ff9a74, #d0181f 70%);
+    box-shadow: 0 0 12px rgba(255, 120, 70, .6);
+    vertical-align: middle;
+}
+html[theme="spring"] .section-eyebrow { color: rgba(255, 210, 150, .8); }
+
+/* 数据卡右上角的剪纸角饰 */
+html[theme="spring"] .stat,
+html[theme="spring"] .ac-stat {
+    position: relative;
+    overflow: hidden;
+}
+html[theme="spring"] .stat::after,
+html[theme="spring"] .ac-stat::after {
+    content: '';
+    position: absolute;
+    top: -18px; right: -18px;
+    width: 44px; height: 44px;
+    transform: rotate(45deg);
+    background: linear-gradient(135deg, rgba(255, 200, 130, .5), rgba(255, 150, 90, .18));
+    box-shadow: 0 0 10px rgba(255, 180, 110, .25);
+    pointer-events: none;
+}
+
+/* 首页底部 CTA：底边加一道剪纸波浪 */
+html[theme="spring"] .cta { position: relative; overflow: hidden; }
+html[theme="spring"] .cta::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 12px;
+    background:
+        radial-gradient(12px 12px at 6px 0, rgba(255, 200, 130, .5) 98%, transparent),
+        radial-gradient(12px 12px at 18px 0, rgba(255, 200, 130, .5) 98%, transparent);
+    background-size: 24px 12px;
+    opacity: .55;
+    pointer-events: none;
+}
+
+/* 页脚顶部：金色回纹 */
+html[theme="spring"] .footer::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 6px;
+    background: repeating-linear-gradient(90deg,
+        rgba(255, 200, 130, .6) 0 6px,
+        transparent 6px 12px,
+        rgba(255, 200, 130, .35) 12px 16px,
+        transparent 16px 24px);
+    opacity: .6;
+    pointer-events: none;
+}
