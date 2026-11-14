@@ -118,6 +118,9 @@
     /* ---------- 应用到 <html> ---------- */
     function apply(choice) {
         var el = document.documentElement;
+        /* ?preview=1 时跳过日期窗口限制（调样式用） */
+        var _pv = false;
+        try { _pv = /[?&]preview=1/i.test(location.search); } catch (e) {}
         /* 用户没选过 → 一律用「默认」。
            节日主题只是「那几天在选项里出现」，不会自动套上。 */
         var real = 'default';
