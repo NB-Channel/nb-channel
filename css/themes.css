@@ -1954,7 +1954,7 @@ html[theme="spring"] .spring-strip.left  { left: 26px; }
 html[theme="spring"] .spring-strip::before {
     content: '';
     position: absolute;
-    left: 50%; top: -132px;          /* 对准灯笼中心，不再压在纸面上 */
+    left: 50%; top: -104px;          /* 对准灯笼主体（略低于灯顶） */
     width: 300px; height: 300px;
     transform: translate(-50%, -50%);
     border-radius: 50%;
