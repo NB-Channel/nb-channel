@@ -52,7 +52,7 @@
         document.body.appendChild(box);   /* 挂 body：hero 有 transform，fixed 会失效 */
     }
 
-    /* ---------- ② 烟花（省性能版） ---------- */
+    /* ---------- ② 烟花（贴图 + 拖影，尽量省） ---------- */
     function fireworks() {
         var hero = document.querySelector('.hero') || document.querySelector('.vhero');
         if (!hero) return;
@@ -62,32 +62,47 @@
         cv.className = 'spring-fireworks';
         hero.insertBefore(cv, hero.firstChild);
 
-        var ctx = cv.getContext('2d', { alpha: true });
-        var W = 0, H = 0, DPR = 1;
+        var ctx = cv.getContext('2d', { alpha: true, desynchronized: true });
+        var W = 0, H = 0;
         var rockets = [], sparks = [];
-        var nextAt = 0;
-        var visible = true;
-        var running = true;
+        var nextAt = 0, visible = true, running = true;
+        var slowFrames = 0;
 
         var COLORS = ['#ffd166', '#ffb347', '#fff0c2', '#ff6b5e'];
+
+        /* 预渲染光点贴图：每帧只 drawImage，不再逐颗 arc+fill */
+        var SPRITES = {};
+        function sprite(color) {
+            if (SPRITES[color]) return SPRITES[color];
+            var S = 32, c = document.createElement('canvas');
+            c.width = c.height = S;
+            var g = c.getContext('2d');
+            var rg = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+            rg.addColorStop(0, '#ffffff');
+            rg.addColorStop(0.25, color);
+            rg.addColorStop(0.65, color);
+            rg.addColorStop(1, 'rgba(0,0,0,0)');
+            g.fillStyle = rg;
+            g.beginPath(); g.arc(S / 2, S / 2, S / 2, 0, 6.2832); g.fill();
+            SPRITES[color] = c;
+            return c;
+        }
+        COLORS.forEach(sprite);
 
         function resize() {
             var r = hero.getBoundingClientRect();
             W = r.width; H = r.height;
-            cv.width = Math.floor(W * DPR);
-            cv.height = Math.floor(H * DPR);
+            cv.width = Math.floor(W);
+            cv.height = Math.floor(H);
             cv.style.width = W + 'px';
             cv.style.height = H + 'px';
-            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
         }
         resize();
         window.addEventListener('resize', resize, { passive: true });
 
-        /* 看不见就停：省电、省 GPU */
         if ('IntersectionObserver' in window) {
-            new IntersectionObserver(function (es) {
-                visible = es[0].isIntersecting;
-            }, { threshold: 0 }).observe(hero);
+            new IntersectionObserver(function (es) { visible = es[0].isIntersecting; },
+                                     { threshold: 0 }).observe(hero);
         }
         document.addEventListener('visibilitychange', function () {
             running = !document.hidden;
@@ -97,57 +112,64 @@
             rockets.push({
                 x: W * (0.18 + Math.random() * 0.64),
                 y: H * 0.92,
-                vx: (Math.random() - 0.5) * 0.6,
-                vy: -(7.2 + Math.random() * 1.2),
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: -(7.6 + Math.random() * 1.4),
                 targetY: H * (0.18 + Math.random() * 0.22),
                 c: COLORS[(Math.random() * COLORS.length) | 0]
             });
         }
 
         function burst(x, y, c) {
-            var n = 46 + ((Math.random() * 22) | 0);
+            var n = 34 + ((Math.random() * 14) | 0);
             for (var i = 0; i < n; i++) {
-                var a = (Math.PI * 2 * i) / n + Math.random() * 0.08;
-                var sp = 2.2 + Math.random() * 3.4;
+                var a = (Math.PI * 2 * i) / n + Math.random() * 0.06;
+                var sp = 2.4 + Math.random() * 3.2;
                 sparks.push({
                     x: x, y: y,
-                    vx: Math.cos(a) * sp,
-                    vy: Math.sin(a) * sp,
-                    life: 46 + ((Math.random() * 26) | 0),
-                    age: 0,
-                    c: (i % 5 === 0) ? '#fff3c4' : c,
-                    r: 1.6 + Math.random() * 1.4
+                    vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                    life: 40 + ((Math.random() * 24) | 0), age: 0,
+                    c: (i % 6 === 0) ? '#fff3c4' : c,
+                    r: 2.2 + Math.random() * 1.6
                 });
             }
-            if (sparks.length > 520) sparks.splice(0, sparks.length - 520);
+            if (sparks.length > 220) sparks.splice(0, sparks.length - 220);
         }
 
+        var last = 0;
         function frame(t) {
             requestAnimationFrame(frame);
-            if (!visible || !running || !W || !H) return;
+            if (!visible || !running || !W || !H) { last = 0; return; }
 
-            if (!nextAt) nextAt = t + 600;
+            /* 自适应：连续两帧超过 26ms 就停一拍，保住流畅 */
+            if (last) {
+                var dt = t - last;
+                if (dt > 26) slowFrames++; else slowFrames = Math.max(0, slowFrames - 1);
+            }
+            last = t;
+            if (slowFrames >= 2) { slowFrames = 0; return; }
+
+            if (!nextAt) nextAt = t + 700;
             if (t > nextAt && rockets.length === 0) {
                 launch();
-                nextAt = t + 2200 + Math.random() * 2200;
+                nextAt = t + 2400 + Math.random() * 2400;
             }
 
-            ctx.clearRect(0, 0, W, H);
+            /* 用「擦掉一点」代替 clearRect：顺手得到拖影 */
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0,0,0,.35)';
+            ctx.fillRect(0, 0, W, H);
             ctx.globalCompositeOperation = 'lighter';
 
             for (var i = rockets.length - 1; i >= 0; i--) {
-                var r = rockets[i];
-                var px = r.x, py = r.y;
+                var r = rockets[i], px = r.x, py = r.y;
                 r.x += r.vx; r.y += r.vy; r.vy += 0.05;
 
-                ctx.globalAlpha = 1;
                 ctx.strokeStyle = r.c;
-                ctx.lineWidth = 2.5;
+                ctx.lineWidth = 2.4;
                 ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(r.x, r.y); ctx.stroke();
 
-                ctx.globalAlpha = 0.9;
-                ctx.fillStyle = '#fff6dc';
-                ctx.beginPath(); ctx.arc(r.x, r.y + 3, 2.2, 0, 6.2832); ctx.fill();
+                var s1 = sprite('#fff6dc');
+                ctx.drawImage(s1, r.x - 4, r.y - 4, 8, 8);
 
                 if (r.y <= r.targetY || r.vy >= -0.6) {
                     burst(r.x, r.y, r.c);
@@ -160,13 +182,14 @@
                 p.age++;
                 p.x += p.vx; p.y += p.vy;
                 p.vy += 0.05;
-                p.vx *= 0.985; p.vy *= 0.985;
+                p.vx *= 0.986; p.vy *= 0.986;
                 var f = 1 - p.age / p.life;
                 if (f <= 0) { sparks.splice(k, 1); continue; }
 
-                ctx.globalAlpha = f;
-                ctx.fillStyle = p.c;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.5 + f), 0, 6.2832); ctx.fill();
+                var sp = sprite(p.c);
+                var sz = p.r * (1 + f * 1.6);
+                ctx.globalAlpha = Math.max(0.05, f);
+                ctx.drawImage(sp, p.x - sz, p.y - sz, sz * 2, sz * 2);
             }
 
             ctx.globalAlpha = 1;
