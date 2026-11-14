@@ -1952,7 +1952,8 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
     var body = document.getElementById('npBody');
     var toastEl = document.getElementById('npToast');
     var VIEW = 'free';
-    var CUR = null;          // 正在看的那一期（route 要用，漏了这句就会 ReferenceError）
+    var CUR = null;
+    var NP_TOTAL = 0;          // 正在看的那一期（route 要用，漏了这句就会 ReferenceError）
 
     function me() {
         try {
@@ -2061,12 +2062,22 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
         });
     }
 
+    function setIssueInfo(no) {
+        var noEl = document.getElementById('pdIssueNo');
+        if (!noEl) return;
+        if (!NP_TOTAL) { noEl.textContent = no ? ('第 ' + no + ' 期') : '—'; return; }
+        noEl.textContent = no ? ('第 ' + no + ' 期 / 共 ' + NP_TOTAL + ' 期')
+                              : ('共 ' + NP_TOTAL + ' 期');
+    }
+
     /* ── 各期 ── */
     function renderIssues() {
         body.innerHTML = '<div class="np-loading">正在取报…</div>';
         var u = me();
         rpc('get_news_issues', { p_user_id: u ? u.id : null }).then(function (d) {
             var all = (d && d.issues) || [];
+            NP_TOTAL = all.length;
+            setIssueInfo();
             var list = all.filter(function (x) { return (x.kind || 'free') === VIEW; });
             if (!list.length) {
                 body.innerHTML = '<div class="np-empty">' +
@@ -2093,6 +2104,8 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
         body.innerHTML = '<div class="np-loading">正在翻你的报箱…</div>';
         rpc('get_my_newspapers', { p_user_id: u.id }).then(function (d) {
             var list = (d && d.issues) || [];
+            NP_TOTAL = NP_TOTAL || list.length;
+            setIssueInfo();
             if (!list.length) {
                 body.innerHTML = '<div class="np-empty">还没有你能读的报纸。<br>' +
                     '去「🆓 免费刊」看看 —— 那些整期都能直接读。</div>';
@@ -2180,7 +2193,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
         // 同步顶部信息卡的「刊期 / 版次」（之前是写死的「第 1 期」）
         (function () {
             var noEl = document.getElementById('pdIssueNo');
-            if (noEl) noEl.textContent = '第 ' + no + ' 期';
+            setIssueInfo(no);
         })();
 
         body.innerHTML = '<div class="np-loading">正在展开第 ' + no + ' 期…</div>';
@@ -2261,7 +2274,7 @@ html.dark .np-paper { box-shadow: 0 20px 40px -18px rgba(0,0,0,.55); }
         // 数据到齐后再校正一次信息卡（含版次）
         (function () {
             var noEl = document.getElementById('pdIssueNo');
-            if (noEl && d.issue_no) noEl.textContent = '第 ' + d.issue_no + ' 期';
+            if (noEl && d.issue_no) setIssueInfo(d.issue_no);
             var pcEl = document.getElementById('pdPageCount');
             if (pcEl) {
                 var _t = (typeof total === 'number' && total > 0) ? total : 1;
