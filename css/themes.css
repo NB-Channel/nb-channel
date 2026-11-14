@@ -1740,7 +1740,7 @@ html.dark    .drawer {
      · 春节＝朱砂红 + 暖金 + 喜庆偏软（大圆角、灯笼、暖橙渐变）
    ============================================================ */
 html[theme="spring"] {
-    --bg:        #7e1015;
+    --bg:        #741014;
     --ink:       #fff3e2;
     --ink-soft:  #ecc8a6;
     --ink-faint: #b58566;
@@ -1757,8 +1757,8 @@ html[theme="spring"] {
 html[theme="spring"] body {
     background:
         linear-gradient(rgba(24, 2, 4, .26), rgba(24, 2, 4, .26)),
-        radial-gradient(680px 420px at 90% -6%, rgba(255, 176, 92, .18), transparent 64%),
-        radial-gradient(560px 360px at 4% 6%, rgba(255, 96, 60, .15), transparent 66%),
+        radial-gradient(680px 420px at 90% -6%, rgba(255, 176, 92, .12), transparent 64%),
+        radial-gradient(560px 360px at 4% 6%, rgba(255, 96, 60, .10), transparent 66%),
         radial-gradient(980px 700px at 50% 112%, rgba(90, 4, 8, .6), transparent 72%),
         var(--bg);
     background-attachment: fixed;
@@ -1850,6 +1850,12 @@ html[theme="spring"] .ac-wrap {
 /* ---- 按钮：胶囊 + 暖金橙渐变 ---- */
 
 /* 红底上导航文字要提亮，否则糊成一片 */
+html[theme="spring"] .nav {
+    background: rgba(64, 5, 8, .93);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 190, 110, .18);
+}
 html[theme="spring"] .nav a,
 html[theme="spring"] .nav-more-btn,
 html[theme="spring"] .nav-scan { color: #ffe9c9; }
@@ -1929,9 +1935,11 @@ html[theme="spring"] .spring-wrap {
     display: inline-block;
     line-height: 0;
     max-width: 100%;
+    padding: 0 66px;
 }
 html[theme="spring"] .spring-wrap .hero-video,
 html[theme="spring"] .spring-wrap video {
+    max-width: 100%;
     border-radius: 18px;
     box-shadow: 0 0 0 3px rgba(255, 190, 110, .28),
                 0 40px 90px -50px rgba(40, 2, 4, .9);
@@ -2011,7 +2019,7 @@ html[theme="spring"] .vhero > *:not(.spring-fireworks) {
 /* ---- 系统深色：压暗一档，灯笼稍亮 ---- */
 html[theme="spring"][data-dark] body {
     background:
-        radial-gradient(680px 420px at 90% -6%, rgba(255, 176, 92, .18), transparent 64%),
+        radial-gradient(680px 420px at 90% -6%, rgba(255, 176, 92, .12), transparent 64%),
         radial-gradient(560px 360px at 4% 6%, rgba(255, 96, 60, .16), transparent 66%),
         #7d0d13;
 }
