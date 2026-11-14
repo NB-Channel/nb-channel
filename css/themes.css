@@ -1731,3 +1731,169 @@ html.dark    .drawer {
     background: var(--card);
     color: var(--ink);
 }
+
+
+/* ============================================================
+   🧧 春节主题 · 朱红 + 鎏金
+   限时：春节正日前后各 5 天（日期表在 js/theme.js 的 FESTIVAL.spring）
+   平时想预览：在网址后加 ?theme=spring&preview=1
+   ============================================================ */
+html[theme="spring"] {
+    --bg:        #7a0f12;
+    --ink:       #ffeccd;
+    --ink-soft:  #e8c69b;
+    --ink-faint: #b08a63;
+    --line:      rgba(255, 206, 92, .24);
+    --brand:     #ffcc4d;
+    --brand-deep:#e8a92c;
+    --card:      #96161a;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .3);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, .42), 0 26px 56px -22px rgba(0, 0, 0, .58);
+}
+
+/* 底色：朱红 + 左侧灯笼暖光 + 右侧窗花冷金，固定不随滚动 */
+html[theme="spring"] body {
+    background:
+        radial-gradient(520px 320px at 6% 2%, rgba(255, 96, 72, .26), transparent 64%),
+        radial-gradient(520px 320px at 94% 0%, rgba(255, 196, 74, .20), transparent 62%),
+        radial-gradient(900px 620px at 50% 108%, rgba(120, 8, 12, .65), transparent 70%),
+        var(--bg);
+    background-attachment: fixed;
+}
+
+/* ---- Hero 幕布（首页 .hero，其它页 .vhero）---- */
+html[theme="spring"] .hero {
+    background-image:
+        radial-gradient(860px 460px at 14% 4%, rgba(255, 206, 92, .20), transparent 62%),
+        radial-gradient(700px 460px at 92% 26%, rgba(255, 96, 72, .16), transparent 60%),
+        linear-gradient(168deg, #52090c 0%, #7a0f12 52%, #96161a 100%) !important;
+    background-repeat: no-repeat !important;
+    background-position: left top, right top, center !important;
+    background-size: auto, auto, auto !important;
+}
+html[theme="spring"] .vhero {
+    background-image:
+        radial-gradient(860px 460px at 14% 4%, rgba(255, 206, 92, .20), transparent 62%),
+        radial-gradient(700px 460px at 92% 26%, rgba(255, 96, 72, .16), transparent 60%),
+        linear-gradient(168deg, #52090c 0%, #7a0f12 52%, #96161a 100%);
+    background-repeat: no-repeat;
+    background-position: left top, right top, center;
+}
+html[theme="spring"] .hero::after {
+    background-image: radial-gradient(rgba(255, 214, 102, .10) 1px, transparent 1px);
+}
+html[theme="spring"] .vhero::before {
+    background-image: radial-gradient(rgba(255, 214, 102, .09) 1px, transparent 1px);
+}
+html[theme="spring"] .hero h1,
+html[theme="spring"] .vhero h1 { color: #fff7e6; }
+html[theme="spring"] .hero h1 .light,
+html[theme="spring"] .vhero h1 .light { color: #ffcc4d; }
+html[theme="spring"] .hero-eyebrow,
+html[theme="spring"] .vhero .hero-eyebrow { color: rgba(255, 226, 170, .58); }
+html[theme="spring"] .hero-sub,
+html[theme="spring"] .vhero-sub { color: rgba(255, 236, 205, .68); }
+html[theme="spring"] .hero-link,
+html[theme="spring"] .vhero-actions .hero-link {
+    color: #ffeccd;
+    border-bottom-color: rgba(255, 206, 92, .42);
+}
+html[theme="spring"] .hero-link:hover,
+html[theme="spring"] .vhero-actions .hero-link:hover { color: #ffcc4d; }
+html[theme="spring"] .hero-video {
+    background: #52090c;
+    box-shadow: 0 70px 140px -60px rgba(0, 0, 0, .9),
+                0 0 0 1px rgba(255, 206, 92, .18),
+                0 0 60px -20px rgba(255, 206, 92, .30);
+}
+html[theme="spring"] .hero-scroll,
+html[theme="spring"] .vhero-fade { color: rgba(255, 226, 170, .55); }
+html[theme="spring"] .vhero-fade { background: linear-gradient(to bottom, transparent, var(--bg)); }
+
+/* ---- 卡片 / 面板 ---- */
+html[theme="spring"] .home-card,
+html[theme="spring"] .comment-section,
+html[theme="spring"] .product-card,
+html[theme="spring"] .about-content,
+html[theme="spring"] .changelog-content,
+html[theme="spring"] .profile-card,
+html[theme="spring"] .ac-wrap,
+html[theme="spring"] .bn-case,
+html[theme="spring"] .bn-rule {
+    border-color: var(--line);
+}
+
+/* ---- 按钮 / 导航 ---- */
+html[theme="spring"] .nav-cta {
+    background: linear-gradient(135deg, #ffcc4d, #ff7a4d);
+    color: #52090c;
+}
+html[theme="spring"] .nav-scan:hover { color: var(--brand); }
+html[theme="spring"] .nav-more-panel a:hover {
+    background: rgba(255, 206, 92, .14);
+    color: #fff7e6;
+}
+html[theme="spring"] .theme-btn:hover {
+    border-color: rgba(255, 206, 92, .55);
+    color: var(--brand);
+}
+html[theme="spring"] .drawer .d-close:hover { color: var(--brand); }
+
+/* ---- 公告条 / 实时点 ---- */
+html[theme="spring"] .beta-announce .ba-title { color: var(--brand); }
+html[theme="spring"] .stat .label .live {
+    background: var(--brand);
+    box-shadow: 0 0 8px rgba(255, 206, 92, .85);
+}
+
+/* ---- CTA 区块（首页底部）---- */
+html[theme="spring"] .cta {
+    background: linear-gradient(170deg, #52090c 0%, #66090f 55%, #7a0f12 100%);
+    color: #fff7e6;
+}
+html[theme="spring"] .cta p { color: rgba(255, 236, 205, .64); }
+html[theme="spring"] .cta .hero-link { border-bottom-color: rgba(255, 206, 92, .42); }
+
+/* ---- 页脚 ---- */
+html[theme="spring"] .footer {
+    background: linear-gradient(180deg, #52090c 0%, #3d0608 100%);
+    color: #e8c69b;
+}
+html[theme="spring"] .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 206, 92, .6), rgba(255, 96, 72, .45), transparent);
+}
+html[theme="spring"] .footer h5 { color: #ffcc4d; }
+
+/* ---- 图标 / 缩略图 ---- */
+html[theme="spring"] .about-card .ico {
+    background: linear-gradient(135deg, rgba(255, 206, 92, .24), rgba(255, 96, 72, .18));
+    color: var(--brand);
+}
+html[theme="spring"] .vcard:nth-child(1) .thumb {
+    background: linear-gradient(135deg, #96161a, #52090c);
+}
+
+/* ---- 滚动条 ---- */
+html[theme="spring"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+html[theme="spring"] ::-webkit-scrollbar-track { background: #52090c; }
+html[theme="spring"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(#ffcc4d, #c8102e);
+    border-radius: 6px;
+    border: 2px solid #52090c;
+}
+
+/* ---- 深色系统下的春节（把底压暗一档，金色提亮）---- */
+html[theme="spring"][data-dark] body {
+    background:
+        radial-gradient(520px 320px at 6% 2%, rgba(255, 96, 72, .20), transparent 64%),
+        radial-gradient(520px 320px at 94% 0%, rgba(255, 196, 74, .14), transparent 62%),
+        #4d080b;
+}
+html[theme="spring"][data-dark] .hero,
+html[theme="spring"][data-dark] .vhero {
+    background-image:
+        radial-gradient(860px 460px at 14% 4%, rgba(255, 206, 92, .16), transparent 62%),
+        radial-gradient(700px 460px at 92% 26%, rgba(255, 96, 72, .12), transparent 60%),
+        linear-gradient(168deg, #3a0406 0%, #4d080b 52%, #66090f 100%);
+}
