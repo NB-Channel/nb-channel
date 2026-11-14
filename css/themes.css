@@ -1932,14 +1932,20 @@ html[theme="spring"] ::-webkit-scrollbar-thumb {
 /* ---- 🧧 对联：贴在 LOGO 视频两侧 ---- */
 html[theme="spring"] .spring-wrap {
     position: relative;
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 0;
+    width: 100%;
     max-width: 100%;
     padding: 0 66px;
+    box-sizing: border-box;
 }
 html[theme="spring"] .spring-wrap .hero-video,
 html[theme="spring"] .spring-wrap video {
-    max-width: 100%;
+    width: 100%;
+    max-width: 520px;
+    height: auto;
     border-radius: 18px;
     box-shadow: 0 0 0 3px rgba(255, 190, 110, .28),
                 0 40px 90px -50px rgba(40, 2, 4, .9);
