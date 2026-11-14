@@ -1913,14 +1913,14 @@ html[theme="spring"] ::-webkit-scrollbar-thumb {
 
 /* ---- 🧧 对联：贴在 hero 左右两侧（不碰视频）---- */
 html[theme="spring"] .spring-couplets {
-    position: absolute;
+    position: fixed;
     inset: 0;
     pointer-events: none;
-    z-index: 2;
+    z-index: 5;
 }
 html[theme="spring"] .spring-strip {
     position: absolute;
-    top: 92px;
+    top: 132px;
     width: 58px;
     padding: 22px 0;
     display: flex;
@@ -1947,7 +1947,7 @@ html[theme="spring"] .spring-strip.right { right: 26px; }
 html[theme="spring"] .spring-strip.left  { left: 26px; }
 html[theme="spring"] .spring-banner {
     position: absolute;
-    top: 22px;
+    top: 70px;
     left: 50%;
     transform: translateX(-50%);
     padding: 10px 30px;

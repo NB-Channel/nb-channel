@@ -85,7 +85,7 @@
         }
 
         function burst(x, y, color) {
-            var n = 70 + Math.floor(Math.random() * 40);
+            var n = 90 + Math.floor(Math.random() * 50);
             var accent = COLORS[Math.floor(Math.random() * COLORS.length)];
             for (var i = 0; i < n; i++) {
                 var a = (Math.PI * 2 * i) / n + Math.random() * 0.1;
@@ -123,17 +123,19 @@
                 r.y += r.vy;
                 r.vy += 0.055;                       /* 减速，到顶自然停 */
 
-                ctx.globalAlpha = 0.9;
+                ctx.globalAlpha = 1;
                 ctx.strokeStyle = r.color;
-                ctx.lineWidth = 2.2;
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = r.color;
                 ctx.beginPath();
                 ctx.moveTo(px, py);
                 ctx.lineTo(r.x, r.y);
                 ctx.stroke();
 
                 /* 尾焰 */
-                ctx.globalAlpha = 0.55;
-                ctx.fillStyle = '#fff3d0';
+                ctx.globalAlpha = 0.85;
+                ctx.fillStyle = '#fff6dc';
                 ctx.beginPath();
                 ctx.arc(r.x, r.y + 4, 2.4, 0, Math.PI * 2);
                 ctx.fill();
@@ -156,6 +158,8 @@
                 var f = 1 - p.age / p.life;
                 if (f <= 0) { sparks.splice(k, 1); continue; }
 
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = p.c;
                 ctx.globalAlpha = Math.max(0, f * 1.0);
                 ctx.fillStyle = p.c;
                 ctx.beginPath();
@@ -170,6 +174,7 @@
                 ctx.fill();
             }
 
+            ctx.shadowBlur = 0;
             ctx.globalAlpha = 1;
             ctx.globalCompositeOperation = 'source-over';
         }
