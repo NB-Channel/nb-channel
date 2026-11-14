@@ -120,7 +120,10 @@
         var el = document.documentElement;
         /* ?preview=1 时跳过日期窗口限制（调样式用） */
         var _pv = false;
-        try { _pv = /[?&]preview=1/i.test(location.search); } catch (e) {}
+        try {
+            _pv = /[?&]preview=1/i.test(location.search);
+            if (/[?&]dark=1/i.test(location.search)) document.documentElement.classList.add('dark');
+        } catch (e) {}
         /* 用户没选过 → 一律用「默认」。
            节日主题只是「那几天在选项里出现」，不会自动套上。 */
         var real = 'default';
@@ -139,7 +142,9 @@
             el.removeAttribute(ATTR);
         } else {
             el.setAttribute(ATTR, real);
-            el.classList.remove('dark');
+            /* ⚠️ 以前这里会 remove('dark')：结果用户刚开的夜间模式
+               一刷新就被主题引擎关掉，灯笼也不会亮。
+               现在保留 dark 类，暗色交给各主题自己的 .dark / [data-dark] 规则。 */
         }
         if (wasDark) el.setAttribute('data-dark', '1');
         else el.removeAttribute('data-dark');
