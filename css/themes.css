@@ -1921,17 +1921,19 @@ html[theme="spring"] .spring-couplets {
 html[theme="spring"] .spring-strip .txt { display: block; }
 html[theme="spring"] .spring-strip {
     position: absolute;
-    top: 190px;
-    width: 58px;
-    padding: 22px 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 62px;
+    padding: 40px 0;
+    min-height: 46vh;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: "KaiTi", "STKaiti", "Kaiti SC", "Songti SC", serif;
-    font-size: 1.42rem;
+    font-size: 1.52rem;
     font-weight: 700;
     line-height: 1.35;
-    letter-spacing: 6px;
+    letter-spacing: 10px;
     color: #ffe8b0;
     background: linear-gradient(180deg, #c11a22 0%, #9c1118 55%, #841016 100%);
     border: 2px solid rgba(255, 205, 130, .55);
@@ -1946,6 +1948,23 @@ html[theme="spring"] .spring-strip {
 }
 html[theme="spring"] .spring-strip.right { right: 26px; }
 html[theme="spring"] .spring-strip.left  { left: 26px; }
+
+
+/* ---- 灯笼的暖光池（只在夜里明显）---- */
+html[theme="spring"] .spring-strip::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: -70px;
+    width: 320px; height: 420px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 170, 90, .10), transparent 72%);
+    pointer-events: none;
+    z-index: -1;
+}
+html[theme="spring"][data-dark] .spring-strip::before {
+    background: radial-gradient(closest-side, rgba(255, 176, 92, .30), rgba(255, 120, 60, .10) 46%, transparent 74%);
+}
 
 /* ---- 🏮 灯笼：挂在每副对联顶端，轻微摆动 ---- */
 html[theme="spring"] .spring-lantern {
@@ -2089,3 +2108,75 @@ html[theme="spring"][data-dark] .vhero {
         radial-gradient(720px 460px at 90% 22%, rgba(255, 96, 60, .13), transparent 60%),
         linear-gradient(166deg, #5c080c 0%, #7d0d13 46%, #98121a 100%);
 }
+
+
+/* ============================================================
+   🌙 春节 · 夜间模式
+   整体压暗，只留灯笼与对联的暖光，像夜里贴了春联的院子
+   ============================================================ */
+html[theme="spring"][data-dark] {
+    --bg:        #32070a;
+    --ink:       #ffe9cf;
+    --ink-soft:  #d9b591;
+    --ink-faint: #9c7757;
+    --line:      rgba(255, 176, 92, .18);
+    --brand:     #ffbe6a;
+    --card:      #43100f;
+}
+html[theme="spring"][data-dark] body {
+    background:
+        radial-gradient(760px 520px at 6% 36%, rgba(255, 150, 80, .10), transparent 66%),
+        radial-gradient(760px 520px at 94% 36%, rgba(255, 150, 80, .10), transparent 66%),
+        radial-gradient(900px 600px at 50% 108%, rgba(10, 0, 2, .7), transparent 72%),
+        var(--bg);
+    background-attachment: fixed;
+}
+/* 灯笼在夜里更亮 */
+html[theme="spring"][data-dark] .spring-lantern .body {
+    background:
+        repeating-linear-gradient(90deg, rgba(255, 210, 140, .30) 0 1px, transparent 1px 8px),
+        radial-gradient(circle at 34% 30%, #ff9a74 0%, #f0332a 42%, #c2181d 70%, #86121a 100%);
+    box-shadow:
+        inset -6px 0 10px rgba(50, 2, 4, .55),
+        inset 6px 0 10px rgba(255, 170, 120, .3),
+        0 0 34px rgba(255, 140, 70, .55),
+        0 0 90px rgba(255, 120, 50, .28);
+}
+html[theme="spring"][data-dark] .spring-strip {
+    background: linear-gradient(180deg, #7a1016 0%, #5c0a10 55%, #47070c 100%);
+    border-color: rgba(255, 205, 130, .45);
+    box-shadow: 0 16px 40px -18px rgba(0, 0, 0, .9),
+                0 0 42px rgba(255, 150, 80, .18),
+                inset 0 0 22px rgba(255, 140, 70, .12);
+    color: #ffe6b8;
+}
+html[theme="spring"][data-dark] .spring-banner {
+    background: linear-gradient(180deg, #d8a355, #a9772f);
+    color: #2a0406;
+}
+/* 卡片、面板一起压暗 */
+html[theme="spring"][data-dark] .home-card,
+html[theme="spring"][data-dark] .comment-section,
+html[theme="spring"][data-dark] .product-card,
+html[theme="spring"][data-dark] .about-content,
+html[theme="spring"][data-dark] .changelog-content,
+html[theme="spring"][data-dark] .profile-card,
+html[theme="spring"][data-dark] .bn-case,
+html[theme="spring"][data-dark] .bn-rule,
+html[theme="spring"][data-dark] .ac-wrap {
+    background: var(--card);
+    border-color: var(--line);
+}
+/* 大事记（首页 sticky 旅程）：原来写死的蓝紫，换成暖金 */
+html[theme="spring"] .jny-node.lit { color: #fff6e8; text-shadow: 0 0 26px rgba(255, 176, 92, .6); }
+html[theme="spring"] .jny-node.lit .jy { color: #ffd9a0; }
+html[theme="spring"] .jny-tag { color: #ffd9a0; }
+html[theme="spring"] .jny-batt i {
+    background: #fff4d8;
+    box-shadow: 0 0 22px rgba(255, 176, 92, .9), 0 0 46px rgba(255, 120, 60, .5);
+}
+html[theme="spring"] .jny-progress .bar i {
+    background: linear-gradient(90deg, #ffc46b, #ff7f3f);
+}
+html[theme="spring"] .jny-svg .go { stroke: rgba(255, 176, 92, .85); }
+html[theme="spring"][data-dark] .jny-node.lit { color: #ffe9cf; }
