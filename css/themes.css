@@ -1954,16 +1954,16 @@ html[theme="spring"] .spring-strip.left  { left: 26px; }
 html[theme="spring"] .spring-strip::before {
     content: '';
     position: absolute;
-    left: 50%; top: -70px;
-    width: 320px; height: 420px;
-    transform: translateX(-50%);
+    left: 50%; top: -132px;          /* 对准灯笼中心，不再压在纸面上 */
+    width: 300px; height: 300px;
+    transform: translate(-50%, -50%);
     border-radius: 50%;
-    background: radial-gradient(closest-side, rgba(255, 170, 90, .10), transparent 72%);
+    background: radial-gradient(closest-side, rgba(255, 170, 90, .12), transparent 70%);
     pointer-events: none;
     z-index: -1;
 }
 html[theme="spring"][data-dark] .spring-strip::before {
-    background: radial-gradient(closest-side, rgba(255, 176, 92, .30), rgba(255, 120, 60, .10) 46%, transparent 74%);
+    background: radial-gradient(closest-side, rgba(255, 176, 92, .34), rgba(255, 120, 60, .12) 44%, transparent 72%);
 }
 
 /* ---- 🏮 灯笼：挂在每副对联顶端，轻微摆动 ---- */
@@ -2145,8 +2145,8 @@ html[theme="spring"][data-dark] .spring-lantern .body {
     box-shadow:
         inset -6px 0 10px rgba(50, 2, 4, .55),
         inset 6px 0 10px rgba(255, 170, 120, .3),
-        0 0 34px rgba(255, 140, 70, .55),
-        0 0 90px rgba(255, 120, 50, .28);
+        0 0 22px rgba(255, 140, 70, .5),
+        0 0 64px rgba(255, 120, 50, .22);
 }
 html[theme="spring"][data-dark] .spring-strip {
     background: linear-gradient(180deg, #7a1016 0%, #5c0a10 55%, #47070c 100%);
@@ -2248,8 +2248,8 @@ html[theme="spring"].dark .spring-lantern .body {
     box-shadow:
         inset -6px 0 10px rgba(50, 2, 4, .55),
         inset 6px 0 10px rgba(255, 170, 120, .3),
-        0 0 34px rgba(255, 140, 70, .55),
-        0 0 90px rgba(255, 120, 50, .28);
+        0 0 22px rgba(255, 140, 70, .5),
+        0 0 64px rgba(255, 120, 50, .22);
 }
 html[theme="spring"].dark .spring-strip {
     background: linear-gradient(180deg, #7a1016 0%, #5c0a10 55%, #47070c 100%);
