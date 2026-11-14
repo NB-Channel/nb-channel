@@ -175,7 +175,7 @@
         window.__nbSpringFxLoaded = true;
         try {
             var el = document.createElement('script');
-            el.src = fxBase() + 'spring-fx.js?v=5';
+            el.src = fxBase() + 'spring-fx.js?v=6';
             el.defer = true;
             document.head.appendChild(el);
         } catch (e) {}
