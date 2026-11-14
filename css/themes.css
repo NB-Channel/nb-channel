@@ -1918,9 +1918,10 @@ html[theme="spring"] .spring-couplets {
     pointer-events: none;
     z-index: 5;
 }
+html[theme="spring"] .spring-strip .txt { display: block; }
 html[theme="spring"] .spring-strip {
     position: absolute;
-    top: 132px;
+    top: 190px;
     width: 58px;
     padding: 22px 0;
     display: flex;
@@ -1945,6 +1946,85 @@ html[theme="spring"] .spring-strip {
 }
 html[theme="spring"] .spring-strip.right { right: 26px; }
 html[theme="spring"] .spring-strip.left  { left: 26px; }
+
+/* ---- 🏮 灯笼：挂在每副对联顶端，轻微摆动 ---- */
+html[theme="spring"] .spring-lantern {
+    position: absolute;
+    top: -104px;
+    left: 50%;
+    width: 54px;
+    height: 74px;
+    transform: translateX(-50%);
+    animation: spring-lantern-sway 5.2s ease-in-out infinite;
+    transform-origin: 50% -26px;
+    pointer-events: none;
+}
+html[theme="spring"] .spring-lantern .cord {
+    position: absolute;
+    top: -26px; left: 50%;
+    width: 2px; height: 26px;
+    margin-left: -1px;
+    background: linear-gradient(#ffd98a, rgba(214, 160, 70, .55));
+    border-radius: 2px;
+}
+html[theme="spring"] .spring-lantern .cap {
+    position: absolute;
+    left: 7px; right: 7px;
+    height: 9px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #ffe1a4, #d8a13c 60%, #a9761f);
+    box-shadow: 0 1px 2px rgba(60, 4, 6, .5);
+}
+html[theme="spring"] .spring-lantern .cap.top { top: 0; }
+html[theme="spring"] .spring-lantern .cap.bottom { bottom: 12px; }
+html[theme="spring"] .spring-lantern .body {
+    position: absolute;
+    left: 0; right: 0;
+    top: 9px; bottom: 20px;
+    border-radius: 50% / 46%;
+    background:
+        repeating-linear-gradient(90deg, rgba(255, 196, 120, .22) 0 1px, transparent 1px 8px),
+        radial-gradient(circle at 34% 30%, #ff7a60 0%, #e0231f 42%, #b31419 70%, #7c0c11 100%);
+    box-shadow:
+        inset -7px 0 12px rgba(70, 4, 8, .55),
+        inset 7px 0 12px rgba(255, 150, 100, .18),
+        inset 0 -8px 12px rgba(70, 4, 8, .45),
+        0 6px 18px -8px rgba(60, 4, 6, .8);
+}
+html[theme="spring"] .spring-lantern .body::after {
+    content: '';
+    position: absolute;
+    left: 8px; top: 22%;
+    width: 8px; height: 42%;
+    border-radius: 50%;
+    background: linear-gradient(90deg, rgba(255, 255, 255, .22), transparent);
+    filter: blur(1px);
+}
+html[theme="spring"] .spring-lantern .tassel {
+    position: absolute;
+    left: 50%; bottom: -6px;
+    width: 3px; height: 20px;
+    margin-left: -1.5px;
+    background: linear-gradient(#ffd98a, #cf9633);
+    border-radius: 2px;
+}
+html[theme="spring"] .spring-lantern .tassel::after {
+    content: '';
+    position: absolute;
+    left: -5px; bottom: -12px;
+    width: 13px; height: 13px;
+    border-radius: 2px 2px 4px 4px;
+    background: linear-gradient(#ffe1a4, #d8a13c);
+    box-shadow: 0 2px 4px rgba(60, 4, 6, .5);
+}
+@keyframes spring-lantern-sway {
+    0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+    50%      { transform: translateX(-50%) rotate(2.4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    html[theme="spring"] .spring-lantern { animation: none; }
+}
+
 html[theme="spring"] .spring-banner {
     position: absolute;
     top: 70px;
