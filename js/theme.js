@@ -170,14 +170,14 @@
         window.__nbSpringFxLoaded = true;
         try {
             var el = document.createElement('script');
-            el.src = fxBase() + 'spring-fx.js?v=1';
+            el.src = fxBase() + 'spring-fx.js?v=2';
             el.defer = true;
             document.head.appendChild(el);
         } catch (e) {}
     }
     function unloadFx() {
         try {
-            document.querySelectorAll('.spring-couplet').forEach(function (n) { n.remove(); });
+            document.querySelectorAll('.spring-couplets').forEach(function (n) { n.remove(); });
             var cv = document.querySelector('.spring-fireworks');
             if (cv) cv.remove();
             document.querySelectorAll('.spring-wrap').forEach(function (w) {

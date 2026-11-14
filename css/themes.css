@@ -1764,24 +1764,6 @@ html[theme="spring"] body {
     background-attachment: fixed;
 }
 
-/* ---- 灯笼：左右上角各一只（纯 CSS，不占 DOM）---- */
-html[theme="spring"] body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 160px;
-    pointer-events: none;
-    z-index: 0;
-    background:
-        radial-gradient(circle at 7% 26px, #ffd591 0 5px, rgba(255, 190, 110, .9) 6px 7px, transparent 8px),
-        radial-gradient(circle at 7% 96px, #e8352f 0 34px, rgba(255, 190, 110, .95) 35px 38px, transparent 39px),
-        radial-gradient(circle at 93% 26px, #ffd591 0 5px, rgba(255, 190, 110, .9) 6px 7px, transparent 8px),
-        radial-gradient(circle at 93% 96px, #e8352f 0 34px, rgba(255, 190, 110, .95) 35px 38px, transparent 39px);
-    opacity: .55;
-    mask-image: linear-gradient(to bottom, #000 0 120px, transparent 160px);
-    -webkit-mask-image: linear-gradient(to bottom, #000 0 120px, transparent 160px);
-}
-
 /* ---- Hero（首页 .hero / 其它页 .vhero）---- */
 html[theme="spring"] .hero {
     background-image:
@@ -1929,75 +1911,66 @@ html[theme="spring"] ::-webkit-scrollbar-thumb {
 }
 
 
-/* ---- 🧧 对联：贴在 LOGO 视频两侧 ---- */
-html[theme="spring"] .spring-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 0;
-    width: 100%;
-    max-width: 100%;
-    padding: 0 66px;
-    box-sizing: border-box;
-}
-html[theme="spring"] .spring-wrap .hero-video,
-html[theme="spring"] .spring-wrap video {
-    width: 100%;
-    max-width: 520px;
-    height: auto;
-    border-radius: 18px;
-    box-shadow: 0 0 0 3px rgba(255, 190, 110, .28),
-                0 40px 90px -50px rgba(40, 2, 4, .9);
-}
-html[theme="spring"] .spring-couplet {
+/* ---- 🧧 对联：贴在 hero 左右两侧（不碰视频）---- */
+html[theme="spring"] .spring-couplets {
     position: absolute;
-    top: 0; bottom: 0;
-    width: 48px;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+html[theme="spring"] .spring-strip {
+    position: absolute;
+    top: 92px;
+    width: 58px;
+    padding: 22px 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.02rem;
-    font-weight: 800;
-    line-height: 1.5;
-    color: #ffe9b8;
-    background: linear-gradient(180deg, #a9141b, #7e1015);
-    border: 1px solid rgba(255, 200, 120, .5);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px -12px rgba(40, 2, 4, .8),
-                inset 0 0 0 3px rgba(255, 200, 120, .1);
-    pointer-events: none;
-    user-select: none;
-    white-space: nowrap;
+    font-family: "KaiTi", "STKaiti", "Kaiti SC", "Songti SC", serif;
+    font-size: 1.42rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: 6px;
+    color: #ffe8b0;
+    background: linear-gradient(180deg, #c11a22 0%, #9c1118 55%, #841016 100%);
+    border: 2px solid rgba(255, 205, 130, .55);
+    border-radius: 6px;
+    box-shadow: 0 14px 34px -16px rgba(30, 2, 4, .85),
+                inset 0 0 22px rgba(120, 6, 10, .6);
+    text-shadow: 0 1px 0 rgba(90, 4, 8, .8);
     writing-mode: vertical-rl;
     text-orientation: upright;
-    letter-spacing: 4px;
+    white-space: nowrap;
+    user-select: none;
 }
-html[theme="spring"] .spring-couplet.left  { left: -60px; }
-html[theme="spring"] .spring-couplet.right { right: -60px; }
-html[theme="spring"] .spring-couplet.top {
+html[theme="spring"] .spring-strip.right { right: 26px; }
+html[theme="spring"] .spring-strip.left  { left: 26px; }
+html[theme="spring"] .spring-banner {
     position: absolute;
-    left: 50%; top: -20px; bottom: auto;
+    top: 22px;
+    left: 50%;
     transform: translateX(-50%);
-    width: auto; height: 38px;
-    writing-mode: horizontal-tb;
-    letter-spacing: 5px;
-    padding: 0 20px;
-    border-radius: 999px;
-    font-size: .9rem;
-    line-height: 36px;
+    padding: 10px 30px;
+    font-family: "KaiTi", "STKaiti", "Kaiti SC", "Songti SC", serif;
+    font-size: 1.12rem;
+    font-weight: 700;
+    letter-spacing: 10px;
+    color: #6b0a0e;
+    background: linear-gradient(180deg, #ffd98a, #f4b martial);
+    background: linear-gradient(180deg, #ffdf9c, #f2b24f);
+    border-radius: 4px;
+    border: 1px solid rgba(120, 12, 14, .25);
+    box-shadow: 0 8px 22px -12px rgba(30, 2, 4, .8);
+    user-select: none;
 }
-
-/* 窄屏：对联收进去一点，避免贴边被裁 */
-@media (max-width: 1100px) {
-    html[theme="spring"] .spring-couplet.left  { left: -46px; }
-    html[theme="spring"] .spring-couplet.right { right: -46px; }
+@media (max-width: 1180px) {
+    html[theme="spring"] .spring-strip { width: 46px; font-size: 1.2rem; top: 84px; letter-spacing: 4px; }
+    html[theme="spring"] .spring-strip.right { right: 12px; }
+    html[theme="spring"] .spring-strip.left  { left: 12px; }
 }
-@media (max-width: 760px) {
-    html[theme="spring"] .spring-couplet { width: 30px; font-size: .76rem; letter-spacing: 2px; }
-    html[theme="spring"] .spring-couplet.left  { left: -34px; }
-    html[theme="spring"] .spring-couplet.right { right: -34px; }
-    html[theme="spring"] .spring-couplet.top { display: none; }
+@media (max-width: 820px) {
+    html[theme="spring"] .spring-strip { display: none; }
+    html[theme="spring"] .spring-banner { font-size: .95rem; padding: 8px 20px; letter-spacing: 7px; }
 }
 
 /* ---- 🎆 烟花画布：铺在 hero 上，不挡点击 ---- */
