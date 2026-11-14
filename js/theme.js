@@ -27,7 +27,7 @@
     };
 
     /* 每个节日提前 / 延后几天出现 */
-    var SPAN = { spring: 5 };
+    var SPAN = { spring: { before: 1, after: 14 } };   // 除夕 ~ 正月十五
 
     /* ---------- 主题清单 ----------
        window: 节日主题的正日子来源（FESTIVAL 的键名）
@@ -49,7 +49,8 @@
           desc: '红金配色，限时 10 月 1 日 ~ 7 日',
           fixed: [10, 1, 7] },
         { id: 'spring',    name: '春节',      icon: '\uD83E\uDDE7',
-          desc: '朱红 + 鎏金，随时可选' },
+          desc: '朱红 + 鎏金，限时：除夕到正月十五',
+          festival: 'spring' },
     ];
 
     var BY_ID = {};
@@ -59,13 +60,20 @@
     function sameDay(d, m, day) {
         return (d.getMonth() + 1) === m && d.getDate() === day;
     }
-    /* 以 (m, day) 为中心，前后各 span 天，看 now 在不在里头 */
-    function inSpan(now, m, day, span) {
+    /* 离正日几天（负数=之前，正数=之后） */
+    function dayDiff(now, m, day) {
         var center = new Date(now.getFullYear(), m - 1, day);
         center.setHours(0, 0, 0, 0);
         var t = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        var diff = Math.round((t - center) / 86400000);
-        return Math.abs(diff) <= span;
+        return Math.round((t - center) / 86400000);
+    }
+    function inSpan(now, m, day, span) {
+        return Math.abs(dayDiff(now, m, day)) <= span;
+    }
+    /* 不对称窗口：前两天 ~ 后两周（春节：除夕 ~ 十五） */
+    function inWindow(now, m, day, w) {
+        var d = dayDiff(now, m, day);
+        return d >= -(w.before || 0) && d <= (w.after || 0);
     }
 
     /* 这个主题此刻可不可选 */
@@ -85,7 +93,9 @@
             var table = FESTIVAL[t.festival] || {};
             var md = table[d.getFullYear()];
             if (!md) return false;                       // 这一年没登记
-            return inSpan(d, md[0], md[1], SPAN[t.festival] || 3);
+            var sp = SPAN[t.festival];
+            if (sp && typeof sp === 'object') return inWindow(d, md[0], md[1], sp);
+            return inSpan(d, md[0], md[1], sp || 3);
         }
         return true;                                     // 常驻
     }
