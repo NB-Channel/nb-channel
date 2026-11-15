@@ -3779,14 +3779,7 @@ function webOn() {
                 web: webOn(),
                 effort: EFFORTS[effortIdx()],
                 fast: fastOn(),
-                model: modelKey(), images: (function () {
-                    var im = window.__aiImgs || [];
-                    if (im.length && typeof window.__aiEnsureVision === 'function'
-                        && typeof window.__aiCanSee === 'function' && !window.__aiCanSee()) {
-                        window.__aiEnsureVision();
-                    }
-                    return im;
-                })()
+                model: modelKey(), images: (window.__aiImgs || [])
             })
         };
         if (ctrl) opts.signal = ctrl.signal;
@@ -4407,9 +4400,11 @@ function webOn() {
     }
 
     function refresh() {
-        btn.hidden = false;
-        btn.title = canSee() ? '上传图片（当前模型能看图）'
-                             : '上传图片（会先切到能看图的模型）';
+        var ok = canSee();
+        btn.hidden = !ok;
+        btn.title = '上传图片（当前模型能看图）';
+        /* 切到看不了图的模型时，把已选图清掉，避免带着图发出去报错 */
+        if (!ok && imgs.length) { imgs.length = 0; render(); }
     }
 
     function render() {
@@ -4437,7 +4432,7 @@ function webOn() {
     window.__aiEnsureVision = ensureVision;
     window.__aiCanSee = canSee;
 
-    btn.addEventListener('click', function () { if (ensureVision()) input.click(); });
+    btn.addEventListener('click', function () { input.click(); });
 
     input.addEventListener('change', function () {
         var files = [].slice.call(input.files || []);
