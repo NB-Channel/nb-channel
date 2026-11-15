@@ -3779,7 +3779,14 @@ function webOn() {
                 web: webOn(),
                 effort: EFFORTS[effortIdx()],
                 fast: fastOn(),
-                model: modelKey(), images: (window.__aiImgs || [])
+                model: modelKey(), images: (function () {
+                    var im = window.__aiImgs || [];
+                    if (im.length && typeof window.__aiEnsureVision === 'function'
+                        && typeof window.__aiCanSee === 'function' && !window.__aiCanSee()) {
+                        window.__aiEnsureVision();
+                    }
+                    return im;
+                })()
             })
         };
         if (ctrl) opts.signal = ctrl.signal;
@@ -4426,6 +4433,9 @@ function webOn() {
             bar.appendChild(chip);
         });
     }
+
+    window.__aiEnsureVision = ensureVision;
+    window.__aiCanSee = canSee;
 
     btn.addEventListener('click', function () { if (ensureVision()) input.click(); });
 
