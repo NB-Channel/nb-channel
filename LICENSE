@@ -1,21 +1,47 @@
-MIT License
+NB频道（NoBook Channel）源码许可
+====================================
 
 Copyright (c) 2026 NB频道（NB搞事局）
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+本项目采用【双许可】。你可以任选其一遵守；选定之后，该选择对本项目
+及其衍生作品生效。
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+--------------------------------------------------------------------
+选项 A：GNU Affero General Public License v3.0（AGPL-3.0）
+--------------------------------------------------------------------
+全文见 licenses/AGPL-3.0.txt，或 https://www.gnu.org/licenses/agpl-3.0.html
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+· 允许商业使用、修改、再分发
+· 若你把修改后的版本作为网络服务提供给他人使用，
+  必须向使用者提供对应的完整源码（AGPL 第 13 条）
+· 必须保留版权声明与许可声明
+
+--------------------------------------------------------------------
+选项 B：PolyForm Noncommercial License 1.0.0
+--------------------------------------------------------------------
+全文见 licenses/PolyForm-Noncommercial-1.0.0.md，
+或 https://polyformproject.org/licenses/noncommercial/1.0.0/
+
+· 仅允许【非商业】用途
+· 允许修改，但不得用于商业目的
+· 必须保留版权声明与许可声明
+
+--------------------------------------------------------------------
+关于"用哪个"
+--------------------------------------------------------------------
+· 个人学习、自己搭着玩 → 两个都行
+· 想商用、想卖、想挂广告 → 只能选 A，并按 AGPL 公开你的修改
+· 只做非商业用途、又不想承担 AGPL 的开源义务 → 选 B
+
+--------------------------------------------------------------------
+历史版本
+--------------------------------------------------------------------
+2026-11-19 之前的版本以 MIT 许可发布，见 licenses/MIT-legacy.txt。
+已经按 MIT 获得的授权不会被本次变更收回；本次变更只适用于
+2026-11-19 之后提交的代码。
+
+--------------------------------------------------------------------
+名称与品牌不在授权范围内
+--------------------------------------------------------------------
+详见 NOTICE。"NB频道""NB-Channel""NB搞事局"及 Logo、页面设计、
+文案与美术素材不属于本许可授权范围。

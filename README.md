@@ -1,5 +1,7 @@
 # NB频道官网
 
+> 代码开源 ≠ 品牌授权：源码按 AGPL-3.0 或 PolyForm Noncommercial 双许可发布；「NB频道」名称、Logo、页面设计与文案不在授权范围内，详见 [LICENSE](LICENSE) 与 [NOTICE](NOTICE)。
+
 > 🚀 热爱理科，与作死同行 —— UP主「NB搞事局」的虚拟公司官网。
 
 [![GitHub Pages](https://img.shields.io/badge/hosting-GitHub%20Pages%20%7C%20Cloudflare%20Pages%20%7C%20PythonAnywhere-blue)](https://github.nb-channel.top)
