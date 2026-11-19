@@ -14,6 +14,28 @@
 - ⛅ Cloudflare 站：https://cloudflare.nb-channel.top
 - 🐍 PythonAnywhere 站：https://pythonanywhere.nb-channel.top
 
+
+## 许可与名称
+
+**源码**按《NB 源码许可 1.0》（[全文](licenses/NB-Source-License-1.0.md)）发布：
+
+- 允许：阅读、学习、非商业地修改与自建
+- 必须：保留版权声明；对外提供服务（含挂成网站）时公开你的修改源码；标明「基于 NB频道 源码修改」
+- 禁止：商业使用；宣称本软件是「开源软件」
+
+**名称不在授权范围内**（详见 [NOTICE](NOTICE)）。以下名称及任何变体，不得用作你方的账号名、公司名、站点名、产品名或宣传口径：
+
+| 名称 | 变体说明 |
+|---|---|
+| NB频道 / NB 频道 / NB-频道 | 加空格、加符号、换形近字、加前后缀 |
+| NB频道官方 / NB官方 | 同上 |
+| NB搞事局 / NB 搞事局 | 同上 |
+| NoBook Channel / No Book Channel | 大小写变换、全半角 |
+| NB-Channel / NB Channel / nbchannel | 插入不可见字符等 |
+| nb-channel.top 及其子域名 | 不得以其名义建站、发布、宣传 |
+
+站内虚拟公司自称「某某公司官方」不受此限——这条只拦「冒用 NB频道 自己的名称」。
+
 ## ✨ 功能
 
 - 🎬 **视频展示**：自动同步 B 站合集视频（GitHub Actions 每日更新）
