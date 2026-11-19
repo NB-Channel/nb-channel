@@ -1,4 +1,4 @@
-NB 源码许可 1.0（NB Source License 1.0）
+NB频道 源码许可 1.0（NB Channel Source License 1.0）
 ==========================================
 
 Copyright (c) 2026 NB频道（NB搞事局）
